@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Frequency Display Test</title>
+    <style>
+        .freq-digits { font-family: 'Courier New', monospace; font-size: 2em; color: #00ff00; }
+        .freq-dot { color: #00aa00; }
+    </style>
+</head>
+<body>
+    <h1>Mobile Interface Frequency Display Test</h1>
+    
+    <div>Current frequency should be: 7.053.000 MHz</div>
+    
+    <div class=\"freq-digits\">
+        <span id=\"freq-100mhz\">0</span>
+        <span id=\"freq-10mhz\">0</span>
+        <span id=\"freq-1mhz\">7</span>
+        <span class=\"freq-dot\">.</span>
+        <span id=\"freq-100khz\">0</span>
+        <span id=\"freq-10khz\">5</span>
+        <span id=\"freq-1khz\">3</span>
+        <span class=\"freq-dot\">.</span>
+        <span id=\"freq-100hz\">0</span>
+        <span id=\"freq-10hz\">0</span>
+        <span id=\"freq-1hz\">0</span>
+    </div>
+    
+    <script>
+        // Test the frequency update function
+        const appState = { frequency: 7053000 };
+        
+        function updateFrequencyDisplay() {
+            const freq = appState.frequency;
+            console.log('Updating frequency display with:', freq);
+            
+            if (!freq || freq <= 0) {
+                console.log('Invalid frequency, using default 7053000');
+                appState.frequency = 7053000;
+            }
+            
+            const freqStr = appState.frequency.toString().padStart(9, '0');
+            console.log('Frequency string:', freqStr);
+            
+            const elements = {
+                'freq-100mhz': freqStr[0],
+                'freq-10mhz': freqStr[1], 
+                'freq-1mhz': freqStr[2],
+                'freq-100khz': freqStr[3],
+                'freq-10khz': freqStr[4],
+                'freq-1khz': freqStr[5],
+                'freq-100hz': freqStr[6],
+                'freq-10hz': freqStr[7],
+                'freq-1hz': freqStr[8]
+            };
+            
+            Object.entries(elements).forEach(([id, digit]) => {
+                const element = document.getElementById(id);
+                if (element) {
+                    element.textContent = digit;
+                    console.log('Set', id, 'to', digit);
+                } else {
+                    console.warn('Element not found:', id);
+                }
+            });
+            
+            console.log('Frequency display updated successfully');
+        }
+        
+        // Run test on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Testing frequency display...');
+            updateFrequencyDisplay();
+            
+            // Test with different frequencies
+            setTimeout(() => {
+                appState.frequency = 14230000;  // 14.230 MHz
+                console.log('Testing with 14.230 MHz');
+                updateFrequencyDisplay();
+            }, 2000);
+            
+            setTimeout(() => {
+                appState.frequency = 21075000;  // 21.075 MHz
+                console.log('Testing with 21.075 MHz');
+                updateFrequencyDisplay();
+            }, 4000);
+        });
+    </script>
+</body>
+</html>

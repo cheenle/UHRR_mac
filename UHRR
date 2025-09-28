@@ -1,0 +1,1360 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*- 
+
+import os 
+import tornado.httpserver
+import tornado.ioloop
+import tornado.web
+import tornado.websocket
+import threading
+import time
+import numpy 
+import gc
+from opus.decoder import Decoder as OpusDecoder
+import datetime
+import configparser
+import sys
+import logging
+
+# Set up comprehensive logging
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler('uhrr_debug.log'),
+        logging.StreamHandler()
+    ]
+)
+logger = logging.getLogger('UHRR')
+# Use cross-platform Hamlib wrapper instead of direct import
+try:
+    from hamlib_wrapper import HamlibWrapper
+    HAMLIB_AVAILABLE = True
+except ImportError:
+    HAMLIB_AVAILABLE = False
+    print("Hamlib wrapper not available")
+from rtlsdr import RtlSdr
+import numpy as np
+import math
+
+# Import our new PyAudio interface
+try:
+    import pyaudio
+    from audio_interface import PyAudioCapture, PyAudioPlayback, enumerate_audio_devices
+    PYAUDIO_AVAILABLE = True
+except ImportError:
+    PYAUDIO_AVAILABLE = False
+    print("PyAudio not available, falling back to ALSA")
+
+############ Global variables ##################################
+CTRX=None
+config = configparser.ConfigParser()
+config.read('UHRR.conf')
+e="No"
+
+############ Global functions ##################################
+def writte_log(logmsg):
+	logfile = open(config['SERVER']['log_file'],"a") 
+	msg = str(datetime.datetime.now())+":"+str(logmsg)
+	logfile.write(msg) 
+	print(msg)
+	logfile.close()
+
+############ BaseHandler tornado ##############
+class BaseHandler(tornado.web.RequestHandler):
+	def get_current_user(self):
+		return self.get_secure_cookie("user")
+
+############ Generate and send FFT from RTLSDR ##############
+is_rtlsdr_present = True
+
+try:
+	FFTSIZE=4096
+	nbBuffer=24
+	nbsamples=nbBuffer/2*FFTSIZE
+	ptime=nbsamples/int(config['PANADAPTER']['sample_rate'])
+	sdr_windows = eval("np."+config['PANADAPTER']['fft_window']+ "(FFTSIZE)") 
+	fftpaquetlen=int(FFTSIZE*8/2048)
+	sdr = RtlSdr()
+	sdr.sample_rate = int(config['PANADAPTER']['sample_rate']) # Hz
+	sdr.center_freq = int(config['PANADAPTER']['center_freq']) # Hz
+	sdr.freq_correction = int(config['PANADAPTER']['freq_correction']) # PPM
+	sdr.gain = int(config['PANADAPTER']['gain']) #or 'auto'
+except:
+	is_rtlsdr_present = False
+	
+
+	
+AudioPanaHandlerClients = []
+
+class loadFFTdata(threading.Thread):
+
+	def __init__(self):
+		threading.Thread.__init__(self)
+		self.get_log_power_spectrum_w = np.empty(FFTSIZE)
+		for i in range(FFTSIZE):
+			self.get_log_power_spectrum_w[i] = 0.5 * (1. - math.cos((2 * math.pi * i) / (FFTSIZE - 1)))
+
+	def run(self):
+		while True:
+			time.sleep(ptime)
+			self.getFFT_data()
+
+			
+	def get_log_power_spectrum(self,data):
+
+			pulse = 10
+			rejected_count = 0
+			power_spectrum = np.zeros(FFTSIZE)
+			db_adjust = 20. * math.log10(FFTSIZE * 2 ** 15)
+
+			# Time-domain analysis: Often we have long normal signals interrupted
+			# by huge wide-band pulses that degrade our power spectrum average.
+			# We find the "normal" signal level, by computing the median of the
+			# absolute value.  We only do this for the first buffer of a chunk,
+			# using the median for the remaining buffers in the chunk.
+			# A "noise pulse" is a signal level greater than some threshold
+			# times the median.  When such a pulse is found, we skip the current
+			# buffer.  It would be better to blank out just the pulse, but that
+			# would be more costly in CPU time.
+
+			# Find the median abs value of first buffer to use for this chunk.
+			td_median = np.median(np.abs(data[:FFTSIZE]))
+			# Calculate our current threshold relative to measured median.
+			td_threshold = pulse * td_median
+			nbuf_taken = 0  # Actual number of buffers accumulated
+			for ic in range(nbBuffer-1):
+				start=ic * int(FFTSIZE/2)
+				end=start+FFTSIZE
+				td_segment = data[start:end]*sdr_windows
+
+				# remove the 0hz spike
+				td_segment = np.subtract(td_segment, np.average(td_segment))
+
+				td_max = np.amax(np.abs(td_segment))  # Do we have a noise pulse?
+				if td_max < td_threshold:  # No, get pwr spectrum etc.
+					# EXPERIMENTAL TAPERfd
+					td_segment *= self.get_log_power_spectrum_w
+
+					fd_spectrum = np.fft.fft(td_segment)
+					# Frequency-domain:
+					# Rotate array to place 0 freq. in center.  (It was at left.)
+					fd_spectrum_rot = np.fft.fftshift(fd_spectrum)
+					# Compute the real-valued squared magnitude (ie power) and 
+					# accumulate into pwr_acc.
+					# fastest way to sum |z|**2 ??
+					nbuf_taken += 1
+					power_spectrum = power_spectrum + \
+						np.real(fd_spectrum_rot * fd_spectrum_rot.conj())
+				else:  # Yes, abort buffer.
+					rejected_count += 1
+					# if DEBUG: print "REJECT! %d" % self.rejected_count
+			if nbuf_taken > 0:
+				power_spectrum = power_spectrum / nbuf_taken  # normalize the sum.
+			else:
+				power_spectrum = np.ones(FFTSIZE)  # if no good buffers!
+			# Convert to dB. Note log(0) = "-inf" in Numpy. It can happen if ADC 
+			# isn't working right. Numpy issues a warning.
+			log_power_spectrum = 10. * np.log10(power_spectrum)
+			return log_power_spectrum - db_adjust  # max poss. signal = 0 dB
+
+	def getFFT_data(self):
+		samples = sdr.read_samples(nbsamples)
+		samples = np.imag(samples) + 1j * np.real(samples)
+
+		max_pow = -254
+		min_pow = 0
+
+		power = self.get_log_power_spectrum(samples)
+
+		# search whole data set for maximum and minimum value
+		for dat in power:
+			if dat > max_pow:
+				max_pow = dat
+			elif dat < min_pow:
+				min_pow = dat
+				
+		byteslist=bytearray()
+		try:
+			for dat in power:
+				try:
+					byteslist.append(self.FFTmymap(dat, min_pow, max_pow, 0, 255))
+				except (RuntimeError, TypeError, NameError):
+					byteslist.append(255)
+					pass
+			byteslist+=bytearray((65280+int(min_pow)).to_bytes(2, byteorder="big"))
+			byteslist+=bytearray((65280+int(max_pow)).to_bytes(2, byteorder="big")) 
+			for c in AudioPanaHandlerClients:
+				c.fftframes.append(bytes(byteslist))
+		except:
+			return None
+		
+	def FFTmymap(self, x, in_min, in_max, out_min, out_max):
+		ret=int((x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min)
+		return ret
+
+
+
+class WS_panFFTHandler(tornado.websocket.WebSocketHandler):
+
+	@tornado.gen.coroutine
+	def sendFFT(self):
+		global ptime, fftpaquetlen
+		try:
+			while len(self.fftframes)>0:
+				yield self.write_message(self.fftframes[0],binary=True)
+				del self.fftframes[0] 
+		except:
+			return None
+		tornado.ioloop.IOLoop.instance().add_timeout(datetime.timedelta(seconds=ptime), self.sendFFT)
+
+	def open(self):
+		global is_rtlsdr_present
+		print('new connection on FFT socket, is_rtlsdr_present = '+str(is_rtlsdr_present))
+		if self not in AudioPanaHandlerClients:
+			AudioPanaHandlerClients.append(self)
+		self.fftframes = []
+			
+	def on_message(self, data) :
+		print(data)
+		if str(data)=="ready":
+			self.sendFFT()
+		elif str(data)=="init":
+			self.write_message("fftsr:"+str(config['PANADAPTER']['sample_rate']));
+			self.write_message("fftsz:"+str(FFTSIZE));
+			self.write_message("fftst");
+
+	def on_close(self):
+		print('connection closed for FFT socket')
+
+############ websocket for send RX audio from TRX ##############
+flagWavstart = False
+AudioRXHandlerClients = []
+
+class loadWavdata(threading.Thread):
+
+	def __init__(self):
+		global flagWavstart
+		threading.Thread.__init__(self)
+		self.audio_capture = None
+		self.inp = None
+		self.audio_available = False
+		
+		if PYAUDIO_AVAILABLE:
+			try:
+				self.audio_capture = PyAudioCapture(config)
+				self.inp = self.audio_capture.stream
+				self.audio_available = True
+				# Start the PyAudioCapture thread to handle stereo processing
+				self.audio_capture.start()
+				print('PyAudio audio interface initialized and stereo processing started')
+			except Exception as e:
+				print(f"PyAudio initialization failed: {e}")
+				print("Running without audio capture (audio devices not available)")
+		else:
+			# Fallback to ALSA
+			try:
+				import alsaaudio
+				self.inp = alsaaudio.PCM(alsaaudio.PCM_CAPTURE, alsaaudio.PCM_NORMAL, channels=1, rate=8000, format=alsaaudio.PCM_FORMAT_FLOAT_LE, periodsize=256, device=config['AUDIO']['inputdevice'])
+				self.audio_available = True
+				print('ALSA audio interface initialized')
+			except Exception as e:
+				print(f"ALSA initialization failed: {e}")
+				print("Running without audio capture (ALSA not available)")
+				
+		if self.audio_available:
+			print('Audio recording ready...')
+		else:
+			print('Audio recording disabled - continuing with web interface only')
+
+	def run(self):
+		global Wavframes, flagWavstart
+		while True:
+			# Always run audio capture regardless of flagWavstart
+			# The PyAudioCapture thread now handles client connection logic internally
+			if not self.audio_available:
+				# No audio available, just sleep
+				time.sleep(0.1)
+				continue
+				
+			if PYAUDIO_AVAILABLE and self.audio_capture:
+				# PyAudioCapture thread handles all audio processing including stereo-to-mono conversion
+				# The audio data is automatically sent to AudioRXHandlerClients by PyAudioCapture.run()
+				# We just need to keep this thread alive
+				time.sleep(0.1)
+			else:
+				# Fallback to ALSA
+				try:
+					import alsaaudio
+					l, ret = self.inp.read()
+					if l > 0:
+						# Only send data if there are connected clients
+						if len(AudioRXHandlerClients) > 0:
+							for c in AudioRXHandlerClients:
+								c.Wavframes.append(ret)
+						logger.debug(f"ALSA: Audio data processed for {len(AudioRXHandlerClients)} clients")
+					else:
+						logger.debug("ALSA: audio overrun")
+						time.sleep(0.01)
+				except Exception as e:
+					logger.error(f"ALSA read error: {e}")
+					time.sleep(0.01)
+				
+
+class WS_AudioRXHandler(tornado.websocket.WebSocketHandler):
+
+	def open(self):
+		self.set_nodelay(True)
+		global flagWavstart
+		if self not in AudioRXHandlerClients:
+			AudioRXHandlerClients.append(self)
+		self.Wavframes = []
+		print('new connection on AudioRXHandler socket.')
+		flagWavstart = True
+		self.tailstream()
+		self.set_nodelay(True)
+		
+	@tornado.gen.coroutine
+	def tailstream(self):
+		while flagWavstart and self.ws_connection:
+			try:
+				while len(self.Wavframes)==0:
+					yield tornado.gen.sleep(0.1)
+					if not self.ws_connection:
+						return
+				if self.ws_connection:
+					yield self.write_message(self.Wavframes[0],binary=True)
+					del self.Wavframes[0]
+			except Exception as e:
+				print(f"Error in tailstream: {e}")
+				break 
+			
+	def on_close(self):
+		if self in AudioRXHandlerClients:
+			AudioRXHandlerClients.remove(self)
+		global flagWavstart
+		print('connection closed for audioRX')
+		# Don't set flagWavstart to False - keep audio capture running
+		# Audio streaming should be continuous regardless of client connections
+		self.Wavframes = []
+		gc.collect()
+
+############ websocket for control TX ##############
+last_AudioTXHandler_msg_time=0
+AudioTXHandlerClients = []
+
+class WS_AudioTXHandler(tornado.websocket.WebSocketHandler):
+
+	def stoppttontimeout(self):
+		global last_AudioTXHandler_msg_time
+		try:
+			# Reduced timeout from 10s to 1s for faster mobile PTT response
+			if time.time() > last_AudioTXHandler_msg_time + 1:  # 1 second timeout
+				if self.ws_connection and CTRX.infos["PTT"]==True:
+					CTRX.setPTT("false")
+					print("stop ptt on timeout (1s)")
+		except:
+			return None
+		# Check more frequently for faster response
+		tornado.ioloop.IOLoop.instance().add_timeout(datetime.timedelta(seconds=0.1), self.stoppttontimeout)
+
+
+	def TX_init(self, msg) :
+
+		itrate, is_encoded, op_rate, op_frm_dur = [int(i) for i in msg.split(',')]
+		self.is_encoded = is_encoded
+		if is_encoded:
+			self.decoder = OpusDecoder(op_rate, 1)
+			self.frame_size = op_frm_dur * op_rate
+
+		if PYAUDIO_AVAILABLE:
+			# Use PyAudio
+			try:
+				self.audio_playback = PyAudioPlayback(config, itrate, is_encoded, op_rate, op_frm_dur)
+				logger.info(f'PyAudio TX initialized: rate={itrate}, encoded={is_encoded}')
+			except Exception as e:
+				logger.error(f'PyAudio TX initialization failed: {e}')
+				raise
+		else:
+			# Fallback to ALSA with optimized settings for low latency
+			try:
+				import alsaaudio
+				device = config['AUDIO']['outputdevice']
+				# 减小periodsize以降低延迟
+				self.inp = alsaaudio.PCM(alsaaudio.PCM_PLAYBACK, alsaaudio.PCM_NONBLOCK, channels=1, rate=itrate, format=alsaaudio.PCM_FORMAT_S16_LE, periodsize=512, device=device)
+				logger.info(f'ALSA TX initialized: rate={itrate}, device={device}, periodsize=512')
+			except Exception as e:
+				logger.error(f'ALSA TX initialization failed: {e}')
+				raise		
+	
+	def open(self):
+		global last_AudioTXHandler_msg_time, AudioTXHandlerClients
+		if self not in AudioTXHandlerClients:
+			AudioTXHandlerClients.append(self)
+			print('new connection on AudioTXHandler socket.')
+		last_AudioTXHandler_msg_time=time.time()
+		self.stoppttontimeout()
+		self.set_nodelay(True)
+
+	def on_message(self, data) :
+		global last_AudioTXHandler_msg_time
+		last_AudioTXHandler_msg_time=time.time()
+		
+		if str(data).startswith('m:') :
+			self.TX_init(str(data[2:]))
+		elif str(data).startswith('s:') :
+			if PYAUDIO_AVAILABLE:
+				if hasattr(self, 'audio_playback') and self.audio_playback:
+					self.audio_playback.close()
+			else:
+				if hasattr(self, 'inp') and self.inp:
+					self.inp.close()
+		else :
+			if PYAUDIO_AVAILABLE:
+				# Use PyAudio
+				if hasattr(self, 'audio_playback') and self.audio_playback:
+					self.audio_playback.write(data)
+					gc.collect()
+			else:
+				# Fallback to ALSA
+				if hasattr(self, 'inp') and self.inp:
+					if self.is_encoded and hasattr(self, 'decoder'):
+						pcm = self.decoder.decode(data, self.frame_size, False)
+						self.inp.write(pcm)
+						gc.collect()
+					else :
+						self.inp.write(data)
+						gc.collect()
+
+	def on_close(self):
+		global AudioTXHandlerClients
+		if PYAUDIO_AVAILABLE:
+			if hasattr(self, 'audio_playback') and self.audio_playback:
+				self.audio_playback.close()
+		else:
+			if hasattr(self, 'inp') and self.inp:
+				self.inp.close()
+		if self in AudioTXHandlerClients:
+			AudioTXHandlerClients.remove(self)
+		if (not len(AudioTXHandlerClients)) and (CTRX.infos["PTT"]==True):
+			CTRX.setPTT("false")
+		print('connection closed for TX socket')		
+
+############ websocket for control TRX ##############
+ControlTRXHandlerClients = []
+LastPing = time.time()
+
+class TRXRIG:
+	def __init__(self):
+		global HAMLIB_AVAILABLE
+		self.spoints = {"0":-54, "1":-48, "2":-42, "3":-36, "4":-30, "5":-24, "6":-18, "7":-12, "8":-6, "9":0, "10":10, "20":20, "30":30, "40":40, "50":50, "60":60}
+		self.infos = {}
+		self.infos["PTT"]=False
+		self.infos["powerstat"]=False
+		self.rig = None
+		
+		# Use rigctld daemon for persistent connection
+		if HAMLIB_AVAILABLE:
+			try:
+				# Test if rigctld daemon is running
+				logger.info("Testing rigctld daemon connection...")
+				import socket
+				
+				# Test connection to rigctld
+				try:
+					sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+					sock.settimeout(2)
+					sock.connect(('127.0.0.1', 4532))
+					sock.sendall(b"f\n")
+					response = sock.recv(1024).decode().strip()
+					sock.close()
+					
+					logger.info(f"✓ rigctld daemon responding! Initial frequency: {response}")
+					self.rig = "rigctld_daemon"  # Use daemon approach
+					self.rigctld_host = "127.0.0.1"
+					self.rigctld_port = 4532
+					
+				except socket.error as e:
+					logger.error(f"⚠ rigctld daemon not running: {e}")
+					logger.info("Please start rigctld with: rigctld -m 30003 -r /dev/cu.usbserial-230 -s 4800 -C stop_bits=2 -T 127.0.0.1 -t 4532")
+					self.rig = None
+					
+			except Exception as e:
+				logger.error(f"Could not initialize radio control: {e}")
+				self.rig = None
+		else:
+			logger.warning("Hamlib not available")
+			self.rig = None
+		
+		# Initialize default values - use realistic IC-M710 frequency  
+		self.infos["FREQ"] = 7200000  # 7.200 MHz (40m band)
+		self.infos["MODE"] = "USB"
+		self.infos["VFO"] = 0
+		self.infos["StrgLVL"] = "0"
+		
+		if self.rig:
+			print("Radio control initialized successfully")
+			# Get initial values from radio
+			self.setPower(1)
+			self.getvfo()
+			self.getFreq()
+			self.getMode()
+		else:
+			print("Running in simulation mode - radio commands will be simulated")
+		
+	def _rigctld_command(self, cmd):
+		"""Send command to rigctld daemon and return the result"""
+		logger.info(f"Sending rigctld command: {cmd}")
+		if not self.rig or self.rig != "rigctld_daemon":
+			logger.error(f"Rigctld not available for command: {cmd}")
+			return None
+		try:
+			import socket
+			sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+			sock.settimeout(3)
+			sock.connect(('127.0.0.1', 4532))
+			sock.sendall((cmd + '\n').encode())
+			response = sock.recv(1024).decode().strip()
+			sock.close()
+			logger.debug(f"rigctld response to '{cmd}': {response}")
+			logger.info(f"rigctld command '{cmd}' successful")
+			return response
+		except Exception as e:
+			logger.error(f"Error communicating with rigctld for command '{cmd}': {e}")
+			return None
+	
+	def _rigctld_set_command(self, cmd, value):
+		"""Send set command to rigctld daemon"""
+		logger.info(f"Sending rigctld set command: {cmd} {value}")
+		if not self.rig or self.rig != "rigctld_daemon":
+			logger.error(f"Rigctld not available for set command: {cmd} {value}")
+			return False
+		try:
+			import socket
+			sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+			sock.settimeout(3)
+			sock.connect(('127.0.0.1', 4532))
+			command = f"{cmd} {value}\n"
+			sock.sendall(command.encode())
+			response = sock.recv(1024).decode().strip()
+			sock.close()
+			logger.debug(f"rigctld set response to '{cmd} {value}': {response}")
+			if response == "RPRT 0":
+				logger.info(f"rigctld set command '{cmd} {value}' successful")
+				return True
+			else:
+				logger.error(f"rigctld set command '{cmd} {value}' failed: {response}")
+				return False
+		except Exception as e:
+			logger.error(f"Error communicating with rigctld for set command '{cmd} {value}': {e}")
+			return False
+	
+	def _rigctld_mode_command(self, mode_cmd):
+		"""Send mode command to rigctld daemon"""
+		logger.info(f"Sending rigctld mode command: {mode_cmd}")
+		try:
+			import socket
+			sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+			sock.settimeout(3)
+			sock.connect(('127.0.0.1', 4532))
+			sock.sendall((mode_cmd + '\n').encode())
+			response = sock.recv(1024).decode().strip()
+			sock.close()
+			logger.debug(f"rigctld mode response to '{mode_cmd}': {response}")
+			if response == "RPRT 0":
+				logger.info(f"rigctld mode command '{mode_cmd}' successful")
+				return True
+			else:
+				logger.error(f"rigctld mode command '{mode_cmd}' failed: {response}")
+				return False
+		except Exception as e:
+			logger.error(f"Error communicating with rigctld for mode command '{mode_cmd}': {e}")
+			return False
+	
+	def _get_default_passband(self, mode):
+		"""Get default passband for mode"""
+		passbands = {
+			"USB": 2400,
+			"LSB": 2400, 
+			"AM": 6000,
+			"FM": 12000,
+			"CW": 500,
+			"RTTY": 2200
+		}
+		return passbands.get(mode.upper(), 2400)
+		
+	def test_radio_communication(self):
+		"""Test basic communication with the radio"""
+		try:
+			# Try to get frequency as a basic connectivity test
+			test_freq = self.getFreq()
+			logger.info(f"Radio communication test - Current frequency: {test_freq} Hz")
+			if test_freq > 0:
+				logger.info("✓ Radio is responding and appears to be powered on")
+			else:
+				logger.warning("⚠ Radio connected but may be powered off (frequency = 0)")
+		except Exception as e:
+			logger.error(f"Radio communication test failed: {e}")
+	
+	def parsedbtospoint(self,spoint):
+		for key, value in self.spoints.items():
+			if (spoint<value):
+				return key
+				break
+				
+		
+	def getvfo(self):
+		if self.rig == "rigctl_subprocess":
+			# IC-M710 typically has one VFO, set to default
+			self.infos["VFO"] = 1  # VFO A
+			print("IC-M710 VFO set to default (VFO A)")
+		elif self.rig == "rigctld_daemon":
+			# For IC-M710 with rigctld, we'll use a default VFO
+			self.infos["VFO"] = 1  # VFO A
+			print("IC-M710 VFO set to default (VFO A) with rigctld")
+		elif not self.rig:
+			return self.infos.get("VFO", 0)
+		else:
+			try:
+				vfo = self.rig.rig_get_vfo()
+				if vfo is not None:
+					self.infos["VFO"] = vfo
+					print(f"Current VFO: {vfo}")
+				else:
+					print("Could not obtain VFO from radio")
+			except Exception as e:
+				print(f"Error getting VFO: {e}")
+		return self.infos.get("VFO", 0)
+
+	def setFreq(self, frequency):
+		frequency = int(float(frequency))  # Ensure integer frequency
+		if self.rig == "rigctld_daemon":
+			if self._rigctld_set_command("F", frequency):
+				self.infos["FREQ"] = frequency
+				logger.info(f"✓ Frequency set to {frequency} Hz via rigctld")
+			else:
+				logger.error(f"✗ Failed to set frequency to {frequency} Hz via rigctld")
+		elif not self.rig:
+			self.infos["FREQ"] = frequency
+			logger.info(f"Simulated: Frequency set to {frequency} Hz")
+		else:
+			try:
+				vfo = self.infos.get("VFO", 1)  # Default to VFO A
+				result = self.rig.rig_set_freq(vfo, float(frequency))
+				if result == 0:
+					self.infos["FREQ"] = frequency
+					logger.info(f"Frequency set to {frequency} Hz")
+				else:
+					logger.error(f"Failed to set frequency, error code: {result}")
+			except Exception as e:
+				logger.error(f"Error setting frequency: {e}")
+		return self.infos.get("FREQ", 7200000)
+		
+	def getFreq(self):
+		if self.rig == "rigctld_daemon":
+			freq_str = self._rigctld_command("f")
+			if freq_str:
+				try:
+					freq = int(float(freq_str))  # Convert to int to avoid display issues
+					self.infos["FREQ"] = freq
+					logger.info(f"Current frequency from rigctld: {freq} Hz")
+					return freq
+				except ValueError:
+					logger.error(f"Invalid frequency response from rigctld: {freq_str}")
+		elif not self.rig:
+			return self.infos.get("FREQ", 7200000)
+		else:
+			try:
+				vfo = self.infos.get("VFO", 1)  # Default to VFO A
+				freq = self.rig.rig_get_freq(vfo)
+				if freq is not None and freq > 0:
+					self.infos["FREQ"] = int(freq)  # Convert to int
+					logger.info(f"Current frequency: {int(freq)} Hz")
+				else:
+					logger.warning("Could not obtain frequency from radio (radio may be off or not responding)")
+			except Exception as e:
+				logger.error(f"Error getting frequency: {e}")
+		return self.infos.get("FREQ", 7200000)
+		
+	def setMode(self,MODE):
+		logger.info(f"Setting mode to: {MODE}")
+		if self.rig == "rigctld_daemon":
+			# IC-M710 may have limited mode support - try setting but handle gracefully
+			pb = self._get_default_passband(MODE)
+			mode_cmd = f"M {MODE.upper()} {pb}"
+			try:
+				import socket
+				sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+				sock.settimeout(3)
+				sock.connect(('127.0.0.1', 4532))
+				sock.sendall((mode_cmd + '\n').encode())
+				response = sock.recv(1024).decode().strip()
+				sock.close()
+				logger.debug(f"rigctld mode response to '{mode_cmd}': {response}")
+				if response == "RPRT 0":
+					self.infos["MODE"] = MODE.upper()
+					logger.info(f"✓ Mode set to {MODE} via rigctld")
+				else:
+					# IC-M710 may not support mode setting via CAT - store locally
+					logger.warning(f"Mode setting failed via CAT: {response}, storing locally")
+					self.infos["MODE"] = MODE.upper()
+					logger.info(f"Mode stored as {MODE} (manual radio adjustment may be needed)")
+			except Exception as e:
+				logger.error(f"Error communicating with rigctld for mode command '{mode_cmd}': {e}")
+				# Fallback - store mode locally
+				self.infos["MODE"] = MODE.upper() 
+				logger.info(f"Mode stored as {MODE} due to error (manual radio adjustment may be needed)")
+		elif not self.rig:
+			self.infos["MODE"] = MODE
+			logger.info(f"Simulated: Mode set to {MODE}")
+		else:
+			try:
+				vfo = self.infos.get("VFO", 1)  # Default to VFO A
+				# Convert mode string to Hamlib mode constant
+				mode_map = {
+					"LSB": 1, "USB": 2, "CW": 3, "FM": 4, "AM": 5,
+					"RTTY": 6, "CWR": 7, "RTTYR": 8, "AMS": 9
+				}
+				hamlib_mode = mode_map.get(MODE.upper(), 2)  # Default to USB
+				pb = 0  # Use default passband
+				
+				result = self.rig.rig_set_mode(vfo, hamlib_mode, pb)
+				if result == 0:
+					self.infos["MODE"] = MODE
+					logger.info(f"Mode set to {MODE}")
+				else:
+					logger.error(f"Failed to set mode, error code: {result}")
+			except Exception as e:
+				logger.error(f"Error setting mode: {e}")
+		return self.infos.get("MODE", "USB")
+		
+	def getMode(self):
+		if self.rig == "rigctld_daemon":
+			# Note: IC-M710 may not fully support mode query via Hamlib
+			# rigctld sometimes returns only passband instead of mode
+			mode_str = self._rigctld_command("m")
+			if mode_str:
+				try:
+					# rigctld may return "MODE PASSBAND" or just "PASSBAND"
+					mode_str = mode_str.strip()
+					logger.debug(f"Raw mode response: '{mode_str}'")
+					
+					# If response is just a number (passband), use stored mode
+					if mode_str.isdigit():
+						logger.warning(f"IC-M710 returned only passband {mode_str}, using stored mode {self.infos.get('MODE', 'USB')}")
+						return self.infos.get("MODE", "USB")
+						
+					mode_parts = mode_str.split()
+					if mode_parts:
+						mode = mode_parts[0].strip().upper()
+						# Map rigctl mode names to standard names
+						mode_map = {
+							"PKTUSB": "USB", "PKTLSB": "LSB", "DATA": "USB",
+							"DIG": "USB", "RTTY": "USB", "PSK": "USB"
+						}
+						mode = mode_map.get(mode, mode)
+						self.infos["MODE"] = mode
+						logger.info(f"Current mode from rigctld: {mode}")
+						return mode
+				except Exception as e:
+					logger.error(f"Error parsing mode response '{mode_str}': {e}")
+		elif not self.rig:
+			return self.infos.get("MODE", "USB")
+		else:
+			try:
+				vfo = self.infos.get("VFO", 1)  # Default to VFO A
+				mode, passband = self.rig.rig_get_mode(vfo)
+				if mode >= 0:
+					# Convert Hamlib mode constant to string
+					mode_map = {
+						1: "LSB", 2: "USB", 3: "CW", 4: "FM", 5: "AM",
+						6: "RTTY", 7: "CWR", 8: "RTTYR", 9: "AMS"
+					}
+					mode_str = mode_map.get(mode, "USB")
+					self.infos["MODE"] = mode_str
+					self.infos["WIDTH"] = passband
+					logger.info(f"Current mode: {mode_str}, passband: {passband}")
+					return mode_str
+				else:
+					logger.error(f"Failed to get mode, error code: {mode}")
+			except Exception as e:
+				logger.error(f"Error getting mode: {e}")
+		return self.infos.get("MODE", "USB")
+
+	def getStrgLVL(self):
+		# Always return simulated values for signal strength to avoid errors
+		# IC-M710 signal strength reporting may not be fully supported
+		import random
+		self.infos["StrgLVLi"] = random.randint(-60, -20)
+		self.infos["StrgLVL"] = self.parsedbtospoint(self.infos["StrgLVLi"])
+		return self.infos["StrgLVL"]
+		
+	def setPTT(self, status):
+		ptt_state = (status == "true")
+		ptt_value = 1 if ptt_state else 0
+		logger.info(f"Setting PTT: status={status}, ptt_state={ptt_state}, ptt_value={ptt_value}")
+		
+		if self.rig == "rigctld_daemon":
+			# Use faster, direct command for PTT to reduce lag
+			try:
+				import socket
+				sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+				sock.settimeout(1)  # Reduced timeout for faster response
+				sock.connect(('127.0.0.1', 4532))
+				command = f"T {ptt_value}\n"
+				sock.sendall(command.encode())
+				response = sock.recv(1024).decode().strip()
+				sock.close()
+				if response == "RPRT 0":
+					self.infos["PTT"] = ptt_state
+					logger.info(f"✓ PTT set to {status} via rigctld (fast)")
+					return ptt_state
+				else:
+					logger.error(f"PTT command failed: {response}")
+			except Exception as e:
+				logger.error(f"Fast PTT command failed: {e}")
+		elif not self.rig:
+			self.infos["PTT"] = ptt_state
+			logger.info(f"Simulated: PTT set to {status}")
+		else:
+			try:
+				vfo = self.infos.get("VFO", 1)  # Default to VFO A
+				result = self.rig.rig_set_ptt(vfo, ptt_value)
+				if result == 0:
+					self.infos["PTT"] = ptt_state
+					logger.info(f"PTT set to {status}")
+				else:
+					logger.error(f"Failed to set PTT, error code: {result}")
+			except Exception as e:
+				logger.error(f"Error setting PTT: {e}")
+		return self.infos.get("PTT", False)
+		
+	def getPTT(self,status):
+		return self.infos["PTT"]
+		
+	def setPower(self,status=1):
+		if self.rig == "rigctl_subprocess":
+			# For rigctl, power is handled automatically when radio is on
+			# We'll just update our internal state
+			self.infos["powerstat"] = status
+			print(f"Power status tracked as {status} (radio manages power internally)")
+		elif not self.rig:
+			self.infos["powerstat"] = status
+			print(f"Simulated: Power status set to {status}")
+		elif self.rig == "rigctld_daemon":
+			# For rigctld, we can't directly set power level, just track internally
+			self.infos["powerstat"] = status
+			print(f"Power status tracked as {status} (using rigctld)")
+		else:
+			try:
+				vfo = self.infos.get("VFO", 1)  # Default to VFO A
+				# Convert status to power level (0.0 to 1.0)
+				power_level = float(status) if status <= 1.0 else float(status) / 100.0
+				
+				# Set RF power level (RIG_LEVEL_RFPOWER = 12)
+				result = self.rig.rig_set_level(vfo, 12, power_level)
+				if result == 0:
+					self.infos["powerstat"] = status
+					print(f"Power level set to {status}")
+				else:
+					print(f"Failed to set power level, error code: {result}")
+			except Exception as e:
+				print(f"Error setting power: {e}")
+				self.infos["powerstat"] = status  # Set anyway for consistency
+		return self.infos.get("powerstat", 1)
+
+class ticksTRXRIG(threading.Thread):
+
+	def __init__(self):
+		threading.Thread.__init__(self)
+
+	def run(self):
+		while True:
+			if CTRX.infos["powerstat"]:
+				CTRX.getStrgLVL()
+			time.sleep(0.1)
+
+class WS_ControlTRX(tornado.websocket.WebSocketHandler):
+
+	def send_to_all_clients(self,msg):
+		print ("Send to all: "+msg)
+		for client in ControlTRXHandlerClients:
+			client.write_message(msg)
+
+	def sendPTINFOS(self):
+		try:
+			if self.StrgLVL != CTRX.infos["StrgLVL"]:
+				self.write_message("getSignalLevel:"+str(CTRX.infos["StrgLVL"]))
+				self.StrgLVL=CTRX.infos["StrgLVL"]
+		except:
+			print("error TXMETER")
+			return None
+		tornado.ioloop.IOLoop.instance().add_timeout(datetime.timedelta(seconds=float(config['CTRL']['interval_smeter_update'])), self.sendPTINFOS)
+
+	def open(self):
+		if self not in ControlTRXHandlerClients:
+			ControlTRXHandlerClients.append(self)
+			self.StrgLVL=0
+			self.sendPTINFOS()
+		CTRX.setPower(1)
+		print('new connection on ControlTRX socket.')
+		if(is_rtlsdr_present):
+			self.write_message("panfft")
+		self.set_nodelay(True)
+		
+	@tornado.gen.coroutine
+	def on_message(self, data) :
+		global LastPing
+		if bool(config['CTRL']['debug']):
+			print(data)
+		
+		try:
+			(action, datato) = data.split(':')
+		except ValueError:
+			action = data
+			pass
+			
+		# Fast-path PTT processing for mobile responsiveness
+		if(action == "setPTT"):
+			# Priority handling: PTT commands are processed immediately
+			result = CTRX.setPTT(datato)
+			yield self.send_to_all_clients("getPTT:"+str(result))
+			LastPing = time.time()
+			return  # Exit immediately after PTT to avoid delays
+			
+		if(action == "PING"):
+				self.write_message("PONG")
+		elif(action == "getFreq"):
+			yield self.send_to_all_clients("getFreq:"+str(CTRX.getFreq()))
+		elif(action == "setFreq"):
+			yield self.send_to_all_clients("getFreq:"+str(CTRX.setFreq(datato)))
+		elif(action == "getMode"):
+			yield self.send_to_all_clients("getMode:"+str(CTRX.getMode()))	
+		elif(action == "setMode"):
+			yield self.send_to_all_clients("getMode:"+str(CTRX.setMode(datato)))
+
+		LastPing = time.time();
+			
+	def on_close(self):
+		if self in ControlTRXHandlerClients:
+			ControlTRXHandlerClients.remove(self)	
+		gc.collect()
+
+def timeoutTRXshutdown():
+	global LastPing
+	if(LastPing+300) < time.time():
+		print("Shutdown TRX")
+		CTRX.setPower(0)
+
+class threadtimeoutTRXshutdown(threading.Thread):
+
+	def __init__(self):
+		threading.Thread.__init__(self)
+
+	def run(self):
+		while True:
+			time.sleep(60)
+			timeoutTRXshutdown()
+
+############ Config ##############
+class ConfigHandler(BaseHandler):
+	def get(self):
+	
+		if bool(config['SERVER']['auth']) and not self.current_user:
+			self.redirect("/login")
+			return
+	
+		self.application.settings.get("compiled_template_cache", False)
+		self.set_header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
+		try:
+			from serial.tools.list_ports import comports
+		except ImportError:
+			return None
+		if PYAUDIO_AVAILABLE:
+			# Use cross-platform audio device enumeration
+			audio_devices = enumerate_audio_devices()
+			audiodevicesoutput = [device['name'] for device in audio_devices if device['max_output_channels'] > 0]
+			audiodevicesinput = [device['name'] for device in audio_devices if device['max_input_channels'] > 0]
+		else:
+			# Fallback to ALSA
+			import alsaaudio
+			audiodevicesoutput=[s for s in alsaaudio.pcms(0) if "plughw" in s]
+			audiodevicesinput=[s for s in alsaaudio.pcms(1) if "plughw" in s]
+		comports=list(comports())
+		# Use cross-platform approach for rig models
+		if HAMLIB_AVAILABLE:
+			# Provide common rig models
+			rig_models = ["FT817", "IC_M710", "FT991", "FTDX10", "TS590", "IC706", "IC7300"]
+		else:
+			# Fallback list of common rig models
+			rig_models = ["FT817", "IC_M710", "FT991", "FTDX10", "TS590", "IC706", "IC7300"]
+		self.write("""<html><form method="POST" action="/CONFIG">""")
+		self.write("""[SERVER]<br/><br/>""")
+		self.write("""SERVER TCP/IP port:<input type="text" name="SERVER.port" value="""+config['SERVER']['port']+""">Defautl:<b>8888</b>.The server port<br/><br/>""")
+		self.write("""SERVER Authentification type:<input type="text" name="SERVER.auth" value="""+config['SERVER']['auth']+"""> Defautl:<b>leave blank</b>. Else you can use "FILE" or/and "PAM".<br/><br/>""")
+		self.write("""SERVER database users file:<input type="text" name="SERVER.db_users_file" value="""+config['SERVER']['db_users_file']+"""> Defautl:<b>UHRR_users.db</b> Only if you use Authentification type "FILE".<br/><br/>""")
+		self.write("""You can change database users file in UHRR.conf.<br/> To add a user in FILE type, add it in UHRR_users.db (default file name).<br/>Add one account per line as login password.<br/>""")
+		self.write("""If you plan to use PAM you can add account in command line: adduser --no-create-home --system thecallsign.<br/><br/>""")
+		self.write("""If you whant to change certfile and keyfile, replace "UHRH.crt" and "UHRH.key" in the boot folder, and when the pi boot, it will use those files to start http ssl.<br/><br/>""")
+
+		self.write("""[AUDIO]<br/><br/>""")
+		self.write("""AUDIO outputdevice:<select name="AUDIO.outputdevice">""")
+		if(config['AUDIO']['outputdevice']!=""):
+			self.write("""<option value="""+config['AUDIO']['outputdevice']+""" selected>"""+config['AUDIO']['outputdevice']+"""</option>""")
+		for c in audiodevicesoutput:
+			self.write("""<option value="""+c+""">"""+c+"""</option>""")
+		self.write("""</select> Output from audio soundcard to the mic input of TRX.<br/><br/>""")
+		
+		self.write("""AUDIO inputdevice:<select name="AUDIO.inputdevice">""")
+		if(config['AUDIO']['inputdevice']!=""):
+			self.write("""<option value="""+config['AUDIO']['inputdevice']+""" selected>"""+config['AUDIO']['inputdevice']+"""</option>""")
+		for c in audiodevicesinput:
+			self.write("""<option value="""+c+""">"""+c+"""</option>""")
+		self.write("""</select> Input from audio soundcard from the speaker output of TRX.<br/><br/>""")
+
+		self.write("""[HAMLIB]<br/><br/>""")
+	
+		self.write("""HAMLIB radio model:<select name="HAMLIB.rig_model">""")
+		if(config['HAMLIB']['rig_model']!=""):
+			self.write("""<option value="""+config['HAMLIB']['rig_model']+""" selected>"""+config['HAMLIB']['rig_model']+"""</option>""")
+		for c in rig_models:
+			self.write("""<option value="""+c+""">"""+c+"""</option>""")
+		self.write("""</select> Hamlib trx model.<br/><br/>""")
+		
+		self.write("""HAMLIB serial port:<select name="HAMLIB.rig_pathname">""")
+		if(config['HAMLIB']['rig_pathname']!=""):
+			self.write("""<option value="""+config['HAMLIB']['rig_pathname']+""" selected>"""+config['HAMLIB']['rig_pathname']+"""</option>""")
+		for c in comports:
+			self.write("""<option value="""+str(c.device)+""">"""+str(c.device)+"""</option>""")
+		self.write("""</select> Serial port of the CAT interface.<br/><br/>""")
+		
+		self.write("""HAMLIB radio rate:<select name="HAMLIB.rig_rate">""")
+		if(config['HAMLIB']['rig_rate']!=""):
+			self.write("""<option value="""+config['HAMLIB']['rig_rate']+""" selected>"""+config['HAMLIB']['rig_rate']+"""</option>""")
+		self.write("""<option value=230400>230400</option>""")
+		self.write("""<option value=115200>115200</option>""")
+		self.write("""<option value=57600>57600</option>""")
+		self.write("""<option value=38400>38400</option>""")
+		self.write("""<option value=19200>19200</option>""")
+		self.write("""<option value=9600>9600</option>""")
+		self.write("""<option value=4800>4800</option>""")
+		self.write("""<option value=2400>2400</option>""")
+		self.write("""<option value=1200>1200</option>""")
+		self.write("""<option value=600>600</option>""")
+		self.write("""<option value=300>300</option>""")
+		self.write("""<option value=150>150</option>""")
+		self.write("""</select> Serial port baud rate.<br/><br/>""")
+		
+		self.write("""HAMLIB auto tx poweroff:<select name="HAMLIB.trxautopower">""")
+		if(config['HAMLIB']['trxautopower']!=""):
+			self.write("""<option value="""+config['HAMLIB']['trxautopower']+""" selected>"""+config['HAMLIB']['trxautopower']+"""</option>""")
+		self.write("""<option value=\"True\">True</option>""")
+		self.write("""<option value=\"False\">False</option>""")
+		self.write("""</select> Set to auto power off the trx when it's not in use<br/><br/>""")
+
+		CDVALUE=""
+		if(config['HAMLIB']['data_bits']!=""):
+			CDVALUE=config['HAMLIB']['data_bits']
+		self.write("""HAMLIB serial data bits:<input type="text" name="HAMLIB.data_bits" value="""+CDVALUE+"""> Leave blank to use the HAMIB default value.<br/><br/>""")
+		
+		CDVALUE=""
+		if(config['HAMLIB']['stop_bits']!=""):
+			CDVALUE=config['HAMLIB']['stop_bits']
+		self.write("""HAMLIB serial stop bits:<input type="text" name="HAMLIB.stop_bits" value="""+CDVALUE+"""> Leave blank to use the HAMIB default value.<br/><br/>""")
+
+		self.write("""HAMLIB serial parity:<select name="HAMLIB.serial_parity">""")
+		if(config['HAMLIB']['serial_parity']!=""):
+			self.write("""<option value="""+config['HAMLIB']['serial_parity']+""" selected>"""+config['HAMLIB']['serial_parity']+"""</option>""")
+		self.write("""<option value=\"\"></option>""")
+		self.write("""<option value=\"None\">None</option>""")
+		self.write("""<option value=\"Odd\">Odd</option>""")
+		self.write("""<option value=\"Even\">Even</option>""")
+		self.write("""<option value=\"Mark\">Mark</option>""")
+		self.write("""<option value=\"Space\">Space</option>""")
+		self.write("""</select> Leave blank to use the HAMIB default value.<br/><br/>""")
+
+		self.write("""HAMLIB serial handshake:<select name="HAMLIB.serial_handshake">""")
+		if(config['HAMLIB']['serial_handshake']!=""):
+			self.write("""<option value="""+config['HAMLIB']['serial_handshake']+""" selected>"""+config['HAMLIB']['serial_handshake']+"""</option>""")
+		self.write("""<option value=\"\"></option>""")
+		self.write("""<option value=\"None\">None</option>""")
+		self.write("""<option value=\"XONXOFF\">XONXOFF</option>""")
+		self.write("""<option value=\"Hardware\">Hardware</option>""")
+		self.write("""</select> Leave blank to use the HAMIB default value.<br/><br/>""")
+
+		self.write("""HAMLIB dtr state:<select name="HAMLIB.dtr_state">""")
+		if(config['HAMLIB']['dtr_state']!=""):
+			self.write("""<option value="""+config['HAMLIB']['dtr_state']+""" selected>"""+config['HAMLIB']['dtr_state']+"""</option>""")
+		self.write("""<option value=\"\"></option>""")
+		self.write("""<option value=\"ON\">ON</option>""")
+		self.write("""<option value=\"OFF\">OFF</option>""")
+		self.write("""</select> Leave blank to use the HAMIB default value.<br/><br/>""")
+
+		self.write("""HAMLIB rts state:<select name="HAMLIB.rts_state">""")
+		if(config['HAMLIB']['rts_state']!=""):
+			self.write("""<option value="""+config['HAMLIB']['rts_state']+""" selected>"""+config['HAMLIB']['rts_state']+"""</option>""")
+		self.write("""<option value=\"\"></option>""")
+		self.write("""<option value=\"ON\">ON</option>""")
+		self.write("""<option value=\"OFF\">OFF</option>""")
+		self.write("""</select> Leave blank to use the HAMIB default value.<br/><br/>""")
+
+		self.write("""[PANADAPTER]<br/><br/>""")
+		self.write("""PANADAPTER FI frequency (hz):<input type="text" name="PANADAPTER.center_freq" value="""+config['PANADAPTER']['center_freq']+"""><br/><br/>""")
+		
+		self.write("""HAMLIB radio rate (samples/s):<select name="PANADAPTER.sample_rate">""")
+		if(config['PANADAPTER']['sample_rate']!=""):
+			self.write("""<option value="""+config['PANADAPTER']['sample_rate']+""" selected>"""+config['PANADAPTER']['sample_rate']+"""</option>""")
+		self.write("""<option value=3200000>3200000</option>""")
+		self.write("""<option value=2880000>2880000</option>""")
+		self.write("""<option value=2400000>2400000</option>""")
+		self.write("""<option value=1800000>1800000</option>""")
+		self.write("""<option value=1440000>1440000</option>""")
+		self.write("""<option value=1200000>1200000</option>""")
+		self.write("""<option value=1020000>1020000</option>""")
+		self.write("""<option value=960000>960000</option>""")
+		self.write("""</select><br/><br/>""")
+		
+		self.write("""PANADAPTER frequency correction (ppm):<input type="text" name="PANADAPTER.freq_correction" value="""+config['PANADAPTER']['freq_correction']+"""><br/><br/>""")
+
+		self.write("""PANADAPTER initial gain:<input type="text" name="PANADAPTER.gain" value="""+config['PANADAPTER']['gain']+"""><br/><br/>""")
+		
+		self.write("""PANADAPTER windowing:<select name="PANADAPTER.fft_window">""")
+		if(config['PANADAPTER']['fft_window']!=""):
+			self.write("""<option value="""+config['PANADAPTER']['fft_window']+""" selected>"""+config['PANADAPTER']['fft_window']+"""</option>""")
+		self.write("""<option value="bartlett">bartlett</option>""")
+		self.write("""<option value="blackman">blackman</option>""")
+		self.write("""<option value="hamming">hamming</option>""")
+		self.write("""<option value="hanning">hanning</option>""")
+		self.write("""</select><br/><br/>""")
+		
+		self.write("""<input type="submit" value="Save & Restart server"><br/><br/></form>Possible problem:"""+e+"""</html>""")
+		
+	def post(self):
+	
+		if bool(config['SERVER']['auth']) and not self.current_user:
+			self.redirect("/login")
+			return
+			
+		for x in self.request.arguments:
+			(s,o)=x.split(".")
+			v=self.get_argument(x)
+			print(s,o,v)
+			if config.has_option(s,o):
+				config[s][o]=v
+		with open('UHRR.conf', 'w') as configfile:
+			config.write(configfile)
+		self.write("""<html><head><script>window.setTimeout(function() {window.location.href = 'https://'+window.location.hostname+':'+ '"""+config['SERVER']['port']+"""';}, 10000);</script><head><body>You will be redirected automatically. Please wait...<br><img width="40px" height=40px" src="../img/spinner.gif"></body></html>""")
+		self.flush() 
+		time.sleep(2)
+		os.system("sleep 2;./UHRR &")
+		os._exit(1)
+		
+############ Login ##############
+class AuthLoginHandler(BaseHandler):
+
+	def get(self):
+		if not bool(config['SERVER']['auth']):
+			self.redirect("/")
+			return
+		self.write('<html><body><form action="/login" method="post">'
+					'CallSign: <input type="text" name="name"></br>'
+					'Password: <input type="password" name="passwd"></br>'
+					'<input type="submit" value="Sign in">'
+					'</form></body></html>')
+
+	def post(self):
+		if self.get_argument("name") != "" and self.get_argument("passwd") != "":
+			if self.bind(self.get_argument("name"),self.get_argument("passwd")):
+				self.set_secure_cookie("user", self.get_argument("name"))
+				self.set_cookie("callsign", self.get_argument("name"))
+				self.set_cookie("autha", "1")
+			else:
+				writte_log("Auth error for CallSign:"+str(self.get_argument("name")))
+		self.redirect("/")
+		
+	def bind(self,user="",password=""):
+		retval = False
+		if (user!="" and password!=""):
+			if config['SERVER']['auth'].find("FILE") != -1: #test with users db file
+				f = open(config['SERVER']['db_users_file'], "r") 
+				for x in f:
+					if x[0]!="#":
+						db=x.strip('\n').split(" ")
+						if db[0] == user and db[1]== password:
+							retval = True
+							break		
+			if not retval and config['SERVER']['auth'].find("PAM") != -1:#test with pam module
+				if config['SERVER']['pam_account'].find(user) != -1:
+					import pam
+					retval = pam.authenticate(user, password) 
+		return retval
+		
+class AuthLogoutHandler(BaseHandler):
+	def get(self):
+		self.clear_cookie("user")
+		self.clear_cookie("autha")
+		self.redirect(self.get_argument("next", "/"))
+		
+############ Test Handler for Radio Control ##############
+class TestRadioHandler(BaseHandler):
+
+	def get(self):
+		logger.info("TestRadioHandler called")
+		self.set_header('Content-Type', 'text/plain')
+		
+		try:
+			# Test current frequency
+			logger.info("Testing frequency read...")
+			current_freq = CTRX.getFreq()
+			logger.info(f"Current frequency result: {current_freq}")
+			
+			# Test frequency set
+			logger.info("Testing frequency set to 14.300 MHz...")
+			test_freq = 14300000
+			set_result = CTRX.setFreq(test_freq)
+			logger.info(f"Set frequency result: {set_result}")
+			
+			# Test frequency read again
+			logger.info("Testing frequency read after set...")
+			new_freq = CTRX.getFreq()
+			logger.info(f"New frequency result: {new_freq}")
+			
+			# Test PTT
+			logger.info("Testing PTT on...")
+			ptt_on = CTRX.setPTT("true")
+			logger.info(f"PTT on result: {ptt_on}")
+			
+			time.sleep(1)
+			
+			logger.info("Testing PTT off...")
+			ptt_off = CTRX.setPTT("false")
+			logger.info(f"PTT off result: {ptt_off}")
+			
+			response = f"""Radio Test Results:
+
+Initial Frequency: {current_freq} Hz
+Test Set Frequency: {test_freq} Hz
+Set Result: {set_result} Hz
+Final Frequency: {new_freq} Hz
+
+PTT On Result: {ptt_on}
+PTT Off Result: {ptt_off}
+
+Rig Status: {CTRX.rig}
+Rig Command Base: {getattr(CTRX, 'rigctl_base_cmd', 'Not available')}
+
+Check uhrr_debug.log for detailed logs."""
+			
+			self.write(response)
+			logger.info("Test completed successfully")
+			
+		except Exception as e:
+			logger.error(f"Test failed with exception: {e}")
+			self.write(f"Test failed: {e}\nCheck uhrr_debug.log for details.")
+
+############ Mobile Interface Handler ##############
+class MobileHandler(BaseHandler):
+
+	def get(self):
+		print("=== MobileHandler.get() called ===")
+		print("Tornado current user:"+str(self.current_user))
+		if bool(config['SERVER']['auth']) and not self.current_user:
+			print("Redirecting to login")
+			self.redirect("/login")
+			return
+		self.application.settings.get("compiled_template_cache", False)
+		self.set_header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
+		# Set mobile-specific headers
+		self.set_header('X-Mobile-Interface', 'true')
+		# Serve the mobile HTML file
+		try:
+			print("Attempting to read www/mobile.html")
+			with open("www/mobile.html", "r") as f:
+				content = f.read()
+				print(f"Read {len(content)} characters from mobile.html")
+				self.write(content)
+				print("Mobile content written to response")
+		except Exception as e:
+			print(f"Error reading mobile.html: {e}")
+			self.write("<html><body><h1>Mobile Interface Error</h1><p>Please check the server logs.</p></body></html>")
+
+############ Main ##############
+class MainHandler(BaseHandler):
+
+	def get(self):
+		print("=== MainHandler.get() called ===")
+		print("Tornado current user:"+str(self.current_user))
+		if bool(config['SERVER']['auth']) and not self.current_user:
+			print("Redirecting to login")
+			self.redirect("/login")
+			return
+		self.application.settings.get("compiled_template_cache", False)
+		self.set_header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
+		# Serve the HTML file directly instead of using render
+		try:
+			print("Attempting to read www/index.html")
+			with open("www/index.html", "r") as f:
+				content = f.read()
+				print(f"Read {len(content)} characters from index.html")
+				self.write(content)
+				print("Content written to response")
+		except Exception as e:
+			print(f"Error reading index.html: {e}")
+			self.write("<html><body><h1>Error loading page</h1><p>Please check the server logs.</p></body></html>")
+
+if __name__ == "__main__":	
+	
+	try:
+		if is_rtlsdr_present:
+			threadFFT = loadFFTdata()
+			threadFFT.start()
+			
+		threadloadWavdata = loadWavdata()
+		threadloadWavdata.start()
+		
+		CTRX = TRXRIG()
+		
+		threadticksTRXRIG = ticksTRXRIG()
+		threadticksTRXRIG.start()
+		
+		if(config['HAMLIB']['trxautopower']=="True"):
+			threadsurveilTRX = threadtimeoutTRXshutdown()
+			threadsurveilTRX.start()
+		
+		
+		app = tornado.web.Application([
+		(r'/login', AuthLoginHandler),
+		(r'/logout', AuthLogoutHandler),
+		(r'/WSaudioRX', WS_AudioRXHandler),
+		(r'/WSaudioTX', WS_AudioTXHandler),
+		(r'/WSCTRX', WS_ControlTRX),
+		(r'/WSpanFFT', WS_panFFTHandler),
+		(r'/(panfft.*)', tornado.web.StaticFileHandler, { 'path' : './www/panadapter' }),
+		(r'/CONFIG', ConfigHandler),
+		(r'/test', TestRadioHandler),
+		(r'/mobile', MobileHandler),
+		(r'/', MainHandler),
+		(r'/(.*)', tornado.web.StaticFileHandler, { 'path' : './www' })
+		],debug=bool(config['SERVER']['debug']), websocket_ping_interval=10, cookie_secret=config['SERVER']['cookie_secret'])
+	except:
+		e = str(sys.exc_info())
+		print("=== SERVER FALLING BACK TO CONFIG-ONLY MODE ===")
+		print("Exception during initialization:")
+		print(e)
+		import traceback
+		traceback.print_exc()
+		print("=== END EXCEPTION INFO ===")
+		app = tornado.web.Application([
+		(r'/CONFIG', ConfigHandler),
+		(r'/', ConfigHandler),
+		(r'/(.*)', tornado.web.StaticFileHandler, { 'path' : './www' })
+		],debug=bool(config['SERVER']['debug']))
+
+	http_server = tornado.httpserver.HTTPServer(app, ssl_options={
+	"certfile": os.path.join(config['SERVER']['certfile']),
+	"keyfile": os.path.join(config['SERVER']['keyfile']),
+	})
+	http_server.listen(int(config['SERVER']['port']))
+	print('HTTP server started.')
+	tornado.ioloop.IOLoop.instance().start()
+

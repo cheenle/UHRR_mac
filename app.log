@@ -1,0 +1,4 @@
+Traceback (most recent call last):
+  File "/Users/cheenle/Universal_HamRadio_Remote_HTML5-master/UHRR", line 17, in <module>
+    import Hamlib
+ModuleNotFoundError: No module named 'Hamlib'

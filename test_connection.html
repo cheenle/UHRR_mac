@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>连接测试页面</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background: #1a1a1a;
+            color: white;
+        }
+        
+        .status-box {
+            background: #333;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 10px;
+        }
+        
+        .success { color: #00ff00; }
+        .error { color: #ff0000; }
+        .warning { color: #ffff00; }
+        .info { color: #00aaff; }
+        
+        .button {
+            background: linear-gradient(145deg, #ff6600, #cc4400);
+            border: 2px solid #ff8800;
+            border-radius: 8px;
+            padding: 15px 30px;
+            color: white;
+            font-weight: bold;
+            font-size: 18px;
+            margin: 10px;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+        }
+        
+        .button:hover {
+            background: linear-gradient(145deg, #ff8800, #ff4400);
+        }
+        
+        .log {
+            background: #000;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            max-height: 400px;
+            overflow-y: auto;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔌 连接测试页面</h1>
+    
+    <div class="status-box">
+        <h2>连接状态</h2>
+        <div id="connection-status" class="info">检查中...</div>
+        <button class="button" onclick="testConnections()">测试连接</button>
+        <button class="button" onclick="clearLog()">清空日志</button>
+    </div>
+    
+    <div class="status-box">
+        <h2>测试日志</h2>
+        <div class="log" id="test-log"></div>
+    </div>
+    
+    <div class="status-box">
+        <h2>快速链接</h2>
+        <a href="https://192.168.1.16:8888" class="button" target="_blank">打开主应用</a>
+        <a href="https://localhost:8888" class="button" target="_blank">本地访问</a>
+    </div>
+
+    <script>
+        let wsControl = null;
+        let wsAudioRX = null;
+        let wsAudioTX = null;
+        
+        function log(message, type = 'info') {
+            const logElement = document.getElementById('test-log');
+            const timestamp = new Date().toLocaleTimeString();
+            const className = type === 'error' ? 'error' : type === 'warning' ? 'warning' : type === 'success' ? 'success' : 'info';
+            logElement.innerHTML += `<div class="${className}">[${timestamp}] ${message}</div>`;
+            logElement.scrollTop = logElement.scrollHeight;
+        }
+        
+        function clearLog() {
+            document.getElementById('test-log').innerHTML = '';
+        }
+        
+        function updateStatus(message, type = 'info') {
+            const statusElement = document.getElementById('connection-status');
+            statusElement.innerHTML = `<span class="${type}">${message}</span>`;
+        }
+        
+        function testConnections() {
+            log('开始测试连接...', 'info');
+            updateStatus('测试中...', 'warning');
+            
+            // 测试HTTPS连接
+            testHTTPSConnection();
+            
+            // 测试WebSocket连接
+            setTimeout(() => testWebSocketConnections(), 1000);
+        }
+        
+        function testHTTPSConnection() {
+            log('测试HTTPS连接...', 'info');
+            
+            fetch('https://192.168.1.16:8888', { 
+                mode: 'no-cors',
+                method: 'HEAD'
+            })
+            .then(() => {
+                log('✅ HTTPS连接成功', 'success');
+            })
+            .catch(err => {
+                log('❌ HTTPS连接失败: ' + err.message, 'error');
+            });
+        }
+        
+        function testWebSocketConnections() {
+            log('测试WebSocket连接...', 'info');
+            
+            // 测试控制WebSocket
+            testControlWebSocket();
+            
+            // 测试音频RX WebSocket
+            setTimeout(() => testAudioRXWebSocket(), 2000);
+            
+            // 测试音频TX WebSocket
+            setTimeout(() => testAudioTXWebSocket(), 4000);
+        }
+        
+        function testControlWebSocket() {
+            log('测试控制WebSocket (WSCTRX)...', 'info');
+            
+            try {
+                wsControl = new WebSocket('wss://192.168.1.16:8888/WSCTRX');
+                
+                wsControl.onopen = function() {
+                    log('✅ 控制WebSocket连接成功', 'success');
+                    wsControl.close();
+                };
+                
+                wsControl.onerror = function(error) {
+                    log('❌ 控制WebSocket连接失败: ' + error, 'error');
+                };
+                
+                wsControl.onclose = function() {
+                    log('控制WebSocket已关闭', 'info');
+                };
+                
+                // 超时检查
+                setTimeout(() => {
+                    if (wsControl && wsControl.readyState === WebSocket.CONNECTING) {
+                        log('❌ 控制WebSocket连接超时', 'error');
+                        wsControl.close();
+                    }
+                }, 5000);
+                
+            } catch (error) {
+                log('❌ 控制WebSocket创建失败: ' + error.message, 'error');
+            }
+        }
+        
+        function testAudioRXWebSocket() {
+            log('测试音频RX WebSocket (WSAudioRX)...', 'info');
+            
+            try {
+                wsAudioRX = new WebSocket('wss://192.168.1.16:8888/WSaudioRX');
+                wsAudioRX.binaryType = 'arraybuffer';
+                
+                wsAudioRX.onopen = function() {
+                    log('✅ 音频RX WebSocket连接成功', 'success');
+                    wsAudioRX.close();
+                };
+                
+                wsAudioRX.onerror = function(error) {
+                    log('❌ 音频RX WebSocket连接失败: ' + error, 'error');
+                };
+                
+                wsAudioRX.onclose = function() {
+                    log('音频RX WebSocket已关闭', 'info');
+                };
+                
+                // 超时检查
+                setTimeout(() => {
+                    if (wsAudioRX && wsAudioRX.readyState === WebSocket.CONNECTING) {
+                        log('❌ 音频RX WebSocket连接超时', 'error');
+                        wsAudioRX.close();
+                    }
+                }, 5000);
+                
+            } catch (error) {
+                log('❌ 音频RX WebSocket创建失败: ' + error.message, 'error');
+            }
+        }
+        
+        function testAudioTXWebSocket() {
+            log('测试音频TX WebSocket (WSAudioTX)...', 'info');
+            
+            try {
+                wsAudioTX = new WebSocket('wss://192.168.1.16:8888/WSaudioTX');
+                wsAudioTX.binaryType = 'arraybuffer';
+                
+                wsAudioTX.onopen = function() {
+                    log('✅ 音频TX WebSocket连接成功', 'success');
+                    wsAudioTX.close();
+                };
+                
+                wsAudioTX.onerror = function(error) {
+                    log('❌ 音频TX WebSocket连接失败: ' + error, 'error');
+                };
+                
+                wsAudioTX.onclose = function() {
+                    log('音频TX WebSocket已关闭', 'info');
+                };
+                
+                // 超时检查
+                setTimeout(() => {
+                    if (wsAudioTX && wsAudioTX.readyState === WebSocket.CONNECTING) {
+                        log('❌ 音频TX WebSocket连接超时', 'error');
+                        wsAudioTX.close();
+                    }
+                }, 5000);
+                
+                // 最终状态检查
+                setTimeout(() => {
+                    checkFinalStatus();
+                }, 6000);
+                
+            } catch (error) {
+                log('❌ 音频TX WebSocket创建失败: ' + error.message, 'error');
+            }
+        }
+        
+        function checkFinalStatus() {
+            log('连接测试完成', 'info');
+            updateStatus('测试完成，请查看日志', 'info');
+        }
+        
+        // 页面加载时自动测试
+        document.addEventListener('DOMContentLoaded', function() {
+            log('连接测试页面已加载', 'info');
+            log('当前时间: ' + new Date().toLocaleString(), 'info');
+            log('用户代理: ' + navigator.userAgent, 'info');
+            
+            // 自动开始测试
+            setTimeout(() => {
+                testConnections();
+            }, 1000);
+        });
+    </script>
+</body>
+</html>

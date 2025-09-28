@@ -1,0 +1,1591 @@
+2025-09-27 15:58:35,950 - UHRR - INFO - Testing rigctld daemon connection...
+2025-09-27 15:58:35,952 - UHRR - INFO - ✓ rigctld daemon responding! Initial frequency: 14270000
+2025-09-27 15:58:35,952 - UHRR - INFO - Sending rigctld command: f
+2025-09-27 15:58:35,952 - UHRR - DEBUG - rigctld response to 'f': 14270000
+2025-09-27 15:58:35,952 - UHRR - INFO - rigctld command 'f' successful
+2025-09-27 15:58:35,952 - UHRR - INFO - Current frequency from rigctld: 14270000 Hz
+2025-09-27 15:58:35,952 - UHRR - INFO - Sending rigctld command: m
+2025-09-27 15:58:35,953 - UHRR - DEBUG - rigctld response to 'm': 2200
+2025-09-27 15:58:35,953 - UHRR - INFO - rigctld command 'm' successful
+2025-09-27 15:58:35,953 - UHRR - DEBUG - Raw mode response: '2200'
+2025-09-27 15:58:35,953 - UHRR - WARNING - IC-M710 returned only passband 2200, using stored mode USB
+2025-09-27 15:58:35,953 - asyncio - DEBUG - Using selector: KqueueSelector
+2025-09-27 15:58:38,678 - tornado.general - WARNING - SSL Error on 10 ('2409:8900:1eb6:c36:e5b:482b:5ba5:8dc1', 57322, 0, 0): [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1010)
+2025-09-27 15:58:39,187 - tornado.general - WARNING - SSL Error on 10 ('2409:8900:1eb6:c36:e5b:482b:5ba5:8dc1', 57326, 0, 0): [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1010)
+2025-09-27 15:58:39,572 - tornado.general - WARNING - SSL Error on 10 ('2409:8900:1eb6:c36:e5b:482b:5ba5:8dc1', 57334, 0, 0): [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1010)
+2025-09-27 15:58:40,848 - tornado.general - WARNING - SSL Error on 10 ('2409:8900:1eb6:c36:e5b:482b:5ba5:8dc1', 57346, 0, 0): [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1010)
+2025-09-27 15:58:40,956 - tornado.general - WARNING - SSL Error on 10 ('2409:8900:1eb6:c36:e5b:482b:5ba5:8dc1', 57354, 0, 0): [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1010)
+2025-09-27 15:58:41,448 - tornado.general - WARNING - SSL Error on 10 ('2409:8900:1eb6:c36:e5b:482b:5ba5:8dc1', 57370, 0, 0): [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1010)
+2025-09-27 15:58:42,181 - tornado.access - INFO - 101 GET /WSCTRX (2409:8900:1eb6:c36:e5b:482b:5ba5:8dc1) 2.55ms
+2025-09-27 15:58:42,673 - tornado.access - INFO - 101 GET /WSaudioRX (2409:8900:1eb6:c36:e5b:482b:5ba5:8dc1) 1.19ms
+2025-09-27 15:58:42,943 - tornado.access - INFO - 101 GET /WSaudioTX (2409:8900:1eb6:c36:e5b:482b:5ba5:8dc1) 1.01ms
+2025-09-27 15:58:43,652 - tornado.general - WARNING - SSL Error on 13 ('2409:8900:1eb6:c36:e5b:482b:5ba5:8dc1', 49164, 0, 0): [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1010)
+2025-09-27 15:58:43,788 - tornado.access - INFO - 101 GET /WSCTRX (2409:8900:1eb6:c36:e5b:482b:5ba5:8dc1) 0.37ms
+2025-09-27 15:58:43,956 - UHRR - INFO - Sending rigctld command: f
+2025-09-27 15:58:43,958 - UHRR - DEBUG - rigctld response to 'f': 14270000
+2025-09-27 15:58:43,958 - UHRR - INFO - rigctld command 'f' successful
+2025-09-27 15:58:43,959 - UHRR - INFO - Current frequency from rigctld: 14270000 Hz
+2025-09-27 15:58:43,971 - UHRR - INFO - Sending rigctld command: m
+2025-09-27 15:58:43,972 - UHRR - DEBUG - rigctld response to 'm': 2200
+2025-09-27 15:58:43,972 - UHRR - INFO - rigctld command 'm' successful
+2025-09-27 15:58:43,972 - UHRR - DEBUG - Raw mode response: '2200'
+2025-09-27 15:58:43,972 - UHRR - WARNING - IC-M710 returned only passband 2200, using stored mode USB
+2025-09-27 15:58:43,973 - UHRR - INFO - Sending rigctld set command: F 14270000
+2025-09-27 15:58:44,122 - UHRR - DEBUG - rigctld set response to 'F 14270000': RPRT 0
+2025-09-27 15:58:44,122 - UHRR - INFO - rigctld set command 'F 14270000' successful
+2025-09-27 15:58:44,122 - UHRR - INFO - ✓ Frequency set to 14270000 Hz via rigctld
+2025-09-27 15:58:44,207 - tornado.access - INFO - 101 GET /WSaudioRX (2409:8900:1eb6:c36:e5b:482b:5ba5:8dc1) 0.74ms
+2025-09-27 15:58:45,588 - tornado.access - INFO - 101 GET /WSaudioTX (2409:8900:1eb6:c36:e5b:482b:5ba5:8dc1) 1.01ms
+2025-09-27 15:58:46,792 - tornado.general - WARNING - SSL Error on 16 ('2409:8900:1eb6:c36:e5b:482b:5ba5:8dc1', 49204, 0, 0): [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1010)
+2025-09-27 15:58:47,048 - tornado.general - WARNING - SSL Error on 17 ('2409:8900:1eb6:c36:e5b:482b:5ba5:8dc1', 49216, 0, 0): [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1010)
+2025-09-27 15:58:47,779 - tornado.access - INFO - 200 GET / (2409:8900:1eb6:c36:e5b:482b:5ba5:8dc1) 2.29ms
+2025-09-27 15:58:48,139 - tornado.access - INFO - 200 GET /style.css (2409:8900:1eb6:c36:e5b:482b:5ba5:8dc1) 11.34ms
+2025-09-27 15:58:48,286 - tornado.access - INFO - 304 GET /controls.js (2409:8900:1eb6:c36:e5b:482b:5ba5:8dc1) 3.25ms
+2025-09-27 15:58:48,703 - tornado.general - WARNING - SSL Error on 19 ('2409:8900:1eb6:c36:e5b:482b:5ba5:8dc1', 49238, 0, 0): [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1010)
+2025-09-27 15:58:49,554 - tornado.access - INFO - 200 GET /img/poweroff.png (2409:8900:1eb6:c36:e5b:482b:5ba5:8dc1) 1413.30ms
+2025-09-27 15:58:51,145 - tornado.access - INFO - 200 GET /favicon.ico (2409:8900:1eb6:c36:e5b:482b:5ba5:8dc1) 3.13ms
+2025-09-27 15:58:52,386 - tornado.access - INFO - 200 GET /img/critsgrey.png (2409:8900:1eb6:c36:e5b:482b:5ba5:8dc1) 1.19ms
+2025-09-27 15:58:52,446 - tornado.general - WARNING - SSL Error on 18 ('2409:8900:1eb6:c36:e5b:482b:5ba5:8dc1', 55550, 0, 0): [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1010)
+2025-09-27 15:58:52,616 - tornado.access - INFO - 200 GET /img/poweron.png (2409:8900:1eb6:c36:e5b:482b:5ba5:8dc1) 234.67ms
+2025-09-27 15:58:53,623 - tornado.general - WARNING - SSL Error on 18 ('2409:8900:1eb6:c36:e5b:482b:5ba5:8dc1', 55552, 0, 0): [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1010)
+2025-09-27 15:58:53,758 - tornado.general - WARNING - SSL Error on 18 ('2409:8900:1eb6:c36:e5b:482b:5ba5:8dc1', 55568, 0, 0): [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1010)
+2025-09-27 15:58:53,844 - tornado.access - INFO - 101 GET /WSaudioRX (2409:8900:1eb6:c36:e5b:482b:5ba5:8dc1) 0.91ms
+2025-09-27 15:58:53,940 - tornado.access - INFO - 200 GET /img/critsgreen.png (2409:8900:1eb6:c36:e5b:482b:5ba5:8dc1) 3.41ms
+2025-09-27 15:58:54,104 - tornado.access - INFO - 101 GET /WSaudioTX (2409:8900:1eb6:c36:e5b:482b:5ba5:8dc1) 0.76ms
+2025-09-27 15:58:54,409 - tornado.access - INFO - 101 GET /WSCTRX (2409:8900:1eb6:c36:e5b:482b:5ba5:8dc1) 0.68ms
+2025-09-27 15:58:54,637 - UHRR - INFO - Sending rigctld command: f
+2025-09-27 15:58:54,638 - UHRR - DEBUG - rigctld response to 'f': 14270000
+2025-09-27 15:58:54,638 - UHRR - INFO - rigctld command 'f' successful
+2025-09-27 15:58:54,638 - UHRR - INFO - Current frequency from rigctld: 14270000 Hz
+2025-09-27 15:58:54,639 - UHRR - INFO - Sending rigctld command: m
+2025-09-27 15:58:54,640 - UHRR - DEBUG - rigctld response to 'm': 2200
+2025-09-27 15:58:54,640 - UHRR - INFO - rigctld command 'm' successful
+2025-09-27 15:58:54,640 - UHRR - DEBUG - Raw mode response: '2200'
+2025-09-27 15:58:54,640 - UHRR - WARNING - IC-M710 returned only passband 2200, using stored mode USB
+2025-09-27 15:59:05,899 - tornado.access - INFO - 200 GET / (::1) 0.49ms
+2025-09-27 16:00:50,552 - tornado.general - WARNING - SSL Error on 10 ('2409:8900:1eb6:c36:5a5e:9255:e544:e158', 35408, 0, 0): [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1010)
+2025-09-27 16:00:50,701 - tornado.access - INFO - 200 GET / (2409:8900:1eb6:c36:5a5e:9255:e544:e158) 1.59ms
+2025-09-27 16:00:50,726 - tornado.general - WARNING - SSL Error on 11 ('2409:8900:1eb6:c36:5a5e:9255:e544:e158', 35432, 0, 0): [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1010)
+2025-09-27 16:00:50,801 - tornado.access - INFO - 200 GET /style.css (2409:8900:1eb6:c36:5a5e:9255:e544:e158) 2.05ms
+2025-09-27 16:00:50,862 - tornado.general - WARNING - SSL Error on 13 ('2409:8900:1eb6:c36:5a5e:9255:e544:e158', 35452, 0, 0): [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1010)
+2025-09-27 16:00:50,865 - tornado.access - INFO - 101 GET /WSCTRX (2409:8900:1eb6:c36:5a5e:9255:e544:e158) 0.18ms
+2025-09-27 16:00:50,894 - tornado.general - WARNING - SSL Error on 12 ('2409:8900:1eb6:c36:5a5e:9255:e544:e158', 35448, 0, 0): [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1010)
+2025-09-27 16:00:50,896 - tornado.general - WARNING - SSL Error on 14 ('2409:8900:1eb6:c36:5a5e:9255:e544:e158', 35470, 0, 0): [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1010)
+2025-09-27 16:00:50,974 - tornado.general - WARNING - SSL Error on 18 ('2409:8900:1eb6:c36:5a5e:9255:e544:e158', 35462, 0, 0): [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1010)
+2025-09-27 16:00:50,993 - tornado.general - WARNING - SSL Error on 15 ('2409:8900:1eb6:c36:5a5e:9255:e544:e158', 35474, 0, 0): [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1010)
+2025-09-27 16:00:51,055 - tornado.access - INFO - 200 GET /img/spinner.gif (2409:8900:1eb6:c36:5a5e:9255:e544:e158) 1.59ms
+2025-09-27 16:00:51,057 - tornado.access - INFO - 200 GET /img/config.png (2409:8900:1eb6:c36:5a5e:9255:e544:e158) 0.54ms
+2025-09-27 16:00:51,627 - tornado.general - WARNING - SSL Error on 19 ('2409:8900:1eb6:c36:5a5e:9255:e544:e158', 35530, 0, 0): [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1010)
+2025-09-27 16:00:51,685 - tornado.access - INFO - 200 GET /img/panfft.png (2409:8900:1eb6:c36:5a5e:9255:e544:e158) 1.32ms
+2025-09-27 16:00:51,876 - tornado.access - INFO - 200 GET /img/critsred.png (2409:8900:1eb6:c36:5a5e:9255:e544:e158) 3.20ms
+2025-09-27 16:00:52,069 - tornado.access - INFO - 101 GET /WSaudioRX (2409:8900:1eb6:c36:5a5e:9255:e544:e158) 1.02ms
+2025-09-27 16:00:52,682 - tornado.general - WARNING - SSL Error on 22 ('2409:8900:1eb6:c36:5a5e:9255:e544:e158', 35542, 0, 0): [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1010)
+2025-09-27 16:00:53,852 - tornado.general - WARNING - SSL Error on 22 ('2409:8900:1eb6:c36:5a5e:9255:e544:e158', 57684, 0, 0): [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1010)
+2025-09-27 16:00:54,008 - tornado.access - INFO - 101 GET /WSaudioTX (2409:8900:1eb6:c36:5a5e:9255:e544:e158) 0.89ms
+2025-09-27 16:00:54,212 - tornado.general - WARNING - SSL Error on 23 ('2409:8900:1eb6:c36:5a5e:9255:e544:e158', 57704, 0, 0): [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1010)
+2025-09-27 16:00:54,365 - tornado.access - INFO - 101 GET /WSaudioTX (2409:8900:1eb6:c36:5a5e:9255:e544:e158) 0.77ms
+2025-09-27 16:00:54,913 - tornado.access - INFO - 101 GET /WSaudioRX (2409:8900:1eb6:c36:5a5e:9255:e544:e158) 0.61ms
+2025-09-27 16:00:55,230 - tornado.general - WARNING - SSL Error on 15 ('2409:8900:1eb6:c36:5a5e:9255:e544:e158', 57728, 0, 0): [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1010)
+2025-09-27 16:00:55,279 - tornado.access - INFO - 200 GET /img/poweroff.png (2409:8900:1eb6:c36:5a5e:9255:e544:e158) 4224.86ms
+2025-09-27 16:00:55,406 - tornado.access - INFO - 101 GET /WSCTRX (2409:8900:1eb6:c36:5a5e:9255:e544:e158) 0.95ms
+2025-09-27 16:00:55,508 - UHRR - INFO - Sending rigctld command: f
+2025-09-27 16:00:55,510 - UHRR - DEBUG - rigctld response to 'f': 14270000
+2025-09-27 16:00:55,510 - UHRR - INFO - rigctld command 'f' successful
+2025-09-27 16:00:55,510 - UHRR - INFO - Current frequency from rigctld: 14270000 Hz
+2025-09-27 16:00:55,511 - UHRR - INFO - Sending rigctld command: m
+2025-09-27 16:00:55,512 - UHRR - DEBUG - rigctld response to 'm': 2200
+2025-09-27 16:00:55,512 - UHRR - INFO - rigctld command 'm' successful
+2025-09-27 16:00:55,512 - UHRR - DEBUG - Raw mode response: '2200'
+2025-09-27 16:00:55,512 - UHRR - WARNING - IC-M710 returned only passband 2200, using stored mode USB
+2025-09-27 16:00:55,513 - UHRR - INFO - Sending rigctld set command: F 14270000
+2025-09-27 16:00:55,663 - UHRR - DEBUG - rigctld set response to 'F 14270000': RPRT 0
+2025-09-27 16:00:55,663 - UHRR - INFO - rigctld set command 'F 14270000' successful
+2025-09-27 16:00:55,663 - UHRR - INFO - ✓ Frequency set to 14270000 Hz via rigctld
+2025-09-27 16:00:55,923 - tornado.access - INFO - 200 GET /controls.js (2409:8900:1eb6:c36:5a5e:9255:e544:e158) 5061.30ms
+2025-09-27 16:00:55,938 - tornado.general - WARNING - SSL Error on 14 ('2409:8900:1eb6:c36:5a5e:9255:e544:e158', 57740, 0, 0): [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1010)
+2025-09-27 16:00:56,020 - tornado.access - INFO - 200 GET / (2409:8900:1eb6:c36:5a5e:9255:e544:e158) 0.88ms
+2025-09-27 16:00:56,191 - tornado.access - INFO - 200 GET /img/smeter.png (2409:8900:1eb6:c36:5a5e:9255:e544:e158) 1.95ms
+2025-09-27 16:00:56,294 - tornado.general - WARNING - SSL Error on 10 ('2409:8900:1eb6:c36:5a5e:9255:e544:e158', 57764, 0, 0): [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1010)
+2025-09-27 16:00:56,297 - tornado.general - WARNING - SSL Error on 15 ('2409:8900:1eb6:c36:5a5e:9255:e544:e158', 57794, 0, 0): [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1010)
+2025-09-27 16:00:56,304 - tornado.general - WARNING - SSL Error on 20 ('2409:8900:1eb6:c36:5a5e:9255:e544:e158', 57780, 0, 0): [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1010)
+2025-09-27 16:00:56,400 - tornado.general - WARNING - SSL Error on 15 ('2409:8900:1eb6:c36:5a5e:9255:e544:e158', 57808, 0, 0): [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1010)
+2025-09-27 16:00:56,400 - tornado.general - WARNING - SSL Error on 10 ('2409:8900:1eb6:c36:5a5e:9255:e544:e158', 57802, 0, 0): [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1010)
+2025-09-27 16:00:56,495 - tornado.access - INFO - 200 GET /style.css (2409:8900:1eb6:c36:5a5e:9255:e544:e158) 0.70ms
+2025-09-27 16:00:56,502 - tornado.general - WARNING - SSL Error on 20 ('2409:8900:1eb6:c36:5a5e:9255:e544:e158', 57838, 0, 0): [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1010)
+2025-09-27 16:00:56,598 - tornado.access - INFO - 200 GET /img/poweroff.png (2409:8900:1eb6:c36:5a5e:9255:e544:e158) 49.38ms
+2025-09-27 16:00:56,621 - tornado.general - WARNING - SSL Error on 25 ('2409:8900:1eb6:c36:5a5e:9255:e544:e158', 57858, 0, 0): [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1010)
+2025-09-27 16:00:56,688 - tornado.general - WARNING - SSL Error on 10 ('2409:8900:1eb6:c36:5a5e:9255:e544:e158', 57782, 0, 0): [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1010)
+2025-09-27 16:00:56,691 - tornado.general - WARNING - SSL Error on 14 ('2409:8900:1eb6:c36:5a5e:9255:e544:e158', 57774, 0, 0): [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1010)
+2025-09-27 16:00:56,708 - tornado.access - INFO - 200 GET /img/smeter.png (2409:8900:1eb6:c36:5a5e:9255:e544:e158) 0.74ms
+2025-09-27 16:00:56,729 - tornado.access - INFO - 200 GET /controls.js (2409:8900:1eb6:c36:5a5e:9255:e544:e158) 201.86ms
+2025-09-27 16:00:56,757 - tornado.general - WARNING - SSL Error on 10 ('2409:8900:1eb6:c36:5a5e:9255:e544:e158', 57872, 0, 0): [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1010)
+2025-09-27 16:00:56,808 - tornado.general - WARNING - SSL Error on 20 ('2409:8900:1eb6:c36:5a5e:9255:e544:e158', 57824, 0, 0): [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1010)
+2025-09-27 16:00:56,820 - tornado.access - INFO - 200 GET /img/critsred.png (2409:8900:1eb6:c36:5a5e:9255:e544:e158) 0.85ms
+2025-09-27 16:00:56,821 - tornado.access - INFO - 200 GET /img/config.png (2409:8900:1eb6:c36:5a5e:9255:e544:e158) 1.05ms
+2025-09-27 16:00:56,822 - tornado.access - INFO - 200 GET /img/spinner.gif (2409:8900:1eb6:c36:5a5e:9255:e544:e158) 0.60ms
+2025-09-27 16:00:56,855 - tornado.access - INFO - 200 GET /img/panfft.png (2409:8900:1eb6:c36:5a5e:9255:e544:e158) 0.44ms
+2025-09-27 16:00:58,094 - tornado.access - INFO - 200 GET /favicon.ico (2409:8900:1eb6:c36:5a5e:9255:e544:e158) 2.31ms
+2025-09-27 16:00:59,200 - tornado.access - INFO - 200 GET /img/critsgrey.png (2409:8900:1eb6:c36:5a5e:9255:e544:e158) 2.86ms
+2025-09-27 16:00:59,247 - tornado.access - INFO - 200 GET /img/poweron.png (2409:8900:1eb6:c36:5a5e:9255:e544:e158) 55.15ms
+2025-09-27 16:00:59,570 - tornado.general - WARNING - SSL Error on 24 ('2409:8900:1eb6:c36:5a5e:9255:e544:e158', 57908, 0, 0): [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1010)
+2025-09-27 16:00:59,905 - tornado.general - WARNING - SSL Error on 24 ('2409:8900:1eb6:c36:5a5e:9255:e544:e158', 57924, 0, 0): [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1010)
+2025-09-27 16:01:00,151 - tornado.general - WARNING - SSL Error on 24 ('2409:8900:1eb6:c36:5a5e:9255:e544:e158', 57930, 0, 0): [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1010)
+2025-09-27 16:01:00,331 - tornado.access - INFO - 101 GET /WSaudioRX (2409:8900:1eb6:c36:5a5e:9255:e544:e158) 1.14ms
+2025-09-27 16:01:00,476 - tornado.access - INFO - 200 GET /img/critsgreen.png (2409:8900:1eb6:c36:5a5e:9255:e544:e158) 1.51ms
+2025-09-27 16:01:00,822 - tornado.access - INFO - 101 GET /WSaudioTX (2409:8900:1eb6:c36:5a5e:9255:e544:e158) 1.20ms
+2025-09-27 16:01:00,986 - tornado.access - INFO - 101 GET /WSCTRX (2409:8900:1eb6:c36:5a5e:9255:e544:e158) 0.82ms
+2025-09-27 16:01:01,074 - UHRR - INFO - Sending rigctld command: f
+2025-09-27 16:01:01,075 - UHRR - DEBUG - rigctld response to 'f': 14270000
+2025-09-27 16:01:01,076 - UHRR - INFO - rigctld command 'f' successful
+2025-09-27 16:01:01,076 - UHRR - INFO - Current frequency from rigctld: 14270000 Hz
+2025-09-27 16:01:01,077 - UHRR - INFO - Sending rigctld command: m
+2025-09-27 16:01:01,078 - UHRR - DEBUG - rigctld response to 'm': 2200
+2025-09-27 16:01:01,078 - UHRR - INFO - rigctld command 'm' successful
+2025-09-27 16:01:01,078 - UHRR - DEBUG - Raw mode response: '2200'
+2025-09-27 16:01:01,078 - UHRR - WARNING - IC-M710 returned only passband 2200, using stored mode USB
+2025-09-27 16:01:03,225 - tornado.access - INFO - 200 GET / (::1) 0.24ms
+2025-09-27 16:01:05,662 - tornado.access - INFO - 200 GET /mobile (::1) 0.60ms
+2025-09-27 16:01:08,388 - tornado.access - WARNING - 405 HEAD /WSaudioRX (::1) 1.70ms
+2025-09-27 16:02:35,956 - tornado.general - INFO - /Users/cheenle/Universal_HamRadio_Remote_HTML5-master/./UHRR modified; restarting server
+2025-09-27 16:02:36,805 - UHRR - INFO - Testing rigctld daemon connection...
+2025-09-27 16:02:36,805 - UHRR - INFO - ✓ rigctld daemon responding! Initial frequency: 14270000
+2025-09-27 16:02:36,805 - UHRR - INFO - Sending rigctld command: f
+2025-09-27 16:02:36,806 - UHRR - DEBUG - rigctld response to 'f': 14270000
+2025-09-27 16:02:36,806 - UHRR - INFO - rigctld command 'f' successful
+2025-09-27 16:02:36,806 - UHRR - INFO - Current frequency from rigctld: 14270000 Hz
+2025-09-27 16:02:36,806 - UHRR - INFO - Sending rigctld command: m
+2025-09-27 16:02:36,806 - UHRR - DEBUG - rigctld response to 'm': 2200
+2025-09-27 16:02:36,806 - UHRR - INFO - rigctld command 'm' successful
+2025-09-27 16:02:36,806 - UHRR - DEBUG - Raw mode response: '2200'
+2025-09-27 16:02:36,806 - UHRR - WARNING - IC-M710 returned only passband 2200, using stored mode USB
+2025-09-27 16:02:36,807 - asyncio - DEBUG - Using selector: KqueueSelector
+2025-09-27 16:03:01,497 - tornado.general - WARNING - SSL Error on 11 ('2409:8900:1eb6:c36:5a5e:9255:e544:e158', 34330, 0, 0): [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1010)
+2025-09-27 16:03:01,500 - tornado.general - WARNING - SSL Error on 12 ('2409:8900:1eb6:c36:5a5e:9255:e544:e158', 34332, 0, 0): [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1010)
+2025-09-27 16:03:12,136 - tornado.general - WARNING - SSL Error on 11 ('2409:8900:1eb6:c36:5a5e:9255:e544:e158', 48664, 0, 0): [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1010)
+2025-09-27 16:03:13,285 - tornado.general - WARNING - SSL Error on 11 ('2409:8900:1eb6:c36:5a5e:9255:e544:e158', 59558, 0, 0): [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1010)
+2025-09-27 16:03:13,292 - tornado.general - WARNING - SSL Error on 12 ('2409:8900:1eb6:c36:5a5e:9255:e544:e158', 59544, 0, 0): [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1010)
+2025-09-27 16:03:14,333 - tornado.general - WARNING - SSL Error on 13 ('2409:8900:1eb6:c36:5a5e:9255:e544:e158', 59572, 0, 0): [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1010)
+2025-09-27 16:03:14,799 - tornado.access - INFO - 200 GET / (2409:8900:1eb6:c36:5a5e:9255:e544:e158) 6.35ms
+2025-09-27 16:03:15,024 - tornado.access - INFO - 304 GET /controls.js (2409:8900:1eb6:c36:5a5e:9255:e544:e158) 12.93ms
+2025-09-27 16:03:16,394 - tornado.access - INFO - 200 GET /favicon.ico (2409:8900:1eb6:c36:5a5e:9255:e544:e158) 2.94ms
+2025-09-27 16:03:18,540 - tornado.access - INFO - 200 GET /img/critsgrey.png (2409:8900:1eb6:c36:5a5e:9255:e544:e158) 2.27ms
+2025-09-27 16:03:18,646 - tornado.general - WARNING - SSL Error on 14 ('2409:8900:1eb6:c36:5a5e:9255:e544:e158', 59598, 0, 0): [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1010)
+2025-09-27 16:03:18,653 - tornado.access - INFO - 200 GET /img/poweron.png (2409:8900:1eb6:c36:5a5e:9255:e544:e158) 121.26ms
+2025-09-27 16:03:21,477 - tornado.general - WARNING - SSL Error on 13 ('2409:8900:1eb6:c36:5a5e:9255:e544:e158', 59610, 0, 0): [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1010)
+2025-09-27 16:03:21,965 - tornado.general - WARNING - SSL Error on 13 ('2409:8900:1eb6:c36:5a5e:9255:e544:e158', 59614, 0, 0): [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1010)
+2025-09-27 16:03:22,595 - tornado.access - INFO - 101 GET /WSaudioRX (2409:8900:1eb6:c36:5a5e:9255:e544:e158) 1.65ms
+2025-09-27 16:03:22,745 - tornado.access - INFO - 200 GET /img/critsgreen.png (2409:8900:1eb6:c36:5a5e:9255:e544:e158) 3.17ms
+2025-09-27 16:03:22,903 - tornado.access - INFO - 101 GET /WSaudioTX (2409:8900:1eb6:c36:5a5e:9255:e544:e158) 1.16ms
+2025-09-27 16:03:23,909 - tornado.access - INFO - 101 GET /WSCTRX (2409:8900:1eb6:c36:5a5e:9255:e544:e158) 1.13ms
+2025-09-27 16:03:24,006 - UHRR - INFO - Sending rigctld command: f
+2025-09-27 16:03:24,008 - UHRR - DEBUG - rigctld response to 'f': 14270000
+2025-09-27 16:03:24,008 - UHRR - INFO - rigctld command 'f' successful
+2025-09-27 16:03:24,008 - UHRR - INFO - Current frequency from rigctld: 14270000 Hz
+2025-09-27 16:03:24,009 - UHRR - INFO - Sending rigctld command: m
+2025-09-27 16:03:24,010 - UHRR - DEBUG - rigctld response to 'm': 2200
+2025-09-27 16:03:24,010 - UHRR - INFO - rigctld command 'm' successful
+2025-09-27 16:03:24,010 - UHRR - DEBUG - Raw mode response: '2200'
+2025-09-27 16:03:24,010 - UHRR - WARNING - IC-M710 returned only passband 2200, using stored mode USB
+2025-09-27 16:03:36,366 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-27 16:03:36,481 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-27 16:03:37,673 - tornado.access - INFO - 200 GET / (2409:8900:1eb6:c36:5a5e:9255:e544:e158) 1.89ms
+2025-09-27 16:03:38,575 - tornado.access - INFO - 200 GET /favicon.ico (2409:8900:1eb6:c36:5a5e:9255:e544:e158) 3.12ms
+2025-09-27 16:03:39,663 - tornado.access - INFO - 200 GET /img/critsgrey.png (2409:8900:1eb6:c36:5a5e:9255:e544:e158) 2.10ms
+2025-09-27 16:03:39,848 - tornado.access - INFO - 200 GET /img/poweron.png (2409:8900:1eb6:c36:5a5e:9255:e544:e158) 191.58ms
+2025-09-27 16:03:39,872 - tornado.general - WARNING - SSL Error on 14 ('2409:8900:1eb6:c36:5a5e:9255:e544:e158', 39962, 0, 0): [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1010)
+2025-09-27 16:03:40,026 - tornado.general - WARNING - SSL Error on 13 ('2409:8900:1eb6:c36:5a5e:9255:e544:e158', 39966, 0, 0): [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1010)
+2025-09-27 16:03:40,131 - tornado.general - WARNING - SSL Error on 13 ('2409:8900:1eb6:c36:5a5e:9255:e544:e158', 39980, 0, 0): [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1010)
+2025-09-27 16:03:40,332 - tornado.access - INFO - 101 GET /WSaudioRX (2409:8900:1eb6:c36:5a5e:9255:e544:e158) 0.88ms
+2025-09-27 16:03:40,390 - tornado.access - INFO - 200 GET /img/critsgreen.png (2409:8900:1eb6:c36:5a5e:9255:e544:e158) 3.35ms
+2025-09-27 16:03:40,507 - tornado.access - INFO - 101 GET /WSaudioTX (2409:8900:1eb6:c36:5a5e:9255:e544:e158) 0.79ms
+2025-09-27 16:03:40,747 - tornado.access - INFO - 101 GET /WSCTRX (2409:8900:1eb6:c36:5a5e:9255:e544:e158) 0.93ms
+2025-09-27 16:03:40,837 - UHRR - INFO - Sending rigctld command: f
+2025-09-27 16:03:40,838 - UHRR - DEBUG - rigctld response to 'f': 14270000
+2025-09-27 16:03:40,838 - UHRR - INFO - rigctld command 'f' successful
+2025-09-27 16:03:40,839 - UHRR - INFO - Current frequency from rigctld: 14270000 Hz
+2025-09-27 16:03:40,839 - UHRR - INFO - Sending rigctld command: m
+2025-09-27 16:03:40,840 - UHRR - DEBUG - rigctld response to 'm': 2200
+2025-09-27 16:03:40,840 - UHRR - INFO - rigctld command 'm' successful
+2025-09-27 16:03:40,841 - UHRR - DEBUG - Raw mode response: '2200'
+2025-09-27 16:03:40,841 - UHRR - WARNING - IC-M710 returned only passband 2200, using stored mode USB
+2025-09-27 16:03:45,286 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-27 16:03:45,398 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-27 16:03:45,450 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-27 16:03:45,567 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-27 16:07:18,995 - tornado.general - WARNING - SSL Error on 11 ('2409:8900:1eb6:c36:5a5e:9255:e544:e158', 43976, 0, 0): [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1010)
+2025-09-27 16:07:18,997 - tornado.general - WARNING - SSL Error on 12 ('2409:8900:1eb6:c36:5a5e:9255:e544:e158', 43974, 0, 0): [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1010)
+2025-09-27 16:07:26,610 - tornado.general - WARNING - SSL Error on 12 ('2409:8900:1eb6:c36:5a5e:9255:e544:e158', 60678, 0, 0): [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1010)
+2025-09-27 16:07:26,623 - tornado.general - WARNING - SSL Error on 11 ('2409:8900:1eb6:c36:5a5e:9255:e544:e158', 60684, 0, 0): [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1010)
+2025-09-27 16:07:29,329 - tornado.general - WARNING - SSL Error on 11 ('2409:8900:1eb6:c36:5a5e:9255:e544:e158', 60710, 0, 0): [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1010)
+2025-09-27 16:07:29,330 - tornado.general - WARNING - SSL Error on 12 ('2409:8900:1eb6:c36:5a5e:9255:e544:e158', 60696, 0, 0): [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1010)
+2025-09-27 16:07:32,913 - tornado.general - WARNING - SSL Error on 11 ('2409:8900:1eb6:c36:5a5e:9255:e544:e158', 60724, 0, 0): [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1010)
+2025-09-27 16:07:33,143 - tornado.general - WARNING - SSL Error on 11 ('2409:8900:1eb6:c36:5a5e:9255:e544:e158', 43752, 0, 0): [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1010)
+2025-09-27 16:07:33,483 - tornado.general - WARNING - SSL Error on 11 ('2409:8900:1eb6:c36:5a5e:9255:e544:e158', 43762, 0, 0): [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1010)
+2025-09-27 16:07:33,505 - tornado.general - WARNING - SSL Error on 12 ('2409:8900:1eb6:c36:5a5e:9255:e544:e158', 43778, 0, 0): [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1010)
+2025-09-27 16:07:33,613 - tornado.general - WARNING - SSL Error on 11 ('2409:8900:1eb6:c36:5a5e:9255:e544:e158', 43794, 0, 0): [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1010)
+2025-09-27 16:07:33,733 - tornado.general - WARNING - SSL Error on 11 ('2409:8900:1eb6:c36:5a5e:9255:e544:e158', 43804, 0, 0): [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1010)
+2025-09-27 16:07:33,936 - tornado.access - INFO - 101 GET /WSCTRX (2409:8900:1eb6:c36:5a5e:9255:e544:e158) 2.00ms
+2025-09-27 16:07:34,115 - tornado.access - INFO - 101 GET /WSaudioRX (2409:8900:1eb6:c36:5a5e:9255:e544:e158) 0.75ms
+2025-09-27 16:07:35,279 - tornado.access - INFO - 101 GET /WSaudioTX (2409:8900:1eb6:c36:5a5e:9255:e544:e158) 1.04ms
+2025-09-27 16:07:35,479 - tornado.access - INFO - 101 GET /WSCTRX (2409:8900:1eb6:c36:5a5e:9255:e544:e158) 0.82ms
+2025-09-27 16:07:35,533 - UHRR - INFO - Sending rigctld command: f
+2025-09-27 16:07:35,535 - UHRR - DEBUG - rigctld response to 'f': 14270000
+2025-09-27 16:07:35,535 - UHRR - INFO - rigctld command 'f' successful
+2025-09-27 16:07:35,535 - UHRR - INFO - Current frequency from rigctld: 14270000 Hz
+2025-09-27 16:07:35,536 - UHRR - INFO - Sending rigctld command: m
+2025-09-27 16:07:35,537 - UHRR - DEBUG - rigctld response to 'm': 2200
+2025-09-27 16:07:35,537 - UHRR - INFO - rigctld command 'm' successful
+2025-09-27 16:07:35,537 - UHRR - DEBUG - Raw mode response: '2200'
+2025-09-27 16:07:35,537 - UHRR - WARNING - IC-M710 returned only passband 2200, using stored mode USB
+2025-09-27 16:07:35,538 - UHRR - INFO - Sending rigctld set command: F 14270000
+2025-09-27 16:07:35,687 - UHRR - DEBUG - rigctld set response to 'F 14270000': RPRT 0
+2025-09-27 16:07:35,688 - UHRR - INFO - rigctld set command 'F 14270000' successful
+2025-09-27 16:07:35,688 - UHRR - INFO - ✓ Frequency set to 14270000 Hz via rigctld
+2025-09-27 16:07:35,708 - asyncio - ERROR - Task exception was never retrieved
+future: <Task finished name='Task-3494' coro=<WebSocketProtocol13.write_message.<locals>.wrapper() done, defined at /Users/cheenle/Library/Python/3.12/lib/python/site-packages/tornado/websocket.py:1111> exception=WebSocketClosedError()>
+Traceback (most recent call last):
+  File "/Users/cheenle/Library/Python/3.12/lib/python/site-packages/tornado/websocket.py", line 1113, in wrapper
+    await fut
+tornado.iostream.StreamClosedError: Stream is closed
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/cheenle/Library/Python/3.12/lib/python/site-packages/tornado/websocket.py", line 1115, in wrapper
+    raise WebSocketClosedError()
+tornado.websocket.WebSocketClosedError
+2025-09-27 16:07:35,711 - asyncio - ERROR - Task exception was never retrieved
+future: <Task finished name='Task-3495' coro=<WebSocketProtocol13.write_message.<locals>.wrapper() done, defined at /Users/cheenle/Library/Python/3.12/lib/python/site-packages/tornado/websocket.py:1111> exception=WebSocketClosedError()>
+Traceback (most recent call last):
+  File "/Users/cheenle/Library/Python/3.12/lib/python/site-packages/tornado/websocket.py", line 1113, in wrapper
+    await fut
+tornado.iostream.StreamClosedError: Stream is closed
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/cheenle/Library/Python/3.12/lib/python/site-packages/tornado/websocket.py", line 1115, in wrapper
+    raise WebSocketClosedError()
+tornado.websocket.WebSocketClosedError
+2025-09-27 16:07:43,000 - tornado.access - INFO - 101 GET /WSaudioTX (2409:8900:1eb6:c36:5a5e:9255:e544:e158) 1.11ms
+2025-09-27 16:07:43,178 - tornado.general - WARNING - SSL Error on 12 ('2409:8900:1eb6:c36:5a5e:9255:e544:e158', 55912, 0, 0): [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1010)
+2025-09-27 16:07:43,298 - tornado.general - WARNING - SSL Error on 12 ('2409:8900:1eb6:c36:5a5e:9255:e544:e158', 55924, 0, 0): [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1010)
+2025-09-27 16:07:43,398 - tornado.general - WARNING - SSL Error on 12 ('2409:8900:1eb6:c36:5a5e:9255:e544:e158', 55928, 0, 0): [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1010)
+2025-09-27 16:07:43,513 - tornado.general - WARNING - SSL Error on 12 ('2409:8900:1eb6:c36:5a5e:9255:e544:e158', 55944, 0, 0): [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1010)
+2025-09-27 16:07:43,612 - tornado.general - WARNING - SSL Error on 12 ('2409:8900:1eb6:c36:5a5e:9255:e544:e158', 55952, 0, 0): [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1010)
+2025-09-27 16:07:43,723 - tornado.general - WARNING - SSL Error on 12 ('2409:8900:1eb6:c36:5a5e:9255:e544:e158', 55954, 0, 0): [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1010)
+2025-09-27 16:07:43,841 - tornado.access - INFO - 101 GET /WSCTRX (2409:8900:1eb6:c36:5a5e:9255:e544:e158) 0.85ms
+2025-09-27 16:07:44,059 - tornado.access - INFO - 101 GET /WSaudioRX (2409:8900:1eb6:c36:5a5e:9255:e544:e158) 0.78ms
+2025-09-27 16:07:44,225 - tornado.access - INFO - 101 GET /WSaudioTX (2409:8900:1eb6:c36:5a5e:9255:e544:e158) 0.86ms
+2025-09-27 16:07:44,384 - tornado.access - INFO - 101 GET /WSCTRX (2409:8900:1eb6:c36:5a5e:9255:e544:e158) 0.86ms
+2025-09-27 16:07:44,518 - UHRR - INFO - Sending rigctld command: f
+2025-09-27 16:07:44,519 - UHRR - DEBUG - rigctld response to 'f': 14270000
+2025-09-27 16:07:44,519 - UHRR - INFO - rigctld command 'f' successful
+2025-09-27 16:07:44,520 - UHRR - INFO - Current frequency from rigctld: 14270000 Hz
+2025-09-27 16:07:44,521 - UHRR - INFO - Sending rigctld command: m
+2025-09-27 16:07:44,521 - UHRR - DEBUG - rigctld response to 'm': 2200
+2025-09-27 16:07:44,522 - UHRR - INFO - rigctld command 'm' successful
+2025-09-27 16:07:44,522 - UHRR - DEBUG - Raw mode response: '2200'
+2025-09-27 16:07:44,522 - UHRR - WARNING - IC-M710 returned only passband 2200, using stored mode USB
+2025-09-27 16:07:44,523 - UHRR - INFO - Sending rigctld set command: F 14270000
+2025-09-27 16:07:44,672 - UHRR - DEBUG - rigctld set response to 'F 14270000': RPRT 0
+2025-09-27 16:07:44,672 - UHRR - INFO - rigctld set command 'F 14270000' successful
+2025-09-27 16:07:44,673 - UHRR - INFO - ✓ Frequency set to 14270000 Hz via rigctld
+2025-09-27 16:07:44,759 - tornado.access - INFO - 101 GET /WSaudioRX (2409:8900:1eb6:c36:5a5e:9255:e544:e158) 0.85ms
+2025-09-27 16:07:44,929 - tornado.access - INFO - 101 GET /WSaudioTX (2409:8900:1eb6:c36:5a5e:9255:e544:e158) 0.99ms
+2025-09-27 16:14:12,281 - tornado.general - WARNING - SSL Error on 13 ('2409:8900:1eb6:c36:5a5e:9255:e544:e158', 42202, 0, 0): [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1010)
+2025-09-27 16:14:12,283 - tornado.general - WARNING - SSL Error on 11 ('2409:8900:1eb6:c36:5a5e:9255:e544:e158', 42206, 0, 0): [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1010)
+2025-09-27 16:14:12,284 - tornado.general - WARNING - SSL Error on 12 ('2409:8900:1eb6:c36:5a5e:9255:e544:e158', 42218, 0, 0): [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1010)
+2025-09-27 16:14:13,631 - tornado.general - WARNING - SSL Error on 11 ('2409:8900:1eb6:c36:5a5e:9255:e544:e158', 53504, 0, 0): [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1010)
+2025-09-27 16:14:14,197 - tornado.general - WARNING - SSL Error on 11 ('2409:8900:1eb6:c36:5a5e:9255:e544:e158', 53514, 0, 0): [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1010)
+2025-09-27 16:14:14,910 - tornado.general - WARNING - SSL Error on 11 ('2409:8900:1eb6:c36:5a5e:9255:e544:e158', 53528, 0, 0): [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1010)
+2025-09-27 16:14:15,552 - tornado.general - WARNING - SSL Error on 11 ('2409:8900:1eb6:c36:5a5e:9255:e544:e158', 53542, 0, 0): [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1010)
+2025-09-27 16:14:15,952 - tornado.general - WARNING - SSL Error on 11 ('2409:8900:1eb6:c36:5a5e:9255:e544:e158', 53556, 0, 0): [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1010)
+2025-09-27 16:14:16,123 - tornado.access - INFO - 101 GET /WSCTRX (2409:8900:1eb6:c36:5a5e:9255:e544:e158) 1.99ms
+2025-09-27 16:14:16,428 - tornado.access - INFO - 101 GET /WSaudioRX (2409:8900:1eb6:c36:5a5e:9255:e544:e158) 1.02ms
+2025-09-27 16:14:16,711 - tornado.access - INFO - 101 GET /WSaudioTX (2409:8900:1eb6:c36:5a5e:9255:e544:e158) 0.47ms
+2025-09-27 16:14:16,967 - tornado.access - INFO - 101 GET /WSCTRX (2409:8900:1eb6:c36:5a5e:9255:e544:e158) 1.02ms
+2025-09-27 16:14:17,046 - UHRR - INFO - Sending rigctld command: f
+2025-09-27 16:14:17,048 - UHRR - DEBUG - rigctld response to 'f': 14270000
+2025-09-27 16:14:17,048 - UHRR - INFO - rigctld command 'f' successful
+2025-09-27 16:14:17,048 - UHRR - INFO - Current frequency from rigctld: 14270000 Hz
+2025-09-27 16:14:17,049 - UHRR - INFO - Sending rigctld command: m
+2025-09-27 16:14:17,050 - UHRR - DEBUG - rigctld response to 'm': 2200
+2025-09-27 16:14:17,050 - UHRR - INFO - rigctld command 'm' successful
+2025-09-27 16:14:17,050 - UHRR - DEBUG - Raw mode response: '2200'
+2025-09-27 16:14:17,050 - UHRR - WARNING - IC-M710 returned only passband 2200, using stored mode USB
+2025-09-27 16:14:17,051 - UHRR - INFO - Sending rigctld set command: F 14270000
+2025-09-27 16:14:17,200 - UHRR - DEBUG - rigctld set response to 'F 14270000': RPRT 0
+2025-09-27 16:14:17,201 - UHRR - INFO - rigctld set command 'F 14270000' successful
+2025-09-27 16:14:17,201 - UHRR - INFO - ✓ Frequency set to 14270000 Hz via rigctld
+2025-09-27 16:14:17,304 - tornado.access - INFO - 101 GET /WSaudioRX (2409:8900:1eb6:c36:5a5e:9255:e544:e158) 1.07ms
+2025-09-27 16:14:17,614 - tornado.access - INFO - 101 GET /WSaudioTX (2409:8900:1eb6:c36:5a5e:9255:e544:e158) 2.14ms
+2025-09-27 16:14:21,062 - tornado.general - WARNING - SSL Error on 17 ('2409:8900:1eb6:c36:5a5e:9255:e544:e158', 53618, 0, 0): [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1010)
+2025-09-27 16:14:21,132 - tornado.general - WARNING - SSL Error on 17 ('2409:8900:1eb6:c36:5a5e:9255:e544:e158', 53632, 0, 0): [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1010)
+2025-09-27 16:14:21,240 - tornado.general - WARNING - 403 GET // (2409:8900:1eb6:c36:5a5e:9255:e544:e158): / is not in root static directory
+2025-09-27 16:14:21,244 - tornado.access - WARNING - 403 GET // (2409:8900:1eb6:c36:5a5e:9255:e544:e158) 3.57ms
+2025-09-27 16:14:21,555 - tornado.access - INFO - 200 GET /favicon.ico (2409:8900:1eb6:c36:5a5e:9255:e544:e158) 3.67ms
+2025-09-27 16:14:21,772 - tornado.general - WARNING - SSL Error on 18 ('2409:8900:1eb6:c36:5a5e:9255:e544:e158', 53656, 0, 0): [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1010)
+2025-09-27 16:14:34,414 - tornado.access - INFO - 200 GET / (2409:8900:1eb6:c36:5a5e:9255:e544:e158) 3.06ms
+2025-09-27 16:14:34,525 - tornado.access - INFO - 200 GET /style.css (2409:8900:1eb6:c36:5a5e:9255:e544:e158) 2.57ms
+2025-09-27 16:14:34,562 - tornado.general - WARNING - SSL Error on 18 ('2409:8900:1eb6:c36:5a5e:9255:e544:e158', 52166, 0, 0): [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1010)
+2025-09-27 16:14:34,616 - tornado.general - WARNING - SSL Error on 18 ('2409:8900:1eb6:c36:5a5e:9255:e544:e158', 52200, 0, 0): [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1010)
+2025-09-27 16:14:34,626 - tornado.general - WARNING - SSL Error on 19 ('2409:8900:1eb6:c36:5a5e:9255:e544:e158', 52182, 0, 0): [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1010)
+2025-09-27 16:14:34,631 - tornado.general - WARNING - SSL Error on 20 ('2409:8900:1eb6:c36:5a5e:9255:e544:e158', 52198, 0, 0): [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1010)
+2025-09-27 16:14:34,631 - tornado.general - WARNING - SSL Error on 21 ('2409:8900:1eb6:c36:5a5e:9255:e544:e158', 52172, 0, 0): [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1010)
+2025-09-27 16:14:34,641 - tornado.general - WARNING - SSL Error on 23 ('2409:8900:1eb6:c36:5a5e:9255:e544:e158', 52208, 0, 0): [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1010)
+2025-09-27 16:14:34,746 - tornado.general - WARNING - SSL Error on 21 ('2409:8900:1eb6:c36:5a5e:9255:e544:e158', 52226, 0, 0): [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1010)
+2025-09-27 16:14:34,746 - tornado.general - WARNING - SSL Error on 18 ('2409:8900:1eb6:c36:5a5e:9255:e544:e158', 52218, 0, 0): [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1010)
+2025-09-27 16:14:34,746 - tornado.general - WARNING - SSL Error on 20 ('2409:8900:1eb6:c36:5a5e:9255:e544:e158', 52230, 0, 0): [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1010)
+2025-09-27 16:14:34,746 - tornado.access - INFO - 200 GET /controls.js (2409:8900:1eb6:c36:5a5e:9255:e544:e158) 179.32ms
+2025-09-27 16:14:34,746 - tornado.general - WARNING - SSL Error on 19 ('2409:8900:1eb6:c36:5a5e:9255:e544:e158', 52222, 0, 0): [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1010)
+2025-09-27 16:14:34,892 - tornado.general - WARNING - SSL Error on 18 ('2409:8900:1eb6:c36:5a5e:9255:e544:e158', 52234, 0, 0): [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1010)
+2025-09-27 16:14:34,905 - tornado.access - INFO - 200 GET /img/poweroff.png (2409:8900:1eb6:c36:5a5e:9255:e544:e158) 11.95ms
+2025-09-27 16:14:35,230 - tornado.general - WARNING - SSL Error on 21 ('2409:8900:1eb6:c36:5a5e:9255:e544:e158', 52268, 0, 0): [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1010)
+2025-09-27 16:14:35,231 - tornado.general - WARNING - SSL Error on 20 ('2409:8900:1eb6:c36:5a5e:9255:e544:e158', 52250, 0, 0): [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1010)
+2025-09-27 16:14:35,232 - tornado.general - WARNING - SSL Error on 18 ('2409:8900:1eb6:c36:5a5e:9255:e544:e158', 52272, 0, 0): [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1010)
+2025-09-27 16:14:35,233 - tornado.general - WARNING - SSL Error on 22 ('2409:8900:1eb6:c36:5a5e:9255:e544:e158', 52286, 0, 0): [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1010)
+2025-09-27 16:14:35,237 - tornado.access - INFO - 200 GET /img/config.png (2409:8900:1eb6:c36:5a5e:9255:e544:e158) 2.91ms
+2025-09-27 16:14:35,239 - tornado.access - INFO - 200 GET /img/smeter.png (2409:8900:1eb6:c36:5a5e:9255:e544:e158) 1.62ms
+2025-09-27 16:14:35,348 - tornado.access - INFO - 200 GET /img/panfft.png (2409:8900:1eb6:c36:5a5e:9255:e544:e158) 3.28ms
+2025-09-27 16:14:35,370 - tornado.access - INFO - 200 GET /img/critsred.png (2409:8900:1eb6:c36:5a5e:9255:e544:e158) 21.69ms
+2025-09-27 16:14:35,454 - tornado.access - INFO - 200 GET /img/spinner.gif (2409:8900:1eb6:c36:5a5e:9255:e544:e158) 2.57ms
+2025-09-27 16:14:37,900 - tornado.access - INFO - 200 GET /img/critsgrey.png (2409:8900:1eb6:c36:5a5e:9255:e544:e158) 4.14ms
+2025-09-27 16:14:37,950 - tornado.general - WARNING - SSL Error on 22 ('2409:8900:1eb6:c36:5a5e:9255:e544:e158', 52328, 0, 0): [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1010)
+2025-09-27 16:14:37,951 - tornado.access - INFO - 200 GET /img/poweron.png (2409:8900:1eb6:c36:5a5e:9255:e544:e158) 56.13ms
+2025-09-27 16:14:38,511 - tornado.general - WARNING - SSL Error on 22 ('2409:8900:1eb6:c36:5a5e:9255:e544:e158', 52344, 0, 0): [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1010)
+2025-09-27 16:14:38,660 - tornado.general - WARNING - SSL Error on 22 ('2409:8900:1eb6:c36:5a5e:9255:e544:e158', 52346, 0, 0): [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1010)
+2025-09-27 16:14:38,808 - tornado.access - INFO - 101 GET /WSaudioRX (2409:8900:1eb6:c36:5a5e:9255:e544:e158) 1.07ms
+2025-09-27 16:14:39,073 - tornado.access - INFO - 200 GET /img/critsgreen.png (2409:8900:1eb6:c36:5a5e:9255:e544:e158) 2.36ms
+2025-09-27 16:14:47,168 - tornado.access - INFO - 101 GET /WSaudioTX (2409:8900:1eb6:c36:5a5e:9255:e544:e158) 0.87ms
+2025-09-27 16:14:47,462 - tornado.access - INFO - 101 GET /WSCTRX (2409:8900:1eb6:c36:5a5e:9255:e544:e158) 0.99ms
+2025-09-27 16:14:47,585 - UHRR - INFO - Sending rigctld command: f
+2025-09-27 16:14:47,586 - UHRR - DEBUG - rigctld response to 'f': 14270000
+2025-09-27 16:14:47,586 - UHRR - INFO - rigctld command 'f' successful
+2025-09-27 16:14:47,586 - UHRR - INFO - Current frequency from rigctld: 14270000 Hz
+2025-09-27 16:14:47,586 - UHRR - INFO - Sending rigctld command: m
+2025-09-27 16:14:47,587 - UHRR - DEBUG - rigctld response to 'm': 2200
+2025-09-27 16:14:47,587 - UHRR - INFO - rigctld command 'm' successful
+2025-09-27 16:14:47,587 - UHRR - DEBUG - Raw mode response: '2200'
+2025-09-27 16:14:47,587 - UHRR - WARNING - IC-M710 returned only passband 2200, using stored mode USB
+2025-09-27 16:14:56,126 - UHRR - INFO - Setting PTT: status=true, ptt_state=True, ptt_value=1
+2025-09-27 16:14:56,186 - UHRR - INFO - ✓ PTT set to true via rigctld (fast)
+2025-09-27 16:14:56,188 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-27 16:14:56,306 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-27 16:14:56,440 - UHRR - INFO - PyAudio TX initialized: rate=48000, encoded=0
+2025-09-27 16:14:56,963 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-27 16:14:57,080 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-27 16:14:57,782 - UHRR - INFO - Setting PTT: status=true, ptt_state=True, ptt_value=1
+2025-09-27 16:14:57,842 - UHRR - INFO - ✓ PTT set to true via rigctld (fast)
+2025-09-27 16:14:57,844 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-27 16:14:57,953 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-27 16:14:58,064 - UHRR - INFO - PyAudio TX initialized: rate=48000, encoded=0
+2025-09-27 16:15:04,575 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-27 16:15:04,693 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-27 16:15:11,467 - UHRR - INFO - Setting PTT: status=true, ptt_state=True, ptt_value=1
+2025-09-27 16:15:11,527 - UHRR - INFO - ✓ PTT set to true via rigctld (fast)
+2025-09-27 16:15:11,651 - UHRR - INFO - PyAudio TX initialized: rate=48000, encoded=0
+2025-09-27 16:15:13,617 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-27 16:15:13,734 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-27 16:15:15,368 - UHRR - INFO - Setting PTT: status=true, ptt_state=True, ptt_value=1
+2025-09-27 16:15:15,428 - UHRR - INFO - ✓ PTT set to true via rigctld (fast)
+2025-09-27 16:15:15,429 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-27 16:15:15,540 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-27 16:15:15,662 - UHRR - INFO - PyAudio TX initialized: rate=48000, encoded=0
+2025-09-27 16:15:16,443 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-27 16:15:16,554 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-27 16:15:22,467 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-27 16:15:22,586 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-27 16:15:22,588 - tornado.application - ERROR - Uncaught exception GET /WSaudioTX (2409:8900:1eb6:c36:5a5e:9255:e544:e158)
+HTTPServerRequest(protocol='https', host='p7.vlsc.net:8888', method='GET', uri='/WSaudioTX', version='HTTP/1.1', remote_ip='2409:8900:1eb6:c36:5a5e:9255:e544:e158')
+Traceback (most recent call last):
+  File "/Users/cheenle/Library/Python/3.12/lib/python/site-packages/tornado/web.py", line 1848, in _execute
+    result = await result
+             ^^^^^^^^^^^^
+  File "/Users/cheenle/Library/Python/3.12/lib/python/site-packages/tornado/websocket.py", line 277, in get
+    await self.ws_connection.accept_connection(self)
+  File "/Users/cheenle/Library/Python/3.12/lib/python/site-packages/tornado/websocket.py", line 890, in accept_connection
+    await self._accept_connection(handler)
+  File "/Users/cheenle/Library/Python/3.12/lib/python/site-packages/tornado/websocket.py", line 973, in _accept_connection
+    await self._receive_frame_loop()
+  File "/Users/cheenle/Library/Python/3.12/lib/python/site-packages/tornado/websocket.py", line 1130, in _receive_frame_loop
+    self.handler.on_ws_connection_close(self.close_code, self.close_reason)
+  File "/Users/cheenle/Library/Python/3.12/lib/python/site-packages/tornado/websocket.py", line 599, in on_ws_connection_close
+    self.on_connection_close()
+  File "/Users/cheenle/Library/Python/3.12/lib/python/site-packages/tornado/websocket.py", line 591, in on_connection_close
+    self.on_close()
+  File "/Users/cheenle/Universal_HamRadio_Remote_HTML5-master.bakkk/./UHRR", line 433, in on_close
+    self.audio_playback.close()
+  File "/Users/cheenle/Universal_HamRadio_Remote_HTML5-master.bakkk/audio_interface.py", line 279, in close
+    if self.stream.is_active():
+       ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/cheenle/Library/Python/3.12/lib/python/site-packages/pyaudio/__init__.py", line 508, in is_active
+    return pa.is_stream_active(self._stream)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+OSError: Stream not open
+2025-09-27 16:15:23,038 - tornado.access - INFO - 200 GET /img/critsred.png (2409:8900:1eb6:c36:5a5e:9255:e544:e158) 6.97ms
+2025-09-27 16:15:23,221 - tornado.access - INFO - 200 GET /img/poweroff.png (2409:8900:1eb6:c36:5a5e:9255:e544:e158) 604.02ms
+2025-09-27 16:15:24,742 - tornado.access - INFO - 200 GET /img/critsgrey.png (2409:8900:1eb6:c36:5a5e:9255:e544:e158) 4.73ms
+2025-09-27 16:15:24,822 - tornado.general - WARNING - SSL Error on 22 ('2409:8900:1eb6:c36:5a5e:9255:e544:e158', 53720, 0, 0): [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1010)
+2025-09-27 16:15:24,973 - tornado.general - WARNING - SSL Error on 22 ('2409:8900:1eb6:c36:5a5e:9255:e544:e158', 53724, 0, 0): [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1010)
+2025-09-27 16:15:25,081 - tornado.general - WARNING - SSL Error on 22 ('2409:8900:1eb6:c36:5a5e:9255:e544:e158', 53732, 0, 0): [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1010)
+2025-09-27 16:15:25,299 - tornado.access - INFO - 101 GET /WSaudioRX (2409:8900:1eb6:c36:5a5e:9255:e544:e158) 1.17ms
+2025-09-27 16:15:25,540 - tornado.access - INFO - 101 GET /WSaudioTX (2409:8900:1eb6:c36:5a5e:9255:e544:e158) 1.03ms
+2025-09-27 16:15:25,719 - tornado.access - INFO - 101 GET /WSCTRX (2409:8900:1eb6:c36:5a5e:9255:e544:e158) 0.89ms
+2025-09-27 16:15:25,823 - UHRR - INFO - Sending rigctld command: f
+2025-09-27 16:15:25,824 - UHRR - DEBUG - rigctld response to 'f': 14270000
+2025-09-27 16:15:25,825 - UHRR - INFO - rigctld command 'f' successful
+2025-09-27 16:15:25,825 - UHRR - INFO - Current frequency from rigctld: 14270000 Hz
+2025-09-27 16:15:25,826 - UHRR - INFO - Sending rigctld command: m
+2025-09-27 16:15:25,826 - UHRR - DEBUG - rigctld response to 'm': 2200
+2025-09-27 16:15:25,827 - UHRR - INFO - rigctld command 'm' successful
+2025-09-27 16:15:25,827 - UHRR - DEBUG - Raw mode response: '2200'
+2025-09-27 16:15:25,827 - UHRR - WARNING - IC-M710 returned only passband 2200, using stored mode USB
+2025-09-27 16:15:32,140 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-27 16:15:32,257 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-27 16:15:33,471 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-27 16:15:33,581 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-27 16:16:16,171 - tornado.access - INFO - 200 GET /img/critsred.png (2409:8900:1eb6:c36:5a5e:9255:e544:e158) 4.49ms
+2025-09-27 16:16:33,454 - UHRR - INFO - PyAudio TX initialized: rate=48000, encoded=0
+2025-09-27 16:16:33,693 - UHRR - INFO - Setting PTT: status=true, ptt_state=True, ptt_value=1
+2025-09-27 16:16:33,753 - UHRR - INFO - ✓ PTT set to true via rigctld (fast)
+2025-09-27 16:16:33,755 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-27 16:16:33,873 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-27 16:16:34,212 - UHRR - INFO - Setting PTT: status=true, ptt_state=True, ptt_value=1
+2025-09-27 16:16:34,272 - UHRR - INFO - ✓ PTT set to true via rigctld (fast)
+2025-09-27 16:16:34,285 - UHRR - INFO - PyAudio TX initialized: rate=48000, encoded=0
+2025-09-27 16:16:34,563 - UHRR - INFO - PyAudio TX initialized: rate=48000, encoded=0
+2025-09-27 16:16:34,850 - UHRR - INFO - PyAudio TX initialized: rate=48000, encoded=0
+2025-09-27 16:16:35,135 - UHRR - INFO - PyAudio TX initialized: rate=48000, encoded=0
+2025-09-27 16:16:35,438 - UHRR - INFO - PyAudio TX initialized: rate=48000, encoded=0
+2025-09-27 16:16:35,957 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-27 16:16:36,069 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-27 16:16:36,084 - UHRR - INFO - Setting PTT: status=true, ptt_state=True, ptt_value=1
+2025-09-27 16:16:36,143 - UHRR - INFO - ✓ PTT set to true via rigctld (fast)
+2025-09-27 16:16:36,145 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-27 16:16:36,255 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-27 16:16:36,257 - UHRR - INFO - Setting PTT: status=true, ptt_state=True, ptt_value=1
+2025-09-27 16:16:36,316 - UHRR - INFO - ✓ PTT set to true via rigctld (fast)
+2025-09-27 16:16:36,317 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-27 16:16:36,435 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-27 16:16:36,448 - UHRR - INFO - Setting PTT: status=true, ptt_state=True, ptt_value=1
+2025-09-27 16:16:36,507 - UHRR - INFO - ✓ PTT set to true via rigctld (fast)
+2025-09-27 16:16:36,508 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-27 16:16:36,618 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-27 16:16:36,620 - UHRR - INFO - Setting PTT: status=true, ptt_state=True, ptt_value=1
+2025-09-27 16:16:36,679 - UHRR - INFO - ✓ PTT set to true via rigctld (fast)
+2025-09-27 16:16:36,680 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-27 16:16:36,795 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+Warning: Some Hamlib functions not available: dlsym(0x7101d410, rig_set_pathname): symbol not found
+Available audio input devices:
+  2: USB Audio CODEC  (channels: 2)
+  3: USB PnP Sound Device (channels: 1)
+Found input device: USB Audio CODEC  (index 2)
+Device 'USB Audio CODEC ' supports 2 input channels
+PyAudio input stream opened successfully with 2 channel(s)
+PyAudio audio interface initialized and stereo processing started
+Audio recording ready...
+Radio control initialized successfully
+Power status tracked as 1 (using rigctld)
+IC-M710 VFO set to default (VFO A) with rigctld
+HTTP server started.
+=== MainHandler.get() called ===
+Tornado current user:None
+Attempting to read www/index.html
+Read 14263 characters from index.html
+Content written to response
+new connection on AudioRXHandler socket.
+new connection on AudioTXHandler socket.
+Power status tracked as 1 (using rigctld)
+new connection on ControlTRX socket.
+getFreq:
+Send to all: getFreq:14270000
+getMode:
+Send to all: getMode:USB
+PING
+PING
+connection closed for TX socket
+connection closed for audioRX
+setPTT:false
+Send to all: getPTT:False
+error TXMETER
+=== MainHandler.get() called ===
+Tornado current user:None
+Attempting to read www/index.html
+Read 14263 characters from index.html
+Content written to response
+new connection on AudioRXHandler socket.
+new connection on AudioTXHandler socket.
+Power status tracked as 1 (using rigctld)
+new connection on ControlTRX socket.
+getFreq:
+Send to all: getFreq:14270000
+getMode:
+Send to all: getMode:USB
+PING
+setPTT:false
+Send to all: getPTT:False
+setPTT:false
+Send to all: getPTT:False
+PING
+PING
+PING
+PING
+PING
+PING
+PING
+PING
+PING
+PING
+PING
+PING
+PING
+connection closed for audioRX
+connection closed for TX socket
+error TXMETER
+Power status tracked as 1 (using rigctld)
+new connection on ControlTRX socket.
+new connection on AudioRXHandler socket.
+new connection on AudioTXHandler socket.
+Power status tracked as 1 (using rigctld)
+new connection on ControlTRX socket.
+getFreq:
+Send to all: getFreq:14270000
+getMode:
+Send to all: getMode:USB
+setFreq:14270000
+Send to all: getFreq:14270000
+connection closed for TX socket
+connection closed for audioRX
+error TXMETER
+error TXMETER
+new connection on AudioTXHandler socket.
+Power status tracked as 1 (using rigctld)
+new connection on ControlTRX socket.
+new connection on AudioRXHandler socket.
+new connection on AudioTXHandler socket.
+Power status tracked as 1 (using rigctld)
+new connection on ControlTRX socket.
+getFreq:
+Send to all: getFreq:14270000
+getMode:
+Send to all: getMode:USB
+setFreq:14270000
+Send to all: getFreq:14270000
+new connection on AudioRXHandler socket.
+new connection on AudioTXHandler socket.
+connection closed for audioRX
+connection closed for TX socket
+connection closed for TX socket
+connection closed for TX socket
+connection closed for audioRX
+error TXMETER
+error TXMETER
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Power status tracked as 1 (using rigctld)
+new connection on ControlTRX socket.
+new connection on AudioRXHandler socket.
+new connection on AudioTXHandler socket.
+Power status tracked as 1 (using rigctld)
+new connection on ControlTRX socket.
+getFreq:
+Send to all: getFreq:14270000
+getMode:
+Send to all: getMode:USB
+setFreq:14270000
+Send to all: getFreq:14270000
+new connection on AudioRXHandler socket.
+new connection on AudioTXHandler socket.
+=== MainHandler.get() called ===
+Tornado current user:None
+Attempting to read www/index.html
+Read 14263 characters from index.html
+Content written to response
+new connection on AudioRXHandler socket.
+new connection on AudioTXHandler socket.
+Power status tracked as 1 (using rigctld)
+new connection on ControlTRX socket.
+getFreq:
+Send to all: getFreq:14270000
+getMode:
+Send to all: getMode:USB
+PING
+PING
+setPTT:true
+Send to all: getPTT:True
+stop ptt on timeout (1s)
+Available audio output devices:
+  0: VA2462-2K-HD (channels: 2)
+  1: USB Audio CODEC  (channels: 2)
+  3: USB PnP Sound Device (channels: 2)
+  4: Mac mini扬声器 (channels: 2)
+Found output device: USB Audio CODEC  (index 1)
+PyAudio output stream opened successfully at 48000Hz with low latency settings
+setPTT:false
+Send to all: getPTT:False
+setPTT:true
+Send to all: getPTT:True
+stop ptt on timeout (1s)
+PING
+Available audio output devices:
+  0: VA2462-2K-HD (channels: 2)
+  1: USB Audio CODEC  (channels: 2)
+  3: USB PnP Sound Device (channels: 2)
+  4: Mac mini扬声器 (channels: 2)
+Found output device: USB Audio CODEC  (index 1)
+PyAudio output stream opened successfully at 48000Hz with low latency settings
+PING
+setPTT:false
+Send to all: getPTT:False
+PING
+setPTT:true
+Send to all: getPTT:True
+Available audio output devices:
+  0: VA2462-2K-HD (channels: 2)
+  1: USB Audio CODEC  (channels: 2)
+  3: USB PnP Sound Device (channels: 2)
+  4: Mac mini扬声器 (channels: 2)
+Found output device: USB Audio CODEC  (index 1)
+PyAudio output stream opened successfully at 48000Hz with low latency settings
+PING
+setPTT:false
+Send to all: getPTT:False
+setPTT:true
+Send to all: getPTT:True
+stop ptt on timeout (1s)
+Available audio output devices:
+  0: VA2462-2K-HD (channels: 2)
+  1: USB Audio CODEC  (channels: 2)
+  3: USB PnP Sound Device (channels: 2)
+  4: Mac mini扬声器 (channels: 2)
+Found output device: USB Audio CODEC  (index 1)
+PyAudio output stream opened successfully at 48000Hz with low latency settings
+setPTT:false
+Send to all: getPTT:False
+PING
+connection closed for audioRX
+setPTT:false
+Send to all: getPTT:False
+error TXMETER
+new connection on AudioRXHandler socket.
+new connection on AudioTXHandler socket.
+Power status tracked as 1 (using rigctld)
+new connection on ControlTRX socket.
+getFreq:
+Send to all: getFreq:14270000
+getMode:
+Send to all: getMode:USB
+PING
+setPTT:false
+Send to all: getPTT:False
+setPTT:false
+Send to all: getPTT:False
+PING
+PING
+PING
+PING
+PING
+PING
+PING
+PING
+PING
+Error in tailstream: 
+connection closed for audioRX
+PING
+PING
+PING
+Available audio output devices:
+  0: VA2462-2K-HD (channels: 2)
+  1: USB Audio CODEC  (channels: 2)
+  3: USB PnP Sound Device (channels: 2)
+  4: Mac mini扬声器 (channels: 2)
+Found output device: USB Audio CODEC  (index 1)
+PyAudio output stream opened successfully at 48000Hz with low latency settings
+setPTT:true
+Send to all: getPTT:True
+setPTT:false
+Send to all: getPTT:False
+setPTT:true
+Send to all: getPTT:True
+Available audio output devices:
+  0: VA2462-2K-HD (channels: 2)
+  1: USB Audio CODEC  (channels: 2)
+  3: USB PnP Sound Device (channels: 2)
+  4: Mac mini扬声器 (channels: 2)
+Found output device: USB Audio CODEC  (index 1)
+PyAudio output stream opened successfully at 48000Hz with low latency settings
+Available audio output devices:
+  0: VA2462-2K-HD (channels: 2)
+  1: USB Audio CODEC  (channels: 2)
+  3: USB PnP Sound Device (channels: 2)
+  4: Mac mini扬声器 (channels: 2)
+Found output device: USB Audio CODEC  (index 1)
+PyAudio output stream opened successfully at 48000Hz with low latency settings
+Available audio output devices:
+  0: VA2462-2K-HD (channels: 2)
+  1: USB Audio CODEC  (channels: 2)
+  3: USB PnP Sound Device (channels: 2)
+  4: Mac mini扬声器 (channels: 2)
+Found output device: USB Audio CODEC  (index 1)
+PyAudio output stream opened successfully at 48000Hz with low latency settings
+Available audio output devices:
+  0: VA2462-2K-HD (channels: 2)
+  1: USB Audio CODEC  (channels: 2)
+  3: USB PnP Sound Device (channels: 2)
+  4: Mac mini扬声器 (channels: 2)
+Found output device: USB Audio CODEC  (index 1)
+PyAudio output stream opened successfully at 48000Hz with low latency settings
+Available audio output devices:
+  0: VA2462-2K-HD (channels: 2)
+  1: USB Audio CODEC  (channels: 2)
+  3: USB PnP Sound Device (channels: 2)
+  4: Mac mini扬声器 (channels: 2)
+Found output device: USB Audio CODEC  (index 1)
+PyAudio output stream opened successfully at 48000Hz with low latency settings
+setPTT:false
+Send to all: getPTT:False
+setPTT:true
+Send to all: getPTT:True
+setPTT:false
+Send to all: getPTT:False
+setPTT:true
+Send to all: getPTT:True
+setPTT:false
+Send to all: getPTT:False
+PING
+setPTT:true
+Send to all: getPTT:True
+setPTT:false
+Send to all: getPTT:False
+setPTT:true
+Send to all: getPTT:True
+setPTT:false
+Send to all: getPTT:False
+PING
+setPTT:false2025-09-27 16:16:40,673 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-27 16:16:40,790 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-27 16:16:40,793 - tornado.application - ERROR - Uncaught exception GET /WSaudioTX (2409:8900:1eb6:c36:5a5e:9255:e544:e158)
+HTTPServerRequest(protocol='https', host='p7.vlsc.net:8888', method='GET', uri='/WSaudioTX', version='HTTP/1.1', remote_ip='2409:8900:1eb6:c36:5a5e:9255:e544:e158')
+Traceback (most recent call last):
+  File "/Users/cheenle/Library/Python/3.12/lib/python/site-packages/tornado/web.py", line 1848, in _execute
+    result = await result
+             ^^^^^^^^^^^^
+  File "/Users/cheenle/Library/Python/3.12/lib/python/site-packages/tornado/websocket.py", line 277, in get
+    await self.ws_connection.accept_connection(self)
+  File "/Users/cheenle/Library/Python/3.12/lib/python/site-packages/tornado/websocket.py", line 890, in accept_connection
+    await self._accept_connection(handler)
+  File "/Users/cheenle/Library/Python/3.12/lib/python/site-packages/tornado/websocket.py", line 973, in _accept_connection
+    await self._receive_frame_loop()
+  File "/Users/cheenle/Library/Python/3.12/lib/python/site-packages/tornado/websocket.py", line 1130, in _receive_frame_loop
+    self.handler.on_ws_connection_close(self.close_code, self.close_reason)
+  File "/Users/cheenle/Library/Python/3.12/lib/python/site-packages/tornado/websocket.py", line 599, in on_ws_connection_close
+    self.on_connection_close()
+  File "/Users/cheenle/Library/Python/3.12/lib/python/site-packages/tornado/websocket.py", line 591, in on_connection_close
+    self.on_close()
+  File "/Users/cheenle/Universal_HamRadio_Remote_HTML5-master.bakkk/./UHRR", line 433, in on_close
+    self.audio_playback.close()
+  File "/Users/cheenle/Universal_HamRadio_Remote_HTML5-master.bakkk/audio_interface.py", line 279, in close
+    if self.stream.is_active():
+       ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/cheenle/Library/Python/3.12/lib/python/site-packages/pyaudio/__init__.py", line 508, in is_active
+    return pa.is_stream_active(self._stream)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+OSError: Stream not open
+2025-09-27 16:16:40,963 - tornado.access - INFO - 200 GET /img/poweroff.png (2409:8900:1eb6:c36:5a5e:9255:e544:e158) 145.99ms
+2025-09-27 16:16:43,732 - tornado.access - INFO - 200 GET /img/critsgrey.png (2409:8900:1eb6:c36:5a5e:9255:e544:e158) 4.54ms
+2025-09-27 16:16:43,863 - tornado.general - WARNING - SSL Error on 18 ('2409:8900:1eb6:c36:5a5e:9255:e544:e158', 57836, 0, 0): [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1010)
+2025-09-27 16:16:43,963 - tornado.general - WARNING - SSL Error on 18 ('2409:8900:1eb6:c36:5a5e:9255:e544:e158', 57840, 0, 0): [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1010)
+2025-09-27 16:16:44,063 - tornado.general - WARNING - SSL Error on 18 ('2409:8900:1eb6:c36:5a5e:9255:e544:e158', 57844, 0, 0): [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1010)
+2025-09-27 16:16:44,158 - tornado.access - INFO - 101 GET /WSaudioRX (2409:8900:1eb6:c36:5a5e:9255:e544:e158) 0.98ms
+2025-09-27 16:16:44,322 - tornado.access - INFO - 101 GET /WSaudioTX (2409:8900:1eb6:c36:5a5e:9255:e544:e158) 0.35ms
+2025-09-27 16:16:44,563 - tornado.access - INFO - 101 GET /WSCTRX (2409:8900:1eb6:c36:5a5e:9255:e544:e158) 1.01ms
+2025-09-27 16:16:44,642 - UHRR - INFO - Sending rigctld command: f
+2025-09-27 16:16:44,644 - UHRR - DEBUG - rigctld response to 'f': 14270000
+2025-09-27 16:16:44,644 - UHRR - INFO - rigctld command 'f' successful
+2025-09-27 16:16:44,644 - UHRR - INFO - Current frequency from rigctld: 14270000 Hz
+2025-09-27 16:16:44,645 - UHRR - INFO - Sending rigctld command: m
+2025-09-27 16:16:44,646 - UHRR - DEBUG - rigctld response to 'm': 2200
+2025-09-27 16:16:44,646 - UHRR - INFO - rigctld command 'm' successful
+2025-09-27 16:16:44,646 - UHRR - DEBUG - Raw mode response: '2200'
+2025-09-27 16:16:44,647 - UHRR - WARNING - IC-M710 returned only passband 2200, using stored mode USB
+2025-09-27 16:16:48,923 - UHRR - INFO - Setting PTT: status=true, ptt_state=True, ptt_value=1
+2025-09-27 16:16:48,982 - UHRR - INFO - ✓ PTT set to true via rigctld (fast)
+2025-09-27 16:16:48,983 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-27 16:16:49,102 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-27 16:16:49,231 - UHRR - INFO - PyAudio TX initialized: rate=48000, encoded=0
+2025-09-27 16:16:49,594 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-27 16:16:49,709 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-27 16:16:50,054 - UHRR - INFO - Setting PTT: status=true, ptt_state=True, ptt_value=1
+2025-09-27 16:16:50,113 - UHRR - INFO - ✓ PTT set to true via rigctld (fast)
+2025-09-27 16:16:50,132 - UHRR - INFO - PyAudio TX initialized: rate=48000, encoded=0
+2025-09-27 16:16:50,420 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-27 16:16:50,539 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-27 16:16:50,682 - UHRR - INFO - Setting PTT: status=true, ptt_state=True, ptt_value=1
+2025-09-27 16:16:50,742 - UHRR - INFO - ✓ PTT set to true via rigctld (fast)
+2025-09-27 16:16:50,759 - UHRR - INFO - PyAudio TX initialized: rate=48000, encoded=0
+2025-09-27 16:16:51,854 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-27 16:16:51,973 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-27 16:17:15,242 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-27 16:17:15,360 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-27 16:17:15,386 - tornado.application - ERROR - Uncaught exception GET /WSaudioTX (2409:8900:1eb6:c36:5a5e:9255:e544:e158)
+HTTPServerRequest(protocol='https', host='p7.vlsc.net:8888', method='GET', uri='/WSaudioTX', version='HTTP/1.1', remote_ip='2409:8900:1eb6:c36:5a5e:9255:e544:e158')
+Traceback (most recent call last):
+  File "/Users/cheenle/Library/Python/3.12/lib/python/site-packages/tornado/web.py", line 1848, in _execute
+    result = await result
+             ^^^^^^^^^^^^
+  File "/Users/cheenle/Library/Python/3.12/lib/python/site-packages/tornado/websocket.py", line 277, in get
+    await self.ws_connection.accept_connection(self)
+  File "/Users/cheenle/Library/Python/3.12/lib/python/site-packages/tornado/websocket.py", line 890, in accept_connection
+    await self._accept_connection(handler)
+  File "/Users/cheenle/Library/Python/3.12/lib/python/site-packages/tornado/websocket.py", line 973, in _accept_connection
+    await self._receive_frame_loop()
+  File "/Users/cheenle/Library/Python/3.12/lib/python/site-packages/tornado/websocket.py", line 1130, in _receive_frame_loop
+    self.handler.on_ws_connection_close(self.close_code, self.close_reason)
+  File "/Users/cheenle/Library/Python/3.12/lib/python/site-packages/tornado/websocket.py", line 599, in on_ws_connection_close
+    self.on_connection_close()
+  File "/Users/cheenle/Library/Python/3.12/lib/python/site-packages/tornado/websocket.py", line 591, in on_connection_close
+    self.on_close()
+  File "/Users/cheenle/Universal_HamRadio_Remote_HTML5-master.bakkk/./UHRR", line 433, in on_close
+    self.audio_playback.close()
+  File "/Users/cheenle/Universal_HamRadio_Remote_HTML5-master.bakkk/audio_interface.py", line 279, in close
+    if self.stream.is_active():
+       ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/cheenle/Library/Python/3.12/lib/python/site-packages/pyaudio/__init__.py", line 508, in is_active
+    return pa.is_stream_active(self._stream)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+OSError: Stream not open
+2025-09-27 16:17:15,405 - tornado.access - INFO - 200 GET /img/critsred.png (2409:8900:1eb6:c36:5a5e:9255:e544:e158) 1.70ms
+2025-09-27 16:17:15,563 - tornado.access - INFO - 200 GET /img/poweroff.png (2409:8900:1eb6:c36:5a5e:9255:e544:e158) 161.82ms
+2025-09-27 16:17:20,673 - tornado.access - INFO - 200 GET /img/critsgrey.png (2409:8900:1eb6:c36:5a5e:9255:e544:e158) 4.97ms
+2025-09-27 16:17:21,079 - tornado.access - INFO - 200 GET /img/poweron.png (2409:8900:1eb6:c36:5a5e:9255:e544:e158) 415.63ms
+2025-09-27 16:17:21,079 - tornado.general - WARNING - SSL Error on 21 ('2409:8900:1eb6:c36:5a5e:9255:e544:e158', 36372, 0, 0): [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1010)
+2025-09-27 16:17:21,248 - tornado.general - WARNING - SSL Error on 18 ('2409:8900:1eb6:c36:5a5e:9255:e544:e158', 36376, 0, 0): [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1010)
+2025-09-27 16:17:21,492 - tornado.general - WARNING - SSL Error on 18 ('2409:8900:1eb6:c36:5a5e:9255:e544:e158', 36392, 0, 0): [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1010)
+2025-09-27 16:17:21,720 - tornado.access - INFO - 101 GET /WSaudioRX (2409:8900:1eb6:c36:5a5e:9255:e544:e158) 0.86ms
+2025-09-27 16:17:21,938 - tornado.access - INFO - 200 GET /img/critsgreen.png (2409:8900:1eb6:c36:5a5e:9255:e544:e158) 3.61ms
+2025-09-27 16:17:22,056 - tornado.access - INFO - 101 GET /WSaudioTX (2409:8900:1eb6:c36:5a5e:9255:e544:e158) 0.85ms
+2025-09-27 16:17:22,530 - tornado.access - INFO - 101 GET /WSCTRX (2409:8900:1eb6:c36:5a5e:9255:e544:e158) 1.04ms
+2025-09-27 16:17:22,663 - UHRR - INFO - Sending rigctld command: f
+2025-09-27 16:17:22,665 - UHRR - DEBUG - rigctld response to 'f': 14270000
+2025-09-27 16:17:22,665 - UHRR - INFO - rigctld command 'f' successful
+2025-09-27 16:17:22,665 - UHRR - INFO - Current frequency from rigctld: 14270000 Hz
+2025-09-27 16:17:22,666 - UHRR - INFO - Sending rigctld command: m
+2025-09-27 16:17:22,667 - UHRR - DEBUG - rigctld response to 'm': 2200
+2025-09-27 16:17:22,667 - UHRR - INFO - rigctld command 'm' successful
+2025-09-27 16:17:22,667 - UHRR - DEBUG - Raw mode response: '2200'
+2025-09-27 16:17:22,668 - UHRR - WARNING - IC-M710 returned only passband 2200, using stored mode USB
+2025-09-27 16:17:26,024 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-27 16:17:26,143 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-27 16:18:09,708 - tornado.general - WARNING - SSL Error on 21 ('2409:8900:1eb6:c36:5a5e:9255:e544:e158', 48310, 0, 0): [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1010)
+2025-09-27 16:18:09,710 - tornado.general - WARNING - SSL Error on 18 ('2409:8900:1eb6:c36:5a5e:9255:e544:e158', 48324, 0, 0): [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1010)
+2025-09-27 16:18:13,567 - tornado.access - INFO - 200 GET / (2409:8900:1eb6:c36:5a5e:9255:e544:e158) 3.03ms
+2025-09-27 16:18:13,734 - tornado.access - INFO - 200 GET /style.css (2409:8900:1eb6:c36:5a5e:9255:e544:e158) 2.47ms
+2025-09-27 16:18:13,738 - tornado.access - INFO - 200 GET /img/spinner.gif (2409:8900:1eb6:c36:5a5e:9255:e544:e158) 3.39ms
+2025-09-27 16:18:13,892 - tornado.access - INFO - 200 GET /img/poweroff.png (2409:8900:1eb6:c36:5a5e:9255:e544:e158) 152.92ms
+2025-09-27 16:18:13,893 - tornado.general - WARNING - SSL Error on 22 ('2409:8900:1eb6:c36:5a5e:9255:e544:e158', 47302, 0, 0): [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1010)
+2025-09-27 16:18:13,893 - tornado.general - WARNING - SSL Error on 21 ('2409:8900:1eb6:c36:5a5e:9255:e544:e158', 47306, 0, 0): [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1010)
+2025-09-27 16:18:13,893 - tornado.general - WARNING - SSL Error on 23 ('2409:8900:1eb6:c36:5a5e:9255:e544:e158', 47286, 0, 0): [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1010)
+2025-09-27 16:18:14,068 - tornado.access - INFO - 200 GET /img/critsred.png (2409:8900:1eb6:c36:5a5e:9255:e544:e158) 11.69ms
+2025-09-27 16:18:14,167 - tornado.access - INFO - 200 GET /img/config.png (2409:8900:1eb6:c36:5a5e:9255:e544:e158) 3.56ms
+2025-09-27 16:18:14,171 - tornado.access - INFO - 200 GET /img/panfft.png (2409:8900:1eb6:c36:5a5e:9255:e544:e158) 2.39ms
+2025-09-27 16:18:14,173 - tornado.access - INFO - 200 GET /img/smeter.png (2409:8900:1eb6:c36:5a5e:9255:e544:e158) 1.47ms
+2025-09-27 16:18:14,528 - tornado.access - INFO - 200 GET /controls.js (2409:8900:1eb6:c36:5a5e:9255:e544:e158) 680.50ms
+2025-09-27 16:18:18,679 - tornado.access - INFO - 200 GET / (2409:8900:1eb6:c36:5a5e:9255:e544:e158) 1.82ms
+2025-09-27 16:18:19,955 - tornado.access - INFO - 200 GET /favicon.ico (2409:8900:1eb6:c36:5a5e:9255:e544:e158) 3.08ms
+2025-09-27 16:18:22,611 - tornado.access - INFO - 200 GET /img/critsgrey.png (2409:8900:1eb6:c36:5a5e:9255:e544:e158) 1.32ms
+2025-09-27 16:18:22,646 - tornado.general - WARNING - SSL Error on 23 ('2409:8900:1eb6:c36:5a5e:9255:e544:e158', 43520, 0, 0): [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1010)
+2025-09-27 16:18:22,721 - tornado.access - INFO - 200 GET /img/poweron.png (2409:8900:1eb6:c36:5a5e:9255:e544:e158) 114.68ms
+2025-09-27 16:18:22,764 - tornado.general - WARNING - SSL Error on 23 ('2409:8900:1eb6:c36:5a5e:9255:e544:e158', 43528, 0, 0): [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1010)
+2025-09-27 16:18:22,986 - tornado.general - WARNING - SSL Error on 23 ('2409:8900:1eb6:c36:5a5e:9255:e544:e158', 43536, 0, 0): [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1010)
+2025-09-27 16:18:23,093 - tornado.access - INFO - 101 GET /WSaudioRX (2409:8900:1eb6:c36:5a5e:9255:e544:e158) 0.99ms
+2025-09-27 16:18:23,227 - tornado.access - INFO - 200 GET /img/critsgreen.png (2409:8900:1eb6:c36:5a5e:9255:e544:e158) 3.39ms
+2025-09-27 16:18:23,456 - tornado.access - INFO - 101 GET /WSaudioTX (2409:8900:1eb6:c36:5a5e:9255:e544:e158) 0.97ms
+2025-09-27 16:18:28,045 - tornado.access - INFO - 101 GET /WSCTRX (2409:8900:1eb6:c36:5a5e:9255:e544:e158) 0.94ms
+2025-09-27 16:18:28,252 - UHRR - INFO - Sending rigctld command: f
+2025-09-27 16:18:28,253 - UHRR - DEBUG - rigctld response to 'f': 14270000
+2025-09-27 16:18:28,253 - UHRR - INFO - rigctld command 'f' successful
+2025-09-27 16:18:28,253 - UHRR - INFO - Current frequency from rigctld: 14270000 Hz
+2025-09-27 16:18:28,254 - UHRR - INFO - Sending rigctld command: m
+2025-09-27 16:18:28,255 - UHRR - DEBUG - rigctld response to 'm': 2200
+2025-09-27 16:18:28,255 - UHRR - INFO - rigctld command 'm' successful
+2025-09-27 16:18:28,255 - UHRR - DEBUG - Raw mode response: '2200'
+2025-09-27 16:18:28,256 - UHRR - WARNING - IC-M710 returned only passband 2200, using stored mode USB
+2025-09-27 16:18:35,064 - UHRR - INFO - Sending rigctld set command: F 70500000
+2025-09-27 16:18:35,213 - UHRR - DEBUG - rigctld set response to 'F 70500000': RPRT 0
+2025-09-27 16:18:35,214 - UHRR - INFO - rigctld set command 'F 70500000' successful
+2025-09-27 16:18:35,214 - UHRR - INFO - ✓ Frequency set to 70500000 Hz via rigctld
+2025-09-27 16:18:35,216 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-27 16:18:35,328 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-27 16:18:45,033 - tornado.access - INFO - 200 GET / (2409:8900:1eb6:c36:5a5e:9255:e544:e158) 1.31ms
+2025-09-27 16:18:45,164 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-27 16:18:45,275 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-27 16:18:46,525 - tornado.access - INFO - 200 GET /favicon.ico (2409:8900:1eb6:c36:5a5e:9255:e544:e158) 2.13ms
+2025-09-27 16:18:49,083 - tornado.general - WARNING - SSL Error on 23 ('2409:8900:1eb6:c36:5a5e:9255:e544:e158', 34968, 0, 0): [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1010)
+2025-09-27 16:18:51,821 - tornado.general - WARNING - SSL Error on 24 ('2409:8900:1eb6:c36:5a5e:9255:e544:e158', 34970, 0, 0): [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1010)
+2025-09-27 16:18:52,119 - tornado.general - WARNING - SSL Error on 23 ('2409:8900:1eb6:c36:5a5e:9255:e544:e158', 34984, 0, 0): [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1010)
+2025-09-27 16:18:52,296 - tornado.access - INFO - 101 GET /WSaudioRX (2409:8900:1eb6:c36:5a5e:9255:e544:e158) 1.11ms
+2025-09-27 16:18:52,615 - tornado.access - INFO - 101 GET /WSaudioTX (2409:8900:1eb6:c36:5a5e:9255:e544:e158) 0.98ms
+2025-09-27 16:18:52,923 - tornado.access - INFO - 101 GET /WSCTRX (2409:8900:1eb6:c36:5a5e:9255:e544:e158) 0.69ms
+2025-09-27 16:18:53,069 - UHRR - INFO - Sending rigctld command: f
+2025-09-27 16:18:53,070 - UHRR - DEBUG - rigctld response to 'f': 70500000
+2025-09-27 16:18:53,071 - UHRR - INFO - rigctld command 'f' successful
+2025-09-27 16:18:53,071 - UHRR - INFO - Current frequency from rigctld: 70500000 Hz
+2025-09-27 16:18:53,072 - UHRR - INFO - Sending rigctld command: m
+2025-09-27 16:18:53,073 - UHRR - DEBUG - rigctld response to 'm': 2200
+2025-09-27 16:18:53,073 - UHRR - INFO - rigctld command 'm' successful
+2025-09-27 16:18:53,073 - UHRR - DEBUG - Raw mode response: '2200'
+2025-09-27 16:18:53,073 - UHRR - WARNING - IC-M710 returned only passband 2200, using stored mode USB
+2025-09-27 16:18:59,409 - UHRR - INFO - Sending rigctld set command: F 14270000
+2025-09-27 16:18:59,558 - UHRR - DEBUG - rigctld set response to 'F 14270000': RPRT 0
+2025-09-27 16:18:59,558 - UHRR - INFO - rigctld set command 'F 14270000' successful
+2025-09-27 16:18:59,559 - UHRR - INFO - ✓ Frequency set to 14270000 Hz via rigctld
+2025-09-27 16:18:59,561 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-27 16:18:59,677 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-27 16:19:02,062 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-27 16:19:02,175 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+
+Send to all: getPTT:False
+error TXMETER
+new connection on AudioRXHandler socket.
+new connection on AudioTXHandler socket.
+Power status tracked as 1 (using rigctld)
+new connection on ControlTRX socket.
+getFreq:
+Send to all: getFreq:14270000
+getMode:
+Send to all: getMode:USB
+PING
+PING
+setPTT:true
+Send to all: getPTT:True
+stop ptt on timeout (1s)
+Available audio output devices:
+  0: VA2462-2K-HD (channels: 2)
+  1: USB Audio CODEC  (channels: 2)
+  3: USB PnP Sound Device (channels: 2)
+  4: Mac mini扬声器 (channels: 2)
+Found output device: USB Audio CODEC  (index 1)
+PyAudio output stream opened successfully at 48000Hz with low latency settings
+setPTT:false
+Send to all: getPTT:False
+PING
+setPTT:true
+Send to all: getPTT:True
+Available audio output devices:
+  0: VA2462-2K-HD (channels: 2)
+  1: USB Audio CODEC  (channels: 2)
+  3: USB PnP Sound Device (channels: 2)
+  4: Mac mini扬声器 (channels: 2)
+Found output device: USB Audio CODEC  (index 1)
+PyAudio output stream opened successfully at 48000Hz with low latency settings
+setPTT:false
+Send to all: getPTT:False
+setPTT:true
+Send to all: getPTT:True
+Available audio output devices:
+  0: VA2462-2K-HD (channels: 2)
+  1: USB Audio CODEC  (channels: 2)
+  3: USB PnP Sound Device (channels: 2)
+  4: Mac mini扬声器 (channels: 2)
+Found output device: USB Audio CODEC  (index 1)
+PyAudio output stream opened successfully at 48000Hz with low latency settings
+setPTT:false
+Send to all: getPTT:False
+PING
+PING
+PING
+PING
+PING
+PING
+PING
+PING
+PING
+PING
+setPTT:false
+Send to all: getPTT:False
+connection closed for audioRX
+error TXMETER
+new connection on AudioRXHandler socket.
+new connection on AudioTXHandler socket.
+Power status tracked as 1 (using rigctld)
+new connection on ControlTRX socket.
+getFreq:
+Send to all: getFreq:14270000
+getMode:
+Send to all: getMode:USB
+PING
+setPTT:false
+Send to all: getPTT:False
+connection closed for audioRX
+connection closed for TX socket
+error TXMETER
+=== MainHandler.get() called ===
+Tornado current user:None
+Attempting to read www/index.html
+Read 14263 characters from index.html
+Content written to response
+=== MainHandler.get() called ===
+Tornado current user:None
+Attempting to read www/index.html
+Read 14263 characters from index.html
+Content written to response
+new connection on AudioRXHandler socket.
+new connection on AudioTXHandler socket.
+Power status tracked as 1 (using rigctld)
+new connection on ControlTRX socket.
+getFreq:
+Send to all: getFreq:14270000
+getMode:
+Send to all: getMode:USB
+PING
+setFreq:0070500000
+Send to all: getFreq:70500000
+setPTT:false
+Send to all: getPTT:False
+PING
+PING
+=== MainHandler.get() called ===
+Tornado current user:None
+Attempting to read www/index.html
+Read 14263 characters from index.html
+Content written to response
+setPTT:false
+Send to all: getPTT:False
+connection closed for TX socket
+connection closed for audioRX
+error TXMETER
+new connection on AudioRXHandler socket.
+new connection on AudioTXHandler socket.
+Power status tracked as 1 (using rigctld)
+new connection on ControlTRX socket.
+getFreq:
+Send to all: getFreq:70500000
+getMode:
+Send to all: getMode:USB
+PING
+PING
+setFreq:014270000
+Send to all: getFreq:14270000
+setPTT:false
+Send to all: getPTT:False
+connection closed for TX socket
+connection closed for audioRX
+setPTT:false
+Send to all: getPTT:False
+error TXMETER
+connection closed for TX socket
+connection closed for TX socket
+connection closed for audioRX
+connection closed for audioRX
+error TXMETER
+error TXMETER
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)
+Shutdown TRX
+Power status tracked as 0 (using rigctld)2025-09-27 22:01:57,964 - tornado.general - WARNING - SSL Error on 11 ('2409:896a:195:8be0:fc26:44bf:4ca6:83e7', 36258, 0, 0): [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1010)
+2025-09-27 22:01:57,967 - tornado.general - WARNING - SSL Error on 12 ('2409:896a:195:8be0:fc26:44bf:4ca6:83e7', 36248, 0, 0): [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1010)
+2025-09-27 22:01:58,174 - tornado.access - INFO - 200 GET / (2409:896a:195:8be0:fc26:44bf:4ca6:83e7) 5.39ms
+2025-09-27 22:01:58,371 - tornado.access - INFO - 200 GET /style.css (2409:896a:195:8be0:fc26:44bf:4ca6:83e7) 2.65ms
+2025-09-27 22:01:58,530 - tornado.general - WARNING - SSL Error on 13 ('2409:896a:195:8be0:fc26:44bf:4ca6:83e7', 36288, 0, 0): [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1010)
+2025-09-27 22:01:58,571 - tornado.general - WARNING - SSL Error on 14 ('2409:896a:195:8be0:fc26:44bf:4ca6:83e7', 36272, 0, 0): [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1010)
+2025-09-27 22:01:58,592 - tornado.general - WARNING - SSL Error on 12 ('2409:896a:195:8be0:fc26:44bf:4ca6:83e7', 36298, 0, 0): [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1010)
+2025-09-27 22:01:58,592 - tornado.general - WARNING - SSL Error on 15 ('2409:896a:195:8be0:fc26:44bf:4ca6:83e7', 36262, 0, 0): [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1010)
+2025-09-27 22:01:58,594 - tornado.general - WARNING - SSL Error on 16 ('2409:896a:195:8be0:fc26:44bf:4ca6:83e7', 36302, 0, 0): [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1010)
+2025-09-27 22:01:58,710 - tornado.general - WARNING - SSL Error on 12 ('2409:896a:195:8be0:fc26:44bf:4ca6:83e7', 36310, 0, 0): [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1010)
+2025-09-27 22:01:58,755 - tornado.access - INFO - 200 GET /controls.js (2409:896a:195:8be0:fc26:44bf:4ca6:83e7) 252.44ms
+2025-09-27 22:01:58,759 - tornado.general - WARNING - SSL Error on 14 ('2409:896a:195:8be0:fc26:44bf:4ca6:83e7', 36322, 0, 0): [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1010)
+2025-09-27 22:01:58,772 - tornado.access - INFO - 200 GET /img/smeter.png (2409:896a:195:8be0:fc26:44bf:4ca6:83e7) 3.40ms
+2025-09-27 22:01:58,773 - tornado.access - INFO - 200 GET /img/config.png (2409:896a:195:8be0:fc26:44bf:4ca6:83e7) 4.17ms
+2025-09-27 22:01:58,908 - tornado.access - INFO - 200 GET /img/panfft.png (2409:896a:195:8be0:fc26:44bf:4ca6:83e7) 1.71ms
+2025-09-27 22:01:58,911 - tornado.access - INFO - 200 GET /img/critsred.png (2409:896a:195:8be0:fc26:44bf:4ca6:83e7) 1.97ms
+2025-09-27 22:01:58,912 - tornado.access - INFO - 200 GET /img/spinner.gif (2409:896a:195:8be0:fc26:44bf:4ca6:83e7) 1.25ms
+2025-09-27 22:01:59,073 - tornado.access - INFO - 200 GET /img/poweroff.png (2409:896a:195:8be0:fc26:44bf:4ca6:83e7) 275.82ms
+2025-09-27 22:02:02,314 - tornado.access - INFO - 200 GET /img/critsgrey.png (2409:896a:195:8be0:fc26:44bf:4ca6:83e7) 6.61ms
+2025-09-27 22:02:02,370 - tornado.access - INFO - 200 GET /img/poweron.png (2409:896a:195:8be0:fc26:44bf:4ca6:83e7) 71.78ms
+2025-09-27 22:02:02,424 - tornado.general - WARNING - SSL Error on 18 ('2409:896a:195:8be0:fc26:44bf:4ca6:83e7', 36388, 0, 0): [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1010)
+2025-09-27 22:02:02,613 - tornado.general - WARNING - SSL Error on 14 ('2409:896a:195:8be0:fc26:44bf:4ca6:83e7', 36402, 0, 0): [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1010)
+2025-09-27 22:02:02,808 - tornado.general - WARNING - SSL Error on 14 ('2409:896a:195:8be0:fc26:44bf:4ca6:83e7', 36404, 0, 0): [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1010)
+2025-09-27 22:02:03,015 - tornado.access - INFO - 101 GET /WSaudioRX (2409:896a:195:8be0:fc26:44bf:4ca6:83e7) 2.97ms
+2025-09-27 22:02:03,147 - tornado.access - INFO - 200 GET /img/critsgreen.png (2409:896a:195:8be0:fc26:44bf:4ca6:83e7) 3.22ms
+2025-09-27 22:02:03,328 - tornado.access - INFO - 101 GET /WSaudioTX (2409:896a:195:8be0:fc26:44bf:4ca6:83e7) 0.69ms
+2025-09-27 22:02:03,655 - tornado.access - INFO - 101 GET /WSCTRX (2409:896a:195:8be0:fc26:44bf:4ca6:83e7) 1.09ms
+2025-09-27 22:02:03,795 - UHRR - INFO - Sending rigctld command: f
+2025-09-27 22:02:03,804 - UHRR - DEBUG - rigctld response to 'f': 14270000
+2025-09-27 22:02:03,804 - UHRR - INFO - rigctld command 'f' successful
+2025-09-27 22:02:03,804 - UHRR - INFO - Current frequency from rigctld: 14270000 Hz
+2025-09-27 22:02:03,805 - UHRR - INFO - Sending rigctld command: m
+2025-09-27 22:02:03,806 - UHRR - DEBUG - rigctld response to 'm': 2200
+2025-09-27 22:02:03,806 - UHRR - INFO - rigctld command 'm' successful
+2025-09-27 22:02:03,806 - UHRR - DEBUG - Raw mode response: '2200'
+2025-09-27 22:02:03,806 - UHRR - WARNING - IC-M710 returned only passband 2200, using stored mode USB
+2025-09-27 22:03:01,198 - tornado.general - WARNING - SSL Error on 11 ('2409:896a:195:8be0:fc26:44bf:4ca6:83e7', 47268, 0, 0): [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1010)
+2025-09-27 22:03:01,201 - tornado.general - WARNING - SSL Error on 12 ('2409:896a:195:8be0:fc26:44bf:4ca6:83e7', 47274, 0, 0): [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1010)
+2025-09-27 22:04:01,232 - tornado.general - WARNING - SSL Error on 11 ('2409:896a:195:8be0:fc26:44bf:4ca6:83e7', 42958, 0, 0): [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1010)
+2025-09-27 22:04:01,248 - tornado.general - WARNING - SSL Error on 12 ('2409:896a:195:8be0:fc26:44bf:4ca6:83e7', 42964, 0, 0): [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN] ssl/tls alert certificate unknown (_ssl.c:1010)

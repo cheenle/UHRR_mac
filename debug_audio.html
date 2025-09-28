@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Audio Debug Test</title>
+</head>
+<body>
+    <h1>Audio Debug Test</h1>
+    <button id="startButton">Start Audio Test</button>
+    <button id="resumeButton">Resume Audio Context</button>
+    <div id="status"></div>
+    <script>
+        let audioContext;
+        let testBuffer;
+        
+        // Create a simple test tone
+        function createTestTone() {
+            if (!audioContext) return;
+            
+            const sampleRate = 8000;
+            const duration = 0.5; // 0.5 seconds
+            const frequency = 440; // A note
+            
+            const length = sampleRate * duration;
+            const audioData = new Float32Array(length);
+            
+            for (let i = 0; i < length; i++) {
+                audioData[i] = Math.sin(2 * Math.PI * frequency * i / sampleRate);
+            }
+            
+            testBuffer = audioContext.createBuffer(1, audioData.length, sampleRate);
+            testBuffer.copyToChannel(audioData, 0);
+            
+            document.getElementById('status').innerHTML += '<p>Test tone created</p>';
+        }
+        
+        document.getElementById('startButton').addEventListener('click', async function() {
+            try {
+                // Create audio context
+                if (!audioContext) {
+                    audioContext = new (window.AudioContext || window.webkitAudioContext)({sampleRate: 8000});
+                    document.getElementById('status').innerHTML += '<p>AudioContext created</p>';
+                }
+                
+                // Create test tone
+                createTestTone();
+                
+                document.getElementById('status').innerHTML += `<p>AudioContext state: ${audioContext.state}</p>`;
+                
+            } catch (error) {
+                document.getElementById('status').innerHTML += `<p>Error: ${error.message}</p>`;
+                console.error('Audio test error:', error);
+            }
+        });
+        
+        document.getElementById('resumeButton').addEventListener('click', async function() {
+            try {
+                if (audioContext && audioContext.state === 'suspended') {
+                    await audioContext.resume();
+                    document.getElementById('status').innerHTML += '<p>AudioContext resumed</p>';
+                    
+                    // Play test tone
+                    if (testBuffer) {
+                        const source = audioContext.createBufferSource();
+                        source.buffer = testBuffer;
+                        source.connect(audioContext.destination);
+                        source.start();
+                        document.getElementById('status').innerHTML += '<p>Test tone played</p>';
+                    }
+                } else {
+                    document.getElementById('status').innerHTML += `<p>AudioContext state: ${audioContext ? audioContext.state : 'null'}</p>`;
+                }
+            } catch (error) {
+                document.getElementById('status').innerHTML += `<p>Error: ${error.message}</p>`;
+                console.error('Audio resume error:', error);
+            }
+        });
+    </script>
+</body>
+</html>

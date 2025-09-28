@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
+    <title>Ham Radio Mobile Remote</title>
+    <link rel="stylesheet" type="text/css" href="mobile.css">
+</head>
+<body>
+    <div class="mobile-container">
+        <!-- Header with Power and Status -->
+        <div class="header-section">
+            <button id="power-btn" class="power-button" onclick="powerToggle();">
+                <span class="power-icon">⏻</span>
+            </button>
+            <div class="status-indicators">
+                <span id="status-rx" class="status-indicator">RX</span>
+                <span id="status-tx" class="status-indicator">TX</span>
+                <span id="status-ctrl" class="status-indicator">CTRL</span>
+            </div>
+            <div class="signal-meter">
+                <meter id="signal-level" min="-60" max="60" value="0"></meter>
+                <span id="signal-text">S0</span>
+            </div>
+        </div>
+
+        <!-- Frequency Display -->
+        <div class="frequency-section">
+            <div class="frequency-display" id="freq-display" onclick="showFreqKeypad();">
+                <span class="freq-digits">
+                    <span id="freq-100mhz">0</span>
+                    <span id="freq-10mhz">0</span>
+                    <span id="freq-1mhz">7</span>
+                    <span class="freq-dot">.</span>
+                    <span id="freq-100khz">0</span>
+                    <span id="freq-10khz">5</span>
+                    <span id="freq-1khz">3</span>
+                    <span class="freq-dot">.</span>
+                    <span id="freq-100hz">0</span>
+                    <span id="freq-10hz">0</span>
+                    <span id="freq-1hz">0</span>
+                </span>
+                <span class="freq-unit">MHz</span>
+                <span class="freq-tap-hint">TAP TO EDIT</span>
+            </div>
+            
+            <!-- Dual VFO Display -->
+            <div class="dual-vfo-display">
+                <div class="vfo-display" id="vfo-a-display">
+                    <span class="vfo-label">VFO-A</span>
+                    <span class="vfo-freq" id="vfo-a-freq">7.053.000</span>
+                    <span class="vfo-mode" id="vfo-a-mode">USB</span>
+                </div>
+                <div class="vfo-display" id="vfo-b-display">
+                    <span class="vfo-label">VFO-B</span>
+                    <span class="vfo-freq" id="vfo-b-freq">14.230.000</span>
+                    <span class="vfo-mode" id="vfo-b-mode">USB</span>
+                </div>
+            </div>
+            
+            <!-- VFO Controls -->
+            <div class="vfo-controls">
+                <button class="vfo-btn active" id="vfo-a" onclick="setVFO('A');">VFO A</button>
+                <button class="vfo-btn" id="vfo-b" onclick="setVFO('B');">VFO B</button>
+                <button class="vfo-btn" onclick="swapVFO();">A⇄B</button>
+                <button class="vfo-btn" onclick="copyVFO();">A→B</button>
+                <button class="vfo-btn" onclick="toggleSplit();">SPLIT</button>
+            </div>
+        </div>
+
+        <!-- Mode Selection -->
+        <div class="mode-section">
+            <div class="mode-buttons">
+                <button class="mode-btn active" data-mode="USB">USB</button>
+                <button class="mode-btn" data-mode="LSB">LSB</button>
+                <button class="mode-btn" data-mode="CW">CW</button>
+                <button class="mode-btn" data-mode="AM">AM</button>
+                <button class="mode-btn" data-mode="FM">FM</button>
+                <button class="mode-btn" data-mode="DATA">DATA</button>
+            </div>
+        </div>
+
+        <!-- Band Selection -->
+        <div class="band-section">
+            <div class="band-grid">
+                <button class="band-btn" data-freq="1845000">160m</button>
+                <button class="band-btn" data-freq="3692500">80m</button>
+                <button class="band-btn" data-freq="7050000">40m</button>
+                <button class="band-btn" data-freq="10125000">30m</button>
+                <button class="band-btn" data-freq="14270000">20m</button>
+                <button class="band-btn" data-freq="18118000">17m</button>
+                <button class="band-btn" data-freq="21270000">15m</button>
+                <button class="band-btn" data-freq="24940000">12m</button>
+                <button class="band-btn" data-freq="28270000">10m</button>
+                <button class="band-btn" data-freq="50125000">6m</button>
+                <button class="band-btn" data-freq="144300000">2m</button>
+                <button class="band-btn" data-freq="432200000">70cm</button>
+            </div>
+        </div>
+
+        <!-- Enhanced Meter Display -->
+        <div class="meter-section">
+            <div class="meter-display">
+                <div class="s-meter">
+                    <canvas id="s-meter-canvas" width="300" height="80"></canvas>
+                    <div class="meter-labels">
+                        <span>S1</span><span>S3</span><span>S5</span><span>S7</span><span>S9</span><span>+20</span><span>+40</span><span>+60</span>
+                    </div>
+                </div>
+                <div class="power-swr-meters">
+                    <div class="mini-meter">
+                        <label>PWR</label>
+                        <meter id="power-meter" min="0" max="100" value="0"></meter>
+                        <span id="power-value">0W</span>
+                    </div>
+                    <div class="mini-meter">
+                        <label>SWR</label>
+                        <meter id="swr-meter" min="1" max="3" value="1"></meter>
+                        <span id="swr-value">1.0</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Advanced Audio Controls -->
+        <div class="advanced-audio-section">
+            <div class="audio-controls">
+                <div class="volume-control">
+                    <label>AF</label>
+                    <input type="range" id="af-gain" min="0" max="100" value="50">
+                    <span id="af-value">50</span>
+                </div>
+                <div class="volume-control">
+                    <label>RF</label>
+                    <input type="range" id="rf-gain" min="0" max="100" value="100">
+                    <span id="rf-value">100</span>
+                </div>
+                <div class="volume-control">
+                    <label>MIC</label>
+                    <input type="range" id="mic-gain" min="0" max="100" value="50">
+                    <span id="mic-value">50</span>
+                </div>
+                <div class="volume-control">
+                    <label>SQL</label>
+                    <input type="range" id="squelch" min="0" max="100" value="0">
+                    <span id="sql-value">0</span>
+                </div>
+            </div>
+            
+            <!-- RIT/XIT Controls -->
+            <div class="rit-xit-controls">
+                <button class="rit-btn" onclick="toggleRIT();" id="rit-btn">RIT</button>
+                <input type="range" id="rit-offset" min="-9999" max="9999" value="0" disabled>
+                <span id="rit-value">0Hz</span>
+                <button class="xit-btn" onclick="toggleXIT();" id="xit-btn">XIT</button>
+            </div>
+        </div>
+
+        <!-- Professional PTT and Function Keys -->
+        <div class="control-section">
+            <div class="ptt-container">
+                <button id="ptt-btn" class="ptt-button">
+                    <span class="ptt-text">PTT</span>
+                </button>
+                <div class="ptt-options">
+                    <button class="ptt-option" onclick="toggleVOX();">VOX</button>
+                    <button class="ptt-option" onclick="toggleMON();">MON</button>
+                    <button class="ptt-option" onclick="toggleTUNE();">TUNE</button>
+                </div>
+            </div>
+            
+            <!-- Function Keys -->
+            <div class="function-keys">
+                <button class="func-btn" onclick="quickMemo();" data-func="F1">F1<br>MEMO</button>
+                <button class="func-btn" onclick="quickScan();" data-func="F2">F2<br>SCAN</button>
+                <button class="func-btn" onclick="quickSplit();" data-func="F3">F3<br>SPLIT</button>
+                <button class="func-btn" onclick="quickFilter();" data-func="F4">F4<br>FILT</button>
+                <button class="func-btn" onclick="quickDual();" data-func="F5">F5<br>DUAL</button>
+                <button class="func-btn" onclick="quickScope();" data-func="F6">F6<br>SCOPE</button>
+            </div>
+        </div>
+
+        <!-- Enhanced Quick Settings -->
+        <div class="quick-settings">
+            <button class="setting-btn" onclick="toggleAGC();">
+                <span id="agc-status">AGC</span>
+            </button>
+            <button class="setting-btn" onclick="toggleNB();">
+                <span id="nb-status">NB</span>
+            </button>
+            <button class="setting-btn" onclick="toggleNR();">
+                <span id="nr-status">NR</span>
+            </button>
+            <button class="setting-btn" onclick="toggleATT();">
+                <span id="att-status">ATT</span>
+            </button>
+            <button class="setting-btn" onclick="togglePRE();">
+                <span id="pre-status">PRE</span>
+            </button>
+            <button class="setting-btn" onclick="toggleCOMP();">
+                <span id="comp-status">COMP</span>
+            </button>
+        </div>
+
+        <!-- Memory and Tune Controls -->
+        <div class="memory-section">
+            <div class="memory-controls">
+                <button class="mem-btn" onclick="memoryRecall();">M→VFO</button>
+                <button class="mem-btn" onclick="memoryStore();">VFO→M</button>
+                <input type="number" id="memory-ch" min="1" max="99" value="1" class="memory-input">
+                <button class="mem-btn" onclick="memoryScan();">M.SCAN</button>
+                <button class="mem-btn" onclick="memorySkip();">SKIP</button>
+            </div>
+            <div class="tune-controls">
+                <button class="tune-btn" onclick="tuneStep(-1000);">-1k</button>
+                <button class="tune-btn" onclick="tuneStep(-100);">-100</button>
+                <button class="tune-btn" onclick="tuneStep(-10);">-10</button>
+                <button class="tune-btn" onclick="tuneStep(10);">+10</button>
+                <button class="tune-btn" onclick="tuneStep(100);">+100</button>
+                <button class="tune-btn" onclick="tuneStep(1000);">+1k</button>
+            </div>
+            
+            <!-- Professional Tuning Step Selection -->
+            <div class="step-controls">
+                <label>STEP:</label>
+                <select id="tune-step" onchange="updateTuneStep();">
+                    <option value="1">1 Hz</option>
+                    <option value="10" selected>10 Hz</option>
+                    <option value="100">100 Hz</option>
+                    <option value="1000">1 kHz</option>
+                    <option value="10000">10 kHz</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Digital Modes Panel -->
+        <div class="digital-modes-panel">
+            <div class="panel-header">
+                <h3>Digital Modes</h3>
+                <button class="panel-toggle" onclick="toggleDigitalPanel();">▼</button>
+            </div>
+            <div class="digital-content" id="digital-content">
+                <div class="mode-selection">
+                    <button class="digital-btn" onclick="setDigitalMode('FT8');">FT8</button>
+                    <button class="digital-btn" onclick="setDigitalMode('FT4');">FT4</button>
+                    <button class="digital-btn" onclick="setDigitalMode('JS8');">JS8</button>
+                    <button class="digital-btn" onclick="setDigitalMode('PSK31');">PSK31</button>
+                    <button class="digital-btn" onclick="setDigitalMode('RTTY');">RTTY</button>
+                    <button class="digital-btn" onclick="setDigitalMode('SSTV');">SSTV</button>
+                </div>
+                
+                <!-- Waterfall Display -->
+                <div class="waterfall-container">
+                    <canvas id="waterfall-canvas" width="350" height="150"></canvas>
+                    <div class="waterfall-controls">
+                        <label>Center: <span id="waterfall-center">1500Hz</span></label>
+                        <input type="range" id="waterfall-offset" min="-2000" max="2000" value="0" onchange="updateWaterfallCenter();">
+                    </div>
+                </div>
+                
+                <!-- Digital Mode Controls -->
+                <div class="digital-controls">
+                    <div class="cw-controls" id="cw-controls" style="display: none;">
+                        <label>CW Speed: <span id="cw-speed-display">20 WPM</span></label>
+                        <input type="range" id="cw-speed" min="5" max="60" value="20" onchange="updateCWSpeed();">
+                        <div class="cw-macros">
+                            <button class="macro-btn" onclick="sendCWMacro('CQ');">CQ</button>
+                            <button class="macro-btn" onclick="sendCWMacro('599');">599</button>
+                            <button class="macro-btn" onclick="sendCWMacro('TU');">TU 73</button>
+                            <button class="macro-btn" onclick="sendCWMacro('AGN');">AGN</button>
+                        </div>
+                    </div>
+                    
+                    <div class="ft8-controls" id="ft8-controls" style="display: none;">
+                        <div class="ft8-status">
+                            <span id="ft8-cycle">Cycle: RX</span>
+                            <span id="ft8-time">00:00</span>
+                        </div>
+                        <textarea id="ft8-messages" rows="4" placeholder="FT8 messages will appear here..." readonly></textarea>
+                        <div class="ft8-quick-reply">
+                            <button class="ft8-btn" onclick="sendFT8('CQ');">CQ</button>
+                            <button class="ft8-btn" onclick="sendFT8('73');">73</button>
+                            <button class="ft8-btn" onclick="sendFT8('RRR');">RRR</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Logbook Panel -->
+        <div class="logbook-panel">
+            <div class="panel-header">
+                <h3>Logbook</h3>
+                <button class="panel-toggle" onclick="toggleLogbookPanel();">▼</button>
+            </div>
+            <div class="logbook-content" id="logbook-content" style="display: none;">
+                <div class="qso-entry">
+                    <div class="entry-row">
+                        <input type="text" id="callsign" placeholder="Callsign" class="log-input">
+                        <input type="text" id="rst-sent" placeholder="599" class="log-input-small">
+                        <input type="text" id="rst-rcvd" placeholder="599" class="log-input-small">
+                    </div>
+                    <div class="entry-row">
+                        <input type="text" id="qth" placeholder="QTH" class="log-input">
+                        <input type="text" id="name" placeholder="Name" class="log-input">
+                    </div>
+                    <div class="entry-row">
+                        <input type="date" id="qso-date" class="log-input">
+                        <input type="time" id="qso-time" class="log-input">
+                        <button class="log-btn" onclick="saveQSO();">LOG QSO</button>
+                    </div>
+                </div>
+                
+                <div class="recent-qsos">
+                    <h4>Recent QSOs</h4>
+                    <div id="qso-list" class="qso-list">
+                        <!-- QSOs will be populated here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Professional Features Panel -->
+        <div class="professional-panel">
+            <div class="panel-row">
+                <div class="feature-group">
+                    <label>Filter Width</label>
+                    <select id="filter-width" onchange="updateFilterWidth();">
+                        <option value="wide">WIDE</option>
+                        <option value="mid" selected>MID</option>
+                        <option value="narrow">NAR</option>
+                    </select>
+                </div>
+                <div class="feature-group">
+                    <label>Antenna</label>
+                    <select id="antenna-sel" onchange="updateAntenna();">
+                        <option value="ant1" selected>ANT1</option>
+                        <option value="ant2">ANT2</option>
+                        <option value="rx">RX ANT</option>
+                    </select>
+                </div>
+                <div class="feature-group">
+                    <label>Keyer</label>
+                    <input type="range" id="keyer-speed" min="6" max="60" value="20" onchange="updateKeyerSpeed();">
+                    <span id="keyer-wpm">20 WPM</span>
+                </div>
+            </div>
+            
+            <div class="panel-row">
+                <button class="pro-btn" onclick="toggleDualWatch();">DUAL WATCH</button>
+                <button class="pro-btn" onclick="toggleFullBreakIn();">QSK</button>
+                <button class="pro-btn" onclick="toggleBandScope();">SCOPE</button>
+                <button class="pro-btn" onclick="toggleWaterfall();">WFALL</button>
+                <button class="pro-btn" onclick="toggleAntTuner();">AT</button>
+            </div>
+        </div>
+
+        <!-- Status Bar -->
+        <div class="status-bar">
+            <span id="connection-status">Connecting...</span>
+            <span id="latency">Latency: --ms</span>
+            <span id="freq-step">Step: 10Hz</span>
+            <span id="current-time"></span>
+        </div>
+        
+        <!-- Test Panel (Development) -->
+        <div class="test-panel" style="background: rgba(0,0,0,0.7); border-radius: 10px; padding: 15px; margin-top: 10px; text-align: center;">
+            <button onclick="runMobileInterfaceTest();" style="background: linear-gradient(145deg, #00cc44, #008833); border: none; border-radius: 8px; padding: 12px 20px; color: white; font-weight: bold;">🧪 RUN INTERFACE TEST</button>
+            <button onclick="console.clear();" style="background: linear-gradient(145deg, #666, #444); border: none; border-radius: 8px; padding: 12px 20px; color: white; font-weight: bold; margin-left: 10px;">🗑️ CLEAR LOG</button>
+        </div>
+    </div>
+
+    <script src="mobile.js"></script>
+</body>
+</html>
