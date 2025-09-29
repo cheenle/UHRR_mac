@@ -1168,15 +1168,15 @@ OpusEncoderProcessor.prototype.onAudioProcess = function( e )
 	this.instant = 0.0;
 	const that = this;
 	
-    if( isRecording )
+	    if( isRecording )
     {
 	var data = e.inputBuffer.getChannelData( 0 )
 	var i = 0, ds = this.downSample;
 	
 	if( encode )
 	{
-	    for( var idx = 0; idx < data.length; idx += ds )
-		this.f32arr[ i++ ] = data[ idx ]/10;
+		    for( var idx = 0; idx < data.length; idx += ds )
+			this.f32arr[ i++ ] = data[ idx ];
 
 	    var res = this.opusEncoder.encode_float( this.f32arr );
 
@@ -1188,10 +1188,10 @@ OpusEncoderProcessor.prototype.onAudioProcess = function( e )
 			this.wsh.send( res[ idx ] );
 		}
 	}
-	else
+		else
 	{
-	    for( var idx = 0; idx < data.length; idx += ds )
-		this.i16arr[ i++ ] = (data[ idx ] /10) * 0xFFFF; // int16
+		    for( var idx = 0; idx < data.length; idx += ds )
+			this.i16arr[ i++ ] = (data[ idx ]) * 0xFFFF; // int16
 
 	    // 码率统计：TX（PCM直发）
 	    if (!window.__txBytes) { window.__txBytes = 0; }
