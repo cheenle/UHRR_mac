@@ -95,3 +95,8 @@
 ## 许可
 - 本项目遵循仓库内 `LICENSE` 文件所述许可条款。
 
+## 致谢与来源
+- 本项目最初来源并受到以下开源项目与文档启发：
+  - F4HTB/Universal_HamRadio_Remote_HTML5（Wiki 与设计思路）参见：[项目 Wiki](https://github.com/F4HTB/Universal_HamRadio_Remote_HTML5/wiki)
+
+
