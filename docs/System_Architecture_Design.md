@@ -605,27 +605,135 @@ l                       # 查询信号强度
 
 ---
 
-## 14. 附录
+## 14. 许可证与合规声明
 
-### 14.1 术语表
+### 14.1 许可证信息
+
+本项目采用 **GNU General Public License v3.0 (GPL-3.0)** 许可证发布。
+
+```
+Universal HamRadio Remote (UHRR) - 业余无线电远程控制系统
+Copyright (C) 2025 Universal HamRadio Remote Contributors
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program. If not, see <https://www.gnu.org/licenses/>.
+```
+
+### 14.2 项目来源声明
+
+本项目基于以下开源项目进行开发和改进：
+
+**原始项目**: [F4HTB/Universal_HamRadio_Remote_HTML5](https://github.com/F4HTB/Universal_HamRadio_Remote_HTML5)
+- 作者: Olivier Schmitt (F4HTB)
+- 许可证: GPL-3.0
+- 描述: 原始的HTML5业余无线电远程控制界面
+
+**主要改进**:
+- 稳定性优化: 修复PTT时序问题，改进音频流处理
+- 架构升级: 引入AudioWorklet，优化WebSocket通信
+- 功能增强: 添加实时码率显示，改进TLS配置
+- 平台适配: 优化macOS兼容性，改进移动端支持
+
+### 14.3 合规要求
+
+根据GPL-3.0许可证要求：
+
+#### 14.3.1 修改声明
+本项目对原始代码进行了以下主要修改：
+- 重构前端音频处理逻辑（引入AudioWorklet）
+- 优化后端PTT超时机制（计数法替代时间阈值）
+- 改进TLS证书链处理
+- 添加实时性能监控功能
+
+#### 14.3.2 分发要求
+- **源代码**: 必须提供完整源代码
+- **修改标识**: 必须明确标识修改内容
+- **许可证**: 必须包含GPL-3.0许可证文本
+- **版权声明**: 必须保留原始版权声明
+
+#### 14.3.3 使用限制
+- **业余无线电**: 仅限业余无线电用途，遵守当地法律法规
+- **远程操作**: 仅用于合法的远程电台操作
+- **商业使用**: 遵循GPL-3.0的商业使用条款
+
+### 14.4 免责声明
+
+**重要法律声明**:
+- 本软件仅供业余无线电爱好者学习和实验使用
+- 使用者必须确保遵守所在国家/地区的无线电管理法规
+- 作者不对任何违法使用承担责任
+- 建议在合法的业余无线电频率范围内使用
+
+**技术免责**:
+- 本软件按"现状"提供，不提供任何明示或暗示的保证
+- 使用过程中可能存在技术风险，使用者需自行承担
+- 建议在测试环境中验证功能后再用于实际操作
+
+### 14.5 贡献指南
+
+欢迎社区贡献，但请注意：
+- 所有贡献必须遵循GPL-3.0许可证
+- 贡献代码必须包含适当的版权声明
+- 重大修改应更新版本历史和修改日志
+- 建议通过GitHub提交Pull Request
+
+---
+
+## 15. 术语表
+
+### 15.1 无线电术语
 - **PTT**: Push-To-Talk，推到讲
 - **QSO**: 业余无线电通话
-- **Hamlib**: 业余无线电设备控制库
-- **rigctld**: Hamlib的TCP服务器
 - **VFO**: Variable Frequency Oscillator，可变频振荡器
 - **S表**: Signal Strength，信号强度指示
+- **Hamlib**: 业余无线电设备控制库
+- **rigctld**: Hamlib的TCP服务器
 
-### 14.2 参考文献
-- Hamlib Documentation: https://hamlib.github.io/
-- Web Audio API Specification: https://webaudio.github.io/web-audio-api/
-- Tornado Documentation: https://www.tornadoweb.org/
-- RFC 6455: WebSocket Protocol
-- RFC 5246: TLS 1.2 Protocol
+### 15.2 技术术语
+- **WebSocket**: 全双工通信协议
+- **AudioWorklet**: Web Audio API的音频工作线程
+- **Opus**: 音频编解码器
+- **TLS**: Transport Layer Security，传输层安全
+- **Tornado**: Python异步Web框架
 
-### 14.3 版本历史
-- **v1.0.0**: 初始版本，基本功能实现
-- **v2.0.0**: 稳定性优化，TLS支持，AudioWorklet集成
+---
+
+## 16. 参考文献
+
+### 16.1 技术文档
+- **Hamlib Documentation**: https://hamlib.github.io/
+- **Web Audio API Specification**: https://webaudio.github.io/web-audio-api/
+- **Tornado Documentation**: https://www.tornadoweb.org/
+- **RFC 6455**: WebSocket Protocol
+- **RFC 5246**: TLS 1.2 Protocol
+
+### 16.2 开源项目
+- **上游项目**: [F4HTB/Universal_HamRadio_Remote_HTML5](https://github.com/F4HTB/Universal_HamRadio_Remote_HTML5)
+- **Opus Codec**: https://opus-codec.org/
+- **PyAudio**: https://people.csail.mit.edu/hubert/pyaudio/
+
+---
+
+## 17. 版本历史
+
+| 版本 | 日期 | 主要变更 | 状态 |
+|------|------|----------|------|
+| v1.0.0 | 2024-12 | 初始版本，基于F4HTB项目 | 已发布 |
+| v2.0.0 | 2025-01 | 稳定性优化，TLS支持，AudioWorklet | 生产就绪 |
+| v2.1.0 | 2025-09 | 架构文档完善，许可证合规 | 当前版本 |
 
 ---
 
 **文档结束**
+
+*本架构设计文档遵循GPL-3.0许可证发布，详见LICENSE文件。*

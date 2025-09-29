@@ -88,15 +88,18 @@
   - 保持 24k 端到端一致
   - 可调整 Worklet 缓冲（例如 32/64 或 16/32）
 
+## 文档
+- **[系统架构设计文档](docs/System_Architecture_Design.md)**: 完整的系统架构设计、组件关系、接口协议、部署方案和技术规范
+- **[PTT/音频稳定性复盘](docs/PTT_Audio_Postmortem_and_Best_Practices.md)**: TX/RX 稳定性问题深度分析与最佳实践
+
 ## 开发与测试
 - 所有测试/调试脚本位于 `dev_tools/`，不参与生产部署
 - 推荐在独立分支进行实验性修改
 
-## 许可
-- 本项目遵循仓库内 `LICENSE` 文件所述许可条款。
-
-## 致谢与来源
-- 本项目最初来源并受到以下开源项目与文档启发：
-  - F4HTB/Universal_HamRadio_Remote_HTML5（Wiki 与设计思路）参见：[项目 Wiki](https://github.com/F4HTB/Universal_HamRadio_Remote_HTML5/wiki)
+## 许可与合规
+- 本项目遵循 **GNU General Public License v3.0 (GPL-3.0)** 许可证
+- **项目来源**: 基于 [F4HTB/Universal_HamRadio_Remote_HTML5](https://github.com/F4HTB/Universal_HamRadio_Remote_HTML5) 开源项目进行开发和改进
+- **修改声明**: 对原始代码进行了稳定性优化、架构升级和功能增强，详见[系统架构设计文档](docs/System_Architecture_Design.md#142-项目来源声明)
+- **分发要求**: 必须提供完整源代码并保留许可证和版权声明
 
 
