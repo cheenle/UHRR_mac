@@ -1147,3 +1147,360 @@
 2025-09-30 00:15:23,949 - UHRR - DEBUG - rigctld set response to 'F 7053000': RPRT 0
 2025-09-30 00:15:23,950 - UHRR - INFO - rigctld set command 'F 7053000' successful
 2025-09-30 00:15:23,950 - UHRR - INFO - ✓ Frequency set to 7053000 Hz via rigctld
+2025-09-30 00:15:26,482 - UHRR - INFO - Sending rigctld set command: F 7052000
+2025-09-30 00:15:26,626 - UHRR - DEBUG - rigctld set response to 'F 7052000': RPRT 0
+2025-09-30 00:15:26,626 - UHRR - INFO - rigctld set command 'F 7052000' successful
+2025-09-30 00:15:26,626 - UHRR - INFO - ✓ Frequency set to 7052000 Hz via rigctld
+2025-09-30 00:15:27,212 - UHRR - INFO - Sending rigctld set command: F 7051000
+2025-09-30 00:15:27,358 - UHRR - DEBUG - rigctld set response to 'F 7051000': RPRT 0
+2025-09-30 00:15:27,358 - UHRR - INFO - rigctld set command 'F 7051000' successful
+2025-09-30 00:15:27,358 - UHRR - INFO - ✓ Frequency set to 7051000 Hz via rigctld
+2025-09-30 00:15:27,940 - UHRR - INFO - Sending rigctld set command: F 7050000
+2025-09-30 00:15:28,085 - UHRR - DEBUG - rigctld set response to 'F 7050000': RPRT 0
+2025-09-30 00:15:28,085 - UHRR - INFO - rigctld set command 'F 7050000' successful
+2025-09-30 00:15:28,085 - UHRR - INFO - ✓ Frequency set to 7050000 Hz via rigctld
+2025-09-30 00:15:29,536 - UHRR - INFO - Sending rigctld set command: F 7049000
+2025-09-30 00:15:29,681 - UHRR - DEBUG - rigctld set response to 'F 7049000': RPRT 0
+2025-09-30 00:15:29,681 - UHRR - INFO - rigctld set command 'F 7049000' successful
+2025-09-30 00:15:29,681 - UHRR - INFO - ✓ Frequency set to 7049000 Hz via rigctld
+2025-09-30 00:15:31,472 - UHRR - INFO - Sending rigctld set command: F 7048000
+2025-09-30 00:15:31,617 - UHRR - DEBUG - rigctld set response to 'F 7048000': RPRT 0
+2025-09-30 00:15:31,617 - UHRR - INFO - rigctld set command 'F 7048000' successful
+2025-09-30 00:15:31,617 - UHRR - INFO - ✓ Frequency set to 7048000 Hz via rigctld
+2025-09-30 00:15:35,365 - UHRR - INFO - Sending rigctld set command: F 7047000
+2025-09-30 00:15:35,510 - UHRR - DEBUG - rigctld set response to 'F 7047000': RPRT 0
+2025-09-30 00:15:35,510 - UHRR - INFO - rigctld set command 'F 7047000' successful
+2025-09-30 00:15:35,510 - UHRR - INFO - ✓ Frequency set to 7047000 Hz via rigctld
+2025-09-30 00:15:37,909 - UHRR - INFO - Sending rigctld set command: F 7048000
+2025-09-30 00:15:38,056 - UHRR - DEBUG - rigctld set response to 'F 7048000': RPRT 0
+2025-09-30 00:15:38,056 - UHRR - INFO - rigctld set command 'F 7048000' successful
+2025-09-30 00:15:38,056 - UHRR - INFO - ✓ Frequency set to 7048000 Hz via rigctld
+2025-09-30 00:15:39,569 - UHRR - INFO - Sending rigctld set command: F 7048100
+2025-09-30 00:15:39,714 - UHRR - DEBUG - rigctld set response to 'F 7048100': RPRT 0
+2025-09-30 00:15:39,714 - UHRR - INFO - rigctld set command 'F 7048100' successful
+2025-09-30 00:15:39,714 - UHRR - INFO - ✓ Frequency set to 7048100 Hz via rigctld
+2025-09-30 00:15:40,591 - UHRR - INFO - Sending rigctld set command: F 7048200
+2025-09-30 00:15:40,735 - UHRR - DEBUG - rigctld set response to 'F 7048200': RPRT 0
+2025-09-30 00:15:40,735 - UHRR - INFO - rigctld set command 'F 7048200' successful
+2025-09-30 00:15:40,735 - UHRR - INFO - ✓ Frequency set to 7048200 Hz via rigctld
+2025-09-30 00:15:41,494 - UHRR - INFO - Sending rigctld set command: F 7048300
+2025-09-30 00:15:41,639 - UHRR - DEBUG - rigctld set response to 'F 7048300': RPRT 0
+2025-09-30 00:15:41,640 - UHRR - INFO - rigctld set command 'F 7048300' successful
+2025-09-30 00:15:41,640 - UHRR - INFO - ✓ Frequency set to 7048300 Hz via rigctld
+2025-09-30 00:15:42,495 - UHRR - INFO - Sending rigctld set command: F 7048310
+2025-09-30 00:15:42,641 - UHRR - DEBUG - rigctld set response to 'F 7048310': RPRT 0
+2025-09-30 00:15:42,641 - UHRR - INFO - rigctld set command 'F 7048310' successful
+2025-09-30 00:15:42,641 - UHRR - INFO - ✓ Frequency set to 7048310 Hz via rigctld
+2025-09-30 00:15:44,099 - UHRR - INFO - Sending rigctld set command: F 7048320
+2025-09-30 00:15:44,244 - UHRR - DEBUG - rigctld set response to 'F 7048320': RPRT 0
+2025-09-30 00:15:44,244 - UHRR - INFO - rigctld set command 'F 7048320' successful
+2025-09-30 00:15:44,244 - UHRR - INFO - ✓ Frequency set to 7048320 Hz via rigctld
+2025-09-30 00:15:45,594 - UHRR - INFO - Sending rigctld set command: F 7048319
+2025-09-30 00:15:45,740 - UHRR - DEBUG - rigctld set response to 'F 7048319': RPRT 0
+2025-09-30 00:15:45,740 - UHRR - INFO - rigctld set command 'F 7048319' successful
+2025-09-30 00:15:45,741 - UHRR - INFO - ✓ Frequency set to 7048319 Hz via rigctld
+2025-09-30 00:15:47,191 - UHRR - INFO - Sending rigctld set command: F 7048318
+2025-09-30 00:15:47,336 - UHRR - DEBUG - rigctld set response to 'F 7048318': RPRT 0
+2025-09-30 00:15:47,337 - UHRR - INFO - rigctld set command 'F 7048318' successful
+2025-09-30 00:15:47,337 - UHRR - INFO - ✓ Frequency set to 7048318 Hz via rigctld
+2025-09-30 00:15:48,420 - UHRR - INFO - Sending rigctld set command: F 7048319
+2025-09-30 00:15:48,565 - UHRR - DEBUG - rigctld set response to 'F 7048319': RPRT 0
+2025-09-30 00:15:48,565 - UHRR - INFO - rigctld set command 'F 7048319' successful
+2025-09-30 00:15:48,565 - UHRR - INFO - ✓ Frequency set to 7048319 Hz via rigctld
+2025-09-30 00:15:49,052 - UHRR - INFO - Sending rigctld set command: F 7048320
+2025-09-30 00:15:49,198 - UHRR - DEBUG - rigctld set response to 'F 7048320': RPRT 0
+2025-09-30 00:15:49,198 - UHRR - INFO - rigctld set command 'F 7048320' successful
+2025-09-30 00:15:49,199 - UHRR - INFO - ✓ Frequency set to 7048320 Hz via rigctld
+2025-09-30 00:15:50,475 - UHRR - INFO - Sending rigctld set command: F 7048310
+2025-09-30 00:15:50,621 - UHRR - DEBUG - rigctld set response to 'F 7048310': RPRT 0
+2025-09-30 00:15:50,621 - UHRR - INFO - rigctld set command 'F 7048310' successful
+2025-09-30 00:15:50,621 - UHRR - INFO - ✓ Frequency set to 7048310 Hz via rigctld
+2025-09-30 00:15:51,356 - UHRR - INFO - Sending rigctld set command: F 7048300
+2025-09-30 00:15:51,500 - UHRR - DEBUG - rigctld set response to 'F 7048300': RPRT 0
+2025-09-30 00:15:51,501 - UHRR - INFO - rigctld set command 'F 7048300' successful
+2025-09-30 00:15:51,501 - UHRR - INFO - ✓ Frequency set to 7048300 Hz via rigctld
+2025-09-30 00:15:52,327 - UHRR - INFO - Sending rigctld set command: F 7048400
+2025-09-30 00:15:52,473 - UHRR - DEBUG - rigctld set response to 'F 7048400': RPRT 0
+2025-09-30 00:15:52,474 - UHRR - INFO - rigctld set command 'F 7048400' successful
+2025-09-30 00:15:52,475 - UHRR - INFO - ✓ Frequency set to 7048400 Hz via rigctld
+2025-09-30 00:15:54,095 - UHRR - INFO - Sending rigctld set command: F 7048410
+2025-09-30 00:15:54,240 - UHRR - DEBUG - rigctld set response to 'F 7048410': RPRT 0
+2025-09-30 00:15:54,240 - UHRR - INFO - rigctld set command 'F 7048410' successful
+2025-09-30 00:15:54,240 - UHRR - INFO - ✓ Frequency set to 7048410 Hz via rigctld
+2025-09-30 00:15:55,628 - UHRR - INFO - Sending rigctld set command: F 7048409
+2025-09-30 00:15:55,775 - UHRR - DEBUG - rigctld set response to 'F 7048409': RPRT 0
+2025-09-30 00:15:55,775 - UHRR - INFO - rigctld set command 'F 7048409' successful
+2025-09-30 00:15:55,776 - UHRR - INFO - ✓ Frequency set to 7048409 Hz via rigctld
+2025-09-30 00:15:58,016 - UHRR - INFO - Sending rigctld set command: F 7048419
+2025-09-30 00:15:58,161 - UHRR - DEBUG - rigctld set response to 'F 7048419': RPRT 0
+2025-09-30 00:15:58,161 - UHRR - INFO - rigctld set command 'F 7048419' successful
+2025-09-30 00:15:58,161 - UHRR - INFO - ✓ Frequency set to 7048419 Hz via rigctld
+2025-09-30 00:15:58,861 - UHRR - INFO - Sending rigctld set command: F 7048420
+2025-09-30 00:15:59,007 - UHRR - DEBUG - rigctld set response to 'F 7048420': RPRT 0
+2025-09-30 00:15:59,007 - UHRR - INFO - rigctld set command 'F 7048420' successful
+2025-09-30 00:15:59,007 - UHRR - INFO - ✓ Frequency set to 7048420 Hz via rigctld
+2025-09-30 00:16:00,260 - UHRR - INFO - Sending rigctld set command: F 7048410
+2025-09-30 00:16:00,406 - UHRR - DEBUG - rigctld set response to 'F 7048410': RPRT 0
+2025-09-30 00:16:00,406 - UHRR - INFO - rigctld set command 'F 7048410' successful
+2025-09-30 00:16:00,406 - UHRR - INFO - ✓ Frequency set to 7048410 Hz via rigctld
+2025-09-30 00:16:01,100 - UHRR - INFO - Sending rigctld set command: F 7048400
+2025-09-30 00:16:01,245 - UHRR - DEBUG - rigctld set response to 'F 7048400': RPRT 0
+2025-09-30 00:16:01,245 - UHRR - INFO - rigctld set command 'F 7048400' successful
+2025-09-30 00:16:01,245 - UHRR - INFO - ✓ Frequency set to 7048400 Hz via rigctld
+2025-09-30 00:16:02,240 - UHRR - INFO - Sending rigctld set command: F 7048500
+2025-09-30 00:16:02,385 - UHRR - DEBUG - rigctld set response to 'F 7048500': RPRT 0
+2025-09-30 00:16:02,385 - UHRR - INFO - rigctld set command 'F 7048500' successful
+2025-09-30 00:16:02,385 - UHRR - INFO - ✓ Frequency set to 7048500 Hz via rigctld
+2025-09-30 00:16:04,707 - UHRR - INFO - Sending rigctld set command: F 7048400
+2025-09-30 00:16:04,852 - UHRR - DEBUG - rigctld set response to 'F 7048400': RPRT 0
+2025-09-30 00:16:04,852 - UHRR - INFO - rigctld set command 'F 7048400' successful
+2025-09-30 00:16:04,852 - UHRR - INFO - ✓ Frequency set to 7048400 Hz via rigctld
+2025-09-30 00:16:29,012 - UHRR - INFO - Sending rigctld set command: F 7048500
+2025-09-30 00:16:29,157 - UHRR - DEBUG - rigctld set response to 'F 7048500': RPRT 0
+2025-09-30 00:16:29,158 - UHRR - INFO - rigctld set command 'F 7048500' successful
+2025-09-30 00:16:29,158 - UHRR - INFO - ✓ Frequency set to 7048500 Hz via rigctld
+2025-09-30 00:16:30,001 - UHRR - INFO - Sending rigctld set command: F 7048510
+2025-09-30 00:16:30,146 - UHRR - DEBUG - rigctld set response to 'F 7048510': RPRT 0
+2025-09-30 00:16:30,146 - UHRR - INFO - rigctld set command 'F 7048510' successful
+2025-09-30 00:16:30,146 - UHRR - INFO - ✓ Frequency set to 7048510 Hz via rigctld
+2025-09-30 00:16:31,613 - UHRR - INFO - Sending rigctld set command: F 7048500
+2025-09-30 00:16:31,758 - UHRR - DEBUG - rigctld set response to 'F 7048500': RPRT 0
+2025-09-30 00:16:31,758 - UHRR - INFO - rigctld set command 'F 7048500' successful
+2025-09-30 00:16:31,759 - UHRR - INFO - ✓ Frequency set to 7048500 Hz via rigctld
+2025-09-30 00:16:32,906 - UHRR - INFO - Sending rigctld set command: F 7048600
+2025-09-30 00:16:33,052 - UHRR - DEBUG - rigctld set response to 'F 7048600': RPRT 0
+2025-09-30 00:16:33,052 - UHRR - INFO - rigctld set command 'F 7048600' successful
+2025-09-30 00:16:33,052 - UHRR - INFO - ✓ Frequency set to 7048600 Hz via rigctld
+2025-09-30 00:16:33,606 - UHRR - INFO - Sending rigctld set command: F 7048700
+2025-09-30 00:16:33,751 - UHRR - DEBUG - rigctld set response to 'F 7048700': RPRT 0
+2025-09-30 00:16:33,751 - UHRR - INFO - rigctld set command 'F 7048700' successful
+2025-09-30 00:16:33,751 - UHRR - INFO - ✓ Frequency set to 7048700 Hz via rigctld
+2025-09-30 00:16:34,271 - UHRR - INFO - Sending rigctld set command: F 7048800
+2025-09-30 00:16:34,415 - UHRR - DEBUG - rigctld set response to 'F 7048800': RPRT 0
+2025-09-30 00:16:34,415 - UHRR - INFO - rigctld set command 'F 7048800' successful
+2025-09-30 00:16:34,416 - UHRR - INFO - ✓ Frequency set to 7048800 Hz via rigctld
+2025-09-30 00:16:34,934 - UHRR - INFO - Sending rigctld set command: F 7048900
+2025-09-30 00:16:35,078 - UHRR - DEBUG - rigctld set response to 'F 7048900': RPRT 0
+2025-09-30 00:16:35,080 - UHRR - INFO - rigctld set command 'F 7048900' successful
+2025-09-30 00:16:35,080 - UHRR - INFO - ✓ Frequency set to 7048900 Hz via rigctld
+2025-09-30 00:16:35,606 - UHRR - INFO - Sending rigctld set command: F 7049000
+2025-09-30 00:16:35,751 - UHRR - DEBUG - rigctld set response to 'F 7049000': RPRT 0
+2025-09-30 00:16:35,751 - UHRR - INFO - rigctld set command 'F 7049000' successful
+2025-09-30 00:16:35,751 - UHRR - INFO - ✓ Frequency set to 7049000 Hz via rigctld
+2025-09-30 00:16:36,230 - UHRR - INFO - Sending rigctld set command: F 7049100
+2025-09-30 00:16:36,376 - UHRR - DEBUG - rigctld set response to 'F 7049100': RPRT 0
+2025-09-30 00:16:36,376 - UHRR - INFO - rigctld set command 'F 7049100' successful
+2025-09-30 00:16:36,376 - UHRR - INFO - ✓ Frequency set to 7049100 Hz via rigctld
+2025-09-30 00:16:37,818 - UHRR - INFO - Sending rigctld set command: F 7049000
+2025-09-30 00:16:37,963 - UHRR - DEBUG - rigctld set response to 'F 7049000': RPRT 0
+2025-09-30 00:16:37,964 - UHRR - INFO - rigctld set command 'F 7049000' successful
+2025-09-30 00:16:37,964 - UHRR - INFO - ✓ Frequency set to 7049000 Hz via rigctld
+2025-09-30 00:16:42,198 - UHRR - INFO - Sending rigctld set command: F 7048000
+2025-09-30 00:16:42,343 - UHRR - DEBUG - rigctld set response to 'F 7048000': RPRT 0
+2025-09-30 00:16:42,344 - UHRR - INFO - rigctld set command 'F 7048000' successful
+2025-09-30 00:16:42,344 - UHRR - INFO - ✓ Frequency set to 7048000 Hz via rigctld
+2025-09-30 00:16:44,560 - UHRR - INFO - Sending rigctld set command: F 7047000
+2025-09-30 00:16:44,705 - UHRR - DEBUG - rigctld set response to 'F 7047000': RPRT 0
+2025-09-30 00:16:44,705 - UHRR - INFO - rigctld set command 'F 7047000' successful
+2025-09-30 00:16:44,705 - UHRR - INFO - ✓ Frequency set to 7047000 Hz via rigctld
+2025-09-30 00:16:46,973 - UHRR - INFO - Sending rigctld set command: F 7046000
+2025-09-30 00:16:47,120 - UHRR - DEBUG - rigctld set response to 'F 7046000': RPRT 0
+2025-09-30 00:16:47,120 - UHRR - INFO - rigctld set command 'F 7046000' successful
+2025-09-30 00:16:47,120 - UHRR - INFO - ✓ Frequency set to 7046000 Hz via rigctld
+2025-09-30 00:16:49,556 - UHRR - INFO - Sending rigctld set command: F 7045000
+2025-09-30 00:16:49,704 - UHRR - DEBUG - rigctld set response to 'F 7045000': RPRT 0
+2025-09-30 00:16:49,704 - UHRR - INFO - rigctld set command 'F 7045000' successful
+2025-09-30 00:16:49,704 - UHRR - INFO - ✓ Frequency set to 7045000 Hz via rigctld
+2025-09-30 00:16:57,008 - UHRR - INFO - Sending rigctld set command: F 7046000
+2025-09-30 00:16:57,155 - UHRR - DEBUG - rigctld set response to 'F 7046000': RPRT 0
+2025-09-30 00:16:57,155 - UHRR - INFO - rigctld set command 'F 7046000' successful
+2025-09-30 00:16:57,155 - UHRR - INFO - ✓ Frequency set to 7046000 Hz via rigctld
+2025-09-30 00:16:57,720 - UHRR - INFO - Sending rigctld set command: F 7047000
+2025-09-30 00:16:57,864 - UHRR - DEBUG - rigctld set response to 'F 7047000': RPRT 0
+2025-09-30 00:16:57,864 - UHRR - INFO - rigctld set command 'F 7047000' successful
+2025-09-30 00:16:57,864 - UHRR - INFO - ✓ Frequency set to 7047000 Hz via rigctld
+2025-09-30 00:16:58,545 - UHRR - INFO - Sending rigctld set command: F 7048000
+2025-09-30 00:16:58,690 - UHRR - DEBUG - rigctld set response to 'F 7048000': RPRT 0
+2025-09-30 00:16:58,690 - UHRR - INFO - rigctld set command 'F 7048000' successful
+2025-09-30 00:16:58,690 - UHRR - INFO - ✓ Frequency set to 7048000 Hz via rigctld
+2025-09-30 00:16:59,945 - UHRR - INFO - Sending rigctld set command: F 7049000
+2025-09-30 00:17:00,091 - UHRR - DEBUG - rigctld set response to 'F 7049000': RPRT 0
+2025-09-30 00:17:00,091 - UHRR - INFO - rigctld set command 'F 7049000' successful
+2025-09-30 00:17:00,091 - UHRR - INFO - ✓ Frequency set to 7049000 Hz via rigctld
+2025-09-30 00:17:01,011 - UHRR - INFO - Sending rigctld set command: F 7050000
+2025-09-30 00:17:01,156 - UHRR - DEBUG - rigctld set response to 'F 7050000': RPRT 0
+2025-09-30 00:17:01,156 - UHRR - INFO - rigctld set command 'F 7050000' successful
+2025-09-30 00:17:01,156 - UHRR - INFO - ✓ Frequency set to 7050000 Hz via rigctld
+2025-09-30 00:17:02,319 - UHRR - INFO - Sending rigctld set command: F 7049000
+2025-09-30 00:17:02,464 - UHRR - DEBUG - rigctld set response to 'F 7049000': RPRT 0
+2025-09-30 00:17:02,465 - UHRR - INFO - rigctld set command 'F 7049000' successful
+2025-09-30 00:17:02,465 - UHRR - INFO - ✓ Frequency set to 7049000 Hz via rigctld
+2025-09-30 00:17:04,244 - UHRR - INFO - Sending rigctld set command: F 7049100
+2025-09-30 00:17:04,390 - UHRR - DEBUG - rigctld set response to 'F 7049100': RPRT 0
+2025-09-30 00:17:04,390 - UHRR - INFO - rigctld set command 'F 7049100' successful
+2025-09-30 00:17:04,391 - UHRR - INFO - ✓ Frequency set to 7049100 Hz via rigctld
+2025-09-30 00:17:04,928 - UHRR - INFO - Sending rigctld set command: F 7049200
+2025-09-30 00:17:05,073 - UHRR - DEBUG - rigctld set response to 'F 7049200': RPRT 0
+2025-09-30 00:17:05,073 - UHRR - INFO - rigctld set command 'F 7049200' successful
+2025-09-30 00:17:05,073 - UHRR - INFO - ✓ Frequency set to 7049200 Hz via rigctld
+2025-09-30 00:17:07,024 - UHRR - INFO - Sending rigctld set command: F 7050200
+2025-09-30 00:17:07,169 - UHRR - DEBUG - rigctld set response to 'F 7050200': RPRT 0
+2025-09-30 00:17:07,169 - UHRR - INFO - rigctld set command 'F 7050200' successful
+2025-09-30 00:17:07,169 - UHRR - INFO - ✓ Frequency set to 7050200 Hz via rigctld
+2025-09-30 00:17:10,989 - UHRR - INFO - Sending rigctld set command: F 7050100
+2025-09-30 00:17:11,135 - UHRR - DEBUG - rigctld set response to 'F 7050100': RPRT 0
+2025-09-30 00:17:11,135 - UHRR - INFO - rigctld set command 'F 7050100' successful
+2025-09-30 00:17:11,135 - UHRR - INFO - ✓ Frequency set to 7050100 Hz via rigctld
+2025-09-30 00:17:11,722 - UHRR - INFO - Sending rigctld set command: F 7050000
+2025-09-30 00:17:11,868 - UHRR - DEBUG - rigctld set response to 'F 7050000': RPRT 0
+2025-09-30 00:17:11,868 - UHRR - INFO - rigctld set command 'F 7050000' successful
+2025-09-30 00:17:11,870 - UHRR - INFO - ✓ Frequency set to 7050000 Hz via rigctld
+2025-09-30 00:17:12,727 - UHRR - INFO - Sending rigctld set command: F 7049000
+2025-09-30 00:17:12,873 - UHRR - DEBUG - rigctld set response to 'F 7049000': RPRT 0
+2025-09-30 00:17:12,873 - UHRR - INFO - rigctld set command 'F 7049000' successful
+2025-09-30 00:17:12,874 - UHRR - INFO - ✓ Frequency set to 7049000 Hz via rigctld
+2025-09-30 00:17:18,245 - UHRR - INFO - Sending rigctld set command: F 7048000
+2025-09-30 00:17:18,391 - UHRR - DEBUG - rigctld set response to 'F 7048000': RPRT 0
+2025-09-30 00:17:18,391 - UHRR - INFO - rigctld set command 'F 7048000' successful
+2025-09-30 00:17:18,391 - UHRR - INFO - ✓ Frequency set to 7048000 Hz via rigctld
+2025-09-30 00:17:26,440 - UHRR - INFO - Sending rigctld set command: F 7049000
+2025-09-30 00:17:26,586 - UHRR - DEBUG - rigctld set response to 'F 7049000': RPRT 0
+2025-09-30 00:17:26,587 - UHRR - INFO - rigctld set command 'F 7049000' successful
+2025-09-30 00:17:26,587 - UHRR - INFO - ✓ Frequency set to 7049000 Hz via rigctld
+2025-09-30 00:17:27,987 - UHRR - INFO - Sending rigctld set command: F 7050000
+2025-09-30 00:17:28,132 - UHRR - DEBUG - rigctld set response to 'F 7050000': RPRT 0
+2025-09-30 00:17:28,132 - UHRR - INFO - rigctld set command 'F 7050000' successful
+2025-09-30 00:17:28,133 - UHRR - INFO - ✓ Frequency set to 7050000 Hz via rigctld
+2025-09-30 00:17:32,971 - UHRR - INFO - Setting mode to: LSB
+2025-09-30 00:17:33,035 - UHRR - DEBUG - rigctld mode response to 'M LSB 2400': RPRT 0
+2025-09-30 00:17:33,035 - UHRR - INFO - ✓ Mode set to LSB via rigctld
+2025-09-30 00:17:35,917 - UHRR - INFO - Setting mode to: CW
+2025-09-30 00:17:35,979 - UHRR - DEBUG - rigctld mode response to 'M CW 500': RPRT 0
+2025-09-30 00:17:35,979 - UHRR - INFO - ✓ Mode set to CW via rigctld
+2025-09-30 00:17:37,835 - UHRR - INFO - Sending rigctld set command: F 7049000
+2025-09-30 00:17:37,980 - UHRR - DEBUG - rigctld set response to 'F 7049000': RPRT 0
+2025-09-30 00:17:37,980 - UHRR - INFO - rigctld set command 'F 7049000' successful
+2025-09-30 00:17:37,980 - UHRR - INFO - ✓ Frequency set to 7049000 Hz via rigctld
+2025-09-30 00:17:38,795 - UHRR - INFO - Sending rigctld set command: F 7048000
+2025-09-30 00:17:38,939 - UHRR - DEBUG - rigctld set response to 'F 7048000': RPRT 0
+2025-09-30 00:17:38,940 - UHRR - INFO - rigctld set command 'F 7048000' successful
+2025-09-30 00:17:38,940 - UHRR - INFO - ✓ Frequency set to 7048000 Hz via rigctld
+2025-09-30 00:17:40,391 - UHRR - INFO - Sending rigctld set command: F 7048010
+2025-09-30 00:17:40,535 - UHRR - DEBUG - rigctld set response to 'F 7048010': RPRT 0
+2025-09-30 00:17:40,535 - UHRR - INFO - rigctld set command 'F 7048010' successful
+2025-09-30 00:17:40,536 - UHRR - INFO - ✓ Frequency set to 7048010 Hz via rigctld
+2025-09-30 00:17:41,815 - UHRR - INFO - Sending rigctld set command: F 7048000
+2025-09-30 00:17:41,961 - UHRR - DEBUG - rigctld set response to 'F 7048000': RPRT 0
+2025-09-30 00:17:41,961 - UHRR - INFO - rigctld set command 'F 7048000' successful
+2025-09-30 00:17:41,961 - UHRR - INFO - ✓ Frequency set to 7048000 Hz via rigctld
+2025-09-30 00:17:42,800 - UHRR - INFO - Sending rigctld set command: F 7048100
+2025-09-30 00:17:42,945 - UHRR - DEBUG - rigctld set response to 'F 7048100': RPRT 0
+2025-09-30 00:17:42,945 - UHRR - INFO - rigctld set command 'F 7048100' successful
+2025-09-30 00:17:42,945 - UHRR - INFO - ✓ Frequency set to 7048100 Hz via rigctld
+2025-09-30 00:17:43,526 - UHRR - INFO - Sending rigctld set command: F 7048200
+2025-09-30 00:17:43,671 - UHRR - DEBUG - rigctld set response to 'F 7048200': RPRT 0
+2025-09-30 00:17:43,671 - UHRR - INFO - rigctld set command 'F 7048200' successful
+2025-09-30 00:17:43,672 - UHRR - INFO - ✓ Frequency set to 7048200 Hz via rigctld
+2025-09-30 00:17:44,161 - UHRR - INFO - Sending rigctld set command: F 7048300
+2025-09-30 00:17:44,306 - UHRR - DEBUG - rigctld set response to 'F 7048300': RPRT 0
+2025-09-30 00:17:44,306 - UHRR - INFO - rigctld set command 'F 7048300' successful
+2025-09-30 00:17:44,306 - UHRR - INFO - ✓ Frequency set to 7048300 Hz via rigctld
+2025-09-30 00:17:44,949 - UHRR - INFO - Sending rigctld set command: F 7048400
+2025-09-30 00:17:45,096 - UHRR - DEBUG - rigctld set response to 'F 7048400': RPRT 0
+2025-09-30 00:17:45,096 - UHRR - INFO - rigctld set command 'F 7048400' successful
+2025-09-30 00:17:45,097 - UHRR - INFO - ✓ Frequency set to 7048400 Hz via rigctld
+2025-09-30 00:17:49,220 - UHRR - INFO - Sending rigctld set command: F 7048500
+2025-09-30 00:17:49,365 - UHRR - DEBUG - rigctld set response to 'F 7048500': RPRT 0
+2025-09-30 00:17:49,365 - UHRR - INFO - rigctld set command 'F 7048500' successful
+2025-09-30 00:17:49,365 - UHRR - INFO - ✓ Frequency set to 7048500 Hz via rigctld
+2025-09-30 00:17:54,883 - UHRR - INFO - Sending rigctld set command: F 7048510
+2025-09-30 00:17:55,030 - UHRR - DEBUG - rigctld set response to 'F 7048510': RPRT 0
+2025-09-30 00:17:55,030 - UHRR - INFO - rigctld set command 'F 7048510' successful
+2025-09-30 00:17:55,030 - UHRR - INFO - ✓ Frequency set to 7048510 Hz via rigctld
+2025-09-30 00:17:56,357 - UHRR - INFO - Sending rigctld set command: F 7048500
+2025-09-30 00:17:56,502 - UHRR - DEBUG - rigctld set response to 'F 7048500': RPRT 0
+2025-09-30 00:17:56,502 - UHRR - INFO - rigctld set command 'F 7048500' successful
+2025-09-30 00:17:56,502 - UHRR - INFO - ✓ Frequency set to 7048500 Hz via rigctld
+2025-09-30 00:17:57,352 - UHRR - INFO - Sending rigctld set command: F 7048600
+2025-09-30 00:17:57,496 - UHRR - DEBUG - rigctld set response to 'F 7048600': RPRT 0
+2025-09-30 00:17:57,497 - UHRR - INFO - rigctld set command 'F 7048600' successful
+2025-09-30 00:17:57,497 - UHRR - INFO - ✓ Frequency set to 7048600 Hz via rigctld
+2025-09-30 00:17:58,281 - UHRR - INFO - Sending rigctld set command: F 7048700
+2025-09-30 00:17:58,426 - UHRR - DEBUG - rigctld set response to 'F 7048700': RPRT 0
+2025-09-30 00:17:58,426 - UHRR - INFO - rigctld set command 'F 7048700' successful
+2025-09-30 00:17:58,426 - UHRR - INFO - ✓ Frequency set to 7048700 Hz via rigctld
+2025-09-30 00:17:59,443 - UHRR - INFO - Sending rigctld set command: F 7048800
+2025-09-30 00:17:59,587 - UHRR - DEBUG - rigctld set response to 'F 7048800': RPRT 0
+2025-09-30 00:17:59,587 - UHRR - INFO - rigctld set command 'F 7048800' successful
+2025-09-30 00:17:59,587 - UHRR - INFO - ✓ Frequency set to 7048800 Hz via rigctld
+2025-09-30 00:18:01,016 - UHRR - INFO - Sending rigctld set command: F 7048700
+2025-09-30 00:18:01,162 - UHRR - DEBUG - rigctld set response to 'F 7048700': RPRT 0
+2025-09-30 00:18:01,162 - UHRR - INFO - rigctld set command 'F 7048700' successful
+2025-09-30 00:18:01,162 - UHRR - INFO - ✓ Frequency set to 7048700 Hz via rigctld
+2025-09-30 00:18:02,190 - UHRR - INFO - Sending rigctld set command: F 7048600
+2025-09-30 00:18:02,334 - UHRR - DEBUG - rigctld set response to 'F 7048600': RPRT 0
+2025-09-30 00:18:02,335 - UHRR - INFO - rigctld set command 'F 7048600' successful
+2025-09-30 00:18:02,335 - UHRR - INFO - ✓ Frequency set to 7048600 Hz via rigctld
+2025-09-30 00:18:03,519 - UHRR - INFO - Sending rigctld set command: F 7048590
+2025-09-30 00:18:03,665 - UHRR - DEBUG - rigctld set response to 'F 7048590': RPRT 0
+2025-09-30 00:18:03,665 - UHRR - INFO - rigctld set command 'F 7048590' successful
+2025-09-30 00:18:03,665 - UHRR - INFO - ✓ Frequency set to 7048590 Hz via rigctld
+2025-09-30 00:18:04,435 - UHRR - INFO - Sending rigctld set command: F 7048490
+2025-09-30 00:18:04,580 - UHRR - DEBUG - rigctld set response to 'F 7048490': RPRT 0
+2025-09-30 00:18:04,580 - UHRR - INFO - rigctld set command 'F 7048490' successful
+2025-09-30 00:18:04,581 - UHRR - INFO - ✓ Frequency set to 7048490 Hz via rigctld
+2025-09-30 00:18:05,620 - UHRR - INFO - Sending rigctld set command: F 7048489
+2025-09-30 00:18:05,764 - UHRR - DEBUG - rigctld set response to 'F 7048489': RPRT 0
+2025-09-30 00:18:05,765 - UHRR - INFO - rigctld set command 'F 7048489' successful
+2025-09-30 00:18:05,765 - UHRR - INFO - ✓ Frequency set to 7048489 Hz via rigctld
+2025-09-30 00:18:06,511 - UHRR - INFO - Sending rigctld set command: F 7048490
+2025-09-30 00:18:06,656 - UHRR - DEBUG - rigctld set response to 'F 7048490': RPRT 0
+2025-09-30 00:18:06,657 - UHRR - INFO - rigctld set command 'F 7048490' successful
+2025-09-30 00:18:06,657 - UHRR - INFO - ✓ Frequency set to 7048490 Hz via rigctld
+2025-09-30 00:18:07,665 - UHRR - INFO - Sending rigctld set command: F 7048491
+2025-09-30 00:18:07,809 - UHRR - DEBUG - rigctld set response to 'F 7048491': RPRT 0
+2025-09-30 00:18:07,810 - UHRR - INFO - rigctld set command 'F 7048491' successful
+2025-09-30 00:18:07,810 - UHRR - INFO - ✓ Frequency set to 7048491 Hz via rigctld
+2025-09-30 00:18:08,911 - UHRR - INFO - Sending rigctld set command: F 7048490
+2025-09-30 00:18:09,056 - UHRR - DEBUG - rigctld set response to 'F 7048490': RPRT 0
+2025-09-30 00:18:09,057 - UHRR - INFO - rigctld set command 'F 7048490' successful
+2025-09-30 00:18:09,057 - UHRR - INFO - ✓ Frequency set to 7048490 Hz via rigctld
+2025-09-30 00:18:09,719 - UHRR - INFO - Sending rigctld set command: F 7048500
+2025-09-30 00:18:09,863 - UHRR - DEBUG - rigctld set response to 'F 7048500': RPRT 0
+2025-09-30 00:18:09,864 - UHRR - INFO - rigctld set command 'F 7048500' successful
+2025-09-30 00:18:09,864 - UHRR - INFO - ✓ Frequency set to 7048500 Hz via rigctld
+2025-09-30 00:18:11,925 - UHRR - INFO - Sending rigctld set command: F 7048600
+2025-09-30 00:18:12,070 - UHRR - DEBUG - rigctld set response to 'F 7048600': RPRT 0
+2025-09-30 00:18:12,071 - UHRR - INFO - rigctld set command 'F 7048600' successful
+2025-09-30 00:18:12,072 - UHRR - INFO - ✓ Frequency set to 7048600 Hz via rigctld
+2025-09-30 00:18:22,397 - UHRR - INFO - Sending rigctld set command: F 7048500
+2025-09-30 00:18:22,542 - UHRR - DEBUG - rigctld set response to 'F 7048500': RPRT 0
+2025-09-30 00:18:22,542 - UHRR - INFO - rigctld set command 'F 7048500' successful
+2025-09-30 00:18:22,542 - UHRR - INFO - ✓ Frequency set to 7048500 Hz via rigctld
+2025-09-30 00:18:29,473 - UHRR - INFO - Sending rigctld set command: F 7048400
+2025-09-30 00:18:29,617 - UHRR - DEBUG - rigctld set response to 'F 7048400': RPRT 0
+2025-09-30 00:18:29,617 - UHRR - INFO - rigctld set command 'F 7048400' successful
+2025-09-30 00:18:29,618 - UHRR - INFO - ✓ Frequency set to 7048400 Hz via rigctld
+2025-09-30 00:19:38,094 - UHRR - INFO - Setting mode to: USB
+2025-09-30 00:19:38,160 - UHRR - DEBUG - rigctld mode response to 'M USB 2400': RPRT 0
+2025-09-30 00:19:38,161 - UHRR - INFO - ✓ Mode set to USB via rigctld
+2025-09-30 00:19:39,018 - UHRR - INFO - Setting mode to: LSB
+2025-09-30 00:19:39,082 - UHRR - DEBUG - rigctld mode response to 'M LSB 2400': RPRT 0
+2025-09-30 00:19:39,082 - UHRR - INFO - ✓ Mode set to LSB via rigctld
+2025-09-30 00:19:42,169 - UHRR - INFO - Setting mode to: CW
+2025-09-30 00:19:42,231 - UHRR - DEBUG - rigctld mode response to 'M CW 500': RPRT 0
+2025-09-30 00:19:42,231 - UHRR - INFO - ✓ Mode set to CW via rigctld
+2025-09-30 00:19:44,197 - UHRR - INFO - Setting mode to: LSB
+2025-09-30 00:19:44,262 - UHRR - DEBUG - rigctld mode response to 'M LSB 2400': RPRT 0
+2025-09-30 00:19:44,262 - UHRR - INFO - ✓ Mode set to LSB via rigctld
+2025-09-30 00:19:55,074 - UHRR - INFO - Sending rigctld set command: F 7050000
+2025-09-30 00:19:55,220 - UHRR - DEBUG - rigctld set response to 'F 7050000': RPRT 0
+2025-09-30 00:19:55,221 - UHRR - INFO - rigctld set command 'F 7050000' successful
+2025-09-30 00:19:55,221 - UHRR - INFO - ✓ Frequency set to 7050000 Hz via rigctld
+2025-09-30 00:20:05,405 - UHRR - INFO - Sending rigctld set command: F 14260000
+2025-09-30 00:20:05,553 - UHRR - DEBUG - rigctld set response to 'F 14260000': RPRT 0
+2025-09-30 00:20:05,553 - UHRR - INFO - rigctld set command 'F 14260000' successful
+2025-09-30 00:20:05,553 - UHRR - INFO - ✓ Frequency set to 14260000 Hz via rigctld
+2025-09-30 00:20:05,554 - UHRR - INFO - Setting mode to: USB
+2025-09-30 00:20:05,617 - UHRR - DEBUG - rigctld mode response to 'M USB 2400': RPRT 0
+2025-09-30 00:20:05,617 - UHRR - INFO - ✓ Mode set to USB via rigctld
