@@ -1,0 +1,429 @@
+/* Mobile Interface Styles */
+
+.mobile-interface {
+  width: 100%;
+  height: 100vh;
+  background: linear-gradient(135deg, #2c3e50, #34495e);
+  color: white;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.mobile-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  background: rgba(0, 0, 0, 0.3);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.time-display {
+  font-size: 1.2rem;
+  font-weight: 500;
+}
+
+.signal-bars {
+  display: flex;
+  gap: 2px;
+  align-items: flex-end;
+}
+
+.signal-bars .bar {
+  width: 4px;
+  background: #ccc;
+  border-radius: 2px;
+}
+
+.signal-bars.connected .bar:nth-child(-n+3) {
+  background: #27ae60;
+  height: 12px;
+}
+
+.signal-bars.connected .bar:nth-child(4) {
+  background: #f39c12;
+  height: 8px;
+}
+
+.disconnect-btn {
+  background: #e74c3c;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background 0.3s ease;
+}
+
+.disconnect-btn:hover {
+  background: #c0392b;
+}
+
+.main-display {
+  flex: 1;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+/* Frequency Display */
+.frequency-display {
+  background: rgba(0, 0, 0, 0.4);
+  border-radius: 15px;
+  padding: 1.5rem;
+  text-align: center;
+  cursor: pointer;
+  transition: background 0.3s ease;
+}
+
+.frequency-display:hover {
+  background: rgba(0, 0, 0, 0.6);
+}
+
+.frequency-main {
+  font-size: 2.5rem;
+  font-weight: bold;
+  margin-bottom: 0.5rem;
+}
+
+.frequency-full {
+  font-size: 1.2rem;
+  opacity: 0.8;
+}
+
+.frequency-input {
+  width: 100%;
+  font-size: 2rem;
+  text-align: center;
+  background: transparent;
+  border: none;
+  color: white;
+  outline: none;
+  border-bottom: 2px solid #3498db;
+}
+
+/* Mode Selection */
+.mode-selection {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.mode-btn {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.mode-btn.active {
+  background: #3498db;
+  border-color: #3498db;
+}
+
+.mode-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* Control Buttons */
+.control-buttons {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.control-btn {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.control-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* Signal Strength */
+.signal-strength {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  background: rgba(0, 0, 0, 0.3);
+  padding: 1rem;
+  border-radius: 10px;
+}
+
+.signal-label {
+  font-size: 0.9rem;
+  min-width: 50px;
+}
+
+.signal-meter {
+  flex: 1;
+  height: 20px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.signal-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #e74c3c, #f39c12, #27ae60);
+  transition: width 0.3s ease;
+}
+
+/* Meters */
+.meters {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.meter {
+  background: rgba(0, 0, 0, 0.3);
+  padding: 1rem;
+  border-radius: 10px;
+}
+
+.meter-label {
+  font-size: 0.8rem;
+  margin-bottom: 0.5rem;
+  text-align: center;
+}
+
+.meter-bar {
+  height: 15px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  overflow: hidden;
+  margin-bottom: 0.5rem;
+}
+
+.meter-fill {
+  height: 100%;
+  transition: width 0.3s ease;
+}
+
+.meter-fill.swr {
+  background: linear-gradient(90deg, #27ae60, #f39c12, #e74c3c);
+  width: 30%;
+}
+
+.meter-fill.mic {
+  background: #3498db;
+  width: 75%;
+}
+
+.meter-value {
+  text-align: center;
+  font-size: 0.9rem;
+  font-weight: bold;
+}
+
+/* Bottom Controls */
+.bottom-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(0, 0, 0, 0.4);
+  padding: 1rem;
+  border-radius: 15px;
+}
+
+.log-btn {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  cursor: pointer;
+}
+
+.ptt-area {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+}
+
+.ptt-btn {
+  background: #e74c3c;
+  border: none;
+  border-radius: 50%;
+  width: 80px;
+  height: 80px;
+  color: white;
+  font-size: 1.2rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 20px rgba(231, 76, 60, 0.3);
+}
+
+.ptt-btn:hover {
+  transform: scale(1.05);
+  box-shadow: 0 6px 25px rgba(231, 76, 60, 0.4);
+}
+
+.ptt-btn.transmitting {
+  background: #c0392b;
+  animation: pulse 1s infinite;
+  box-shadow: 0 0 30px rgba(231, 76, 60, 0.6);
+}
+
+@keyframes pulse {
+  0% { box-shadow: 0 0 0 0 rgba(231, 76, 60, 0.7); }
+  70% { box-shadow: 0 0 0 20px rgba(231, 76, 60, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(231, 76, 60, 0); }
+}
+
+.step-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.step-btn {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: white;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.step-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.step-value {
+  font-size: 0.9rem;
+  min-width: 60px;
+  text-align: center;
+}
+
+/* Spectrum Area */
+.spectrum-area {
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 10px;
+  padding: 1rem;
+  margin-top: 1rem;
+}
+
+.spectrum-canvas {
+  width: 100%;
+  height: 80px;
+  border-radius: 5px;
+}
+
+/* Bottom Navigation */
+.bottom-nav {
+  display: flex;
+  justify-content: space-around;
+  background: rgba(0, 0, 0, 0.6);
+  padding: 0.5rem;
+  border-radius: 20px;
+}
+
+.nav-btn {
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.7);
+  padding: 0.5rem 1rem;
+  border-radius: 15px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 0.8rem;
+}
+
+.nav-btn.active {
+  background: #3498db;
+  color: white;
+}
+
+.nav-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+}
+
+/* Responsive adjustments */
+@media (max-width: 480px) {
+  .mobile-header {
+    padding: 0.5rem;
+  }
+
+  .main-display {
+    padding: 0.5rem;
+    gap: 0.5rem;
+  }
+
+  .frequency-main {
+    font-size: 2rem;
+  }
+
+  .ptt-btn {
+    width: 70px;
+    height: 70px;
+    font-size: 1rem;
+  }
+
+  .mode-selection,
+  .control-buttons {
+    gap: 0.25rem;
+  }
+
+  .mode-btn,
+  .control-btn {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.8rem;
+  }
+}
+
+/* Dark mode enhancements */
+@media (prefers-color-scheme: dark) {
+  .mobile-interface {
+    background: linear-gradient(135deg, #1a1a1a, #2c3e50);
+  }
+
+  .frequency-display,
+  .signal-strength,
+  .meters,
+  .spectrum-area {
+    background: rgba(0, 0, 0, 0.4);
+  }
+}
+
+/* Landscape orientation */
+@media (orientation: landscape) and (max-height: 500px) {
+  .mobile-header {
+    padding: 0.25rem;
+  }
+
+  .frequency-main {
+    font-size: 1.8rem;
+  }
+
+  .ptt-btn {
+    width: 60px;
+    height: 60px;
+    font-size: 0.9rem;
+  }
+}

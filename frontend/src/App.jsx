@@ -3,6 +3,7 @@ import io from 'socket.io-client';
 import RadioControl from './components/RadioControl';
 import SpectrumDisplay from './components/SpectrumDisplay';
 import AudioControl from './components/AudioControl';
+import MobileInterface from './components/MobileInterface';
 import RadioService from './services/radioService';
 import AudioService from './services/audioService';
 import WebSocketService from './services/websocketService';
@@ -11,9 +12,20 @@ import './App.css';
 function App() {
   const [isConnected, setIsConnected] = useState(false);
   const [services, setServices] = useState(null);
+  const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
+    // Detect mobile device
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth <= 768 || 'ontouchstart' in window);
+    };
+
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+
     initializeServices();
+
+    return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
   const initializeServices = async () => {
@@ -74,6 +86,18 @@ function App() {
     );
   }
 
+  // Render mobile interface for mobile devices
+  if (isMobile && services) {
+    return (
+      <MobileInterface
+        radioService={services.radio}
+        audioService={services.audio}
+        websocketService={services.websocket}
+      />
+    );
+  }
+
+  // Render desktop interface
   return (
     <div className="app">
       <header className="app-header">
