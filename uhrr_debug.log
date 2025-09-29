@@ -1504,3 +1504,82 @@
 2025-09-30 00:20:05,554 - UHRR - INFO - Setting mode to: USB
 2025-09-30 00:20:05,617 - UHRR - DEBUG - rigctld mode response to 'M USB 2400': RPRT 0
 2025-09-30 00:20:05,617 - UHRR - INFO - ✓ Mode set to USB via rigctld
+2025-09-30 00:24:14,685 - UHRR - INFO - Testing rigctld daemon connection...
+2025-09-30 00:24:14,686 - UHRR - INFO - ✓ rigctld daemon responding! Initial frequency: 14260000
+2025-09-30 00:24:14,686 - UHRR - INFO - Sending rigctld command: f
+2025-09-30 00:24:14,687 - UHRR - DEBUG - rigctld response to 'f': 14260000
+2025-09-30 00:24:14,687 - UHRR - INFO - rigctld command 'f' successful
+2025-09-30 00:24:14,687 - UHRR - INFO - Current frequency from rigctld: 14260000 Hz
+2025-09-30 00:24:14,687 - UHRR - INFO - Sending rigctld command: m
+2025-09-30 00:24:14,688 - UHRR - DEBUG - rigctld response to 'm': 2200
+2025-09-30 00:24:14,688 - UHRR - INFO - rigctld command 'm' successful
+2025-09-30 00:24:14,688 - UHRR - DEBUG - Raw mode response: '2200'
+2025-09-30 00:24:14,688 - UHRR - WARNING - IC-M710 returned only passband 2200, using stored mode USB
+2025-09-30 00:24:14,689 - asyncio - DEBUG - Using selector: KqueueSelector
+2025-09-30 00:24:15,892 - tornado.access - INFO - 101 GET /WSCTRX (2409:8a00:1894:9660:84e:6280:b8f7:34c8) 1.64ms
+2025-09-30 00:24:15,923 - UHRR - INFO - Sending rigctld command: f
+2025-09-30 00:24:15,924 - UHRR - DEBUG - rigctld response to 'f': 14260000
+2025-09-30 00:24:15,924 - UHRR - INFO - rigctld command 'f' successful
+2025-09-30 00:24:15,924 - UHRR - INFO - Current frequency from rigctld: 14260000 Hz
+2025-09-30 00:24:15,925 - UHRR - INFO - Sending rigctld command: m
+2025-09-30 00:24:15,926 - UHRR - DEBUG - rigctld response to 'm': 2200
+2025-09-30 00:24:15,926 - UHRR - INFO - rigctld command 'm' successful
+2025-09-30 00:24:15,927 - UHRR - DEBUG - Raw mode response: '2200'
+2025-09-30 00:24:15,927 - UHRR - WARNING - IC-M710 returned only passband 2200, using stored mode USB
+2025-09-30 00:24:16,955 - tornado.access - INFO - 101 GET /WSaudioTX (2409:8a00:1894:9660:84e:6280:b8f7:34c8) 0.89ms
+2025-09-30 00:24:24,341 - tornado.access - INFO - 200 GET / (2409:8a00:1894:9660:84e:6280:b8f7:34c8) 1.83ms
+2025-09-30 00:24:24,433 - tornado.access - INFO - 304 GET /style.css (2409:8a00:1894:9660:84e:6280:b8f7:34c8) 2.45ms
+2025-09-30 00:24:24,435 - tornado.access - INFO - 304 GET /controls.js (2409:8a00:1894:9660:84e:6280:b8f7:34c8) 1.51ms
+2025-09-30 00:24:24,443 - tornado.access - INFO - 304 GET /tx_button_optimized.js (2409:8a00:1894:9660:84e:6280:b8f7:34c8) 0.45ms
+2025-09-30 00:24:27,441 - tornado.access - INFO - 101 GET /WSaudioRX (2409:8a00:1894:9660:84e:6280:b8f7:34c8) 1.21ms
+2025-09-30 00:24:27,663 - tornado.access - INFO - 101 GET /WSCTRX (2409:8a00:1894:9660:84e:6280:b8f7:34c8) 0.23ms
+2025-09-30 00:24:27,716 - UHRR - INFO - Sending rigctld command: f
+2025-09-30 00:24:27,730 - UHRR - DEBUG - rigctld response to 'f': 14260000
+2025-09-30 00:24:27,730 - UHRR - INFO - rigctld command 'f' successful
+2025-09-30 00:24:27,730 - UHRR - INFO - Current frequency from rigctld: 14260000 Hz
+2025-09-30 00:24:27,731 - UHRR - INFO - Sending rigctld command: m
+2025-09-30 00:24:27,732 - UHRR - DEBUG - rigctld response to 'm': 2200
+2025-09-30 00:24:27,732 - UHRR - INFO - rigctld command 'm' successful
+2025-09-30 00:24:27,732 - UHRR - DEBUG - Raw mode response: '2200'
+2025-09-30 00:24:27,732 - UHRR - WARNING - IC-M710 returned only passband 2200, using stored mode USB
+2025-09-30 00:24:27,945 - tornado.access - INFO - 101 GET /WSaudioTX (2409:8a00:1894:9660:84e:6280:b8f7:34c8) 0.79ms
+2025-09-30 00:24:38,462 - UHRR - INFO - Sending rigctld set command: F 7050000
+2025-09-30 00:24:38,615 - UHRR - DEBUG - rigctld set response to 'F 7050000': RPRT 0
+2025-09-30 00:24:38,615 - UHRR - INFO - rigctld set command 'F 7050000' successful
+2025-09-30 00:24:38,616 - UHRR - INFO - ✓ Frequency set to 7050000 Hz via rigctld
+2025-09-30 00:24:38,616 - UHRR - INFO - Setting mode to: LSB
+2025-09-30 00:24:38,679 - UHRR - DEBUG - rigctld mode response to 'M LSB 2400': RPRT 0
+2025-09-30 00:24:38,679 - UHRR - INFO - ✓ Mode set to LSB via rigctld
+2025-09-30 00:24:48,921 - UHRR - INFO - Setting PTT: status=true, ptt_state=True, ptt_value=1
+2025-09-30 00:24:48,982 - UHRR - INFO - ✓ PTT set to true via rigctld (fast)
+2025-09-30 00:24:49,105 - UHRR - INFO - PyAudio TX initialized: rate=24000, encoded=0
+2025-09-30 00:25:04,103 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-30 00:25:04,217 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-30 00:27:14,490 - UHRR - INFO - Setting PTT: status=true, ptt_state=True, ptt_value=1
+2025-09-30 00:27:14,552 - UHRR - INFO - ✓ PTT set to true via rigctld (fast)
+2025-09-30 00:27:14,677 - UHRR - INFO - PyAudio TX initialized: rate=24000, encoded=0
+2025-09-30 00:27:17,311 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-30 00:27:17,426 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-30 00:28:40,862 - UHRR - INFO - Setting PTT: status=true, ptt_state=True, ptt_value=1
+2025-09-30 00:28:40,922 - UHRR - INFO - ✓ PTT set to true via rigctld (fast)
+2025-09-30 00:28:41,043 - UHRR - INFO - PyAudio TX initialized: rate=24000, encoded=0
+2025-09-30 00:28:46,403 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-30 00:28:46,516 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-30 00:29:23,053 - UHRR - INFO - Sending rigctld set command: F 14270000
+2025-09-30 00:29:23,205 - UHRR - DEBUG - rigctld set response to 'F 14270000': RPRT 0
+2025-09-30 00:29:23,205 - UHRR - INFO - rigctld set command 'F 14270000' successful
+2025-09-30 00:29:23,206 - UHRR - INFO - ✓ Frequency set to 14270000 Hz via rigctld
+2025-09-30 00:29:26,123 - UHRR - INFO - Setting mode to: USB
+2025-09-30 00:29:26,190 - UHRR - DEBUG - rigctld mode response to 'M USB 2400': RPRT 0
+2025-09-30 00:29:26,190 - UHRR - INFO - ✓ Mode set to USB via rigctld
+2025-09-30 00:29:30,734 - UHRR - INFO - Sending rigctld set command: F 7050000
+2025-09-30 00:29:30,879 - UHRR - DEBUG - rigctld set response to 'F 7050000': RPRT 0
+2025-09-30 00:29:30,879 - UHRR - INFO - rigctld set command 'F 7050000' successful
+2025-09-30 00:29:30,880 - UHRR - INFO - ✓ Frequency set to 7050000 Hz via rigctld
+2025-09-30 00:29:32,204 - UHRR - INFO - Sending rigctld set command: F 7050000
+2025-09-30 00:29:32,349 - UHRR - DEBUG - rigctld set response to 'F 7050000': RPRT 0
+2025-09-30 00:29:32,349 - UHRR - INFO - rigctld set command 'F 7050000' successful
+2025-09-30 00:29:32,349 - UHRR - INFO - ✓ Frequency set to 7050000 Hz via rigctld
+2025-09-30 00:29:32,349 - UHRR - INFO - Setting mode to: LSB
+2025-09-30 00:29:32,412 - UHRR - DEBUG - rigctld mode response to 'M LSB 2400': RPRT 0
+2025-09-30 00:29:32,412 - UHRR - INFO - ✓ Mode set to LSB via rigctld

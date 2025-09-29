@@ -1,0 +1,51 @@
+{
+  "name": "uhrr-frontend",
+  "version": "2.0.0",
+  "description": "Universal HamRadio Remote - Modern Node.js Frontend",
+  "main": "dist/server.js",
+  "scripts": {
+    "dev": "nodemon src/server.js",
+    "build": "webpack --mode=production",
+    "start": "node dist/server.js",
+    "lint": "eslint src/",
+    "test": "jest"
+  },
+  "dependencies": {
+    "express": "^4.18.0",
+    "socket.io": "^4.7.0",
+    "socket.io-client": "^4.7.0",
+    "simple-peer": "^9.11.0",
+    "cors": "^2.8.5",
+    "helmet": "^6.0.0",
+    "compression": "^1.7.4",
+    "morgan": "^1.10.0",
+    "dotenv": "^16.0.0",
+    "uuid": "^9.0.0",
+    "lodash": "^4.17.21"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.22",
+    "webpack": "^5.88.0",
+    "webpack-cli": "^5.1.0",
+    "babel-loader": "^9.1.0",
+    "@babel/core": "^7.22.0",
+    "@babel/preset-env": "^7.22.0",
+    "@babel/preset-react": "^7.22.0",
+    "eslint": "^8.44.0",
+    "jest": "^29.5.0",
+    "supertest": "^6.3.0"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "keywords": [
+    "hamradio",
+    "webrtc",
+    "socket.io",
+    "realtime",
+    "audio",
+    "radio-control"
+  ],
+  "author": "Universal HamRadio Remote Team",
+  "license": "GPL-3.0"
+}
