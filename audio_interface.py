@@ -13,6 +13,7 @@ import gc
 import numpy as np
 from opus.decoder import Decoder as OpusDecoder
 
+
 def enumerate_audio_devices():
     """Enumerate audio devices available on the system"""
     try:
@@ -92,12 +93,12 @@ class PyAudioCapture(threading.Thread):
             self.stream = self.p.open(
                 format=pyaudio.paFloat32,
                 channels=device_channels,
-                rate=8000,
+                rate=24000,
                 input=True,
                 input_device_index=device_index,
                 frames_per_buffer=256
             )
-            print(f'PyAudio input stream opened successfully with {device_channels} channel(s)')
+            print(f'PyAudio input stream opened successfully with {device_channels} channel(s) at 24000 Hz')
             self.stereo_mode = (device_channels == 2)
         except Exception as e:
             print(f"Failed to open PyAudio input stream with {device_channels} channels: {e}")
@@ -106,12 +107,12 @@ class PyAudioCapture(threading.Thread):
                 self.stream = self.p.open(
                     format=pyaudio.paFloat32,
                     channels=1,
-                    rate=8000,
+                    rate=24000,
                     input=True,
                     input_device_index=device_index,
                     frames_per_buffer=256
                 )
-                print('PyAudio input stream opened successfully with MONO (1 channel) - fallback')
+                print('PyAudio input stream opened successfully with MONO (1 channel) at 24000 Hz - fallback')
                 self.stereo_mode = False
             except Exception as e2:
                 print(f"Failed to open mono PyAudio input stream: {e2}")
@@ -120,11 +121,11 @@ class PyAudioCapture(threading.Thread):
                     self.stream = self.p.open(
                         format=pyaudio.paFloat32,
                         channels=1,
-                        rate=8000,
+                        rate=24000,
                         input=True,
                         frames_per_buffer=256
                     )
-                    print('Opened with default input device (mono)')
+                    print('Opened with default input device (mono) at 24000 Hz')
                     self.stereo_mode = False
                 except Exception as e3:
                     print(f"Failed to open default input device: {e3}")
@@ -179,16 +180,27 @@ class PyAudioCapture(threading.Thread):
                         import sys
                         main_module = sys.modules['__main__']
                         if hasattr(main_module, 'AudioRXHandlerClients'):
+                            global AudioRXHandlerClients
                             AudioRXHandlerClients = getattr(main_module, 'AudioRXHandlerClients')
                             client_count = len(AudioRXHandlerClients)
+                            # Initialize and increment frame counter
+                            if hasattr(self, '_log_counter'):
+                                self._log_counter += 1
+                            else:
+                                self._log_counter = 1
+
                             if client_count > 0:
                                 for c in AudioRXHandlerClients:
                                     c.Wavframes.append(data)
-                                # Debug: Print when clients are connected and receiving data
-                                print(f"Audio data sent to {client_count} clients")
+                                # Print logs only every 1000 frames to reduce log volume
+                                if self._log_counter % 1000 == 0:
+                                    print(f"DEBUG: Checking clients - found {client_count} clients")
+                                    print(f"Audio data sent to {client_count} clients ({self._log_counter} frames)")
                             else:
-                                # Debug: Print when no clients are connected
-                                print("No audio clients connected")
+                                # Print logs only every 1000 frames when no clients are connected
+                                if self._log_counter % 1000 == 0:
+                                    print(f"DEBUG: Checking clients - found {client_count} clients")
+                                    print("No audio clients connected")
                         else:
                             print("AudioRXHandlerClients not found in main module")
                     except Exception as e:

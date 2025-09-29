@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>PAD TX按钮测试页面</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background: #1a1a1a;
+            color: white;
+            text-align: center;
+        }
+        
+        .test-section {
+            background: #333;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 10px;
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        
+        .tx-button {
+            text-align: center;
+            font: normal bold 100px tahoma;
+            height: 150px;
+            width: 250px;
+            display: inline-block;
+            background: linear-gradient(145deg, #ff6600, #cc4400);
+            border: 3px solid #ff8800;
+            border-radius: 15px;
+            color: white;
+            cursor: pointer;
+            margin: 20px;
+            padding: 25px;
+            transition: all 0.1s ease;
+            touch-action: manipulation;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+        }
+        
+        .tx-button:hover {
+            background: linear-gradient(145deg, #ff8800, #ff4400);
+        }
+        
+        .tx-button.pressed {
+            transform: scale(0.95);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.5);
+            background: linear-gradient(145deg, #00ff00, #00cc00);
+        }
+        
+        .status {
+            background: #444;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 18px;
+        }
+        
+        .success { color: #00ff00; }
+        .error { color: #ff0000; }
+        .warning { color: #ffff00; }
+        .info { color: #00aaff; }
+        
+        .log {
+            background: #000;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+            margin: 10px 0;
+            text-align: left;
+        }
+        
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        
+        .stat-box {
+            background: #444;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        
+        .stat-number {
+            font-size: 24px;
+            font-weight: bold;
+            color: #00ff00;
+        }
+        
+        .stat-label {
+            font-size: 14px;
+            color: #ccc;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>📱 PAD TX按钮测试页面</h1>
+    
+    <div class="test-section">
+        <h2>TX按钮测试</h2>
+        <div class="tx-button" id="test-tx-button">TX</div>
+        <div class="status" id="tx-status">状态: 未按下</div>
+    </div>
+    
+    <div class="test-section">
+        <h2>触摸统计</h2>
+        <div class="stats">
+            <div class="stat-box">
+                <div class="stat-number" id="touch-count">0</div>
+                <div class="stat-label">触摸次数</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-number" id="press-time">0ms</div>
+                <div class="stat-label">按下时间</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-number" id="response-time">0ms</div>
+                <div class="stat-label">响应时间</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-number" id="success-rate">100%</div>
+                <div class="stat-label">成功率</div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="test-section">
+        <h2>测试日志</h2>
+        <div class="log" id="test-log"></div>
+        <button onclick="clearLog()" style="background: #666; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer;">清空日志</button>
+    </div>
+
+    <script>
+        let touchCount = 0;
+        let successCount = 0;
+        let pressStartTime = 0;
+        let lastResponseTime = 0;
+        
+        function log(message, type = 'info') {
+            const logElement = document.getElementById('test-log');
+            const timestamp = new Date().toLocaleTimeString();
+            const className = type === 'error' ? 'error' : type === 'warning' ? 'warning' : type === 'success' ? 'success' : 'info';
+            logElement.innerHTML += `<div class="${className}">[${timestamp}] ${message}</div>`;
+            logElement.scrollTop = logElement.scrollHeight;
+        }
+        
+        function clearLog() {
+            document.getElementById('test-log').innerHTML = '';
+        }
+        
+        function updateStats() {
+            document.getElementById('touch-count').textContent = touchCount;
+            document.getElementById('success-rate').textContent = touchCount > 0 ? Math.round((successCount / touchCount) * 100) + '%' : '100%';
+        }
+        
+        function updateStatus(message, type = 'info') {
+            const statusElement = document.getElementById('tx-status');
+            statusElement.innerHTML = `<span class="${type}">${message}</span>`;
+        }
+        
+        // 模拟TX按钮功能
+        function simulateTX(state) {
+            const button = document.getElementById('test-tx-button');
+            const now = Date.now();
+            
+            if (state === 'True' || state === true) {
+                // TX开启
+                button.classList.add('pressed');
+                updateStatus('TX开启', 'success');
+                pressStartTime = now;
+                log('TX按钮按下', 'success');
+                
+                // 模拟音频传输
+                log('开始音频传输...', 'info');
+                
+            } else {
+                // TX关闭
+                button.classList.remove('pressed');
+                updateStatus('TX关闭', 'info');
+                
+                if (pressStartTime > 0) {
+                    const pressDuration = now - pressStartTime;
+                    document.getElementById('press-time').textContent = pressDuration + 'ms';
+                    log(`TX按钮释放，按下时长: ${pressDuration}ms`, 'info');
+                }
+                
+                // 模拟停止音频传输
+                log('停止音频传输', 'info');
+            }
+        }
+        
+        // 初始化触摸事件
+        function initTouchEvents() {
+            const button = document.getElementById('test-tx-button');
+            let touchActive = false;
+            let touchStartTime = 0;
+            
+            // 触摸开始
+            button.addEventListener("touchstart", function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                touchActive = true;
+                touchStartTime = Date.now();
+                touchCount++;
+                
+                // 立即视觉反馈
+                this.classList.add('pressed');
+                
+                // 立即执行TX开启
+                simulateTX('True');
+                
+                // 计算响应时间
+                const responseTime = Date.now() - touchStartTime;
+                lastResponseTime = responseTime;
+                document.getElementById('response-time').textContent = responseTime + 'ms';
+                
+                log(`触摸开始，响应时间: ${responseTime}ms`, 'success');
+                successCount++;
+                updateStats();
+                
+            }, {passive: false, capture: true});
+            
+            // 触摸结束
+            button.addEventListener("touchend", function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                touchActive = false;
+                
+                // 立即视觉反馈
+                this.classList.remove('pressed');
+                
+                // 立即执行TX关闭
+                simulateTX('False');
+                
+                log('触摸结束', 'info');
+                
+            }, {passive: false, capture: true});
+            
+            // 触摸取消
+            button.addEventListener("touchcancel", function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                touchActive = false;
+                
+                // 确保状态正确
+                this.classList.remove('pressed');
+                
+                // 确保TX关闭
+                simulateTX('False');
+                
+                log('触摸取消', 'warning');
+                
+            }, {passive: false, capture: true});
+            
+            // 触摸移动
+            button.addEventListener("touchmove", function(e) {
+                if (!touchActive) return;
+                
+                const touch = e.touches[0];
+                const rect = this.getBoundingClientRect();
+                const x = touch.clientX - rect.left;
+                const y = touch.clientY - rect.top;
+                
+                // 如果触摸点移出按钮区域，取消操作
+                if (x < 0 || x > rect.width || y < 0 || y > rect.height) {
+                    touchActive = false;
+                    this.classList.remove('pressed');
+                    simulateTX('False');
+                    log('触摸移出按钮区域，取消操作', 'warning');
+                }
+            }, {passive: false});
+        }
+        
+        // 页面加载完成后初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            log('PAD TX按钮测试页面已加载', 'info');
+            log('当前时间: ' + new Date().toLocaleString(), 'info');
+            log('用户代理: ' + navigator.userAgent, 'info');
+            
+            // 检测设备类型
+            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+            if (isMobile) {
+                log('检测到移动设备，启用触摸优化', 'success');
+            } else {
+                log('检测到桌面设备，触摸事件可能不会触发', 'warning');
+            }
+            
+            // 初始化触摸事件
+            initTouchEvents();
+            
+            // 更新统计
+            updateStats();
+        });
+    </script>
+</body>
+</html>

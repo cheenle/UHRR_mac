@@ -86,15 +86,15 @@
 			<div id="div-bandshortcut">
 				<ul id="band_but">
 				  <li onmousedown="button_pressed();recall_hambands();" onmouseup="button_unpressed();" class="button_unpressed" v="001845500">160m</li>
-				  <li onmousedown="button_pressed();recall_hambands();" onmouseup="button_unpressed();" class="button_unpressed" v="003692500">80m</li>
-				  <li onmousedown="button_pressed();recall_hambands();" onmouseup="button_unpressed();" class="button_unpressed" v="007092500">40m</li>
+				  <li onmousedown="button_pressed();recall_hambands();" onmouseup="button_unpressed();" class="button_unpressed" v="003850000">80m</li>
+				  <li onmousedown="button_pressed();recall_hambands();" onmouseup="button_unpressed();" class="button_unpressed" v="007050000">40m</li>
 				  <li onmousedown="button_pressed();recall_hambands();" onmouseup="button_unpressed();" class="button_unpressed" v="010140000">30m</li>
-				  <li onmousedown="button_pressed();recall_hambands();" onmouseup="button_unpressed();" class="button_unpressed" v="014127500">20m</li>
+				  <li onmousedown="button_pressed();recall_hambands();" onmouseup="button_unpressed();" class="button_unpressed" v="014270000">20m</li>
 				  <li onmousedown="button_pressed();recall_hambands();" onmouseup="button_unpressed();" class="button_unpressed" v="018132500">17m</li>
-				  <li onmousedown="button_pressed();recall_hambands();" onmouseup="button_unpressed();" class="button_unpressed" v="021287500">15m</li>
+				  <li onmousedown="button_pressed();recall_hambands();" onmouseup="button_unpressed();" class="button_unpressed" v="021400000">15m</li>
 				  <li onmousedown="button_pressed();recall_hambands();" onmouseup="button_unpressed();" class="button_unpressed" v="027085000">11m</li>
 				  <li onmousedown="button_pressed();recall_hambands();" onmouseup="button_unpressed();" class="button_unpressed" v="024952500">12m</li>
-				  <li onmousedown="button_pressed();recall_hambands();" onmouseup="button_unpressed();" class="button_unpressed" v="028362500">10m</li>
+				  <li onmousedown="button_pressed();recall_hambands();" onmouseup="button_unpressed();" class="button_unpressed" v="028450000">10m</li>
 				  <li onmousedown="button_pressed();recall_hambands();" onmouseup="button_unpressed();" class="button_unpressed" v="050202500">6m</li>
 				  <li onmousedown="button_pressed();recall_hambands();" onmouseup="button_unpressed();" class="button_unpressed" v="070202500">4m</li>
 				  <li onmousedown="button_pressed();recall_hambands();" onmouseup="button_unpressed();" class="button_unpressed" v="144300000">2m</li>
@@ -179,7 +179,7 @@
 			</div>
 			
 			<div id="div-TX">
-				<span onmousedown="TXtogle('True');" onmouseup="TXtogle('False');" class="button_unpressed" id="TX-record">TX</span>	
+				<span class="button_unpressed" id="TX-record">TX</span>	
 				<span onclick="TXtogle();" class="button_unpressed" id="TX-record-lock">TX Lock</span>
 				<form id="TX-record_record_opus">
 					<input type="checkbox" id="encode" class=none alt="Encode TX with opus codec">Encode TX</input><br>
@@ -193,8 +193,10 @@
 			</div>
 			
 			<div id="div-latencymeter">latency:∞</div>
+			<div id="div-bitrates">bitrate RX: 0.0 kbps | TX: 0.0 kbps</div>
 			
 		</div>	
 		<script src="controls.js"></script>
+	<script src="tx_button_optimized.js"></script>
 	</body>
 </html>

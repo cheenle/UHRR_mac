@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>UHRR PAD专用界面</title>
+    <link rel="stylesheet" type="text/css" href="pad.css">
+</head>
+<body onload="padload();">
+    <!-- 顶部状态栏 -->
+    <div id="pad-status-bar">
+        <img onclick="powertogle();" id="pad-button-power" alt="Click to connect or disconnect interface" src="img/poweroff.png" style="width: 40px; height: 40px; cursor: pointer;">
+        <div id="pad-power-status" class="status-indicator">●</div>
+        <div id="pad-connection-status" class="status-indicator">●</div>
+        <div id="pad-audio-status" class="status-indicator">●</div>
+        <div id="pad-callsign" class="callsign-display">未连接</div>
+    </div>
+
+    <!-- 主频率显示区域 -->
+    <div id="pad-frequency-section">
+        <div id="pad-freq-display" class="frequency-display">000.000.000</div>
+        <div class="frequency-input-section">
+            <input type="text" id="pad-freq-input" placeholder="输入频率 (Hz)" class="frequency-input">
+            <button id="pad-freq-set" class="freq-set-button">设置</button>
+        </div>
+        <div class="frequency-controls">
+            <div class="freq-button" data-value="1000000">1M</div>
+            <div class="freq-button" data-value="100000">100K</div>
+            <div class="freq-button" data-value="10000">10K</div>
+            <div class="freq-button" data-value="1000">1K</div>
+            <div class="freq-button" data-value="100">100</div>
+            <div class="freq-button" data-value="10">10</div>
+            <div class="freq-button" data-value="1">1</div>
+        </div>
+    </div>
+
+    <!-- 模式选择区域 -->
+    <div id="pad-mode-section">
+        <div class="mode-button" data-mode="USB">USB</div>
+        <div class="mode-button" data-mode="LSB">LSB</div>
+        <div class="mode-button" data-mode="CW">CW</div>
+        <div class="mode-button" data-mode="FM">FM</div>
+        <div class="mode-button" data-mode="AM">AM</div>
+    </div>
+
+    <!-- 音频控制区域 -->
+    <div id="pad-audio-section">
+        <div class="audio-control">
+            <label>AF GAIN</label>
+            <input type="range" id="pad-af-gain" min="0" max="1000" value="250" class="audio-slider">
+            <span class="audio-value">250</span>
+        </div>
+        <div class="audio-control">
+            <label>RX VOL</label>
+            <input type="range" id="pad-rx-vol" min="0" max="100" value="50" class="audio-slider">
+            <span class="audio-value">50</span>
+        </div>
+        <div class="audio-control">
+            <label>MIC GAIN</label>
+            <input type="range" id="pad-mic-gain" min="0" max="100" value="50" class="audio-slider">
+            <span class="audio-value">50</span>
+        </div>
+        <div class="audio-control">
+            <label>SQL</label>
+            <input type="range" id="pad-squelch" min="0" max="100" value="0" class="audio-slider">
+            <span class="audio-value">0</span>
+        </div>
+    </div>
+
+    <!-- 频谱显示区域 -->
+    <div id="pad-spectrum-section">
+        <canvas id="pad-spectrum-canvas" width="800" height="200"></canvas>
+        <div class="spectrum-controls">
+            <button class="spectrum-btn" id="pad-spectrum-scale-up">+</button>
+            <button class="spectrum-btn" id="pad-spectrum-scale-down">-</button>
+            <button class="spectrum-btn" id="pad-spectrum-reset">Reset</button>
+        </div>
+    </div>
+
+    <!-- S表显示 -->
+    <div id="pad-smeter-section">
+        <div class="smeter-label">S-Meter</div>
+        <div class="smeter-bar">
+            <div class="smeter-fill" id="pad-smeter-fill"></div>
+        </div>
+        <div class="smeter-value" id="pad-smeter-value">S0</div>
+    </div>
+
+    <!-- 音量显示 - 参考原始界面 -->
+    <div id="pad-audio-meters">
+        <div id="pad-rx-meters">
+            <div id="pad-rx-instant">
+                <div class="label">RX volume:</div>
+                <meter low="10" high="70" max="100" value="0" id="pad-rx-meter"></meter>
+                <div class="value" id="pad-rx-value"></div>
+            </div>
+        </div>
+
+        <div id="pad-tx-meters">
+            <div id="pad-tx-instant">
+                <div class="label">TX volume:</div>
+                <meter low="10" high="50" max="100" value="0" id="pad-tx-meter"></meter>
+                <div class="value" id="pad-tx-value"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 波段快捷按钮 -->
+    <div id="pad-band-section">
+        <div class="band-button" data-freq="1800000">160m</div>
+        <div class="band-button" data-freq="3500000">80m</div>
+        <div class="band-button" data-freq="7000000">40m</div>
+        <div class="band-button" data-freq="10100000">30m</div>
+        <div class="band-button" data-freq="14000000">20m</div>
+        <div class="band-button" data-freq="18068000">17m</div>
+        <div class="band-button" data-freq="21000000">15m</div>
+        <div class="band-button" data-freq="24890000">12m</div>
+        <div class="band-button" data-freq="28000000">10m</div>
+        <div class="band-button" data-freq="50000000">6m</div>
+        <div class="band-button" data-freq="70000000">4m</div>
+        <div class="band-button" data-freq="144000000">2m</div>
+    </div>
+
+    <!-- TX控制区域 -->
+    <div id="pad-tx-section">
+        <div class="tx-controls">
+            <div class="tx-button" id="pad-tx-button">
+                <div class="tx-text">TX</div>
+                <div class="tx-indicator"></div>
+            </div>
+            <div class="tx-options">
+                <label class="tx-option">
+                    <input type="checkbox" id="pad-tx-lock">
+                    <span>TX Lock</span>
+                </label>
+                <label class="tx-option">
+                    <input type="checkbox" id="pad-encode-tx">
+                    <span>Encode TX</span>
+                </label>
+            </div>
+        </div>
+    </div>
+
+    <!-- 音频滤波器 -->
+    <div id="pad-filter-section">
+        <div class="filter-grid">
+            <div class="filter-button" data-filter="none">None</div>
+            <div class="filter-button" data-filter="lp4400">LP 4.4k</div>
+            <div class="filter-button" data-filter="lp3300">LP 3.3k</div>
+            <div class="filter-button" data-filter="lp2700">LP 2.7k</div>
+            <div class="filter-button" data-filter="lp2100">LP 2.1k</div>
+            <div class="filter-button" data-filter="lp1000">LP 1.0k</div>
+            <div class="filter-button" data-filter="bp300">BP 300Hz</div>
+            <div class="filter-button" data-filter="bp500">BP 500Hz</div>
+            <div class="filter-button" data-filter="bp800">BP 800Hz</div>
+            <div class="filter-button" data-filter="bp1000">BP 1kHz</div>
+        </div>
+    </div>
+
+    <!-- 连接状态指示器 -->
+    <div id="pad-connection-indicators">
+        <div class="conn-indicator" id="pad-ws-ctrl">wsCtrl</div>
+        <div class="conn-indicator" id="pad-ws-rx">wsRX</div>
+        <div class="conn-indicator" id="pad-ws-tx">wsTX</div>
+        <div class="conn-indicator" id="pad-latency">latency: ∞</div>
+    </div>
+
+    <!-- 加载遮罩 -->
+    <div id="pad-loading-overlay">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">连接中...</div>
+    </div>
+
+    <script src="pad.js"></script>
+</body>
+</html>

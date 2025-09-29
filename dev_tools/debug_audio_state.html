@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>音频状态调试页面</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background: #1a1a1a;
+            color: white;
+        }
+        
+        .debug-section {
+            background: #333;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 10px;
+        }
+        
+        .status {
+            background: #444;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            font-family: monospace;
+            white-space: pre-wrap;
+        }
+        
+        .success { color: #00ff00; }
+        .error { color: #ff0000; }
+        .warning { color: #ffff00; }
+        .info { color: #00aaff; }
+        
+        .button {
+            background: linear-gradient(145deg, #ff6600, #cc4400);
+            border: 2px solid #ff8800;
+            border-radius: 8px;
+            padding: 12px 20px;
+            color: white;
+            font-weight: bold;
+            margin: 5px;
+            cursor: pointer;
+        }
+        
+        .button:active {
+            transform: scale(0.95);
+        }
+        
+        .spectrum-display {
+            width: 100%;
+            height: 200px;
+            background: #000;
+            border: 2px solid #333;
+            border-radius: 8px;
+            margin: 10px 0;
+        }
+        
+        .audio-level {
+            width: 100%;
+            height: 20px;
+            background: #222;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+        
+        .audio-level-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #00ff00, #ffff00, #ff0000);
+            transition: width 0.1s ease;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔊 音频状态调试页面</h1>
+    
+    <div class="debug-section">
+        <h2>当前音频状态</h2>
+        <div class="status" id="audio-state">检查中...</div>
+        <button class="button" onclick="checkAudioState()">刷新状态</button>
+        <button class="button" onclick="resetAudioState()">重置音频状态</button>
+    </div>
+    
+    <div class="debug-section">
+        <h2>频谱显示测试</h2>
+        <canvas class="spectrum-display" id="test-spectrum" width="800" height="200"></canvas>
+        <div class="status" id="spectrum-info">频谱信息将显示在这里</div>
+        <button class="button" onclick="testSpectrum()">测试频谱显示</button>
+    </div>
+    
+    <div class="debug-section">
+        <h2>音频电平监控</h2>
+        <div class="audio-level">
+            <div class="audio-level-bar" id="rx-level" style="width: 0%"></div>
+        </div>
+        <div class="status" id="level-info">RX电平: 0%</div>
+        <button class="button" onclick="startLevelMonitoring()">开始监控</button>
+        <button class="button" onclick="stopLevelMonitoring()">停止监控</button>
+    </div>
+    
+    <div class="debug-section">
+        <h2>调试日志</h2>
+        <div class="status" id="debug-log" style="max-height: 300px; overflow-y: auto;"></div>
+        <button class="button" onclick="clearLog()">清空日志</button>
+    </div>
+
+    <script>
+        // 模拟音频状态变量
+        let muteRX = false;
+        let AudioRX_analyser = null;
+        let AudioTX_analyser = null;
+        let monitoringInterval = null;
+        
+        // 日志函数
+        function log(message, type = 'info') {
+            const logElement = document.getElementById('debug-log');
+            const timestamp = new Date().toLocaleTimeString();
+            const className = type === 'error' ? 'error' : type === 'warning' ? 'warning' : type === 'success' ? 'success' : 'info';
+            logElement.innerHTML += `<div class="${className}">[${timestamp}] ${message}</div>`;
+            logElement.scrollTop = logElement.scrollHeight;
+        }
+        
+        function clearLog() {
+            document.getElementById('debug-log').innerHTML = '';
+        }
+        
+        // 检查音频状态
+        function checkAudioState() {
+            const stateElement = document.getElementById('audio-state');
+            
+            let stateInfo = `muteRX: ${muteRX}\n`;
+            stateInfo += `AudioRX_analyser: ${AudioRX_analyser ? '存在' : '不存在'}\n`;
+            stateInfo += `AudioTX_analyser: ${AudioTX_analyser ? '存在' : '不存在'}\n`;
+            
+            // 模拟频谱显示逻辑
+            let spectrumSource = '未知';
+            if (muteRX && AudioTX_analyser) {
+                spectrumSource = 'AudioTX_analyser (MIC)';
+            } else if (AudioRX_analyser) {
+                spectrumSource = 'AudioRX_analyser (RX)';
+            }
+            
+            stateInfo += `当前频谱源: ${spectrumSource}\n`;
+            
+            if (muteRX && AudioTX_analyser) {
+                stateInfo += '\n⚠️ 警告: 频谱显示的是MIC声音，不是接收音频！';
+                stateElement.innerHTML = `<span class="warning">${stateInfo}</span>`;
+            } else if (AudioRX_analyser) {
+                stateInfo += '\n✅ 正常: 频谱显示接收音频';
+                stateElement.innerHTML = `<span class="success">${stateInfo}</span>`;
+            } else {
+                stateElement.innerHTML = `<span class="error">${stateInfo}</span>`;
+            }
+            
+            log('音频状态检查完成', 'info');
+        }
+        
+        // 重置音频状态
+        function resetAudioState() {
+            muteRX = false;
+            log('音频状态已重置', 'success');
+            checkAudioState();
+        }
+        
+        // 模拟toggleaudioRX函数
+        function toggleaudioRX(stat = "None") {
+            muteRX = !muteRX;
+            if (stat !== "None") { muteRX = stat; }
+            
+            log(`toggleaudioRX called, muteRX: ${muteRX}, stat: ${stat}`, 'info');
+            checkAudioState();
+        }
+        
+        // 测试频谱显示
+        function testSpectrum() {
+            const canvas = document.getElementById('test-spectrum');
+            const ctx = canvas.getContext('2d');
+            
+            // 清空画布
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = 'rgb(0, 0, 0)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // 绘制测试频谱
+            ctx.fillStyle = 'rgb(255, 255, 0)';
+            for (let i = 0; i < canvas.width; i++) {
+                const height = Math.random() * canvas.height * 0.8;
+                ctx.fillRect(i, canvas.height - height, 1, height);
+            }
+            
+            // 显示频谱信息
+            const spectrumInfo = document.getElementById('spectrum-info');
+            if (muteRX && AudioTX_analyser) {
+                spectrumInfo.innerHTML = '<span class="warning">⚠️ 当前显示MIC频谱</span>';
+            } else {
+                spectrumInfo.innerHTML = '<span class="success">✅ 当前显示RX频谱</span>';
+            }
+            
+            log('频谱显示测试完成', 'info');
+        }
+        
+        // 开始电平监控
+        function startLevelMonitoring() {
+            if (monitoringInterval) {
+                clearInterval(monitoringInterval);
+            }
+            
+            monitoringInterval = setInterval(() => {
+                // 模拟音频电平
+                const level = Math.random() * 100;
+                const levelBar = document.getElementById('rx-level');
+                const levelInfo = document.getElementById('level-info');
+                
+                levelBar.style.width = level + '%';
+                levelInfo.innerHTML = `RX电平: ${level.toFixed(1)}%`;
+                
+                if (level > 50) {
+                    levelInfo.innerHTML = `<span class="success">${levelInfo.innerHTML}</span>`;
+                } else if (level > 20) {
+                    levelInfo.innerHTML = `<span class="warning">${levelInfo.innerHTML}</span>`;
+                } else {
+                    levelInfo.innerHTML = `<span class="error">${levelInfo.innerHTML}</span>`;
+                }
+            }, 100);
+            
+            log('开始电平监控', 'success');
+        }
+        
+        // 停止电平监控
+        function stopLevelMonitoring() {
+            if (monitoringInterval) {
+                clearInterval(monitoringInterval);
+                monitoringInterval = null;
+            }
+            
+            log('停止电平监控', 'info');
+        }
+        
+        // 模拟PTT操作
+        function simulatePTT() {
+            log('模拟PTT按下', 'info');
+            toggleaudioRX(true);
+            
+            setTimeout(() => {
+                log('模拟PTT释放', 'info');
+                toggleaudioRX(false);
+                resetAudioState();
+            }, 2000);
+        }
+        
+        // 页面加载完成后初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            log('调试页面已加载', 'info');
+            
+            // 模拟初始化音频分析器
+            AudioRX_analyser = { fftSize: 1024 };
+            AudioTX_analyser = { fftSize: 1024 };
+            
+            checkAudioState();
+            
+            // 添加测试按钮
+            const testSection = document.querySelector('.debug-section');
+            const testButton = document.createElement('button');
+            testButton.className = 'button';
+            testButton.textContent = '模拟PTT操作';
+            testButton.onclick = simulatePTT;
+            testSection.appendChild(testButton);
+        });
+    </script>
+</body>
+</html>

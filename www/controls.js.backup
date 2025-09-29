@@ -16,61 +16,10 @@ const IS_MOBILE = (function (a) {
 function bodyload(){
 	disableSFFC();
 	checkCookie();
+	if(IS_MOBILE)initformobile();
 	
-	// 确保音频状态正确初始化
-	resetRXAudioState();
-	
-	if(IS_MOBILE) {
-		initformobile();
-		optimizeForMobile();
-	}
-}
-
-// 新增：移动端优化函数
-function optimizeForMobile() {
-	// 检测移动设备
-	const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-	
-	if (isMobile) {
-		// 调整音频参数
-		AudioRX_sampleRate = 44100; // 使用标准采样率
-		
-		// 添加音频质量监控
-		setInterval(() => {
-			if (AudioRX_audiobuffer.length > 10) {
-				console.warn('Audio buffer overflow, dropping frames');
-				// 丢弃旧数据
-				AudioRX_audiobuffer = AudioRX_audiobuffer.slice(-5);
-			}
-		}, 1000);
-		
-		// 添加音频延迟检测
-		let lastAudioTime = 0;
-		function checkAudioLatency() {
-			const now = Date.now();
-			if (lastAudioTime > 0) {
-				const latency = now - lastAudioTime;
-				if (latency > 200) { // 超过200ms认为有延迟
-					console.warn('Audio latency detected:', latency + 'ms');
-				}
-			}
-			lastAudioTime = now;
-		}
-		
-		// 定期检查音频延迟
-		setInterval(checkAudioLatency, 5000);
-		
-		// 添加触摸反馈
-		document.addEventListener('touchstart', function(e) {
-			if (e.target.classList.contains('button_unpressed') || 
-				e.target.classList.contains('button_pressed')) {
-				// 触觉反馈
-				if (navigator.vibrate) {
-					navigator.vibrate(10);
-				}
-			}
-		});
-	}
+	// 初始化PAD触摸屏TX按钮
+	initTXButtonTouch();
 }
 
 function disableSFFC() { 
@@ -94,49 +43,44 @@ function disableSFFC() {
 		x = document.getElementById('TX-record');
 		preventLongPressMenu(x);
 		
-		// 添加触摸状态跟踪
+		// 优化的PAD触摸处理
 		let touchActive = false;
 		let touchStartTime = 0;
 		
-		// 改进的触摸开始处理
+		// 触摸开始 - 立即响应
 		x.addEventListener("touchstart", function(e) {
-			e.preventDefault(); // Critical: Prevent 300ms click delay
-			e.stopPropagation(); // Prevent event bubbling
+			e.preventDefault();
+			e.stopPropagation();
 			
-			// 记录触摸开始时间
-			touchStartTime = Date.now();
 			touchActive = true;
+			touchStartTime = Date.now();
 			
-			// Immediate visual feedback
+			// 立即视觉反馈
 			this.classList.add('button_pressed');
 			this.classList.remove('button_unpressed');
 			
-			// 延迟执行功能，确保视觉反馈先显示
-			setTimeout(() => {
-				if (touchActive) {
-					TXtogle('True');
-				}
-			}, 50);
+			// 立即执行TX开启
+			TXtogle('True');
 			
-		}, {passive: false, capture: true}); // capture: true for fastest response
+		}, {passive: false, capture: true});
 		
-		// 改进的触摸结束处理
+		// 触摸结束 - 立即释放
 		x.addEventListener("touchend", function(e) {
 			e.preventDefault();
 			e.stopPropagation();
 			
 			touchActive = false;
 			
-			// Immediate visual feedback
+			// 立即视觉反馈
 			this.classList.add('button_unpressed');
 			this.classList.remove('button_pressed');
 			
-			// 执行功能
+			// 立即执行TX关闭
 			TXtogle('False');
 			
 		}, {passive: false, capture: true});
 		
-		// 关键：添加触摸取消处理
+		// 触摸取消 - 确保释放
 		x.addEventListener("touchcancel", function(e) {
 			e.preventDefault();
 			e.stopPropagation();
@@ -147,14 +91,15 @@ function disableSFFC() {
 			this.classList.add('button_unpressed');
 			this.classList.remove('button_pressed');
 			
-			// 释放PTT
+			// 确保TX关闭
 			TXtogle('False');
 			
 		}, {passive: false, capture: true});
 		
-		// 添加触摸移动处理，防止意外触发
+		// 触摸移动 - 防止意外触发
 		x.addEventListener("touchmove", function(e) {
-			// 如果触摸移动距离过大，取消操作
+			if (!touchActive) return;
+			
 			const touch = e.touches[0];
 			const rect = this.getBoundingClientRect();
 			const x = touch.clientX - rect.left;
@@ -165,17 +110,15 @@ function disableSFFC() {
 				touchActive = false;
 				this.classList.add('button_unpressed');
 				this.classList.remove('button_pressed');
+				TXtogle('False');
 			}
 		}, {passive: false});
 		
-		// Prevent touch-related delays
-		x.style.touchAction = 'manipulation'; // Disable double-tap zoom
-		x.style.userSelect = 'none'; // Disable text selection
-		x.style.webkitTouchCallout = 'none'; // Disable callout on iOS
-		x.style.webkitUserSelect = 'none'; // Additional iOS prevention
-		
-		// Add CSS for faster visual feedback
-		x.style.transition = 'all 0.05s ease-out'; // Very fast transitions
+		// 优化触摸响应
+		x.style.touchAction = 'manipulation';
+		x.style.userSelect = 'none';
+		x.style.webkitTouchCallout = 'none';
+		x.style.webkitUserSelect = 'none';
 		
 		x = document.getElementById('canBFFFT_scale_floor');
 		x.addEventListener("touchstart", disableScrolling);
@@ -242,8 +185,6 @@ function powertogle()
 	}
 	else{
 		event.srcElement.src="img/poweroff.png";
-		document.getElementById("ombre-body").style.display = "none";
-		document.getElementById("pop-upspinner").style.display = "none";
 		AudioRX_stop();
 		AudioTX_stop();
 		ControlTRX_stop();
@@ -294,156 +235,44 @@ function AudioRX_start(){
 	wsAudioRX.onopen = wsAudioRXopen;
 	wsAudioRX.onclose = wsAudioRXclose;
 	wsAudioRX.onerror = wsAudioRXerror;
-	
-	// 添加连接超时检查
-	wsAudioRX.timeoutTimer = setTimeout(function() {
-		if (wsAudioRX.readyState !== WebSocket.OPEN) {
-			console.warn("WebSocket RX connection timeout");
-			document.getElementById("indwsAudioRX").innerHTML='<img src="img/critsred.png">wsRX';
-			wsAudioRX.close();
-			wsAudioRXerror(new Error("Connection timeout"));
-		}
-	}, 10000); // 10秒超时
-	
-	// 音频上下文将在WebSocket连接成功后初始化
-}
 
-// 新增：改进的音频上下文初始化
-function initAudioContext() {
-	// 检查AudioContext支持
-	if (!window.AudioContext && !window.webkitAudioContext) {
-		console.error('Web Audio API not supported');
-		return;
+	function appendwsAudioRX( msg ){
+		AudioRX_audiobuffer.push(new Float32Array(msg.data));
 	}
-	
-	// 创建AudioContext
-	AudioRX_context = new (window.AudioContext || window.webkitAudioContext)({
-		latencyHint: "interactive",
-		sampleRate: AudioRX_sampleRate
-	});
-	
-	// 处理AudioContext suspended状态
-	if (AudioRX_context.state === 'suspended') {
-		console.log('AudioContext suspended, waiting for user interaction');
-		
-		// 添加用户交互监听器
-		const resumeAudio = () => {
-			AudioRX_context.resume().then(() => {
-				console.log('AudioContext resumed');
-				setupAudioNodes();
-			}).catch(err => {
-				console.error('Failed to resume AudioContext:', err);
-			});
-		};
-		
-		// 监听多种用户交互事件
-		document.addEventListener('touchstart', resumeAudio, { once: true });
-		document.addEventListener('click', resumeAudio, { once: true });
-		document.addEventListener('keydown', resumeAudio, { once: true });
-		
-		return;
-	}
-	
-	setupAudioNodes();
-}
 
-// 新增：设置音频节点
-function setupAudioNodes() {
-	// 创建音频节点
+	const BUFF_SIZE = 256; // spec allows, yet do not go below 1024 
+	AudioRX_context = new AudioContext({latencyHint: "interactive",sampleRate: AudioRX_sampleRate});
 	AudioRX_gain_node = AudioRX_context.createGain();
 	AudioRX_biquadFilter_node = AudioRX_context.createBiquadFilter();
 	AudioRX_analyser = AudioRX_context.createAnalyser();
 	
-	// 设置音频处理链
-	const BUFF_SIZE = 256;
 	AudioRX_source_node = AudioRX_context.createScriptProcessor(BUFF_SIZE, 1, 1);
-	AudioRX_source_node.onaudioprocess = processAudioData;
-	
-	// 连接音频节点
+
+	AudioRX_source_node.onaudioprocess = (function() {
+		return function(event) {
+			var synth_buff = event.outputBuffer.getChannelData(0); // mono for now
+			let le = Boolean(AudioRX_audiobuffer.length);
+			if(le){
+				for (var i = 0, buff_size = synth_buff.length; i < buff_size; i++) {
+					synth_buff[i] = AudioRX_audiobuffer[0][i];
+				}
+				if(le){AudioRX_audiobuffer.shift();}
+			}
+		};
+	}());
+
 	AudioRX_source_node.connect(AudioRX_biquadFilter_node);
 	AudioRX_biquadFilter_node.connect(AudioRX_gain_node);
 	AudioRX_gain_node.connect(AudioRX_analyser);
-	AudioRX_gain_node.connect(AudioRX_context.destination);
+	AudioRX_gain_node.connect( AudioRX_context.destination );
+	drawBF();
+	drawRXvol();
 	
-	// 设置滤波器
 	AudioRX_biquadFilter_node.type = "lowshelf";
 	AudioRX_biquadFilter_node.frequency.setValueAtTime(22000, AudioRX_context.currentTime);
 	AudioRX_biquadFilter_node.gain.setValueAtTime(0, AudioRX_context.currentTime);
 	
-	// 设置增益
 	AudioRX_SetGAIN();
-	
-	// 关键：启动音频源节点
-	if (AudioRX_source_node) {
-		AudioRX_source_node.start(0);
-		console.log('Audio source node started');
-	}
-	
-	// 开始绘制
-	drawBF();
-	drawRXvol();
-	
-	console.log('Audio setup completed successfully');
-}
-
-// 新增：改进的音频数据处理
-function processAudioData(event) {
-	const outputBuffer = event.outputBuffer.getChannelData(0);
-	
-	// 检查缓冲区状态
-	if (AudioRX_audiobuffer.length === 0) {
-		// 没有数据时输出静音
-		for (let i = 0; i < outputBuffer.length; i++) {
-			outputBuffer[i] = 0;
-		}
-		return;
-	}
-	
-	// 处理音频数据
-	const audioData = AudioRX_audiobuffer.shift();
-	const minLength = Math.min(audioData.length, outputBuffer.length);
-	
-	// 调试：检查音频数据
-	const maxInput = Math.max(...audioData);
-	if (maxInput > 0.01) {
-		console.log('Processing audio data, max input:', maxInput.toFixed(4));
-	}
-	
-	for (let i = 0; i < minLength; i++) {
-		outputBuffer[i] = audioData[i];
-	}
-	
-	// 如果还有剩余空间，填充静音
-	for (let i = minLength; i < outputBuffer.length; i++) {
-		outputBuffer[i] = 0;
-	}
-	
-	// 调试：检查输出数据
-	const maxOutput = Math.max(...outputBuffer);
-	if (maxOutput > 0.01) {
-		console.log('Audio output, max value:', maxOutput.toFixed(4));
-	}
-}
-
-	function appendwsAudioRX( msg ){
-		const audioData = new Float32Array(msg.data);
-		AudioRX_audiobuffer.push(audioData);
-		
-		// 调试信息：监控音频数据接收
-		if (AudioRX_audiobuffer.length > 5) {
-			console.warn('Audio buffer growing large:', AudioRX_audiobuffer.length);
-		}
-		
-		// 检查音频数据是否有效
-		if (audioData.length > 0) {
-			const maxValue = Math.max(...audioData);
-			if (maxValue > 0.01) { // 有实际音频数据
-				console.log('Audio data received, max value:', maxValue.toFixed(4));
-			}
-		}
-	}
-
-	// 音频初始化已移至 setupAudioNodes() 函数
 	
 }
 
@@ -472,19 +301,6 @@ function AudioRX_SetGAIN( vol="None" ){
 
 function wsAudioRXopen(){
 	document.getElementById("indwsAudioRX").innerHTML='<img src="img/critsgreen.png">wsRX';
-	
-	// 清除连接超时定时器
-	if (wsAudioRX.timeoutTimer) {
-		clearTimeout(wsAudioRX.timeoutTimer);
-		wsAudioRX.timeoutTimer = null;
-	}
-	
-	// 重置重连尝试计数
-	wsAudioRX.reconnectAttempts = 0;
-	
-	// 关键修复：WebSocket连接成功后立即初始化音频
-	console.log('WebSocket RX connected, initializing audio...');
-	initAudioContext();
 }
 
 function wsAudioRXclose(){
@@ -493,29 +309,15 @@ function wsAudioRXclose(){
 }
 
 function wsAudioRXerror(err){
-	console.error("WebSocket RX Error: ", err);
 	document.getElementById("indwsAudioRX").innerHTML='<img src="img/critsred.png">wsRX';
-	
-	// 添加重连限制，避免无限重连
-	if (!wsAudioRX.reconnectAttempts) {
-		wsAudioRX.reconnectAttempts = 0;
-	}
-	
-	if (wsAudioRX.reconnectAttempts < 3) {
-		wsAudioRX.reconnectAttempts++;
-		console.log("Attempting to reconnect RX WebSocket, attempt: " + wsAudioRX.reconnectAttempts);
-		setTimeout(function() {
-			AudioRX_start();
-		}, 1500 * wsAudioRX.reconnectAttempts); // 递增延迟重连
-	} else {
-		console.error("Max reconnection attempts reached for RX WebSocket");
-		alert("音频接收连接失败，已达到最大重试次数。请检查网络连接并刷新页面重试。");
-	}
+	AudioRX_stop();
 }
 
 function AudioRX_stop()
 {
+	audiobufferready = false;
 	wsAudioRX.close();
+	AudioRX_source_node.onaudioprocess = null
 	AudioRX_context.close();
 }
 
@@ -525,16 +327,6 @@ function toggleaudioRX(stat="None"){
 	if(stat != "None"){muteRX=stat;}
 	if(muteRX){AudioRX_SetGAIN(0);}
 	else{AudioRX_SetGAIN();}
-	
-	// 调试信息
-	console.log('toggleaudioRX called, muteRX:', muteRX, 'stat:', stat);
-}
-
-// 新增：强制重置接收音频状态
-function resetRXAudioState() {
-	muteRX = false;
-	AudioRX_SetGAIN();
-	console.log('RX audio state reset, muteRX:', muteRX);
 }
 
 
@@ -667,16 +459,6 @@ function ControlTRX_start(){
 	wsControlTRX.onclose = wsControlTRXclose;
 	wsControlTRX.onerror = wsControlTRXerror;
 	wsControlTRX.onmessage = wsControlTRXcrtol;
-	
-	// 添加连接超时检查
-	wsControlTRX.timeoutTimer = setTimeout(function() {
-		if (wsControlTRX.readyState !== WebSocket.OPEN) {
-			console.warn("WebSocket Control connection timeout");
-			document.getElementById("indwsControlTRX").innerHTML='<img src="img/critsred.png">wsCtrl';
-			wsControlTRX.close();
-			wsControlTRXerror(new Error("Connection timeout"));
-		}
-	}, 10000); // 10秒超时
 }
 
 var SignalLevel=0;
@@ -700,16 +482,6 @@ function ControlTRX_getFreq(){
 
 function wsControlTRXopen(){
 	document.getElementById("indwsControlTRX").innerHTML='<img src="img/critsgreen.png">wsCtrl';
-	
-	// 清除连接超时定时器
-	if (wsControlTRX.timeoutTimer) {
-		clearTimeout(wsControlTRX.timeoutTimer);
-		wsControlTRX.timeoutTimer = null;
-	}
-	
-	// 重置重连尝试计数
-	wsControlTRX.reconnectAttempts = 0;
-	
 	wsControlTRX.send("getFreq:");
 	wsControlTRX.send("getMode:");
 }
@@ -719,25 +491,9 @@ function wsControlTRXclose(){
 }
 
 function wsControlTRXerror(err){
-    console.error("WebSocket Control Error: ", err);
     wsControlTRX.close();
 	document.getElementById("indwsControlTRX").innerHTML='<img src="img/critsred.png">wsCtrl';
-	
-	// 添加重连限制，避免无限重连
-	if (!wsControlTRX.reconnectAttempts) {
-		wsControlTRX.reconnectAttempts = 0;
-	}
-	
-	if (wsControlTRX.reconnectAttempts < 5) {
-		wsControlTRX.reconnectAttempts++;
-		console.log("Attempting to reconnect Control WebSocket, attempt: " + wsControlTRX.reconnectAttempts);
-		setTimeout(function() {
-			ControlTRX_start();
-		}, 2000 * wsControlTRX.reconnectAttempts); // 递增延迟重连
-	} else {
-		console.error("Max reconnection attempts reached for Control WebSocket");
-		alert("控制连接失败，已达到最大重试次数。请刷新页面重试。");
-	}
+	ControlTRX_start();
 }
 
 var startTime;
@@ -812,23 +568,7 @@ function sendTRXfreq(freq=0){
 }
 
 function sendTRXptt(stat){
-	// Fast-path PTT command with immediate send and minimal overhead
-	if (wsControlTRX.readyState === WebSocket.OPEN) {
-		// Use JSON for faster parsing on server side
-		const pttCommand = `setPTT:${stat}`;
-		try {
-			wsControlTRX.send(pttCommand);
-			console.log(`PTT ${stat ? 'ON' : 'OFF'} sent at ${Date.now()}`);
-		} catch (error) {
-			console.error('PTT send failed:', error);
-		}
-		
-		// Debug timing for mobile optimization
-		if (IS_MOBILE) {
-			const touchTime = performance.now();
-			console.log(`Mobile PTT timing: ${touchTime}ms`);
-		}
-	}
+	if (wsControlTRX.readyState === WebSocket.OPEN) {wsControlTRX.send("setPTT:"+stat);}
 }	
 
 function showTRXmode(mode){
@@ -890,147 +630,161 @@ function drawRXSmeter() {
 		}
 }
 
+// TX按钮状态管理 - 统一状态管理
+let txButtonState = {
+	isPressed: false,
+	isLocked: false,
+	element: null,
+	lastTouchTime: 0,
+	debounceDelay: 50, // 减少防抖延迟
+	touchActive: false,
+	touchStartTime: 0,
+	eventHandlersAdded: false // 防止重复添加事件
+};
+
 function TXtogle(state="None")
 {
-	// Prevent default behavior for touch events to avoid delays
-	if (event) {
-		try {
-			event.preventDefault();
-			event.stopPropagation();
-		} catch (e) {
-			// Ignore errors in event handling
-		}
+	// 获取TX按钮元素
+	const txButton = document.getElementById('TX-record');
+	if (!txButton) {
+		console.error('TX按钮元素未找到');
+		return;
 	}
 	
-	// Get PTT button element for visual feedback
-	const pttButton = document.getElementById('TX-record');
+	// 更新状态管理
+	txButtonState.element = txButton;
 	
-	// Simple and reliable PTT logic with improved timing
-	if (state === "True" || state === true) {
-		// PTT Press
-		if (poweron) {
-			// Visual feedback first for immediate response
+	// 防抖检查 - 更严格的防抖
+	const now = Date.now();
+	if (now - txButtonState.lastTouchTime < txButtonState.debounceDelay) {
+		console.log('TX操作被防抖阻止');
+		return;
+	}
+	txButtonState.lastTouchTime = now;
+	
+	// 处理按下状态
+	if (state === "True") {
+		if (poweron && !txButtonState.isPressed) {
+			txButtonState.isPressed = true;
 			button_pressed();
-			if (pttButton) {
-				pttButton.classList.add('pressed');
-				pttButton.classList.remove('button_unpressed');
-				pttButton.classList.add('button_pressed');
-			}
-			
-			// Haptic feedback immediately
-			if (navigator.vibrate && IS_MOBILE) {
-				try {
-					navigator.vibrate(30);
-				} catch (e) {
-					// Ignore vibration errors
-				}
-			}
-			
-			// Send PTT command with slight delay to ensure visual feedback is seen
-			setTimeout(() => {
-				sendTRXptt(true);
-				console.log("PTT ON command sent at:", Date.now());
-			}, 1);
-			
-			// Audio operations with proper timing
-			setTimeout(() => {
-				try {
-					toggleRecord(true);
-					toggleaudioRX();
-					console.log("Audio TX enabled at:", Date.now());
-				} catch (e) {
-					console.log("Audio toggle error:", e);
-				}
-			}, 10); // Increased delay to ensure PTT command is processed first
-		}
-	} else {
-		// PTT Release
-		if (poweron) {
-			// Send PTT OFF command immediately
-			sendTRXptt(false);
-			console.log("PTT OFF command sent at:", Date.now());
-			
-			// Visual feedback immediately to ensure button state is updated
-			button_unpressed();
-			if (pttButton) {
-				pttButton.classList.remove('pressed');
-			}
-			
-			// Audio operations with delay to ensure clean transition
-			setTimeout(() => {
-				try {
-					toggleRecord();
-					toggleaudioRX();
-					// 关键修复：确保接收音频状态正确
-					resetRXAudioState();
-					console.log("Audio TX disabled at:", Date.now());
-				} catch (e) {
-					console.log("Audio toggle error:", e);
-					// Ensure visual feedback even if audio operations fail
-					button_unpressed();
-					if (pttButton) {
-						pttButton.classList.remove('pressed');
-					}
-					// 即使出错也要重置音频状态
-					resetRXAudioState();
-				}
-			}, 15); // Increased delay for proper sequencing
-			
-			// Haptic feedback
-			if (navigator.vibrate && IS_MOBILE) {
-				try {
-					navigator.vibrate(15);
-				} catch (e) {
-					// Ignore vibration errors
-				}
-			}
+			toggleRecord(true);
+			toggleaudioRX();
+			sendTRXptt(true);
+			console.log('TX按钮按下 - 状态:', txButtonState.isPressed);
 		} else {
+			console.log('TX按下被阻止 - poweron:', poweron, 'isPressed:', txButtonState.isPressed);
+		}
+	}
+	// 处理释放状态
+	else if (state === "False") {
+		if (poweron && txButtonState.isPressed) {
+			txButtonState.isPressed = false;
 			button_unpressed();
-			if (pttButton) {
-				pttButton.classList.remove('pressed');
-			}
+			toggleRecord();
+			toggleaudioRX();
+			sendTRXptt(false);
+			console.log('TX按钮释放 - 状态:', txButtonState.isPressed);
+		} else {
+			console.log('TX释放被阻止 - poweron:', poweron, 'isPressed:', txButtonState.isPressed);
+		}
+	}
+	// 处理切换状态（兼容旧代码）
+	else if (state === "None") {
+		if (txButtonState.isPressed) {
+			TXtogle("False");
+		} else {
+			TXtogle("True");
 		}
 	}
 }
 
-// Safety mechanism: Ensure PTT is released if window loses focus
-window.addEventListener('blur', function() {
-	TXtogle('False');
-});
 
-// Safety mechanism: Ensure PTT is released on page visibility change
-document.addEventListener('visibilitychange', function() {
-	if (document.hidden) {
+// PAD触摸屏TX按钮优化
+function initTXButtonTouch() {
+	const txButton = document.getElementById('TX-record');
+	if (!txButton) return;
+	
+	// 触摸开始
+	txButton.addEventListener('touchstart', function(e) {
+		e.preventDefault();
+		e.stopPropagation();
+		
+		if (!poweron) return;
+		
+		// 防抖检查
+		const now = Date.now();
+		if (now - txButtonState.lastTouchTime < txButtonState.debounceDelay) {
+			return;
+		}
+		txButtonState.lastTouchTime = now;
+		
+		// 立即视觉反馈
+		txButton.style.transform = 'scale(0.95)';
+		txButton.style.backgroundColor = '#ff4444';
+		
+		// 触觉反馈（如果支持）
+		if (navigator.vibrate) {
+			navigator.vibrate(50);
+		}
+		
+		// 开始TX
+		TXtogle('True');
+		
+		console.log('TX触摸开始');
+	}, { passive: false });
+	
+	// 触摸结束
+	txButton.addEventListener('touchend', function(e) {
+		e.preventDefault();
+		e.stopPropagation();
+		
+		// 恢复视觉状态
+		txButton.style.transform = 'scale(1)';
+		txButton.style.backgroundColor = '';
+		
+		// 结束TX
 		TXtogle('False');
-	}
-});
-
-// Add safety listeners to ensure PTT is released
-document.addEventListener('DOMContentLoaded', function() {
-	const pttButton = document.getElementById('TX-record');
-	if (pttButton) {
-		// Handle touch cancel (in case the touch is interrupted)
-		pttButton.addEventListener('touchcancel', function(e) {
-			e.preventDefault();
-			TXtogle('False');
-		}, { passive: true });
 		
-		// Handle mouse leaving the button area
-		pttButton.addEventListener('mouseleave', function(e) {
-			e.preventDefault();
-			TXtogle('False');
-		});
+		console.log('TX触摸结束');
+	}, { passive: false });
+	
+	// 触摸取消（手指移出按钮区域）
+	txButton.addEventListener('touchcancel', function(e) {
+		e.preventDefault();
+		e.stopPropagation();
 		
-		// Global listeners to ensure release
-		document.addEventListener('mouseup', function(e) {
-			// Only release if we're not clicking the PTT button itself
-			if (pttButton && !pttButton.contains(e.target)) {
-				TXtogle('False');
-			}
-		}, { passive: true });
-	}
-});
-
+		// 恢复视觉状态
+		txButton.style.transform = 'scale(1)';
+		txButton.style.backgroundColor = '';
+		
+		// 结束TX
+		TXtogle('False');
+		
+		console.log('TX触摸取消');
+	}, { passive: false });
+	
+	// 触摸移动（防止意外触发）
+	txButton.addEventListener('touchmove', function(e) {
+		e.preventDefault();
+		e.stopPropagation();
+	}, { passive: false });
+	
+	// 鼠标事件（桌面兼容）
+	txButton.addEventListener('mousedown', function(e) {
+		if (!poweron) return;
+		TXtogle('True');
+	});
+	
+	txButton.addEventListener('mouseup', function(e) {
+		TXtogle('False');
+	});
+	
+	txButton.addEventListener('mouseleave', function(e) {
+		TXtogle('False');
+	});
+	
+	console.log('TX按钮触摸事件初始化完成');
+}
 
 //Cookie routines///////////////////////////////////////////////////////////////////////////
 function setCookie(cname,cvalue,exdays) {
@@ -1528,10 +1282,10 @@ var OpusDecoder = (function () {
 var OpusEncoderProcessor = function( wsh )
 {
     this.wsh = wsh;
-    this.bufferSize = 1024; // 减小缓冲区以降低延迟
-    this.downSample = 1; // 不进行下采样以保持音质
-    this.opusFrameDur = 20; // 减小帧时长以降低延迟 (推荐值: 20ms)
-    this.opusRate = 16000; // 降低采样率以减少处理负担 (推荐值: 16kHz)
+    this.bufferSize = 4096; // for webaudio script processor
+    this.downSample = 2;
+    this.opusFrameDur = 60; // msec
+    this.opusRate = 24000;
     this.i16arr = new Int16Array( this.bufferSize / this.downSample );
     this.f32arr = new Float32Array( this.bufferSize / this.downSample );
     this.opusEncoder = new OpusEncoder( this.opusRate, 1, 2049, this.opusFrameDur );
@@ -1551,23 +1305,19 @@ OpusEncoderProcessor.prototype.onAudioProcess = function( e )
 	if( encode )
 	{
 	    for( var idx = 0; idx < data.length; idx += ds )
-		this.f32arr[ i++ ] = data[ idx ];
+		this.f32arr[ i++ ] = data[ idx ]/10;
 
 	    var res = this.opusEncoder.encode_float( this.f32arr );
-	    
-	    // 批量发送Opus数据包以减少网络延迟
-	    if (res.length > 0 && this.wsh.readyState === WebSocket.OPEN) {
-		// 创建一个包含所有数据包的Blob
-		var blob = new Blob(res, {type: 'application/octet-stream'});
-		this.wsh.send(blob);
-	    }
+
+	    for( var idx = 0; idx < res.length; ++idx )
+		this.wsh.send( res[ idx ] );
 	}
 	else
 	{
 	    for( var idx = 0; idx < data.length; idx += ds )
-		this.i16arr[ i++ ] = data[ idx ] * 0xFFFF; // int16
+		this.i16arr[ i++ ] = (data[ idx ] /10) * 0xFFFF; // int16
 
-	    if (this.wsh.readyState === WebSocket.OPEN) this.wsh.send( this.i16arr );
+	    this.wsh.send( this.i16arr );
 	}
 	
 	let u;
@@ -1591,14 +1341,11 @@ OpusEncoderProcessor.prototype.onAudioProcess = function( e )
 var MediaHandler = function( audioProcessor )
 {
     var context = new (window.AudioContext||window.webkitAudioContext)();
-    console.log("AudioContext采样率: " + context.sampleRate + " Hz");
-    
     if( !context.createScriptProcessor )
 	context.createScriptProcessor = context.createJavaScriptNode;
 
-    if( context.sampleRate < 44000 || context.sampleRate > 50000 )
+    if( context.sampleRate < 44000 || context.SampleRate > 50000 )
     {
-	console.warn("不支持的采样率: " + String( context.sampleRate ) + " Hz");
 	alert( "Unsupported sample rate: " + String( context.sampleRate ) );
 	return;
     };
@@ -1636,40 +1383,18 @@ MediaHandler.prototype.callback = function( stream )
 }
 
 
-MediaHandler.prototype.error = function( err ) { 
-	console.error("音频设备访问错误:", err);
-	alert( "音频设备访问失败: " + (err.message || err.name || "未知错误") + "\n请检查浏览器权限设置并确保麦克风已连接。" ); 
-}
+MediaHandler.prototype.error = function( err ) { alert( "Problem" ); }
 
 
-function checkAudioSupport() {
-	// 检查浏览器音频支持
-	if (!window.AudioContext && !window.webkitAudioContext) {
-		console.error("浏览器不支持Web Audio API");
-		alert("您的浏览器不支持Web Audio API。请使用最新版本的Chrome、Firefox或Safari。");
-		return false;
-	}
-	
-	// 检查getUserMedia支持
-	if (!navigator.mediaDevices && !navigator.getUserMedia && !navigator.webkitGetUserMedia && !navigator.mozGetUserMedia) {
-		console.error("浏览器不支持getUserMedia API");
-		alert("您的浏览器不支持音频设备访问API。请使用最新版本的Chrome、Firefox或Safari。");
-		return false;
-	}
-	
-	console.log("浏览器音频支持检查通过");
-	return true;
-}
+var isRecording = false, encode = false;
+var wsAudioTX = "";
+var ap = "";
+var mh = "";
 
 const TXinstantMeter = document.querySelector('#Txinstant meter');
 
 function AudioTX_start()
 {
-if (!checkAudioSupport()) {
-	console.error("音频支持检查失败，无法启动音频传输");
-	return;
-}
-
 isRecording = false;
 encode = false;
 document.getElementById("indwsAudioTX").innerHTML='<img src="img/critsgrey.png">wsTX';
@@ -1679,100 +1404,20 @@ wsAudioTX.onerror = appendwsAudioTXError;
 wsAudioTX.onclose = appendwsAudioTXclose;
 ap = new OpusEncoderProcessor( wsAudioTX );
 mh = new MediaHandler( ap );
-	
-// 添加连接超时检查
-wsAudioTX.timeoutTimer = setTimeout(function() {
-	if (wsAudioTX.readyState !== WebSocket.OPEN) {
-		console.warn("WebSocket TX connection timeout");
-		document.getElementById("indwsAudioTX").innerHTML='<img src="img/critsred.png">wsTX';
-		wsAudioTX.close();
-		appendwsAudioTXError(new Error("Connection timeout"));
-	}
-}, 10000); // 10秒超时
-}
-
-function checkAudioTXConnection() {
-	if (wsAudioTX && wsAudioTX.readyState !== WebSocket.OPEN) {
-		console.warn("WebSocket TX连接未打开，当前状态:", wsAudioTX.readyState);
-		return false;
-	}
-	return true;
-}
-
-// 音频系统综合测试函数
-function testAudioSystem() {
-	console.log("开始音频系统测试...");
-	
-	// 1. 检查浏览器支持
-	if (!checkAudioSupport()) {
-		console.error("音频系统测试失败：浏览器不支持");
-		return false;
-	}
-	
-	// 2. 检查WebSocket连接
-	if (!checkAudioTXConnection()) {
-		console.warn("音频系统测试警告：WebSocket连接未建立");
-	}
-	
-	// 3. 检查音频上下文状态
-	if (typeof mh !== "undefined" && mh && mh.context) {
-		console.log("AudioContext状态:", mh.context.state);
-		console.log("AudioContext采样率:", mh.context.sampleRate);
-	} else {
-		console.warn("AudioContext尚未初始化");
-	}
-	
-	// 4. 检查编码器状态
-	if (typeof ap !== "undefined" && ap && ap.opusEncoder) {
-		console.log("Opus编码器已初始化");
-		console.log("编码器参数 - 采样率:", ap.opusRate, "帧时长:", ap.opusFrameDur, "ms");
-	} else {
-		console.warn("Opus编码器尚未初始化");
-	}
-	
-	console.log("音频系统测试完成");
-	return true;
 }
 
 function appendwsAudioTXclose(){
-	console.log("WebSocket TX连接已关闭");
 	document.getElementById("indwsAudioTX").innerHTML='<img src="img/critsred.png">wsTX';
 }
 
 function appendwsAudioTXOpen(){
-	console.log("WebSocket TX连接已建立");
 	document.getElementById("indwsAudioTX").innerHTML='<img src="img/critsgreen.png">wsTX';
-	
-	// 清除连接超时定时器
-	if (wsAudioTX.timeoutTimer) {
-		clearTimeout(wsAudioTX.timeoutTimer);
-		wsAudioTX.timeoutTimer = null;
-	}
-	
-	// 重置重连尝试计数
-	wsAudioTX.reconnectAttempts = 0;
 }
 
 function appendwsAudioTXError(err){
-	console.error("WebSocket TX Error: ", err);
 	document.getElementById("indwsAudioTX").innerHTML='<img src="img/critsred.png">wsTX';
-	
-	// 添加重连限制，避免无限重连
-	if (!wsAudioTX.reconnectAttempts) {
-		wsAudioTX.reconnectAttempts = 0;
-	}
-	
-	if (wsAudioTX.reconnectAttempts < 3) {
-		wsAudioTX.reconnectAttempts++;
-		console.log("Attempting to reconnect TX WebSocket, attempt: " + wsAudioTX.reconnectAttempts);
-		alert("音频传输连接错误: " + (err.message || "未知错误") + "。系统将尝试重新连接... (尝试 " + wsAudioTX.reconnectAttempts + "/3)");
-		setTimeout(function() {
-			AudioTX_start();
-		}, 1500 * wsAudioTX.reconnectAttempts); // 递增延迟重连
-	} else {
-		console.error("Max reconnection attempts reached for TX WebSocket");
-		alert("音频传输连接失败，已达到最大重试次数。请检查网络连接并刷新页面重试。");
-	}
+    wsAudioTX.close();
+	AudioTX_start();
 }
 
 function AudioTX_stop()

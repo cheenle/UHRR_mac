@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>WebSocket PTT Test</title>
+</head>
+<body>
+    <h1>WebSocket PTT Test</h1>
+    <button onclick="testPTT()">Test PTT</button>
+    <div id="log"></div>
+
+    <script>
+        let ws = null;
+        
+        function log(message) {
+            const logDiv = document.getElementById('log');
+            logDiv.innerHTML += '<div>' + new Date().toLocaleTimeString() + ': ' + message + '</div>';
+            console.log(message);
+        }
+        
+        function connectWebSocket() {
+            const wsUrl = 'wss://localhost:8888/WSCTRX';
+            log('Connecting to: ' + wsUrl);
+            
+            ws = new WebSocket(wsUrl);
+            
+            ws.onopen = function() {
+                log('✅ WebSocket connected');
+            };
+            
+            ws.onmessage = function(event) {
+                log('📨 Received: ' + event.data);
+            };
+            
+            ws.onerror = function(error) {
+                log('❌ WebSocket error: ' + error);
+            };
+            
+            ws.onclose = function() {
+                log('🔌 WebSocket closed');
+            };
+        }
+        
+        function testPTT() {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                log('📤 Sending setPTT:true');
+                ws.send('setPTT:true');
+                
+                setTimeout(() => {
+                    log('📤 Sending setPTT:false');
+                    ws.send('setPTT:false');
+                }, 2000);
+            } else {
+                log('❌ WebSocket not connected');
+            }
+        }
+        
+        // Connect on page load
+        window.onload = function() {
+            connectWebSocket();
+        };
+    </script>
+</body>
+</html>

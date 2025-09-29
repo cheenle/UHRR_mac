@@ -1,1 +1,12 @@
 UHRR.log
+# Ignore runtime and secrets
+__pycache__/
+*.pyc
+logs/
+certs/
+*.key
+*.crt
+*.pem
+server_*.log
+app*.log
+

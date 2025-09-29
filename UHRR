@@ -3,6 +3,7 @@
 
 import os 
 import tornado.httpserver
+import ssl
 import tornado.ioloop
 import tornado.web
 import tornado.websocket
@@ -318,13 +319,19 @@ class WS_AudioRXHandler(tornado.websocket.WebSocketHandler):
 	def tailstream(self):
 		while flagWavstart and self.ws_connection:
 			try:
-				while len(self.Wavframes)==0:
-					yield tornado.gen.sleep(0.1)
+				# 空队列时更高频率检查，降低抖动
+				while len(self.Wavframes) == 0:
+					yield tornado.gen.sleep(0.005)
 					if not self.ws_connection:
 						return
+				# 尽可能把当前累积的帧连续发出，减少爆发式抖动
 				if self.ws_connection:
-					yield self.write_message(self.Wavframes[0],binary=True)
-					del self.Wavframes[0]
+					# 每次最多发送 8 帧，避免长时间阻塞
+					batch = 0
+					while batch < 8 and len(self.Wavframes) > 0 and self.ws_connection:
+						yield self.write_message(self.Wavframes[0], binary=True)
+						del self.Wavframes[0]
+						batch += 1
 			except Exception as e:
 				print(f"Error in tailstream: {e}")
 				break 
@@ -348,11 +355,12 @@ class WS_AudioTXHandler(tornado.websocket.WebSocketHandler):
 	def stoppttontimeout(self):
 		global last_AudioTXHandler_msg_time
 		try:
-			# Reduced timeout from 10s to 1s for faster mobile PTT response
-			if time.time() > last_AudioTXHandler_msg_time + 1:  # 1 second timeout
+			# PTT timeout should be immediate when no audio data is received
+			# This prevents PTT from staying on after user releases TX button
+			if time.time() > last_AudioTXHandler_msg_time + 0.5:  # 0.5 second timeout
 				if self.ws_connection and CTRX.infos["PTT"]==True:
 					CTRX.setPTT("false")
-					print("stop ptt on timeout (1s)")
+					print("stop ptt on timeout (0.5s)")
 		except:
 			return None
 		# Check more frequently for faster response
@@ -403,12 +411,18 @@ class WS_AudioTXHandler(tornado.websocket.WebSocketHandler):
 		if str(data).startswith('m:') :
 			self.TX_init(str(data[2:]))
 		elif str(data).startswith('s:') :
+			# 立即停止音频播放，清除缓冲区
+			print("🛑 立即停止音频播放")
 			if PYAUDIO_AVAILABLE:
 				if hasattr(self, 'audio_playback') and self.audio_playback:
 					self.audio_playback.close()
+					self.audio_playback = None
 			else:
 				if hasattr(self, 'inp') and self.inp:
 					self.inp.close()
+					self.inp = None
+			# 清除任何待播放的音频数据
+			print("🧹 清除音频缓冲区")
 		else :
 			if PYAUDIO_AVAILABLE:
 				# Use PyAudio
@@ -905,19 +919,26 @@ class WS_ControlTRX(tornado.websocket.WebSocketHandler):
 	@tornado.gen.coroutine
 	def on_message(self, data) :
 		global LastPing
+		print(f"📨 收到WebSocket消息: {data}")
 		if bool(config['CTRL']['debug']):
 			print(data)
 		
 		try:
 			(action, datato) = data.split(':')
+			print(f"📨 解析消息: action={action}, datato={datato}")
 		except ValueError:
 			action = data
+			datato = ""
+			print(f"📨 解析消息: action={action}, datato={datato}")
 			pass
 			
 		# Fast-path PTT processing for mobile responsiveness
 		if(action == "setPTT"):
 			# Priority handling: PTT commands are processed immediately
+			print(f"🔥 PTT命令接收: action={action}, datato={datato}")
 			result = CTRX.setPTT(datato)
+			print(f"🔥 PTT命令执行结果: {result}")
+			
 			yield self.send_to_all_clients("getPTT:"+str(result))
 			LastPing = time.time()
 			return  # Exit immediately after PTT to avoid delays
@@ -1323,19 +1344,19 @@ if __name__ == "__main__":
 		
 		
 		app = tornado.web.Application([
-		(r'/login', AuthLoginHandler),
-		(r'/logout', AuthLogoutHandler),
-		(r'/WSaudioRX', WS_AudioRXHandler),
-		(r'/WSaudioTX', WS_AudioTXHandler),
-		(r'/WSCTRX', WS_ControlTRX),
-		(r'/WSpanFFT', WS_panFFTHandler),
-		(r'/(panfft.*)', tornado.web.StaticFileHandler, { 'path' : './www/panadapter' }),
-		(r'/CONFIG', ConfigHandler),
-		(r'/test', TestRadioHandler),
-		(r'/mobile', MobileHandler),
-		(r'/', MainHandler),
-		(r'/(.*)', tornado.web.StaticFileHandler, { 'path' : './www' })
-		],debug=bool(config['SERVER']['debug']), websocket_ping_interval=10, cookie_secret=config['SERVER']['cookie_secret'])
+			(r'/login', AuthLoginHandler),
+			(r'/logout', AuthLogoutHandler),
+			(r'/WSaudioRX', WS_AudioRXHandler),
+			(r'/WSaudioTX', WS_AudioTXHandler),
+			(r'/WSCTRX', WS_ControlTRX),
+			(r'/WSpanFFT', WS_panFFTHandler),
+			(r'/(panfft.*)', tornado.web.StaticFileHandler, { 'path' : './www/panadapter' }),
+			(r'/CONFIG', ConfigHandler),
+			(r'/test', TestRadioHandler),
+			(r'/mobile', MobileHandler),
+			(r'/', MainHandler),
+			(r'/(.*)', tornado.web.StaticFileHandler, { 'path' : './www' })
+			],debug=bool(config['SERVER']['debug']), websocket_ping_interval=10, cookie_secret=config['SERVER']['cookie_secret'])
 	except:
 		e = str(sys.exc_info())
 		print("=== SERVER FALLING BACK TO CONFIG-ONLY MODE ===")
@@ -1348,12 +1369,16 @@ if __name__ == "__main__":
 		(r'/CONFIG', ConfigHandler),
 		(r'/', ConfigHandler),
 		(r'/(.*)', tornado.web.StaticFileHandler, { 'path' : './www' })
-		],debug=bool(config['SERVER']['debug']))
+	],debug=bool(config['SERVER']['debug']))
 
-	http_server = tornado.httpserver.HTTPServer(app, ssl_options={
-	"certfile": os.path.join(config['SERVER']['certfile']),
-	"keyfile": os.path.join(config['SERVER']['keyfile']),
-	})
+	# Use explicit SSLContext to avoid PEM parsing quirks
+	cert_path = os.path.join(config['SERVER']['certfile'])
+	key_path = os.path.join(config['SERVER']['keyfile'])
+	ssl_ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+	ssl_ctx.options |= ssl.OP_NO_COMPRESSION
+	ssl_ctx.minimum_version = ssl.TLSVersion.TLSv1_2
+	ssl_ctx.load_cert_chain(certfile=cert_path, keyfile=key_path)
+	http_server = tornado.httpserver.HTTPServer(app, ssl_options=ssl_ctx)
 	http_server.listen(int(config['SERVER']['port']))
 	print('HTTP server started.')
 	tornado.ioloop.IOLoop.instance().start()
