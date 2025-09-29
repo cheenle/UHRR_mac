@@ -279,6 +279,15 @@ class RadioService:
 
         return await self.get_status()
 
+    def validate_frequency(self, frequency: int) -> bool:
+        """Validate frequency value"""
+        return 100000 <= frequency <= 30000000000  # 100kHz to 30GHz
+
+    def validate_mode(self, mode: str) -> bool:
+        """Validate mode value"""
+        valid_modes = ['USB', 'LSB', 'CW', 'AM', 'FM']
+        return mode.upper() in valid_modes
+
     async def cleanup(self):
         """Cleanup radio service"""
         try:

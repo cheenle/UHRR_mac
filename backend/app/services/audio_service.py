@@ -192,6 +192,38 @@ class AudioService:
             'stats': self.stats.copy()
         }
 
+    def get_devices(self) -> dict:
+        """Get available audio devices"""
+        try:
+            devices = []
+            for i in range(self.audio.get_device_count()):
+                device_info = self.audio.get_device_info_by_index(i)
+                devices.append({
+                    'index': i,
+                    'name': device_info['name'],
+                    'max_input_channels': device_info['maxInputChannels'],
+                    'max_output_channels': device_info['maxOutputChannels'],
+                    'default_sample_rate': device_info['defaultSampleRate']
+                })
+            return devices
+        except Exception as e:
+            logger.error(f"Error getting devices: {e}")
+            return []
+
+    async def update_config(self, config: dict) -> dict:
+        """Update audio configuration"""
+        try:
+            # This would update audio settings dynamically
+            # For now, return current config
+            return {
+                'sample_rate': self.sample_rate,
+                'channels': self.channels,
+                'chunk_size': self.chunk_size
+            }
+        except Exception as e:
+            logger.error(f"Error updating config: {e}")
+            raise
+
     async def cleanup(self):
         """Cleanup audio resources"""
         try:

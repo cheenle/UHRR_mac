@@ -23,6 +23,7 @@ from app.services.radio_service import RadioService
 from app.services.websocket_service import WebSocketService
 from app.models.radio_state import RadioState
 from app.utils.logging_config import setup_logging
+from app.routers import radio, audio
 
 # Setup logging
 setup_logging()
@@ -119,6 +120,10 @@ async def heartbeat(sid, data):
     """Handle heartbeat from client"""
     await websocket_service.handle_heartbeat(sid, data)
 
+# Include routers
+app.include_router(radio.router)
+app.include_router(audio.router)
+
 # FastAPI routes
 @app.get("/", response_class=HTMLResponse)
 async def root():
@@ -149,36 +154,6 @@ async def health_check():
             "websocket": websocket_service.is_initialized
         }
     }
-
-@app.get("/api/radio/status")
-async def get_radio_status():
-    """Get current radio status"""
-    try:
-        status = await radio_service.get_status()
-        return {"status": "success", "data": status}
-    except Exception as e:
-        logger.error(f"Failed to get radio status: {e}")
-        raise HTTPException(status_code=500, detail="Failed to get radio status")
-
-@app.post("/api/radio/command")
-async def execute_radio_command(command: dict):
-    """Execute radio command"""
-    try:
-        result = await radio_service.execute_command(command)
-        return {"status": "success", "data": result}
-    except Exception as e:
-        logger.error(f"Failed to execute radio command: {e}")
-        raise HTTPException(status_code=500, detail="Failed to execute radio command")
-
-@app.get("/api/audio/stats")
-async def get_audio_stats():
-    """Get audio service statistics"""
-    try:
-        stats = audio_service.get_stats()
-        return {"status": "success", "data": stats}
-    except Exception as e:
-        logger.error(f"Failed to get audio stats: {e}")
-        raise HTTPException(status_code=500, detail="Failed to get audio stats")
 
 # WebSocket endpoint for Socket.IO
 app.mount('/socket.io', socketio.ASGIApp(sio))

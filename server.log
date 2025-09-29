@@ -1,0 +1,12 @@
+2025-09-30 00:51:51,484 - UHRR - INFO - Testing rigctld daemon connection...
+2025-09-30 00:51:51,485 - UHRR - INFO - ✓ rigctld daemon responding! Initial frequency: 7050000
+2025-09-30 00:51:51,485 - UHRR - INFO - Sending rigctld command: f
+2025-09-30 00:51:51,485 - UHRR - DEBUG - rigctld response to 'f': 7050000
+2025-09-30 00:51:51,485 - UHRR - INFO - rigctld command 'f' successful
+2025-09-30 00:51:51,485 - UHRR - INFO - Current frequency from rigctld: 7050000 Hz
+2025-09-30 00:51:51,485 - UHRR - INFO - Sending rigctld command: m
+2025-09-30 00:51:51,486 - UHRR - DEBUG - rigctld response to 'm': 2200
+2025-09-30 00:51:51,486 - UHRR - INFO - rigctld command 'm' successful
+2025-09-30 00:51:51,486 - UHRR - DEBUG - Raw mode response: '2200'
+2025-09-30 00:51:51,486 - UHRR - WARNING - IC-M710 returned only passband 2200, using stored mode USB
+2025-09-30 00:51:51,487 - asyncio - DEBUG - Using selector: KqueueSelector

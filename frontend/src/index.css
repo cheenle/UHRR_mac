@@ -1,0 +1,412 @@
+/* Universal HamRadio Remote - Modern CSS */
+
+:root {
+  --primary-color: #2c3e50;
+  --secondary-color: #3498db;
+  --accent-color: #e74c3c;
+  --success-color: #27ae60;
+  --warning-color: #f39c12;
+  --danger-color: #e74c3c;
+  --light-color: #ecf0f1;
+  --dark-color: #2c3e50;
+  --text-color: #2c3e50;
+  --border-color: #bdc3c7;
+  --shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  --border-radius: 8px;
+  --transition: all 0.3s ease;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  line-height: 1.6;
+  color: var(--text-color);
+  background-color: #f8f9fa;
+  min-height: 100vh;
+}
+
+.app {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.app-header {
+  background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+  color: white;
+  padding: 2rem;
+  border-radius: var(--border-radius);
+  box-shadow: var(--shadow);
+  margin-bottom: 2rem;
+  text-align: center;
+}
+
+.app-header h1 {
+  font-size: 2.5rem;
+  margin-bottom: 0.5rem;
+  font-weight: 300;
+}
+
+.connection-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.connection-status.connected {
+  background-color: rgba(39, 174, 96, 0.2);
+  color: var(--success-color);
+}
+
+.connection-status.disconnected {
+  background-color: rgba(231, 76, 60, 0.2);
+  color: var(--danger-color);
+}
+
+.connect-button {
+  background: var(--secondary-color);
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: var(--border-radius);
+  cursor: pointer;
+  transition: var(--transition);
+  margin-left: 1rem;
+}
+
+.connect-button:hover {
+  background: #2980b9;
+  transform: translateY(-2px);
+}
+
+.app-main {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+  margin-bottom: 2rem;
+}
+
+@media (max-width: 768px) {
+  .app-main {
+    grid-template-columns: 1fr;
+  }
+}
+
+.controls-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.display-section {
+  display: flex;
+  justify-content: center;
+}
+
+.radio-control,
+.audio-control {
+  background: white;
+  border-radius: var(--border-radius);
+  box-shadow: var(--shadow);
+  padding: 1.5rem;
+  border: 1px solid var(--border-color);
+}
+
+.radio-control__header,
+.audio-control__header,
+.spectrum-display__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.radio-control__header h2,
+.audio-control__header h3,
+.spectrum-display__header h3 {
+  color: var(--primary-color);
+  font-weight: 600;
+}
+
+.control-group {
+  margin-bottom: 1.5rem;
+}
+
+.control-group label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+  color: var(--text-color);
+}
+
+.frequency-display,
+.mode-selector,
+.power-slider,
+.gain-slider,
+.volume-slider {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  font-size: 1rem;
+  transition: var(--transition);
+}
+
+.frequency-display:focus,
+.mode-selector:focus,
+.power-slider:focus,
+.gain-slider:focus,
+.volume-slider:focus {
+  outline: none;
+  border-color: var(--secondary-color);
+  box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+}
+
+.frequency-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 8px;
+  background: #ddd;
+  border-radius: 4px;
+  outline: none;
+}
+
+.frequency-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--secondary-color);
+  cursor: pointer;
+}
+
+.frequency-slider::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--secondary-color);
+  cursor: pointer;
+  border: none;
+}
+
+.signal-meter {
+  width: 100%;
+  height: 20px;
+  background: #eee;
+  border-radius: 10px;
+  overflow: hidden;
+  margin: 0.5rem 0;
+}
+
+.signal-bar {
+  height: 100%;
+  background: linear-gradient(90deg, #e74c3c, #f39c12, #27ae60);
+  transition: width 0.3s ease;
+}
+
+.ptt-button {
+  background: var(--light-color);
+  border: 2px solid var(--border-color);
+  border-radius: 50%;
+  width: 80px;
+  height: 80px;
+  font-size: 1rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: var(--transition);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto;
+}
+
+.ptt-button:hover {
+  transform: scale(1.05);
+  box-shadow: var(--shadow);
+}
+
+.ptt-button.transmitting {
+  background: var(--accent-color);
+  color: white;
+  border-color: var(--accent-color);
+  animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+  0% { box-shadow: 0 0 0 0 rgba(231, 76, 60, 0.7); }
+  70% { box-shadow: 0 0 0 10px rgba(231, 76, 60, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(231, 76, 60, 0); }
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.stat-item {
+  background: #f8f9fa;
+  padding: 1rem;
+  border-radius: var(--border-radius);
+  text-align: center;
+}
+
+.stat-label {
+  display: block;
+  font-size: 0.8rem;
+  color: #666;
+  margin-bottom: 0.5rem;
+}
+
+.stat-value {
+  display: block;
+  font-size: 1.2rem;
+  font-weight: bold;
+  color: var(--primary-color);
+}
+
+.stat-value.recording {
+  color: var(--accent-color);
+}
+
+.spectrum-display {
+  background: white;
+  border-radius: var(--border-radius);
+  box-shadow: var(--shadow);
+  padding: 1.5rem;
+  border: 1px solid var(--border-color);
+}
+
+.spectrum-canvas {
+  width: 100%;
+  height: 300px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  background: #000;
+}
+
+.spectrum-display__info {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.info-item {
+  text-align: center;
+  padding: 0.5rem;
+  background: #f8f9fa;
+  border-radius: var(--border-radius);
+}
+
+.info-item span:first-child {
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.info-item span:last-child {
+  font-weight: bold;
+  color: var(--primary-color);
+}
+
+.app-footer {
+  text-align: center;
+  padding: 2rem;
+  color: #666;
+  border-top: 1px solid var(--border-color);
+  margin-top: 2rem;
+}
+
+.loading-spinner {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  font-size: 1.2rem;
+  color: var(--primary-color);
+}
+
+.loading-spinner::before {
+  content: '';
+  width: 40px;
+  height: 40px;
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid var(--secondary-color);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-right: 1rem;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .app {
+    padding: 10px;
+  }
+
+  .app-header {
+    padding: 1.5rem;
+  }
+
+  .app-header h1 {
+    font-size: 2rem;
+  }
+
+  .controls-section {
+    gap: 1rem;
+  }
+
+  .radio-control,
+  .audio-control {
+    padding: 1rem;
+  }
+
+  .ptt-button {
+    width: 60px;
+    height: 60px;
+    font-size: 0.9rem;
+  }
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --primary-color: #3498db;
+    --secondary-color: #2980b9;
+    --text-color: #ecf0f1;
+    --border-color: #34495e;
+    --light-color: #2c3e50;
+  }
+
+  body {
+    background-color: #1a1a1a;
+  }
+
+  .radio-control,
+  .audio-control,
+  .spectrum-display {
+    background: #2c3e50;
+    border-color: var(--border-color);
+  }
+
+  .stat-item {
+    background: #34495e;
+  }
+}

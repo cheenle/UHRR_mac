@@ -1,10 +1,75 @@
+version: '3.8'
+
 services:
-  uhrh:
-    build: .
-    container_name: uhrh
-    restart: always
-    devices:
-      - /dev/snd:/dev/snd
-      - /dev/ttyUSB0:/dev/ttyUSB0
+  # Backend API server
+  backend:
+    build: ./backend
     ports:
-      - 8888:8888
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - HOST=0.0.0.0
+      - PORT=3000
+      - CORS_ORIGINS=http://localhost:3000,http://localhost:8080
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      - redis
+    volumes:
+      - ./backend:/app
+      - ./certs:/app/certs:ro
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Frontend application
+  frontend:
+    build: ./frontend
+    ports:
+      - "8080:3000"
+    environment:
+      - NODE_ENV=production
+      - REACT_APP_BACKEND_URL=http://localhost:3000
+    volumes:
+      - ./frontend:/app
+    restart: unless-stopped
+    depends_on:
+      - backend
+
+  # Redis for session storage and caching
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+
+  # rigctld (Hamlib daemon)
+  rigctld:
+    image: ubuntu:22.04
+    ports:
+      - "4532:4532"
+    environment:
+      - RIG_MODEL=IC-7100
+      - RIG_PORT=/dev/ttyUSB0
+      - RIG_BAUDRATE=19200
+    devices:
+      - /dev/ttyUSB0:/dev/ttyUSB0
+    command: >
+      bash -c "
+        apt-get update &&
+        apt-get install -y hamlib-utils &&
+        rigctld -m \${RIG_MODEL} -r \${RIG_PORT} -s \${RIG_BAUDRATE}
+      "
+    restart: unless-stopped
+
+volumes:
+  redis_data:
+
+networks:
+  default:
+    name: uhrr-network
