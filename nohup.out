@@ -595,4 +595,16 @@ No audio clients connected
 DEBUG: Checking clients - found 0 clients
 No audio clients connected
 DEBUG: Checking clients - found 0 clients
-No audio clients connected
+No audio clients connected2025-09-30 00:47:52,798 - tornado.access - INFO - 304 GET /rx_worklet_processor.js (2409:8a00:1894:9660:84e:6280:b8f7:34c8) 6.62ms
+2025-09-30 00:47:52,830 - tornado.access - INFO - 101 GET /WSaudioRX (2409:8a00:1894:9660:84e:6280:b8f7:34c8) 1.16ms
+2025-09-30 00:47:52,878 - tornado.access - INFO - 101 GET /WSaudioTX (2409:8a00:1894:9660:84e:6280:b8f7:34c8) 0.87ms
+2025-09-30 00:47:52,965 - tornado.access - INFO - 101 GET /WSCTRX (2409:8a00:1894:9660:84e:6280:b8f7:34c8) 1.12ms
+2025-09-30 00:47:53,024 - UHRR - INFO - Sending rigctld command: f
+2025-09-30 00:47:53,027 - UHRR - DEBUG - rigctld response to 'f': 7050000
+2025-09-30 00:47:53,027 - UHRR - INFO - rigctld command 'f' successful
+2025-09-30 00:47:53,027 - UHRR - INFO - Current frequency from rigctld: 7050000 Hz
+2025-09-30 00:47:53,028 - UHRR - INFO - Sending rigctld command: m
+2025-09-30 00:47:53,032 - UHRR - DEBUG - rigctld response to 'm': 2200
+2025-09-30 00:47:53,032 - UHRR - INFO - rigctld command 'm' successful
+2025-09-30 00:47:53,033 - UHRR - DEBUG - Raw mode response: '2200'
+2025-09-30 00:47:53,033 - UHRR - WARNING - IC-M710 returned only passband 2200, using stored mode LSB
