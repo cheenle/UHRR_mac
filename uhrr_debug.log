@@ -1,38 +1,1149 @@
-2025-09-29 22:38:24,838 - UHRR - INFO - Testing rigctld daemon connection...
-2025-09-29 22:38:24,846 - UHRR - INFO - ✓ rigctld daemon responding! Initial frequency: 7050000
-2025-09-29 22:38:24,846 - UHRR - INFO - Sending rigctld command: f
-2025-09-29 22:38:24,846 - UHRR - DEBUG - rigctld response to 'f': 7050000
-2025-09-29 22:38:24,846 - UHRR - INFO - rigctld command 'f' successful
-2025-09-29 22:38:24,846 - UHRR - INFO - Current frequency from rigctld: 7050000 Hz
-2025-09-29 22:38:24,846 - UHRR - INFO - Sending rigctld command: m
-2025-09-29 22:38:24,847 - UHRR - DEBUG - rigctld response to 'm': 2200
-2025-09-29 22:38:24,847 - UHRR - INFO - rigctld command 'm' successful
-2025-09-29 22:38:24,847 - UHRR - DEBUG - Raw mode response: '2200'
-2025-09-29 22:38:24,847 - UHRR - WARNING - IC-M710 returned only passband 2200, using stored mode USB
-2025-09-29 22:38:24,849 - asyncio - DEBUG - Using selector: KqueueSelector
-2025-09-29 22:38:28,553 - tornado.access - INFO - 200 GET / (2409:8a00:1894:9660:84e:6280:b8f7:34c8) 4.78ms
-2025-09-29 22:38:28,605 - tornado.access - INFO - 304 GET /style.css (2409:8a00:1894:9660:84e:6280:b8f7:34c8) 7.39ms
-2025-09-29 22:38:28,616 - tornado.access - INFO - 304 GET /controls.js (2409:8a00:1894:9660:84e:6280:b8f7:34c8) 10.60ms
-2025-09-29 22:38:28,617 - tornado.access - INFO - 304 GET /tx_button_optimized.js (2409:8a00:1894:9660:84e:6280:b8f7:34c8) 0.68ms
-2025-09-29 22:38:31,390 - tornado.access - INFO - 101 GET /WSaudioRX (2409:8a00:1894:9660:84e:6280:b8f7:34c8) 1.30ms
-2025-09-29 22:38:31,447 - tornado.access - INFO - 101 GET /WSaudioTX (2409:8a00:1894:9660:84e:6280:b8f7:34c8) 0.47ms
-2025-09-29 22:38:31,540 - tornado.access - INFO - 101 GET /WSCTRX (2409:8a00:1894:9660:84e:6280:b8f7:34c8) 0.43ms
-2025-09-29 22:38:31,598 - UHRR - INFO - Sending rigctld command: f
-2025-09-29 22:38:31,599 - UHRR - DEBUG - rigctld response to 'f': 7050000
-2025-09-29 22:38:31,599 - UHRR - INFO - rigctld command 'f' successful
-2025-09-29 22:38:31,599 - UHRR - INFO - Current frequency from rigctld: 7050000 Hz
-2025-09-29 22:38:31,599 - UHRR - INFO - Sending rigctld command: m
-2025-09-29 22:38:31,600 - UHRR - DEBUG - rigctld response to 'm': 2200
-2025-09-29 22:38:31,600 - UHRR - INFO - rigctld command 'm' successful
-2025-09-29 22:38:31,600 - UHRR - DEBUG - Raw mode response: '2200'
-2025-09-29 22:38:31,600 - UHRR - WARNING - IC-M710 returned only passband 2200, using stored mode USB
-2025-09-29 22:38:53,872 - UHRR - INFO - Setting PTT: status=true, ptt_state=True, ptt_value=1
-2025-09-29 22:38:53,940 - UHRR - INFO - ✓ PTT set to true via rigctld (fast)
-2025-09-29 22:38:54,067 - UHRR - INFO - PyAudio TX initialized: rate=24000, encoded=0
-2025-09-29 22:38:56,399 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
-2025-09-29 22:38:56,510 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
-2025-09-29 22:38:58,291 - UHRR - INFO - Setting PTT: status=true, ptt_state=True, ptt_value=1
-2025-09-29 22:38:58,352 - UHRR - INFO - ✓ PTT set to true via rigctld (fast)
-2025-09-29 22:38:58,473 - UHRR - INFO - PyAudio TX initialized: rate=24000, encoded=0
-2025-09-29 22:39:01,243 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
-2025-09-29 22:39:01,358 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-29 23:24:31,758 - UHRR - INFO - Testing rigctld daemon connection...
+2025-09-29 23:24:31,760 - UHRR - INFO - ✓ rigctld daemon responding! Initial frequency: 7050000
+2025-09-29 23:24:31,760 - UHRR - INFO - Sending rigctld command: f
+2025-09-29 23:24:31,761 - UHRR - DEBUG - rigctld response to 'f': 7050000
+2025-09-29 23:24:31,761 - UHRR - INFO - rigctld command 'f' successful
+2025-09-29 23:24:31,761 - UHRR - INFO - Current frequency from rigctld: 7050000 Hz
+2025-09-29 23:24:31,761 - UHRR - INFO - Sending rigctld command: m
+2025-09-29 23:24:31,762 - UHRR - ERROR - Error communicating with rigctld for command 'm': [Errno 54] Connection reset by peer
+2025-09-29 23:24:31,764 - asyncio - DEBUG - Using selector: KqueueSelector
+2025-09-29 23:24:46,326 - UHRR - INFO - Testing rigctld daemon connection...
+2025-09-29 23:24:46,326 - UHRR - INFO - ✓ rigctld daemon responding! Initial frequency: 7050000
+2025-09-29 23:24:46,326 - UHRR - INFO - Sending rigctld command: f
+2025-09-29 23:24:46,327 - UHRR - DEBUG - rigctld response to 'f': 7050000
+2025-09-29 23:24:46,327 - UHRR - INFO - rigctld command 'f' successful
+2025-09-29 23:24:46,327 - UHRR - INFO - Current frequency from rigctld: 7050000 Hz
+2025-09-29 23:24:46,327 - UHRR - INFO - Sending rigctld command: m
+2025-09-29 23:24:46,327 - UHRR - DEBUG - rigctld response to 'm': 2200
+2025-09-29 23:24:46,327 - UHRR - INFO - rigctld command 'm' successful
+2025-09-29 23:24:46,327 - UHRR - DEBUG - Raw mode response: '2200'
+2025-09-29 23:24:46,327 - UHRR - WARNING - IC-M710 returned only passband 2200, using stored mode USB
+2025-09-29 23:24:46,328 - asyncio - DEBUG - Using selector: KqueueSelector
+2025-09-29 23:24:52,227 - tornado.access - INFO - 200 GET / (2409:8a00:1894:9660:84e:6280:b8f7:34c8) 4.50ms
+2025-09-29 23:24:52,290 - tornado.access - INFO - 304 GET /style.css (2409:8a00:1894:9660:84e:6280:b8f7:34c8) 16.00ms
+2025-09-29 23:24:52,293 - tornado.access - INFO - 304 GET /controls.js (2409:8a00:1894:9660:84e:6280:b8f7:34c8) 18.03ms
+2025-09-29 23:24:56,434 - tornado.access - INFO - 304 GET /rx_worklet_processor.js (2409:8a00:1894:9660:84e:6280:b8f7:34c8) 3.42ms
+2025-09-29 23:24:56,450 - tornado.access - INFO - 101 GET /WSaudioRX (2409:8a00:1894:9660:84e:6280:b8f7:34c8) 1.04ms
+2025-09-29 23:24:56,505 - tornado.access - INFO - 101 GET /WSaudioTX (2409:8a00:1894:9660:84e:6280:b8f7:34c8) 0.85ms
+2025-09-29 23:24:56,679 - tornado.access - INFO - 101 GET /WSCTRX (2409:8a00:1894:9660:84e:6280:b8f7:34c8) 1.14ms
+2025-09-29 23:24:56,701 - UHRR - INFO - Sending rigctld command: f
+2025-09-29 23:24:56,702 - UHRR - DEBUG - rigctld response to 'f': 7050000
+2025-09-29 23:24:56,702 - UHRR - INFO - rigctld command 'f' successful
+2025-09-29 23:24:56,702 - UHRR - INFO - Current frequency from rigctld: 7050000 Hz
+2025-09-29 23:24:56,703 - UHRR - INFO - Sending rigctld command: m
+2025-09-29 23:24:56,704 - UHRR - DEBUG - rigctld response to 'm': 2200
+2025-09-29 23:24:56,704 - UHRR - INFO - rigctld command 'm' successful
+2025-09-29 23:24:56,704 - UHRR - DEBUG - Raw mode response: '2200'
+2025-09-29 23:24:56,704 - UHRR - WARNING - IC-M710 returned only passband 2200, using stored mode USB
+2025-09-29 23:25:01,750 - UHRR - INFO - Setting mode to: LSB
+2025-09-29 23:25:01,816 - UHRR - DEBUG - rigctld mode response to 'M LSB 2400': RPRT 0
+2025-09-29 23:25:01,816 - UHRR - INFO - ✓ Mode set to LSB via rigctld
+2025-09-29 23:25:15,281 - UHRR - INFO - Setting PTT: status=true, ptt_state=True, ptt_value=1
+2025-09-29 23:25:15,342 - UHRR - INFO - ✓ PTT set to true via rigctld (fast)
+2025-09-29 23:25:15,468 - UHRR - INFO - PyAudio TX initialized: rate=24000, encoded=0
+2025-09-29 23:25:16,434 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-29 23:25:16,544 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-29 23:25:17,880 - UHRR - INFO - Setting PTT: status=true, ptt_state=True, ptt_value=1
+2025-09-29 23:25:17,941 - UHRR - INFO - ✓ PTT set to true via rigctld (fast)
+2025-09-29 23:25:18,056 - UHRR - INFO - PyAudio TX initialized: rate=24000, encoded=0
+2025-09-29 23:25:18,928 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-29 23:25:19,040 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-29 23:25:25,139 - UHRR - INFO - Setting PTT: status=true, ptt_state=True, ptt_value=1
+2025-09-29 23:25:25,199 - UHRR - INFO - ✓ PTT set to true via rigctld (fast)
+2025-09-29 23:25:25,311 - UHRR - INFO - PyAudio TX initialized: rate=24000, encoded=0
+2025-09-29 23:25:28,071 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-29 23:25:28,183 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-29 23:25:30,194 - UHRR - INFO - Setting PTT: status=true, ptt_state=True, ptt_value=1
+2025-09-29 23:25:30,253 - UHRR - INFO - ✓ PTT set to true via rigctld (fast)
+2025-09-29 23:25:30,364 - UHRR - INFO - PyAudio TX initialized: rate=24000, encoded=0
+2025-09-29 23:25:31,258 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-29 23:25:31,373 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-29 23:25:33,026 - UHRR - INFO - Setting PTT: status=true, ptt_state=True, ptt_value=1
+2025-09-29 23:25:33,086 - UHRR - INFO - ✓ PTT set to true via rigctld (fast)
+2025-09-29 23:25:33,195 - UHRR - INFO - PyAudio TX initialized: rate=24000, encoded=0
+2025-09-29 23:25:34,920 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-29 23:25:35,033 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-29 23:25:37,962 - UHRR - INFO - Setting PTT: status=true, ptt_state=True, ptt_value=1
+2025-09-29 23:25:38,021 - UHRR - INFO - ✓ PTT set to true via rigctld (fast)
+2025-09-29 23:25:38,134 - UHRR - INFO - PyAudio TX initialized: rate=24000, encoded=0
+2025-09-29 23:25:39,686 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-29 23:25:39,801 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-29 23:25:41,542 - UHRR - INFO - Setting PTT: status=true, ptt_state=True, ptt_value=1
+2025-09-29 23:25:41,601 - UHRR - INFO - ✓ PTT set to true via rigctld (fast)
+2025-09-29 23:25:41,712 - UHRR - INFO - PyAudio TX initialized: rate=24000, encoded=0
+2025-09-29 23:25:43,120 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-29 23:25:43,235 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-29 23:26:03,896 - UHRR - INFO - Setting PTT: status=true, ptt_state=True, ptt_value=1
+2025-09-29 23:26:03,956 - UHRR - INFO - ✓ PTT set to true via rigctld (fast)
+2025-09-29 23:26:04,072 - UHRR - INFO - PyAudio TX initialized: rate=24000, encoded=0
+2025-09-29 23:26:05,810 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-29 23:26:05,924 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-29 23:26:07,249 - UHRR - INFO - Setting PTT: status=true, ptt_state=True, ptt_value=1
+2025-09-29 23:26:07,309 - UHRR - INFO - ✓ PTT set to true via rigctld (fast)
+2025-09-29 23:26:07,422 - UHRR - INFO - PyAudio TX initialized: rate=24000, encoded=0
+2025-09-29 23:26:08,392 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-29 23:26:08,502 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-29 23:26:09,843 - UHRR - INFO - Setting PTT: status=true, ptt_state=True, ptt_value=1
+2025-09-29 23:26:09,902 - UHRR - INFO - ✓ PTT set to true via rigctld (fast)
+2025-09-29 23:26:10,014 - UHRR - INFO - PyAudio TX initialized: rate=24000, encoded=0
+2025-09-29 23:26:12,434 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-29 23:26:12,549 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-29 23:26:17,823 - UHRR - INFO - Setting PTT: status=true, ptt_state=True, ptt_value=1
+2025-09-29 23:26:17,882 - UHRR - INFO - ✓ PTT set to true via rigctld (fast)
+2025-09-29 23:26:18,002 - UHRR - INFO - PyAudio TX initialized: rate=24000, encoded=0
+2025-09-29 23:26:24,951 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-29 23:26:25,062 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-29 23:26:28,495 - UHRR - INFO - Setting PTT: status=true, ptt_state=True, ptt_value=1
+2025-09-29 23:26:28,554 - UHRR - INFO - ✓ PTT set to true via rigctld (fast)
+2025-09-29 23:26:28,676 - UHRR - INFO - PyAudio TX initialized: rate=24000, encoded=0
+2025-09-29 23:26:30,419 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-29 23:26:30,533 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-29 23:27:26,832 - tornado.general - INFO - /Users/cheenle/Universal_HamRadio_Remote_HTML5-master/./UHRR modified; restarting server
+2025-09-29 23:27:27,235 - UHRR - INFO - Testing rigctld daemon connection...
+2025-09-29 23:27:27,235 - UHRR - INFO - ✓ rigctld daemon responding! Initial frequency: 7050000
+2025-09-29 23:27:27,235 - UHRR - INFO - Sending rigctld command: f
+2025-09-29 23:27:27,236 - UHRR - DEBUG - rigctld response to 'f': 7050000
+2025-09-29 23:27:27,236 - UHRR - INFO - rigctld command 'f' successful
+2025-09-29 23:27:27,236 - UHRR - INFO - Current frequency from rigctld: 7050000 Hz
+2025-09-29 23:27:27,236 - UHRR - INFO - Sending rigctld command: m
+2025-09-29 23:27:27,236 - UHRR - DEBUG - rigctld response to 'm': 2200
+2025-09-29 23:27:27,236 - UHRR - INFO - rigctld command 'm' successful
+2025-09-29 23:27:27,236 - UHRR - DEBUG - Raw mode response: '2200'
+2025-09-29 23:27:27,236 - UHRR - WARNING - IC-M710 returned only passband 2200, using stored mode USB
+2025-09-29 23:27:27,237 - asyncio - DEBUG - Using selector: KqueueSelector
+2025-09-29 23:27:36,661 - UHRR - INFO - Testing rigctld daemon connection...
+2025-09-29 23:27:36,662 - UHRR - INFO - ✓ rigctld daemon responding! Initial frequency: 7050000
+2025-09-29 23:27:36,662 - UHRR - INFO - Sending rigctld command: f
+2025-09-29 23:27:36,662 - UHRR - DEBUG - rigctld response to 'f': 7050000
+2025-09-29 23:27:36,662 - UHRR - INFO - rigctld command 'f' successful
+2025-09-29 23:27:36,662 - UHRR - INFO - Current frequency from rigctld: 7050000 Hz
+2025-09-29 23:27:36,662 - UHRR - INFO - Sending rigctld command: m
+2025-09-29 23:27:36,662 - UHRR - DEBUG - rigctld response to 'm': 2200
+2025-09-29 23:27:36,662 - UHRR - INFO - rigctld command 'm' successful
+2025-09-29 23:27:36,662 - UHRR - DEBUG - Raw mode response: '2200'
+2025-09-29 23:27:36,662 - UHRR - WARNING - IC-M710 returned only passband 2200, using stored mode USB
+2025-09-29 23:27:36,664 - asyncio - DEBUG - Using selector: KqueueSelector
+2025-09-29 23:27:43,239 - tornado.general - INFO - /Users/cheenle/Universal_HamRadio_Remote_HTML5-master/./UHRR modified; restarting server
+2025-09-29 23:27:43,586 - UHRR - INFO - Testing rigctld daemon connection...
+2025-09-29 23:27:43,586 - UHRR - INFO - ✓ rigctld daemon responding! Initial frequency: 7050000
+2025-09-29 23:27:43,586 - UHRR - INFO - Sending rigctld command: f
+2025-09-29 23:27:43,587 - UHRR - DEBUG - rigctld response to 'f': 7050000
+2025-09-29 23:27:43,587 - UHRR - INFO - rigctld command 'f' successful
+2025-09-29 23:27:43,587 - UHRR - INFO - Current frequency from rigctld: 7050000 Hz
+2025-09-29 23:27:43,587 - UHRR - INFO - Sending rigctld command: m
+2025-09-29 23:27:43,587 - UHRR - DEBUG - rigctld response to 'm': 2200
+2025-09-29 23:27:43,587 - UHRR - INFO - rigctld command 'm' successful
+2025-09-29 23:27:43,587 - UHRR - DEBUG - Raw mode response: '2200'
+2025-09-29 23:27:43,587 - UHRR - WARNING - IC-M710 returned only passband 2200, using stored mode USB
+2025-09-29 23:27:43,588 - asyncio - DEBUG - Using selector: KqueueSelector
+2025-09-29 23:29:06,107 - UHRR - INFO - Testing rigctld daemon connection...
+2025-09-29 23:29:06,107 - UHRR - INFO - ✓ rigctld daemon responding! Initial frequency: 7050000
+2025-09-29 23:29:06,107 - UHRR - INFO - Sending rigctld command: f
+2025-09-29 23:29:06,108 - UHRR - DEBUG - rigctld response to 'f': 7050000
+2025-09-29 23:29:06,108 - UHRR - INFO - rigctld command 'f' successful
+2025-09-29 23:29:06,108 - UHRR - INFO - Current frequency from rigctld: 7050000 Hz
+2025-09-29 23:29:06,108 - UHRR - INFO - Sending rigctld command: m
+2025-09-29 23:29:06,108 - UHRR - DEBUG - rigctld response to 'm': 2200
+2025-09-29 23:29:06,108 - UHRR - INFO - rigctld command 'm' successful
+2025-09-29 23:29:06,108 - UHRR - DEBUG - Raw mode response: '2200'
+2025-09-29 23:29:06,109 - UHRR - WARNING - IC-M710 returned only passband 2200, using stored mode USB
+2025-09-29 23:29:06,109 - asyncio - DEBUG - Using selector: KqueueSelector
+2025-09-29 23:29:06,547 - tornado.access - INFO - 200 GET / (2409:8a00:1894:9660:84e:6280:b8f7:34c8) 3.47ms
+2025-09-29 23:29:06,681 - tornado.access - INFO - 304 GET /controls.js (2409:8a00:1894:9660:84e:6280:b8f7:34c8) 10.18ms
+2025-09-29 23:29:09,333 - tornado.access - INFO - 101 GET /WSaudioRX (2409:8a00:1894:9660:84e:6280:b8f7:34c8) 1.05ms
+2025-09-29 23:29:09,390 - tornado.access - INFO - 101 GET /WSaudioTX (2409:8a00:1894:9660:84e:6280:b8f7:34c8) 0.96ms
+2025-09-29 23:29:09,523 - tornado.access - INFO - 101 GET /WSCTRX (2409:8a00:1894:9660:84e:6280:b8f7:34c8) 1.07ms
+2025-09-29 23:29:09,584 - UHRR - INFO - Sending rigctld command: f
+2025-09-29 23:29:09,586 - UHRR - DEBUG - rigctld response to 'f': 7050000
+2025-09-29 23:29:09,586 - UHRR - INFO - rigctld command 'f' successful
+2025-09-29 23:29:09,586 - UHRR - INFO - Current frequency from rigctld: 7050000 Hz
+2025-09-29 23:29:09,590 - UHRR - INFO - Sending rigctld command: m
+2025-09-29 23:29:09,591 - UHRR - DEBUG - rigctld response to 'm': 2200
+2025-09-29 23:29:09,591 - UHRR - INFO - rigctld command 'm' successful
+2025-09-29 23:29:09,592 - UHRR - DEBUG - Raw mode response: '2200'
+2025-09-29 23:29:09,592 - UHRR - WARNING - IC-M710 returned only passband 2200, using stored mode USB
+2025-09-29 23:29:12,447 - UHRR - INFO - Setting PTT: status=true, ptt_state=True, ptt_value=1
+2025-09-29 23:29:12,507 - UHRR - INFO - ✓ PTT set to true via rigctld (fast)
+2025-09-29 23:29:12,627 - UHRR - INFO - PyAudio TX initialized: rate=24000, encoded=0
+2025-09-29 23:29:13,667 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-29 23:29:13,782 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-29 23:29:15,107 - UHRR - INFO - Setting PTT: status=true, ptt_state=True, ptt_value=1
+2025-09-29 23:29:15,166 - UHRR - INFO - ✓ PTT set to true via rigctld (fast)
+2025-09-29 23:29:15,276 - UHRR - INFO - PyAudio TX initialized: rate=24000, encoded=0
+2025-09-29 23:29:15,989 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-29 23:29:16,100 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-29 23:29:17,398 - UHRR - INFO - Setting PTT: status=true, ptt_state=True, ptt_value=1
+2025-09-29 23:29:17,458 - UHRR - INFO - ✓ PTT set to true via rigctld (fast)
+2025-09-29 23:29:17,563 - UHRR - INFO - PyAudio TX initialized: rate=24000, encoded=0
+2025-09-29 23:29:18,700 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-29 23:29:18,812 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-29 23:29:21,026 - tornado.access - INFO - 200 GET / (2409:8a00:1894:9660:84e:6280:b8f7:34c8) 0.60ms
+2025-09-29 23:29:23,646 - tornado.access - INFO - 101 GET /WSaudioRX (2409:8a00:1894:9660:84e:6280:b8f7:34c8) 0.92ms
+2025-09-29 23:29:23,690 - tornado.access - INFO - 101 GET /WSaudioTX (2409:8a00:1894:9660:84e:6280:b8f7:34c8) 0.74ms
+2025-09-29 23:29:23,835 - tornado.access - INFO - 101 GET /WSCTRX (2409:8a00:1894:9660:84e:6280:b8f7:34c8) 0.63ms
+2025-09-29 23:29:23,927 - UHRR - INFO - Sending rigctld command: f
+2025-09-29 23:29:23,928 - UHRR - DEBUG - rigctld response to 'f': 7050000
+2025-09-29 23:29:23,928 - UHRR - INFO - rigctld command 'f' successful
+2025-09-29 23:29:23,928 - UHRR - INFO - Current frequency from rigctld: 7050000 Hz
+2025-09-29 23:29:23,929 - UHRR - INFO - Sending rigctld command: m
+2025-09-29 23:29:23,929 - UHRR - DEBUG - rigctld response to 'm': 2200
+2025-09-29 23:29:23,929 - UHRR - INFO - rigctld command 'm' successful
+2025-09-29 23:29:23,930 - UHRR - DEBUG - Raw mode response: '2200'
+2025-09-29 23:29:23,930 - UHRR - WARNING - IC-M710 returned only passband 2200, using stored mode USB
+2025-09-29 23:29:26,683 - UHRR - INFO - Setting PTT: status=true, ptt_state=True, ptt_value=1
+2025-09-29 23:29:26,742 - UHRR - INFO - ✓ PTT set to true via rigctld (fast)
+2025-09-29 23:29:26,853 - UHRR - INFO - PyAudio TX initialized: rate=24000, encoded=0
+2025-09-29 23:29:27,641 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-29 23:29:27,754 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-29 23:29:28,195 - UHRR - INFO - Setting PTT: status=true, ptt_state=True, ptt_value=1
+2025-09-29 23:29:28,254 - UHRR - INFO - ✓ PTT set to true via rigctld (fast)
+2025-09-29 23:29:28,264 - UHRR - INFO - PyAudio TX initialized: rate=24000, encoded=0
+2025-09-29 23:29:29,151 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-29 23:29:29,264 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-29 23:29:29,768 - UHRR - INFO - Setting PTT: status=true, ptt_state=True, ptt_value=1
+2025-09-29 23:29:29,827 - UHRR - INFO - ✓ PTT set to true via rigctld (fast)
+2025-09-29 23:29:29,839 - UHRR - INFO - PyAudio TX initialized: rate=24000, encoded=0
+2025-09-29 23:29:40,605 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-29 23:29:40,718 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-29 23:29:45,154 - UHRR - INFO - Setting mode to: LSB
+2025-09-29 23:29:45,218 - UHRR - DEBUG - rigctld mode response to 'M LSB 2400': RPRT 0
+2025-09-29 23:29:45,218 - UHRR - INFO - ✓ Mode set to LSB via rigctld
+2025-09-29 23:30:12,599 - tornado.access - INFO - 200 GET / (2409:8a00:1894:9660:84e:6280:b8f7:34c8) 4.12ms
+2025-09-29 23:30:12,626 - tornado.access - INFO - 200 GET /style.css (2409:8a00:1894:9660:84e:6280:b8f7:34c8) 1.59ms
+2025-09-29 23:30:12,707 - tornado.access - INFO - 200 GET /controls.js (2409:8a00:1894:9660:84e:6280:b8f7:34c8) 71.03ms
+2025-09-29 23:30:12,710 - tornado.access - INFO - 200 GET /img/spinner.gif (2409:8a00:1894:9660:84e:6280:b8f7:34c8) 3.40ms
+2025-09-29 23:30:12,712 - tornado.access - INFO - 200 GET /img/smeter.png (2409:8a00:1894:9660:84e:6280:b8f7:34c8) 1.26ms
+2025-09-29 23:30:12,736 - tornado.access - INFO - 200 GET /img/config.png (2409:8a00:1894:9660:84e:6280:b8f7:34c8) 1.49ms
+2025-09-29 23:30:12,738 - tornado.access - INFO - 200 GET /img/panfft.png (2409:8a00:1894:9660:84e:6280:b8f7:34c8) 1.12ms
+2025-09-29 23:30:12,764 - tornado.access - INFO - 200 GET /img/critsred.png (2409:8a00:1894:9660:84e:6280:b8f7:34c8) 1.33ms
+2025-09-29 23:30:12,773 - tornado.access - INFO - 200 GET /tx_button_optimized.js (2409:8a00:1894:9660:84e:6280:b8f7:34c8) 0.90ms
+2025-09-29 23:30:12,783 - tornado.access - INFO - 200 GET /img/poweroff.png (2409:8a00:1894:9660:84e:6280:b8f7:34c8) 70.44ms
+2025-09-29 23:30:26,330 - tornado.access - INFO - 200 GET /favicon.ico (2409:8a00:1894:9660:84e:6280:b8f7:34c8) 3.46ms
+2025-09-29 23:30:29,062 - tornado.access - INFO - 101 GET /WSaudioRX (2409:8a00:1894:9660:84e:6280:b8f7:34c8) 1.13ms
+2025-09-29 23:30:29,073 - tornado.access - INFO - 200 GET /img/poweron.png (2409:8a00:1894:9660:84e:6280:b8f7:34c8) 5.34ms
+2025-09-29 23:30:29,075 - tornado.access - INFO - 200 GET /img/critsgrey.png (2409:8a00:1894:9660:84e:6280:b8f7:34c8) 7.37ms
+2025-09-29 23:30:29,085 - tornado.access - INFO - 200 GET /rx_worklet_processor.js (2409:8a00:1894:9660:84e:6280:b8f7:34c8) 1.84ms
+2025-09-29 23:30:29,119 - tornado.access - INFO - 200 GET /img/critsgreen.png (2409:8a00:1894:9660:84e:6280:b8f7:34c8) 1.33ms
+2025-09-29 23:30:29,158 - tornado.access - INFO - 101 GET /WSaudioTX (2409:8a00:1894:9660:84e:6280:b8f7:34c8) 0.53ms
+2025-09-29 23:30:29,256 - tornado.access - INFO - 101 GET /WSCTRX (2409:8a00:1894:9660:84e:6280:b8f7:34c8) 0.67ms
+2025-09-29 23:30:29,328 - UHRR - INFO - Sending rigctld command: f
+2025-09-29 23:30:29,329 - UHRR - DEBUG - rigctld response to 'f': 7050000
+2025-09-29 23:30:29,329 - UHRR - INFO - rigctld command 'f' successful
+2025-09-29 23:30:29,329 - UHRR - INFO - Current frequency from rigctld: 7050000 Hz
+2025-09-29 23:30:29,330 - UHRR - INFO - Sending rigctld command: m
+2025-09-29 23:30:29,330 - UHRR - DEBUG - rigctld response to 'm': 2200
+2025-09-29 23:30:29,330 - UHRR - INFO - rigctld command 'm' successful
+2025-09-29 23:30:29,330 - UHRR - DEBUG - Raw mode response: '2200'
+2025-09-29 23:30:29,330 - UHRR - WARNING - IC-M710 returned only passband 2200, using stored mode LSB
+2025-09-29 23:30:34,295 - UHRR - INFO - Setting PTT: status=true, ptt_state=True, ptt_value=1
+2025-09-29 23:30:34,354 - UHRR - INFO - ✓ PTT set to true via rigctld (fast)
+2025-09-29 23:30:34,479 - UHRR - INFO - PyAudio TX initialized: rate=24000, encoded=0
+2025-09-29 23:30:35,858 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-29 23:30:35,973 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-29 23:30:37,369 - UHRR - INFO - PyAudio TX initialized: rate=24000, encoded=0
+2025-09-29 23:30:38,594 - UHRR - INFO - Setting PTT: status=true, ptt_state=True, ptt_value=1
+2025-09-29 23:30:38,654 - UHRR - INFO - ✓ PTT set to true via rigctld (fast)
+2025-09-29 23:30:38,655 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-29 23:30:38,766 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-29 23:30:38,775 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-29 23:30:38,889 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-29 23:30:39,519 - UHRR - INFO - PyAudio TX initialized: rate=24000, encoded=0
+2025-09-29 23:30:40,401 - UHRR - INFO - Setting PTT: status=true, ptt_state=True, ptt_value=1
+2025-09-29 23:30:40,461 - UHRR - INFO - ✓ PTT set to true via rigctld (fast)
+2025-09-29 23:30:40,461 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-29 23:30:40,575 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-29 23:30:40,584 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-29 23:30:40,697 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-29 23:30:42,499 - UHRR - INFO - PyAudio TX initialized: rate=24000, encoded=0
+2025-09-29 23:30:43,467 - UHRR - INFO - Setting PTT: status=true, ptt_state=True, ptt_value=1
+2025-09-29 23:30:43,526 - UHRR - INFO - ✓ PTT set to true via rigctld (fast)
+2025-09-29 23:30:43,526 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-29 23:30:43,638 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-29 23:30:43,642 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-29 23:30:43,756 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-29 23:30:45,668 - UHRR - INFO - PyAudio TX initialized: rate=24000, encoded=0
+2025-09-29 23:30:47,318 - UHRR - INFO - Setting PTT: status=true, ptt_state=True, ptt_value=1
+2025-09-29 23:30:47,377 - UHRR - INFO - ✓ PTT set to true via rigctld (fast)
+2025-09-29 23:30:47,377 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-29 23:30:47,488 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-29 23:30:47,497 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-29 23:30:47,612 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-29 23:30:55,733 - UHRR - INFO - PyAudio TX initialized: rate=24000, encoded=0
+2025-09-29 23:30:57,299 - UHRR - INFO - Setting PTT: status=true, ptt_state=True, ptt_value=1
+2025-09-29 23:30:57,359 - UHRR - INFO - ✓ PTT set to true via rigctld (fast)
+2025-09-29 23:30:57,359 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-29 23:30:57,469 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-29 23:30:57,479 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-29 23:30:57,591 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-29 23:30:58,677 - UHRR - INFO - PyAudio TX initialized: rate=24000, encoded=0
+2025-09-29 23:30:59,803 - UHRR - INFO - Setting PTT: status=true, ptt_state=True, ptt_value=1
+2025-09-29 23:30:59,862 - UHRR - INFO - ✓ PTT set to true via rigctld (fast)
+2025-09-29 23:30:59,862 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-29 23:30:59,973 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-29 23:30:59,980 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-29 23:31:00,092 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-29 23:31:01,036 - UHRR - INFO - PyAudio TX initialized: rate=24000, encoded=0
+2025-09-29 23:31:02,190 - UHRR - INFO - Setting PTT: status=true, ptt_state=True, ptt_value=1
+2025-09-29 23:31:02,250 - UHRR - INFO - ✓ PTT set to true via rigctld (fast)
+2025-09-29 23:31:02,250 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-29 23:31:02,362 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-29 23:31:02,372 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-29 23:31:02,484 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-29 23:31:03,559 - UHRR - INFO - PyAudio TX initialized: rate=24000, encoded=0
+2025-09-29 23:31:05,112 - UHRR - INFO - Setting PTT: status=true, ptt_state=True, ptt_value=1
+2025-09-29 23:31:05,172 - UHRR - INFO - ✓ PTT set to true via rigctld (fast)
+2025-09-29 23:31:05,172 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-29 23:31:05,283 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-29 23:31:05,287 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-29 23:31:05,397 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-29 23:31:06,154 - UHRR - INFO - PyAudio TX initialized: rate=24000, encoded=0
+2025-09-29 23:31:07,377 - UHRR - INFO - Setting PTT: status=true, ptt_state=True, ptt_value=1
+2025-09-29 23:31:07,436 - UHRR - INFO - ✓ PTT set to true via rigctld (fast)
+2025-09-29 23:31:07,436 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-29 23:31:07,548 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-29 23:31:07,552 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-29 23:31:07,664 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-29 23:31:15,531 - tornado.access - INFO - 200 GET / (2409:8a00:1894:9660:84e:6280:b8f7:34c8) 2.99ms
+2025-09-29 23:31:29,021 - tornado.access - INFO - 200 GET / (2409:8a00:1894:9660:84e:6280:b8f7:34c8) 2.69ms
+2025-09-29 23:31:29,060 - tornado.access - INFO - 304 GET /tx_button_optimized.js (2409:8a00:1894:9660:84e:6280:b8f7:34c8) 1.97ms
+2025-09-29 23:31:31,686 - tornado.access - INFO - 101 GET /WSaudioRX (2409:8a00:1894:9660:84e:6280:b8f7:34c8) 1.02ms
+2025-09-29 23:31:31,735 - tornado.access - INFO - 101 GET /WSaudioTX (2409:8a00:1894:9660:84e:6280:b8f7:34c8) 0.72ms
+2025-09-29 23:31:31,857 - tornado.access - INFO - 101 GET /WSCTRX (2409:8a00:1894:9660:84e:6280:b8f7:34c8) 1.07ms
+2025-09-29 23:31:31,920 - UHRR - INFO - Sending rigctld command: f
+2025-09-29 23:31:31,922 - UHRR - DEBUG - rigctld response to 'f': 7050000
+2025-09-29 23:31:31,922 - UHRR - INFO - rigctld command 'f' successful
+2025-09-29 23:31:31,922 - UHRR - INFO - Current frequency from rigctld: 7050000 Hz
+2025-09-29 23:31:31,923 - UHRR - INFO - Sending rigctld command: m
+2025-09-29 23:31:31,924 - UHRR - DEBUG - rigctld response to 'm': 2200
+2025-09-29 23:31:31,924 - UHRR - INFO - rigctld command 'm' successful
+2025-09-29 23:31:31,924 - UHRR - DEBUG - Raw mode response: '2200'
+2025-09-29 23:31:31,924 - UHRR - WARNING - IC-M710 returned only passband 2200, using stored mode LSB
+2025-09-29 23:31:34,872 - UHRR - INFO - PyAudio TX initialized: rate=24000, encoded=0
+2025-09-29 23:31:36,440 - UHRR - INFO - Setting PTT: status=true, ptt_state=True, ptt_value=1
+2025-09-29 23:31:36,499 - UHRR - INFO - ✓ PTT set to true via rigctld (fast)
+2025-09-29 23:31:36,500 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-29 23:31:36,612 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-29 23:31:36,628 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-29 23:31:36,742 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-29 23:31:37,143 - UHRR - INFO - Setting PTT: status=true, ptt_state=True, ptt_value=1
+2025-09-29 23:31:37,202 - UHRR - INFO - ✓ PTT set to true via rigctld (fast)
+2025-09-29 23:31:37,306 - UHRR - INFO - PyAudio TX initialized: rate=24000, encoded=0
+2025-09-29 23:31:38,363 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-29 23:31:38,476 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-29 23:31:39,566 - UHRR - INFO - PyAudio TX initialized: rate=24000, encoded=0
+2025-09-29 23:31:40,439 - UHRR - INFO - Setting PTT: status=true, ptt_state=True, ptt_value=1
+2025-09-29 23:31:40,498 - UHRR - INFO - ✓ PTT set to true via rigctld (fast)
+2025-09-29 23:31:40,498 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-29 23:31:40,609 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-29 23:31:40,618 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-29 23:31:40,732 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-29 23:31:41,174 - UHRR - INFO - Setting PTT: status=true, ptt_state=True, ptt_value=1
+2025-09-29 23:31:41,233 - UHRR - INFO - ✓ PTT set to true via rigctld (fast)
+2025-09-29 23:31:41,333 - UHRR - INFO - PyAudio TX initialized: rate=24000, encoded=0
+2025-09-29 23:31:42,291 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-29 23:31:42,405 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-29 23:31:44,151 - UHRR - INFO - PyAudio TX initialized: rate=24000, encoded=0
+2025-09-29 23:31:45,034 - UHRR - INFO - Setting PTT: status=true, ptt_state=True, ptt_value=1
+2025-09-29 23:31:45,093 - UHRR - INFO - ✓ PTT set to true via rigctld (fast)
+2025-09-29 23:31:45,093 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-29 23:31:45,203 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-29 23:31:45,204 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-29 23:31:45,318 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-29 23:31:45,676 - UHRR - INFO - PyAudio TX initialized: rate=24000, encoded=0
+2025-09-29 23:31:45,678 - UHRR - INFO - Setting PTT: status=true, ptt_state=True, ptt_value=1
+2025-09-29 23:31:45,737 - UHRR - INFO - ✓ PTT set to true via rigctld (fast)
+2025-09-29 23:31:46,827 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-29 23:31:46,943 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-29 23:31:46,944 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-29 23:31:47,059 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-29 23:31:48,870 - UHRR - INFO - PyAudio TX initialized: rate=24000, encoded=0
+2025-09-29 23:31:49,913 - UHRR - INFO - Setting PTT: status=true, ptt_state=True, ptt_value=1
+2025-09-29 23:31:49,973 - UHRR - INFO - ✓ PTT set to true via rigctld (fast)
+2025-09-29 23:31:49,973 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-29 23:31:50,084 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-29 23:31:50,094 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-29 23:31:50,207 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-29 23:31:50,668 - UHRR - INFO - PyAudio TX initialized: rate=24000, encoded=0
+2025-09-29 23:31:51,978 - UHRR - INFO - Setting PTT: status=true, ptt_state=True, ptt_value=1
+2025-09-29 23:31:52,037 - UHRR - INFO - ✓ PTT set to true via rigctld (fast)
+2025-09-29 23:31:52,037 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-29 23:31:52,150 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-29 23:31:52,155 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-29 23:31:52,268 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-29 23:31:53,185 - UHRR - INFO - PyAudio TX initialized: rate=24000, encoded=0
+2025-09-29 23:31:54,744 - UHRR - INFO - Setting PTT: status=true, ptt_state=True, ptt_value=1
+2025-09-29 23:31:54,803 - UHRR - INFO - ✓ PTT set to true via rigctld (fast)
+2025-09-29 23:31:54,804 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-29 23:31:54,918 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-29 23:31:54,928 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-29 23:31:55,041 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-29 23:33:03,612 - tornado.general - INFO - /Users/cheenle/Universal_HamRadio_Remote_HTML5-master/./UHRR modified; restarting server
+2025-09-29 23:33:04,032 - UHRR - INFO - Testing rigctld daemon connection...
+2025-09-29 23:33:04,033 - UHRR - INFO - ✓ rigctld daemon responding! Initial frequency: 7050000
+2025-09-29 23:33:04,033 - UHRR - INFO - Sending rigctld command: f
+2025-09-29 23:33:04,033 - UHRR - DEBUG - rigctld response to 'f': 7050000
+2025-09-29 23:33:04,033 - UHRR - INFO - rigctld command 'f' successful
+2025-09-29 23:33:04,033 - UHRR - INFO - Current frequency from rigctld: 7050000 Hz
+2025-09-29 23:33:04,033 - UHRR - INFO - Sending rigctld command: m
+2025-09-29 23:33:04,034 - UHRR - DEBUG - rigctld response to 'm': 2200
+2025-09-29 23:33:04,034 - UHRR - INFO - rigctld command 'm' successful
+2025-09-29 23:33:04,034 - UHRR - DEBUG - Raw mode response: '2200'
+2025-09-29 23:33:04,034 - UHRR - WARNING - IC-M710 returned only passband 2200, using stored mode USB
+2025-09-29 23:33:04,035 - asyncio - DEBUG - Using selector: KqueueSelector
+2025-09-29 23:33:13,063 - UHRR - INFO - Testing rigctld daemon connection...
+2025-09-29 23:33:13,065 - UHRR - INFO - ✓ rigctld daemon responding! Initial frequency: 7050000
+2025-09-29 23:33:13,065 - UHRR - INFO - Sending rigctld command: f
+2025-09-29 23:33:13,065 - UHRR - DEBUG - rigctld response to 'f': 7050000
+2025-09-29 23:33:13,065 - UHRR - INFO - rigctld command 'f' successful
+2025-09-29 23:33:13,065 - UHRR - INFO - Current frequency from rigctld: 7050000 Hz
+2025-09-29 23:33:13,065 - UHRR - INFO - Sending rigctld command: m
+2025-09-29 23:33:13,066 - UHRR - DEBUG - rigctld response to 'm': 2200
+2025-09-29 23:33:13,066 - UHRR - INFO - rigctld command 'm' successful
+2025-09-29 23:33:13,066 - UHRR - DEBUG - Raw mode response: '2200'
+2025-09-29 23:33:13,066 - UHRR - WARNING - IC-M710 returned only passband 2200, using stored mode USB
+2025-09-29 23:33:13,068 - asyncio - DEBUG - Using selector: KqueueSelector
+2025-09-29 23:33:14,726 - tornado.access - INFO - 200 GET / (2409:8a00:1894:9660:84e:6280:b8f7:34c8) 4.67ms
+2025-09-29 23:33:14,793 - tornado.access - INFO - 304 GET /tx_button_optimized.js (2409:8a00:1894:9660:84e:6280:b8f7:34c8) 6.89ms
+2025-09-29 23:33:14,796 - tornado.access - INFO - 304 GET /controls.js (2409:8a00:1894:9660:84e:6280:b8f7:34c8) 9.89ms
+2025-09-29 23:33:17,775 - tornado.access - INFO - 101 GET /WSaudioRX (2409:8a00:1894:9660:84e:6280:b8f7:34c8) 1.55ms
+2025-09-29 23:33:17,828 - tornado.access - INFO - 101 GET /WSaudioTX (2409:8a00:1894:9660:84e:6280:b8f7:34c8) 0.58ms
+2025-09-29 23:33:17,925 - tornado.access - INFO - 101 GET /WSCTRX (2409:8a00:1894:9660:84e:6280:b8f7:34c8) 0.72ms
+2025-09-29 23:33:17,982 - UHRR - INFO - Sending rigctld command: f
+2025-09-29 23:33:17,983 - UHRR - DEBUG - rigctld response to 'f': 7050000
+2025-09-29 23:33:17,984 - UHRR - INFO - rigctld command 'f' successful
+2025-09-29 23:33:17,984 - UHRR - INFO - Current frequency from rigctld: 7050000 Hz
+2025-09-29 23:33:17,984 - UHRR - INFO - Sending rigctld command: m
+2025-09-29 23:33:17,984 - UHRR - DEBUG - rigctld response to 'm': 2200
+2025-09-29 23:33:17,984 - UHRR - INFO - rigctld command 'm' successful
+2025-09-29 23:33:17,984 - UHRR - DEBUG - Raw mode response: '2200'
+2025-09-29 23:33:17,985 - UHRR - WARNING - IC-M710 returned only passband 2200, using stored mode USB
+2025-09-29 23:33:21,126 - UHRR - INFO - PyAudio TX initialized: rate=24000, encoded=0
+2025-09-29 23:33:22,431 - UHRR - INFO - Setting PTT: status=true, ptt_state=True, ptt_value=1
+2025-09-29 23:33:22,490 - UHRR - INFO - ✓ PTT set to true via rigctld (fast)
+2025-09-29 23:33:22,490 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-29 23:33:22,603 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-29 23:33:23,590 - UHRR - INFO - PyAudio TX initialized: rate=24000, encoded=0
+2025-09-29 23:33:24,559 - UHRR - INFO - Setting PTT: status=true, ptt_state=True, ptt_value=1
+2025-09-29 23:33:24,625 - UHRR - INFO - ✓ PTT set to true via rigctld (fast)
+2025-09-29 23:33:24,626 - tornado.general - INFO - /Users/cheenle/Universal_HamRadio_Remote_HTML5-master/./UHRR modified; restarting server
+2025-09-29 23:33:25,299 - UHRR - INFO - Testing rigctld daemon connection...
+2025-09-29 23:33:25,300 - UHRR - INFO - ✓ rigctld daemon responding! Initial frequency: 7050000
+2025-09-29 23:33:25,300 - UHRR - INFO - Sending rigctld command: f
+2025-09-29 23:33:25,300 - UHRR - DEBUG - rigctld response to 'f': 7050000
+2025-09-29 23:33:25,300 - UHRR - INFO - rigctld command 'f' successful
+2025-09-29 23:33:25,300 - UHRR - INFO - Current frequency from rigctld: 7050000 Hz
+2025-09-29 23:33:25,300 - UHRR - INFO - Sending rigctld command: m
+2025-09-29 23:33:25,301 - UHRR - DEBUG - rigctld response to 'm': 2200
+2025-09-29 23:33:25,301 - UHRR - INFO - rigctld command 'm' successful
+2025-09-29 23:33:25,301 - UHRR - DEBUG - Raw mode response: '2200'
+2025-09-29 23:33:25,301 - UHRR - WARNING - IC-M710 returned only passband 2200, using stored mode USB
+2025-09-29 23:33:25,302 - asyncio - DEBUG - Using selector: KqueueSelector
+2025-09-29 23:33:35,342 - tornado.access - INFO - 101 GET /WSaudioRX (2409:8a00:1894:9660:84e:6280:b8f7:34c8) 2.43ms
+2025-09-29 23:33:35,387 - tornado.access - INFO - 101 GET /WSaudioTX (2409:8a00:1894:9660:84e:6280:b8f7:34c8) 0.28ms
+2025-09-29 23:33:35,636 - tornado.access - INFO - 101 GET /WSCTRX (2409:8a00:1894:9660:84e:6280:b8f7:34c8) 0.62ms
+2025-09-29 23:33:35,702 - UHRR - INFO - Sending rigctld command: f
+2025-09-29 23:33:35,703 - UHRR - DEBUG - rigctld response to 'f': 7050000
+2025-09-29 23:33:35,703 - UHRR - INFO - rigctld command 'f' successful
+2025-09-29 23:33:35,703 - UHRR - INFO - Current frequency from rigctld: 7050000 Hz
+2025-09-29 23:33:35,704 - UHRR - INFO - Sending rigctld command: m
+2025-09-29 23:33:35,704 - UHRR - DEBUG - rigctld response to 'm': 2200
+2025-09-29 23:33:35,705 - UHRR - INFO - rigctld command 'm' successful
+2025-09-29 23:33:35,705 - UHRR - DEBUG - Raw mode response: '2200'
+2025-09-29 23:33:35,705 - UHRR - WARNING - IC-M710 returned only passband 2200, using stored mode USB
+2025-09-29 23:33:38,487 - UHRR - INFO - PyAudio TX initialized: rate=24000, encoded=0
+2025-09-29 23:33:38,866 - UHRR - INFO - Setting PTT: status=true, ptt_state=True, ptt_value=1
+2025-09-29 23:33:38,925 - UHRR - INFO - ✓ PTT set to true via rigctld (fast)
+2025-09-29 23:33:38,930 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-29 23:33:39,044 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-29 23:33:41,038 - UHRR - INFO - PyAudio TX initialized: rate=24000, encoded=0
+2025-09-29 23:33:42,104 - UHRR - INFO - Setting PTT: status=true, ptt_state=True, ptt_value=1
+2025-09-29 23:33:42,163 - UHRR - INFO - ✓ PTT set to true via rigctld (fast)
+2025-09-29 23:33:42,168 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-29 23:33:42,282 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-29 23:33:43,700 - UHRR - INFO - Setting PTT: status=true, ptt_state=True, ptt_value=1
+2025-09-29 23:33:43,760 - UHRR - INFO - ✓ PTT set to true via rigctld (fast)
+2025-09-29 23:33:43,871 - UHRR - INFO - PyAudio TX initialized: rate=24000, encoded=0
+2025-09-29 23:33:44,835 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-29 23:33:44,947 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-29 23:33:46,612 - UHRR - INFO - PyAudio TX initialized: rate=24000, encoded=0
+2025-09-29 23:33:47,655 - UHRR - INFO - Setting PTT: status=true, ptt_state=True, ptt_value=1
+2025-09-29 23:33:47,714 - UHRR - INFO - ✓ PTT set to true via rigctld (fast)
+2025-09-29 23:33:47,719 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-29 23:33:47,832 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-29 23:33:48,756 - UHRR - INFO - PyAudio TX initialized: rate=24000, encoded=0
+2025-09-29 23:33:49,734 - UHRR - INFO - Setting PTT: status=true, ptt_state=True, ptt_value=1
+2025-09-29 23:33:49,793 - UHRR - INFO - ✓ PTT set to true via rigctld (fast)
+2025-09-29 23:33:49,798 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-29 23:33:49,911 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-29 23:33:50,726 - UHRR - INFO - PyAudio TX initialized: rate=24000, encoded=0
+2025-09-29 23:33:51,857 - UHRR - INFO - Setting PTT: status=true, ptt_state=True, ptt_value=1
+2025-09-29 23:33:51,916 - UHRR - INFO - ✓ PTT set to true via rigctld (fast)
+2025-09-29 23:33:51,921 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-29 23:33:52,029 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-29 23:33:53,860 - UHRR - INFO - PyAudio TX initialized: rate=24000, encoded=0
+2025-09-29 23:33:55,074 - UHRR - INFO - Setting PTT: status=true, ptt_state=True, ptt_value=1
+2025-09-29 23:33:55,133 - UHRR - INFO - ✓ PTT set to true via rigctld (fast)
+2025-09-29 23:33:55,136 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-29 23:33:55,248 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-29 23:33:57,181 - UHRR - INFO - PyAudio TX initialized: rate=24000, encoded=0
+2025-09-29 23:33:57,264 - UHRR - INFO - Setting PTT: status=true, ptt_state=True, ptt_value=1
+2025-09-29 23:33:57,323 - UHRR - INFO - ✓ PTT set to true via rigctld (fast)
+2025-09-29 23:34:00,031 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-29 23:34:00,145 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-29 23:34:04,137 - UHRR - INFO - PyAudio TX initialized: rate=24000, encoded=0
+2025-09-29 23:34:06,972 - UHRR - INFO - Setting PTT: status=true, ptt_state=True, ptt_value=1
+2025-09-29 23:34:07,031 - UHRR - INFO - ✓ PTT set to true via rigctld (fast)
+2025-09-29 23:34:07,036 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-29 23:34:07,147 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-29 23:34:08,162 - UHRR - INFO - PyAudio TX initialized: rate=24000, encoded=0
+2025-09-29 23:34:09,902 - UHRR - INFO - Setting PTT: status=true, ptt_state=True, ptt_value=1
+2025-09-29 23:34:09,961 - UHRR - INFO - ✓ PTT set to true via rigctld (fast)
+2025-09-29 23:34:09,966 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-29 23:34:10,076 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-29 23:34:10,966 - UHRR - INFO - PyAudio TX initialized: rate=24000, encoded=0
+2025-09-29 23:34:11,054 - UHRR - INFO - Setting PTT: status=true, ptt_state=True, ptt_value=1
+2025-09-29 23:34:11,113 - UHRR - INFO - ✓ PTT set to true via rigctld (fast)
+2025-09-29 23:34:12,187 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-29 23:34:12,300 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-29 23:34:14,221 - UHRR - INFO - Setting PTT: status=true, ptt_state=True, ptt_value=1
+2025-09-29 23:34:14,281 - UHRR - INFO - ✓ PTT set to true via rigctld (fast)
+2025-09-29 23:34:14,389 - UHRR - INFO - PyAudio TX initialized: rate=24000, encoded=0
+2025-09-29 23:34:15,529 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-29 23:34:15,639 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-29 23:34:17,316 - UHRR - INFO - PyAudio TX initialized: rate=24000, encoded=0
+2025-09-29 23:34:18,369 - UHRR - INFO - Setting PTT: status=true, ptt_state=True, ptt_value=1
+2025-09-29 23:34:18,428 - UHRR - INFO - ✓ PTT set to true via rigctld (fast)
+2025-09-29 23:34:18,433 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-29 23:34:18,546 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-29 23:34:19,406 - UHRR - INFO - PyAudio TX initialized: rate=24000, encoded=0
+2025-09-29 23:34:20,970 - UHRR - INFO - Setting PTT: status=true, ptt_state=True, ptt_value=1
+2025-09-29 23:34:21,029 - UHRR - INFO - ✓ PTT set to true via rigctld (fast)
+2025-09-29 23:34:21,033 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-29 23:34:21,147 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-29 23:34:22,294 - UHRR - INFO - PyAudio TX initialized: rate=24000, encoded=0
+2025-09-29 23:34:23,338 - UHRR - INFO - Setting PTT: status=true, ptt_state=True, ptt_value=1
+2025-09-29 23:34:23,398 - UHRR - INFO - ✓ PTT set to true via rigctld (fast)
+2025-09-29 23:34:23,398 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-29 23:34:23,512 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-29 23:35:17,250 - UHRR - INFO - PyAudio TX initialized: rate=24000, encoded=0
+2025-09-29 23:35:18,654 - UHRR - INFO - Setting PTT: status=true, ptt_state=True, ptt_value=1
+2025-09-29 23:35:18,713 - UHRR - INFO - ✓ PTT set to true via rigctld (fast)
+2025-09-29 23:35:18,722 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-29 23:35:18,835 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-29 23:35:20,126 - UHRR - INFO - PyAudio TX initialized: rate=24000, encoded=0
+2025-09-29 23:35:21,448 - UHRR - INFO - Setting PTT: status=true, ptt_state=True, ptt_value=1
+2025-09-29 23:35:21,507 - UHRR - INFO - ✓ PTT set to true via rigctld (fast)
+2025-09-29 23:35:21,515 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-29 23:35:21,627 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-29 23:35:22,376 - UHRR - INFO - PyAudio TX initialized: rate=24000, encoded=0
+2025-09-29 23:35:23,256 - UHRR - INFO - Setting PTT: status=true, ptt_state=True, ptt_value=1
+2025-09-29 23:35:23,314 - UHRR - INFO - ✓ PTT set to true via rigctld (fast)
+2025-09-29 23:35:23,318 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-29 23:35:23,431 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-29 23:35:23,904 - UHRR - INFO - PyAudio TX initialized: rate=24000, encoded=0
+2025-09-29 23:35:23,906 - UHRR - INFO - Setting PTT: status=true, ptt_state=True, ptt_value=1
+2025-09-29 23:35:23,964 - UHRR - INFO - ✓ PTT set to true via rigctld (fast)
+2025-09-29 23:35:25,544 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-29 23:35:25,658 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-29 23:35:27,331 - UHRR - INFO - PyAudio TX initialized: rate=24000, encoded=0
+2025-09-29 23:35:28,483 - UHRR - INFO - Setting PTT: status=true, ptt_state=True, ptt_value=1
+2025-09-29 23:35:28,542 - UHRR - INFO - ✓ PTT set to true via rigctld (fast)
+2025-09-29 23:35:28,543 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-29 23:35:28,656 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-29 23:35:29,576 - UHRR - INFO - PyAudio TX initialized: rate=24000, encoded=0
+2025-09-29 23:35:31,313 - UHRR - INFO - Setting PTT: status=true, ptt_state=True, ptt_value=1
+2025-09-29 23:35:31,374 - UHRR - INFO - ✓ PTT set to true via rigctld (fast)
+2025-09-29 23:35:31,407 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-29 23:35:31,521 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-29 23:35:32,453 - UHRR - INFO - PyAudio TX initialized: rate=24000, encoded=0
+2025-09-29 23:35:33,322 - UHRR - INFO - Setting PTT: status=true, ptt_state=True, ptt_value=1
+2025-09-29 23:35:33,382 - UHRR - INFO - ✓ PTT set to true via rigctld (fast)
+2025-09-29 23:35:33,384 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-29 23:35:33,496 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-29 23:35:34,372 - UHRR - INFO - PyAudio TX initialized: rate=24000, encoded=0
+2025-09-29 23:35:35,775 - UHRR - INFO - Setting PTT: status=true, ptt_state=True, ptt_value=1
+2025-09-29 23:35:35,834 - UHRR - INFO - ✓ PTT set to true via rigctld (fast)
+2025-09-29 23:35:35,843 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-29 23:35:35,957 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-29 23:35:37,686 - UHRR - INFO - PyAudio TX initialized: rate=24000, encoded=0
+2025-09-29 23:35:38,553 - UHRR - INFO - Setting PTT: status=true, ptt_state=True, ptt_value=1
+2025-09-29 23:35:38,612 - UHRR - INFO - ✓ PTT set to true via rigctld (fast)
+2025-09-29 23:35:38,619 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-29 23:35:38,733 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-29 23:35:39,214 - UHRR - INFO - PyAudio TX initialized: rate=24000, encoded=0
+2025-09-29 23:35:39,215 - UHRR - INFO - Setting PTT: status=true, ptt_state=True, ptt_value=1
+2025-09-29 23:35:39,273 - UHRR - INFO - ✓ PTT set to true via rigctld (fast)
+2025-09-29 23:35:40,215 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-29 23:35:40,329 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-29 23:35:41,274 - UHRR - INFO - PyAudio TX initialized: rate=24000, encoded=0
+2025-09-29 23:35:42,166 - UHRR - INFO - Setting PTT: status=true, ptt_state=True, ptt_value=1
+2025-09-29 23:35:42,226 - UHRR - INFO - ✓ PTT set to true via rigctld (fast)
+2025-09-29 23:35:42,231 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-29 23:35:42,345 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-29 23:35:42,777 - UHRR - INFO - PyAudio TX initialized: rate=24000, encoded=0
+2025-09-29 23:35:42,778 - UHRR - INFO - Setting PTT: status=true, ptt_state=True, ptt_value=1
+2025-09-29 23:35:42,837 - UHRR - INFO - ✓ PTT set to true via rigctld (fast)
+2025-09-29 23:35:44,250 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-29 23:35:44,363 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-29 23:36:07,922 - UHRR - INFO - Testing rigctld daemon connection...
+2025-09-29 23:36:07,926 - UHRR - INFO - ✓ rigctld daemon responding! Initial frequency: 7050000
+2025-09-29 23:36:07,926 - UHRR - INFO - Sending rigctld command: f
+2025-09-29 23:36:07,926 - UHRR - DEBUG - rigctld response to 'f': 7050000
+2025-09-29 23:36:07,926 - UHRR - INFO - rigctld command 'f' successful
+2025-09-29 23:36:07,926 - UHRR - INFO - Current frequency from rigctld: 7050000 Hz
+2025-09-29 23:36:07,926 - UHRR - INFO - Sending rigctld command: m
+2025-09-29 23:36:07,927 - UHRR - DEBUG - rigctld response to 'm': 2200
+2025-09-29 23:36:07,927 - UHRR - INFO - rigctld command 'm' successful
+2025-09-29 23:36:07,927 - UHRR - DEBUG - Raw mode response: '2200'
+2025-09-29 23:36:07,927 - UHRR - WARNING - IC-M710 returned only passband 2200, using stored mode USB
+2025-09-29 23:36:07,929 - asyncio - DEBUG - Using selector: KqueueSelector
+2025-09-29 23:36:11,498 - tornado.access - INFO - 200 GET / (2409:8a00:1894:9660:84e:6280:b8f7:34c8) 4.24ms
+2025-09-29 23:36:11,620 - tornado.access - INFO - 304 GET /controls.js (2409:8a00:1894:9660:84e:6280:b8f7:34c8) 9.13ms
+2025-09-29 23:36:11,622 - tornado.access - INFO - 200 GET /tx_button_optimized.js (2409:8a00:1894:9660:84e:6280:b8f7:34c8) 1.15ms
+2025-09-29 23:36:14,531 - tornado.access - INFO - 101 GET /WSaudioRX (2409:8a00:1894:9660:84e:6280:b8f7:34c8) 1.33ms
+2025-09-29 23:36:14,578 - tornado.access - INFO - 101 GET /WSaudioTX (2409:8a00:1894:9660:84e:6280:b8f7:34c8) 0.79ms
+2025-09-29 23:36:14,799 - tornado.access - INFO - 101 GET /WSCTRX (2409:8a00:1894:9660:84e:6280:b8f7:34c8) 1.08ms
+2025-09-29 23:36:14,864 - UHRR - INFO - Sending rigctld command: f
+2025-09-29 23:36:14,865 - UHRR - DEBUG - rigctld response to 'f': 7050000
+2025-09-29 23:36:14,866 - UHRR - INFO - rigctld command 'f' successful
+2025-09-29 23:36:14,866 - UHRR - INFO - Current frequency from rigctld: 7050000 Hz
+2025-09-29 23:36:14,867 - UHRR - INFO - Sending rigctld command: m
+2025-09-29 23:36:14,868 - UHRR - DEBUG - rigctld response to 'm': 2200
+2025-09-29 23:36:14,868 - UHRR - INFO - rigctld command 'm' successful
+2025-09-29 23:36:14,868 - UHRR - DEBUG - Raw mode response: '2200'
+2025-09-29 23:36:14,868 - UHRR - WARNING - IC-M710 returned only passband 2200, using stored mode USB
+2025-09-29 23:36:18,540 - UHRR - INFO - PyAudio TX initialized: rate=24000, encoded=0
+2025-09-29 23:36:20,134 - UHRR - INFO - Setting PTT: status=true, ptt_state=True, ptt_value=1
+2025-09-29 23:36:20,194 - UHRR - INFO - ✓ PTT set to true via rigctld (fast)
+2025-09-29 23:36:20,200 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-29 23:36:20,312 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-29 23:36:21,127 - UHRR - INFO - PyAudio TX initialized: rate=24000, encoded=0
+2025-09-29 23:36:22,109 - UHRR - INFO - Setting PTT: status=true, ptt_state=True, ptt_value=1
+2025-09-29 23:36:22,168 - UHRR - INFO - ✓ PTT set to true via rigctld (fast)
+2025-09-29 23:36:22,174 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-29 23:36:22,288 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-29 23:36:23,203 - UHRR - INFO - PyAudio TX initialized: rate=24000, encoded=0
+2025-09-29 23:36:24,349 - UHRR - INFO - Setting PTT: status=true, ptt_state=True, ptt_value=1
+2025-09-29 23:36:24,409 - UHRR - INFO - ✓ PTT set to true via rigctld (fast)
+2025-09-29 23:36:24,414 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-29 23:36:24,527 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-29 23:36:25,248 - UHRR - INFO - PyAudio TX initialized: rate=24000, encoded=0
+2025-09-29 23:36:26,665 - UHRR - INFO - Setting PTT: status=true, ptt_state=True, ptt_value=1
+2025-09-29 23:36:26,724 - UHRR - INFO - ✓ PTT set to true via rigctld (fast)
+2025-09-29 23:36:26,729 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-29 23:36:26,843 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-29 23:36:28,009 - UHRR - INFO - PyAudio TX initialized: rate=24000, encoded=0
+2025-09-29 23:36:29,156 - UHRR - INFO - Setting PTT: status=true, ptt_state=True, ptt_value=1
+2025-09-29 23:36:29,215 - UHRR - INFO - ✓ PTT set to true via rigctld (fast)
+2025-09-29 23:36:29,216 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-29 23:36:29,326 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-29 23:36:30,391 - UHRR - INFO - PyAudio TX initialized: rate=24000, encoded=0
+2025-09-29 23:36:39,490 - UHRR - INFO - Setting PTT: status=true, ptt_state=True, ptt_value=1
+2025-09-29 23:36:39,549 - UHRR - INFO - ✓ PTT set to true via rigctld (fast)
+2025-09-29 23:36:39,554 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-29 23:36:39,665 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-29 23:36:42,414 - UHRR - INFO - PyAudio TX initialized: rate=24000, encoded=0
+2025-09-29 23:36:43,649 - UHRR - INFO - Setting PTT: status=true, ptt_state=True, ptt_value=1
+2025-09-29 23:36:43,708 - UHRR - INFO - ✓ PTT set to true via rigctld (fast)
+2025-09-29 23:36:43,713 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-29 23:36:43,824 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-29 23:36:44,788 - UHRR - INFO - Setting PTT: status=true, ptt_state=True, ptt_value=1
+2025-09-29 23:36:44,848 - UHRR - INFO - ✓ PTT set to true via rigctld (fast)
+2025-09-29 23:36:44,964 - UHRR - INFO - PyAudio TX initialized: rate=24000, encoded=0
+2025-09-29 23:36:50,146 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-29 23:36:50,260 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-29 23:36:51,944 - UHRR - INFO - PyAudio TX initialized: rate=24000, encoded=0
+2025-09-29 23:36:52,933 - UHRR - INFO - Setting PTT: status=true, ptt_state=True, ptt_value=1
+2025-09-29 23:36:52,992 - UHRR - INFO - ✓ PTT set to true via rigctld (fast)
+2025-09-29 23:36:52,997 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-29 23:36:53,106 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-29 23:36:53,500 - UHRR - INFO - PyAudio TX initialized: rate=24000, encoded=0
+2025-09-29 23:36:53,532 - UHRR - INFO - Setting PTT: status=true, ptt_state=True, ptt_value=1
+2025-09-29 23:36:53,592 - UHRR - INFO - ✓ PTT set to true via rigctld (fast)
+2025-09-29 23:36:54,941 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-29 23:36:55,054 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-29 23:37:24,901 - tornado.access - INFO - 200 GET / (2409:8a00:1894:9660:84e:6280:b8f7:34c8) 1.60ms
+2025-09-29 23:37:24,960 - tornado.access - INFO - 304 GET /tx_button_optimized.js (2409:8a00:1894:9660:84e:6280:b8f7:34c8) 0.65ms
+2025-09-29 23:37:27,536 - tornado.access - INFO - 101 GET /WSaudioRX (2409:8a00:1894:9660:84e:6280:b8f7:34c8) 1.07ms
+2025-09-29 23:37:27,584 - tornado.access - INFO - 101 GET /WSaudioTX (2409:8a00:1894:9660:84e:6280:b8f7:34c8) 1.04ms
+2025-09-29 23:37:27,703 - tornado.access - INFO - 101 GET /WSCTRX (2409:8a00:1894:9660:84e:6280:b8f7:34c8) 1.00ms
+2025-09-29 23:37:27,763 - UHRR - INFO - Sending rigctld command: f
+2025-09-29 23:37:27,765 - UHRR - DEBUG - rigctld response to 'f': 7050000
+2025-09-29 23:37:27,765 - UHRR - INFO - rigctld command 'f' successful
+2025-09-29 23:37:27,765 - UHRR - INFO - Current frequency from rigctld: 7050000 Hz
+2025-09-29 23:37:27,765 - UHRR - INFO - Sending rigctld command: m
+2025-09-29 23:37:27,766 - UHRR - DEBUG - rigctld response to 'm': 2200
+2025-09-29 23:37:27,766 - UHRR - INFO - rigctld command 'm' successful
+2025-09-29 23:37:27,766 - UHRR - DEBUG - Raw mode response: '2200'
+2025-09-29 23:37:27,767 - UHRR - WARNING - IC-M710 returned only passband 2200, using stored mode USB
+2025-09-29 23:37:31,517 - UHRR - INFO - Setting mode to: LSB
+2025-09-29 23:37:31,584 - UHRR - DEBUG - rigctld mode response to 'M LSB 2400': RPRT 0
+2025-09-29 23:37:31,584 - UHRR - INFO - ✓ Mode set to LSB via rigctld
+2025-09-29 23:37:32,441 - UHRR - INFO - PyAudio TX initialized: rate=24000, encoded=0
+2025-09-29 23:37:34,017 - UHRR - INFO - Setting PTT: status=true, ptt_state=True, ptt_value=1
+2025-09-29 23:37:34,076 - UHRR - INFO - ✓ PTT set to true via rigctld (fast)
+2025-09-29 23:37:34,086 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-29 23:37:34,196 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-29 23:37:35,298 - UHRR - INFO - PyAudio TX initialized: rate=24000, encoded=0
+2025-09-29 23:37:36,192 - UHRR - INFO - Setting PTT: status=true, ptt_state=True, ptt_value=1
+2025-09-29 23:37:36,251 - UHRR - INFO - ✓ PTT set to true via rigctld (fast)
+2025-09-29 23:37:36,259 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-29 23:37:36,373 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-29 23:37:37,350 - UHRR - INFO - PyAudio TX initialized: rate=24000, encoded=0
+2025-09-29 23:37:38,596 - UHRR - INFO - Setting PTT: status=true, ptt_state=True, ptt_value=1
+2025-09-29 23:37:38,656 - UHRR - INFO - ✓ PTT set to true via rigctld (fast)
+2025-09-29 23:37:38,664 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-29 23:37:38,778 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-29 23:37:39,555 - UHRR - INFO - PyAudio TX initialized: rate=24000, encoded=0
+2025-09-29 23:37:40,960 - UHRR - INFO - Setting PTT: status=true, ptt_state=True, ptt_value=1
+2025-09-29 23:37:41,020 - UHRR - INFO - ✓ PTT set to true via rigctld (fast)
+2025-09-29 23:37:41,030 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-29 23:37:41,140 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-29 23:37:41,830 - UHRR - INFO - PyAudio TX initialized: rate=24000, encoded=0
+2025-09-29 23:37:42,990 - UHRR - INFO - Setting PTT: status=true, ptt_state=True, ptt_value=1
+2025-09-29 23:37:43,050 - UHRR - INFO - ✓ PTT set to true via rigctld (fast)
+2025-09-29 23:37:43,055 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-29 23:37:43,167 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-29 23:37:43,908 - UHRR - INFO - PyAudio TX initialized: rate=24000, encoded=0
+2025-09-29 23:37:45,067 - UHRR - INFO - Setting PTT: status=true, ptt_state=True, ptt_value=1
+2025-09-29 23:37:45,126 - UHRR - INFO - ✓ PTT set to true via rigctld (fast)
+2025-09-29 23:37:45,135 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-29 23:37:45,246 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-29 23:37:46,026 - UHRR - INFO - PyAudio TX initialized: rate=24000, encoded=0
+2025-09-29 23:37:47,270 - UHRR - INFO - Setting PTT: status=true, ptt_state=True, ptt_value=1
+2025-09-29 23:37:47,330 - UHRR - INFO - ✓ PTT set to true via rigctld (fast)
+2025-09-29 23:37:47,336 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-29 23:37:47,449 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-29 23:37:48,182 - UHRR - INFO - PyAudio TX initialized: rate=24000, encoded=0
+2025-09-29 23:37:49,073 - UHRR - INFO - Setting PTT: status=true, ptt_state=True, ptt_value=1
+2025-09-29 23:37:49,132 - UHRR - INFO - ✓ PTT set to true via rigctld (fast)
+2025-09-29 23:37:49,138 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-29 23:37:49,251 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-29 23:38:34,699 - tornado.access - INFO - 200 GET / (2409:8a00:1894:9660:84e:6280:b8f7:34c8) 2.34ms
+2025-09-29 23:38:34,735 - tornado.access - INFO - 200 GET /style.css (2409:8a00:1894:9660:84e:6280:b8f7:34c8) 2.25ms
+2025-09-29 23:38:34,754 - tornado.access - INFO - 200 GET /img/spinner.gif (2409:8a00:1894:9660:84e:6280:b8f7:34c8) 2.35ms
+2025-09-29 23:38:34,830 - tornado.access - INFO - 200 GET /controls.js (2409:8a00:1894:9660:84e:6280:b8f7:34c8) 62.08ms
+2025-09-29 23:38:34,843 - tornado.access - INFO - 200 GET /img/smeter.png (2409:8a00:1894:9660:84e:6280:b8f7:34c8) 2.51ms
+2025-09-29 23:38:34,850 - tornado.access - INFO - 200 GET /img/config.png (2409:8a00:1894:9660:84e:6280:b8f7:34c8) 5.68ms
+2025-09-29 23:38:34,851 - tornado.access - INFO - 200 GET /img/panfft.png (2409:8a00:1894:9660:84e:6280:b8f7:34c8) 6.43ms
+2025-09-29 23:38:34,852 - tornado.access - INFO - 200 GET /img/critsred.png (2409:8a00:1894:9660:84e:6280:b8f7:34c8) 7.33ms
+2025-09-29 23:38:34,889 - tornado.access - INFO - 200 GET /tx_button_optimized.js (2409:8a00:1894:9660:84e:6280:b8f7:34c8) 0.86ms
+2025-09-29 23:38:34,908 - tornado.access - INFO - 200 GET /img/poweroff.png (2409:8a00:1894:9660:84e:6280:b8f7:34c8) 64.49ms
+2025-09-29 23:38:45,027 - tornado.access - INFO - 200 GET /favicon.ico (2409:8a00:1894:9660:84e:6280:b8f7:34c8) 3.32ms
+2025-09-29 23:38:47,639 - tornado.access - INFO - 200 GET /img/critsgrey.png (2409:8a00:1894:9660:84e:6280:b8f7:34c8) 2.58ms
+2025-09-29 23:38:47,640 - tornado.access - INFO - 200 GET /rx_worklet_processor.js (2409:8a00:1894:9660:84e:6280:b8f7:34c8) 3.34ms
+2025-09-29 23:38:47,641 - tornado.access - INFO - 101 GET /WSaudioRX (2409:8a00:1894:9660:84e:6280:b8f7:34c8) 0.43ms
+2025-09-29 23:38:47,697 - tornado.access - INFO - 200 GET /img/poweron.png (2409:8a00:1894:9660:84e:6280:b8f7:34c8) 66.34ms
+2025-09-29 23:38:47,702 - tornado.access - INFO - 200 GET /img/critsgreen.png (2409:8a00:1894:9660:84e:6280:b8f7:34c8) 3.31ms
+2025-09-29 23:38:47,748 - tornado.access - INFO - 101 GET /WSaudioTX (2409:8a00:1894:9660:84e:6280:b8f7:34c8) 0.93ms
+2025-09-29 23:38:47,876 - tornado.access - INFO - 101 GET /WSCTRX (2409:8a00:1894:9660:84e:6280:b8f7:34c8) 1.01ms
+2025-09-29 23:38:47,940 - UHRR - INFO - Sending rigctld command: f
+2025-09-29 23:38:47,941 - UHRR - DEBUG - rigctld response to 'f': 7050000
+2025-09-29 23:38:47,942 - UHRR - INFO - rigctld command 'f' successful
+2025-09-29 23:38:47,942 - UHRR - INFO - Current frequency from rigctld: 7050000 Hz
+2025-09-29 23:38:47,943 - UHRR - INFO - Sending rigctld command: m
+2025-09-29 23:38:47,943 - UHRR - DEBUG - rigctld response to 'm': 2200
+2025-09-29 23:38:47,944 - UHRR - INFO - rigctld command 'm' successful
+2025-09-29 23:38:47,944 - UHRR - DEBUG - Raw mode response: '2200'
+2025-09-29 23:38:47,944 - UHRR - WARNING - IC-M710 returned only passband 2200, using stored mode LSB
+2025-09-29 23:38:51,642 - UHRR - INFO - PyAudio TX initialized: rate=24000, encoded=0
+2025-09-29 23:38:53,314 - UHRR - INFO - Setting PTT: status=true, ptt_state=True, ptt_value=1
+2025-09-29 23:38:53,372 - UHRR - INFO - ✓ PTT set to true via rigctld (fast)
+2025-09-29 23:38:53,378 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-29 23:38:53,492 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-29 23:38:54,317 - UHRR - INFO - PyAudio TX initialized: rate=24000, encoded=0
+2025-09-29 23:38:54,508 - UHRR - INFO - Setting PTT: status=true, ptt_state=True, ptt_value=1
+2025-09-29 23:38:54,566 - UHRR - INFO - ✓ PTT set to true via rigctld (fast)
+2025-09-29 23:38:55,731 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-29 23:38:55,841 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-29 23:38:56,595 - UHRR - INFO - PyAudio TX initialized: rate=24000, encoded=0
+2025-09-29 23:38:57,669 - UHRR - INFO - Setting PTT: status=true, ptt_state=True, ptt_value=1
+2025-09-29 23:38:57,728 - UHRR - INFO - ✓ PTT set to true via rigctld (fast)
+2025-09-29 23:38:57,733 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-29 23:38:57,846 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-29 23:38:58,654 - UHRR - INFO - PyAudio TX initialized: rate=24000, encoded=0
+2025-09-29 23:38:59,728 - UHRR - INFO - Setting PTT: status=true, ptt_state=True, ptt_value=1
+2025-09-29 23:38:59,788 - UHRR - INFO - ✓ PTT set to true via rigctld (fast)
+2025-09-29 23:38:59,795 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-29 23:38:59,909 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-29 23:39:02,688 - UHRR - INFO - PyAudio TX initialized: rate=24000, encoded=0
+2025-09-29 23:39:03,943 - UHRR - INFO - Setting PTT: status=true, ptt_state=True, ptt_value=1
+2025-09-29 23:39:04,003 - UHRR - INFO - ✓ PTT set to true via rigctld (fast)
+2025-09-29 23:39:04,011 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-29 23:39:04,125 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-29 23:39:04,879 - UHRR - INFO - PyAudio TX initialized: rate=24000, encoded=0
+2025-09-29 23:39:06,122 - UHRR - INFO - Setting PTT: status=true, ptt_state=True, ptt_value=1
+2025-09-29 23:39:06,182 - UHRR - INFO - ✓ PTT set to true via rigctld (fast)
+2025-09-29 23:39:06,188 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-29 23:39:06,302 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-29 23:39:07,639 - UHRR - INFO - PyAudio TX initialized: rate=24000, encoded=0
+2025-09-29 23:39:08,799 - UHRR - INFO - Setting PTT: status=true, ptt_state=True, ptt_value=1
+2025-09-29 23:39:08,858 - UHRR - INFO - ✓ PTT set to true via rigctld (fast)
+2025-09-29 23:39:08,862 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-29 23:39:08,973 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-29 23:39:10,213 - UHRR - INFO - PyAudio TX initialized: rate=24000, encoded=0
+2025-09-29 23:39:11,541 - UHRR - INFO - Setting PTT: status=true, ptt_state=True, ptt_value=1
+2025-09-29 23:39:11,601 - UHRR - INFO - ✓ PTT set to true via rigctld (fast)
+2025-09-29 23:39:11,608 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-29 23:39:11,722 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-29 23:42:14,432 - tornado.general - INFO - /Users/cheenle/Universal_HamRadio_Remote_HTML5-master/./UHRR modified; restarting server
+2025-09-29 23:42:15,119 - UHRR - INFO - Testing rigctld daemon connection...
+2025-09-29 23:42:15,119 - UHRR - INFO - ✓ rigctld daemon responding! Initial frequency: 7050000
+2025-09-29 23:42:15,120 - UHRR - INFO - Sending rigctld command: f
+2025-09-29 23:42:15,120 - UHRR - DEBUG - rigctld response to 'f': 7050000
+2025-09-29 23:42:15,120 - UHRR - INFO - rigctld command 'f' successful
+2025-09-29 23:42:15,120 - UHRR - INFO - Current frequency from rigctld: 7050000 Hz
+2025-09-29 23:42:15,120 - UHRR - INFO - Sending rigctld command: m
+2025-09-29 23:42:15,121 - UHRR - DEBUG - rigctld response to 'm': 2200
+2025-09-29 23:42:15,121 - UHRR - INFO - rigctld command 'm' successful
+2025-09-29 23:42:15,121 - UHRR - DEBUG - Raw mode response: '2200'
+2025-09-29 23:42:15,121 - UHRR - WARNING - IC-M710 returned only passband 2200, using stored mode USB
+2025-09-29 23:42:15,122 - asyncio - DEBUG - Using selector: KqueueSelector
+2025-09-29 23:42:25,314 - UHRR - INFO - Testing rigctld daemon connection...
+2025-09-29 23:42:25,315 - UHRR - INFO - ✓ rigctld daemon responding! Initial frequency: 7050000
+2025-09-29 23:42:25,315 - UHRR - INFO - Sending rigctld command: f
+2025-09-29 23:42:25,316 - UHRR - DEBUG - rigctld response to 'f': 7050000
+2025-09-29 23:42:25,316 - UHRR - INFO - rigctld command 'f' successful
+2025-09-29 23:42:25,316 - UHRR - INFO - Current frequency from rigctld: 7050000 Hz
+2025-09-29 23:42:25,316 - UHRR - INFO - Sending rigctld command: m
+2025-09-29 23:42:25,316 - UHRR - DEBUG - rigctld response to 'm': 2200
+2025-09-29 23:42:25,316 - UHRR - INFO - rigctld command 'm' successful
+2025-09-29 23:42:25,316 - UHRR - DEBUG - Raw mode response: '2200'
+2025-09-29 23:42:25,316 - UHRR - WARNING - IC-M710 returned only passband 2200, using stored mode USB
+2025-09-29 23:42:25,317 - asyncio - DEBUG - Using selector: KqueueSelector
+2025-09-29 23:42:39,124 - tornado.general - INFO - /Users/cheenle/Universal_HamRadio_Remote_HTML5-master/./UHRR modified; restarting server
+2025-09-29 23:42:39,389 - UHRR - INFO - Testing rigctld daemon connection...
+2025-09-29 23:42:39,390 - UHRR - INFO - ✓ rigctld daemon responding! Initial frequency: 7050000
+2025-09-29 23:42:39,390 - UHRR - INFO - Sending rigctld command: f
+2025-09-29 23:42:39,390 - UHRR - DEBUG - rigctld response to 'f': 7050000
+2025-09-29 23:42:39,390 - UHRR - INFO - rigctld command 'f' successful
+2025-09-29 23:42:39,390 - UHRR - INFO - Current frequency from rigctld: 7050000 Hz
+2025-09-29 23:42:39,390 - UHRR - INFO - Sending rigctld command: m
+2025-09-29 23:42:39,390 - UHRR - DEBUG - rigctld response to 'm': 2200
+2025-09-29 23:42:39,390 - UHRR - INFO - rigctld command 'm' successful
+2025-09-29 23:42:39,390 - UHRR - DEBUG - Raw mode response: '2200'
+2025-09-29 23:42:39,390 - UHRR - WARNING - IC-M710 returned only passband 2200, using stored mode USB
+2025-09-29 23:42:39,391 - asyncio - DEBUG - Using selector: KqueueSelector
+2025-09-29 23:43:01,848 - tornado.access - INFO - 200 GET / (2409:8a00:1894:9660:84e:6280:b8f7:34c8) 2.50ms
+2025-09-29 23:43:01,908 - tornado.access - INFO - 304 GET /controls.js (2409:8a00:1894:9660:84e:6280:b8f7:34c8) 5.23ms
+2025-09-29 23:43:01,908 - tornado.access - INFO - 200 GET /tx_button_optimized.js (2409:8a00:1894:9660:84e:6280:b8f7:34c8) 0.53ms
+2025-09-29 23:43:04,439 - tornado.access - INFO - 101 GET /WSaudioRX (2409:8a00:1894:9660:84e:6280:b8f7:34c8) 1.46ms
+2025-09-29 23:43:04,499 - tornado.access - INFO - 101 GET /WSaudioTX (2409:8a00:1894:9660:84e:6280:b8f7:34c8) 0.66ms
+2025-09-29 23:43:04,636 - tornado.access - INFO - 101 GET /WSCTRX (2409:8a00:1894:9660:84e:6280:b8f7:34c8) 0.67ms
+2025-09-29 23:43:04,690 - UHRR - INFO - Sending rigctld command: f
+2025-09-29 23:43:04,691 - UHRR - DEBUG - rigctld response to 'f': 7050000
+2025-09-29 23:43:04,691 - UHRR - INFO - rigctld command 'f' successful
+2025-09-29 23:43:04,691 - UHRR - INFO - Current frequency from rigctld: 7050000 Hz
+2025-09-29 23:43:04,692 - UHRR - INFO - Sending rigctld command: m
+2025-09-29 23:43:04,693 - UHRR - DEBUG - rigctld response to 'm': 2200
+2025-09-29 23:43:04,693 - UHRR - INFO - rigctld command 'm' successful
+2025-09-29 23:43:04,693 - UHRR - DEBUG - Raw mode response: '2200'
+2025-09-29 23:43:04,693 - UHRR - WARNING - IC-M710 returned only passband 2200, using stored mode USB
+2025-09-29 23:43:21,946 - tornado.access - INFO - 200 GET / (2409:8a00:1894:9660:84e:6280:b8f7:34c8) 2.82ms
+2025-09-29 23:43:22,010 - tornado.access - INFO - 304 GET /tx_button_optimized.js (2409:8a00:1894:9660:84e:6280:b8f7:34c8) 1.62ms
+2025-09-29 23:43:37,725 - tornado.access - INFO - 200 GET / (2409:8a00:1894:9660:84e:6280:b8f7:34c8) 1.26ms
+2025-09-29 23:43:37,756 - tornado.access - INFO - 200 GET /style.css (2409:8a00:1894:9660:84e:6280:b8f7:34c8) 0.99ms
+2025-09-29 23:43:37,767 - tornado.access - INFO - 200 GET /img/spinner.gif (2409:8a00:1894:9660:84e:6280:b8f7:34c8) 0.96ms
+2025-09-29 23:43:37,820 - tornado.access - INFO - 200 GET /img/critsred.png (2409:8a00:1894:9660:84e:6280:b8f7:34c8) 1.03ms
+2025-09-29 23:43:37,822 - tornado.access - INFO - 200 GET /img/config.png (2409:8a00:1894:9660:84e:6280:b8f7:34c8) 3.17ms
+2025-09-29 23:43:37,823 - tornado.access - INFO - 200 GET /img/panfft.png (2409:8a00:1894:9660:84e:6280:b8f7:34c8) 3.57ms
+2025-09-29 23:43:37,823 - tornado.access - INFO - 200 GET /tx_button_optimized.js (2409:8a00:1894:9660:84e:6280:b8f7:34c8) 0.48ms
+2025-09-29 23:43:37,839 - tornado.access - INFO - 200 GET /controls.js (2409:8a00:1894:9660:84e:6280:b8f7:34c8) 60.02ms
+2025-09-29 23:43:37,840 - tornado.access - INFO - 200 GET /img/poweroff.png (2409:8a00:1894:9660:84e:6280:b8f7:34c8) 20.91ms
+2025-09-29 23:43:37,851 - tornado.access - INFO - 200 GET /img/smeter.png (2409:8a00:1894:9660:84e:6280:b8f7:34c8) 0.66ms
+2025-09-29 23:43:44,720 - tornado.access - INFO - 200 GET /favicon.ico (2409:8a00:1894:9660:84e:6280:b8f7:34c8) 3.08ms
+2025-09-29 23:43:48,782 - tornado.access - INFO - 101 GET /WSaudioRX (2409:8a00:1894:9660:84e:6280:b8f7:34c8) 0.72ms
+2025-09-29 23:43:48,800 - tornado.access - INFO - 200 GET /img/critsgrey.png (2409:8a00:1894:9660:84e:6280:b8f7:34c8) 2.04ms
+2025-09-29 23:43:48,826 - tornado.access - INFO - 200 GET /rx_worklet_processor.js (2409:8a00:1894:9660:84e:6280:b8f7:34c8) 1.07ms
+2025-09-29 23:43:48,827 - tornado.access - INFO - 200 GET /img/critsgreen.png (2409:8a00:1894:9660:84e:6280:b8f7:34c8) 1.07ms
+2025-09-29 23:43:48,865 - tornado.access - INFO - 200 GET /img/poweron.png (2409:8a00:1894:9660:84e:6280:b8f7:34c8) 69.72ms
+2025-09-29 23:43:48,945 - tornado.access - INFO - 101 GET /WSaudioTX (2409:8a00:1894:9660:84e:6280:b8f7:34c8) 0.59ms
+2025-09-29 23:43:49,048 - tornado.access - INFO - 101 GET /WSCTRX (2409:8a00:1894:9660:84e:6280:b8f7:34c8) 0.96ms
+2025-09-29 23:43:49,108 - UHRR - INFO - Sending rigctld command: f
+2025-09-29 23:43:49,110 - UHRR - DEBUG - rigctld response to 'f': 7050000
+2025-09-29 23:43:49,110 - UHRR - INFO - rigctld command 'f' successful
+2025-09-29 23:43:49,110 - UHRR - INFO - Current frequency from rigctld: 7050000 Hz
+2025-09-29 23:43:49,112 - UHRR - INFO - Sending rigctld command: m
+2025-09-29 23:43:49,113 - UHRR - DEBUG - rigctld response to 'm': 2200
+2025-09-29 23:43:49,113 - UHRR - INFO - rigctld command 'm' successful
+2025-09-29 23:43:49,113 - UHRR - DEBUG - Raw mode response: '2200'
+2025-09-29 23:43:49,113 - UHRR - WARNING - IC-M710 returned only passband 2200, using stored mode USB
+2025-09-29 23:44:56,995 - UHRR - INFO - Testing rigctld daemon connection...
+2025-09-29 23:44:56,996 - UHRR - INFO - ✓ rigctld daemon responding! Initial frequency: 7050000
+2025-09-29 23:44:56,996 - UHRR - INFO - Sending rigctld command: f
+2025-09-29 23:44:56,996 - UHRR - DEBUG - rigctld response to 'f': 7050000
+2025-09-29 23:44:56,996 - UHRR - INFO - rigctld command 'f' successful
+2025-09-29 23:44:56,996 - UHRR - INFO - Current frequency from rigctld: 7050000 Hz
+2025-09-29 23:44:56,996 - UHRR - INFO - Sending rigctld command: m
+2025-09-29 23:44:56,996 - UHRR - DEBUG - rigctld response to 'm': 2200
+2025-09-29 23:44:56,997 - UHRR - INFO - rigctld command 'm' successful
+2025-09-29 23:44:56,997 - UHRR - DEBUG - Raw mode response: '2200'
+2025-09-29 23:44:56,997 - UHRR - WARNING - IC-M710 returned only passband 2200, using stored mode USB
+2025-09-29 23:44:56,997 - asyncio - DEBUG - Using selector: KqueueSelector
+2025-09-29 23:45:00,151 - tornado.access - INFO - 200 GET / (2409:8a00:1894:9660:84e:6280:b8f7:34c8) 3.80ms
+2025-09-29 23:45:00,190 - tornado.access - INFO - 200 GET /tx_button_optimized.js (2409:8a00:1894:9660:84e:6280:b8f7:34c8) 9.28ms
+2025-09-29 23:45:02,676 - tornado.access - INFO - 101 GET /WSaudioRX (2409:8a00:1894:9660:84e:6280:b8f7:34c8) 0.43ms
+2025-09-29 23:45:02,754 - tornado.access - INFO - 101 GET /WSaudioTX (2409:8a00:1894:9660:84e:6280:b8f7:34c8) 0.77ms
+2025-09-29 23:45:02,911 - tornado.access - INFO - 101 GET /WSCTRX (2409:8a00:1894:9660:84e:6280:b8f7:34c8) 1.18ms
+2025-09-29 23:45:02,924 - UHRR - INFO - Sending rigctld command: f
+2025-09-29 23:45:02,925 - UHRR - DEBUG - rigctld response to 'f': 7050000
+2025-09-29 23:45:02,926 - UHRR - INFO - rigctld command 'f' successful
+2025-09-29 23:45:02,926 - UHRR - INFO - Current frequency from rigctld: 7050000 Hz
+2025-09-29 23:45:02,938 - UHRR - INFO - Sending rigctld command: m
+2025-09-29 23:45:02,939 - UHRR - DEBUG - rigctld response to 'm': 2200
+2025-09-29 23:45:02,940 - UHRR - INFO - rigctld command 'm' successful
+2025-09-29 23:45:02,940 - UHRR - DEBUG - Raw mode response: '2200'
+2025-09-29 23:45:02,940 - UHRR - WARNING - IC-M710 returned only passband 2200, using stored mode USB
+2025-09-29 23:45:08,185 - UHRR - INFO - PyAudio TX initialized: rate=24000, encoded=0
+2025-09-29 23:45:10,488 - UHRR - INFO - Setting PTT: status=true, ptt_state=True, ptt_value=1
+2025-09-29 23:45:10,547 - UHRR - INFO - ✓ PTT set to true via rigctld (fast)
+2025-09-29 23:45:10,553 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-29 23:45:10,665 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-29 23:45:11,599 - UHRR - INFO - PyAudio TX initialized: rate=24000, encoded=0
+2025-09-29 23:45:12,856 - UHRR - INFO - Setting PTT: status=true, ptt_state=True, ptt_value=1
+2025-09-29 23:45:12,916 - UHRR - INFO - ✓ PTT set to true via rigctld (fast)
+2025-09-29 23:45:12,921 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-29 23:45:13,035 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-29 23:45:14,191 - UHRR - INFO - PyAudio TX initialized: rate=24000, encoded=0
+2025-09-29 23:45:15,454 - UHRR - INFO - Setting PTT: status=true, ptt_state=True, ptt_value=1
+2025-09-29 23:45:15,514 - UHRR - INFO - ✓ PTT set to true via rigctld (fast)
+2025-09-29 23:45:15,516 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-29 23:45:15,629 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-29 23:45:17,080 - UHRR - INFO - PyAudio TX initialized: rate=24000, encoded=0
+2025-09-29 23:45:18,600 - UHRR - INFO - Setting PTT: status=true, ptt_state=True, ptt_value=1
+2025-09-29 23:45:18,660 - UHRR - INFO - ✓ PTT set to true via rigctld (fast)
+2025-09-29 23:45:18,664 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-29 23:45:18,777 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-29 23:45:19,683 - UHRR - INFO - PyAudio TX initialized: rate=24000, encoded=0
+2025-09-29 23:45:22,154 - UHRR - INFO - Setting PTT: status=true, ptt_state=True, ptt_value=1
+2025-09-29 23:45:22,213 - UHRR - INFO - ✓ PTT set to true via rigctld (fast)
+2025-09-29 23:45:22,217 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-29 23:45:22,326 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-29 23:45:23,393 - UHRR - INFO - PyAudio TX initialized: rate=24000, encoded=0
+2025-09-29 23:45:34,293 - UHRR - INFO - Setting PTT: status=true, ptt_state=True, ptt_value=1
+2025-09-29 23:45:34,352 - UHRR - INFO - ✓ PTT set to true via rigctld (fast)
+2025-09-29 23:45:34,357 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-29 23:45:34,470 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-29 23:45:38,865 - UHRR - INFO - PyAudio TX initialized: rate=24000, encoded=0
+2025-09-29 23:45:40,123 - UHRR - INFO - Setting PTT: status=true, ptt_state=True, ptt_value=1
+2025-09-29 23:45:40,182 - UHRR - INFO - ✓ PTT set to true via rigctld (fast)
+2025-09-29 23:45:40,187 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-29 23:45:40,300 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-29 23:45:57,373 - tornado.access - INFO - 200 GET / (2409:8a00:1894:9660:84e:6280:b8f7:34c8) 3.50ms
+2025-09-29 23:45:57,423 - tornado.access - INFO - 304 GET /tx_button_optimized.js (2409:8a00:1894:9660:84e:6280:b8f7:34c8) 1.55ms
+2025-09-29 23:46:00,302 - tornado.access - INFO - 101 GET /WSaudioRX (2409:8a00:1894:9660:84e:6280:b8f7:34c8) 0.43ms
+2025-09-29 23:46:00,359 - tornado.access - INFO - 101 GET /WSaudioTX (2409:8a00:1894:9660:84e:6280:b8f7:34c8) 0.34ms
+2025-09-29 23:46:00,492 - tornado.access - INFO - 101 GET /WSCTRX (2409:8a00:1894:9660:84e:6280:b8f7:34c8) 0.83ms
+2025-09-29 23:46:00,535 - UHRR - INFO - Sending rigctld command: f
+2025-09-29 23:46:00,536 - UHRR - DEBUG - rigctld response to 'f': 7050000
+2025-09-29 23:46:00,536 - UHRR - INFO - rigctld command 'f' successful
+2025-09-29 23:46:00,537 - UHRR - INFO - Current frequency from rigctld: 7050000 Hz
+2025-09-29 23:46:00,537 - UHRR - INFO - Sending rigctld command: m
+2025-09-29 23:46:00,538 - UHRR - DEBUG - rigctld response to 'm': 2200
+2025-09-29 23:46:00,538 - UHRR - INFO - rigctld command 'm' successful
+2025-09-29 23:46:00,538 - UHRR - DEBUG - Raw mode response: '2200'
+2025-09-29 23:46:00,538 - UHRR - WARNING - IC-M710 returned only passband 2200, using stored mode USB
+2025-09-29 23:46:03,365 - UHRR - INFO - PyAudio TX initialized: rate=24000, encoded=0
+2025-09-29 23:46:05,484 - UHRR - INFO - Setting PTT: status=true, ptt_state=True, ptt_value=1
+2025-09-29 23:46:05,544 - UHRR - INFO - ✓ PTT set to true via rigctld (fast)
+2025-09-29 23:46:05,549 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-29 23:46:05,663 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-29 23:46:06,751 - UHRR - INFO - PyAudio TX initialized: rate=24000, encoded=0
+2025-09-29 23:46:08,010 - UHRR - INFO - Setting PTT: status=true, ptt_state=True, ptt_value=1
+2025-09-29 23:46:08,070 - UHRR - INFO - ✓ PTT set to true via rigctld (fast)
+2025-09-29 23:46:08,075 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-29 23:46:08,186 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-29 23:47:58,663 - UHRR - INFO - PyAudio TX initialized: rate=24000, encoded=0
+2025-09-29 23:48:00,011 - UHRR - INFO - Setting PTT: status=true, ptt_state=True, ptt_value=1
+2025-09-29 23:48:00,070 - UHRR - INFO - ✓ PTT set to true via rigctld (fast)
+2025-09-29 23:48:00,072 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-29 23:48:00,183 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-29 23:48:14,071 - UHRR - INFO - PyAudio TX initialized: rate=24000, encoded=0
+2025-09-29 23:48:14,902 - UHRR - INFO - Setting PTT: status=true, ptt_state=True, ptt_value=1
+2025-09-29 23:48:14,961 - UHRR - INFO - ✓ PTT set to true via rigctld (fast)
+2025-09-29 23:48:14,971 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-29 23:48:15,085 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-29 23:48:16,813 - tornado.access - INFO - 200 GET / (2409:8a00:1894:9660:84e:6280:b8f7:34c8) 1.20ms
+2025-09-29 23:48:16,922 - tornado.access - INFO - 304 GET /controls.js (2409:8a00:1894:9660:84e:6280:b8f7:34c8) 3.13ms
+2025-09-29 23:48:16,926 - tornado.access - INFO - 200 GET /tx_button_optimized.js (2409:8a00:1894:9660:84e:6280:b8f7:34c8) 0.59ms
+2025-09-29 23:48:19,419 - tornado.access - INFO - 101 GET /WSaudioRX (2409:8a00:1894:9660:84e:6280:b8f7:34c8) 1.18ms
+2025-09-29 23:48:19,461 - tornado.access - INFO - 101 GET /WSaudioTX (2409:8a00:1894:9660:84e:6280:b8f7:34c8) 0.72ms
+2025-09-29 23:48:19,586 - tornado.access - INFO - 101 GET /WSCTRX (2409:8a00:1894:9660:84e:6280:b8f7:34c8) 0.98ms
+2025-09-29 23:48:19,734 - UHRR - INFO - Sending rigctld command: f
+2025-09-29 23:48:19,735 - UHRR - DEBUG - rigctld response to 'f': 7050000
+2025-09-29 23:48:19,735 - UHRR - INFO - rigctld command 'f' successful
+2025-09-29 23:48:19,736 - UHRR - INFO - Current frequency from rigctld: 7050000 Hz
+2025-09-29 23:48:19,737 - UHRR - INFO - Sending rigctld command: m
+2025-09-29 23:48:19,738 - UHRR - DEBUG - rigctld response to 'm': 2200
+2025-09-29 23:48:19,738 - UHRR - INFO - rigctld command 'm' successful
+2025-09-29 23:48:19,738 - UHRR - DEBUG - Raw mode response: '2200'
+2025-09-29 23:48:19,738 - UHRR - WARNING - IC-M710 returned only passband 2200, using stored mode USB
+2025-09-29 23:48:22,371 - UHRR - INFO - Setting PTT: status=true, ptt_state=True, ptt_value=1
+2025-09-29 23:48:22,430 - UHRR - INFO - ✓ PTT set to true via rigctld (fast)
+2025-09-29 23:48:22,544 - UHRR - INFO - PyAudio TX initialized: rate=24000, encoded=0
+2025-09-29 23:48:23,711 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-29 23:48:23,826 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-29 23:48:25,373 - UHRR - INFO - Setting PTT: status=true, ptt_state=True, ptt_value=1
+2025-09-29 23:48:25,433 - UHRR - INFO - ✓ PTT set to true via rigctld (fast)
+2025-09-29 23:48:25,545 - UHRR - INFO - PyAudio TX initialized: rate=24000, encoded=0
+2025-09-29 23:48:27,062 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-29 23:48:27,175 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-29 23:48:29,121 - UHRR - INFO - Setting PTT: status=true, ptt_state=True, ptt_value=1
+2025-09-29 23:48:29,179 - UHRR - INFO - ✓ PTT set to true via rigctld (fast)
+2025-09-29 23:48:29,295 - UHRR - INFO - PyAudio TX initialized: rate=24000, encoded=0
+2025-09-29 23:48:31,571 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-29 23:48:31,685 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-29 23:48:44,677 - UHRR - INFO - Setting PTT: status=true, ptt_state=True, ptt_value=1
+2025-09-29 23:48:44,738 - UHRR - INFO - ✓ PTT set to true via rigctld (fast)
+2025-09-29 23:48:44,858 - UHRR - INFO - PyAudio TX initialized: rate=24000, encoded=0
+2025-09-29 23:48:46,293 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-29 23:48:46,406 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-29 23:48:47,741 - UHRR - INFO - Setting PTT: status=true, ptt_state=True, ptt_value=1
+2025-09-29 23:48:47,801 - UHRR - INFO - ✓ PTT set to true via rigctld (fast)
+2025-09-29 23:48:47,917 - UHRR - INFO - PyAudio TX initialized: rate=24000, encoded=0
+2025-09-29 23:48:49,108 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-29 23:48:49,221 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-29 23:50:01,876 - UHRR - INFO - Setting mode to: LSB
+2025-09-29 23:50:01,942 - UHRR - DEBUG - rigctld mode response to 'M LSB 2400': RPRT 0
+2025-09-29 23:50:01,943 - UHRR - INFO - ✓ Mode set to LSB via rigctld
+2025-09-29 23:50:02,982 - UHRR - INFO - Setting PTT: status=true, ptt_state=True, ptt_value=1
+2025-09-29 23:50:03,041 - UHRR - INFO - ✓ PTT set to true via rigctld (fast)
+2025-09-29 23:50:03,161 - UHRR - INFO - PyAudio TX initialized: rate=24000, encoded=0
+2025-09-29 23:50:08,435 - UHRR - INFO - Setting PTT: status=false, ptt_state=False, ptt_value=0
+2025-09-29 23:50:08,544 - UHRR - INFO - ✓ PTT set to false via rigctld (fast)
+2025-09-29 23:53:48,675 - UHRR - INFO - Sending rigctld set command: F 14270000
+2025-09-29 23:53:48,826 - UHRR - DEBUG - rigctld set response to 'F 14270000': RPRT 0
+2025-09-29 23:53:48,827 - UHRR - INFO - rigctld set command 'F 14270000' successful
+2025-09-29 23:53:48,827 - UHRR - INFO - ✓ Frequency set to 14270000 Hz via rigctld
+2025-09-29 23:53:52,666 - UHRR - INFO - Setting mode to: USB
+2025-09-29 23:53:52,730 - UHRR - DEBUG - rigctld mode response to 'M USB 2400': RPRT 0
+2025-09-29 23:53:52,731 - UHRR - INFO - ✓ Mode set to USB via rigctld
+2025-09-29 23:53:58,222 - UHRR - INFO - Sending rigctld set command: F 14269000
+2025-09-29 23:53:58,371 - UHRR - DEBUG - rigctld set response to 'F 14269000': RPRT 0
+2025-09-29 23:53:58,372 - UHRR - INFO - rigctld set command 'F 14269000' successful
+2025-09-29 23:53:58,372 - UHRR - INFO - ✓ Frequency set to 14269000 Hz via rigctld
+2025-09-29 23:53:58,923 - UHRR - INFO - Sending rigctld set command: F 14259000
+2025-09-29 23:53:59,072 - UHRR - DEBUG - rigctld set response to 'F 14259000': RPRT 0
+2025-09-29 23:53:59,073 - UHRR - INFO - rigctld set command 'F 14259000' successful
+2025-09-29 23:53:59,073 - UHRR - INFO - ✓ Frequency set to 14259000 Hz via rigctld
+2025-09-29 23:54:00,384 - UHRR - INFO - Sending rigctld set command: F 14260000
+2025-09-29 23:54:00,532 - UHRR - DEBUG - rigctld set response to 'F 14260000': RPRT 0
+2025-09-29 23:54:00,533 - UHRR - INFO - rigctld set command 'F 14260000' successful
+2025-09-29 23:54:00,533 - UHRR - INFO - ✓ Frequency set to 14260000 Hz via rigctld
+2025-09-29 23:54:01,450 - UHRR - INFO - Sending rigctld set command: F 14250000
+2025-09-29 23:54:01,600 - UHRR - DEBUG - rigctld set response to 'F 14250000': RPRT 0
+2025-09-29 23:54:01,600 - UHRR - INFO - rigctld set command 'F 14250000' successful
+2025-09-29 23:54:01,601 - UHRR - INFO - ✓ Frequency set to 14250000 Hz via rigctld
+2025-09-29 23:54:02,118 - UHRR - INFO - Sending rigctld set command: F 14249000
+2025-09-29 23:54:02,268 - UHRR - DEBUG - rigctld set response to 'F 14249000': RPRT 0
+2025-09-29 23:54:02,268 - UHRR - INFO - rigctld set command 'F 14249000' successful
+2025-09-29 23:54:02,269 - UHRR - INFO - ✓ Frequency set to 14249000 Hz via rigctld
+2025-09-29 23:54:02,851 - UHRR - INFO - Sending rigctld set command: F 14248000
+2025-09-29 23:54:03,000 - UHRR - DEBUG - rigctld set response to 'F 14248000': RPRT 0
+2025-09-29 23:54:03,000 - UHRR - INFO - rigctld set command 'F 14248000' successful
+2025-09-29 23:54:03,000 - UHRR - INFO - ✓ Frequency set to 14248000 Hz via rigctld
+2025-09-29 23:54:04,564 - UHRR - INFO - Sending rigctld set command: F 14247000
+2025-09-29 23:54:04,714 - UHRR - DEBUG - rigctld set response to 'F 14247000': RPRT 0
+2025-09-29 23:54:04,714 - UHRR - INFO - rigctld set command 'F 14247000' successful
+2025-09-29 23:54:04,715 - UHRR - INFO - ✓ Frequency set to 14247000 Hz via rigctld
+2025-09-29 23:54:04,824 - UHRR - INFO - Sending rigctld set command: F 14246000
+2025-09-29 23:54:04,973 - UHRR - DEBUG - rigctld set response to 'F 14246000': RPRT 0
+2025-09-29 23:54:04,974 - UHRR - INFO - rigctld set command 'F 14246000' successful
+2025-09-29 23:54:04,974 - UHRR - INFO - ✓ Frequency set to 14246000 Hz via rigctld
+2025-09-29 23:54:05,635 - UHRR - INFO - Sending rigctld set command: F 14245000
+2025-09-29 23:54:05,784 - UHRR - DEBUG - rigctld set response to 'F 14245000': RPRT 0
+2025-09-29 23:54:05,784 - UHRR - INFO - rigctld set command 'F 14245000' successful
+2025-09-29 23:54:05,785 - UHRR - INFO - ✓ Frequency set to 14245000 Hz via rigctld
+2025-09-29 23:54:06,715 - UHRR - INFO - Sending rigctld set command: F 14244000
+2025-09-29 23:54:06,865 - UHRR - DEBUG - rigctld set response to 'F 14244000': RPRT 0
+2025-09-29 23:54:06,865 - UHRR - INFO - rigctld set command 'F 14244000' successful
+2025-09-29 23:54:06,865 - UHRR - INFO - ✓ Frequency set to 14244000 Hz via rigctld
+2025-09-29 23:54:07,741 - UHRR - INFO - Sending rigctld set command: F 14243000
+2025-09-29 23:54:07,890 - UHRR - DEBUG - rigctld set response to 'F 14243000': RPRT 0
+2025-09-29 23:54:07,890 - UHRR - INFO - rigctld set command 'F 14243000' successful
+2025-09-29 23:54:07,891 - UHRR - INFO - ✓ Frequency set to 14243000 Hz via rigctld
+2025-09-29 23:55:32,096 - UHRR - INFO - Sending rigctld set command: F 14253000
+2025-09-29 23:55:32,246 - UHRR - DEBUG - rigctld set response to 'F 14253000': RPRT 0
+2025-09-29 23:55:32,246 - UHRR - INFO - rigctld set command 'F 14253000' successful
+2025-09-29 23:55:32,247 - UHRR - INFO - ✓ Frequency set to 14253000 Hz via rigctld
+2025-09-29 23:55:32,892 - UHRR - INFO - Sending rigctld set command: F 14254000
+2025-09-29 23:55:33,042 - UHRR - DEBUG - rigctld set response to 'F 14254000': RPRT 0
+2025-09-29 23:55:33,042 - UHRR - INFO - rigctld set command 'F 14254000' successful
+2025-09-29 23:55:33,042 - UHRR - INFO - ✓ Frequency set to 14254000 Hz via rigctld
+2025-09-29 23:55:33,834 - UHRR - INFO - Sending rigctld set command: F 14264000
+2025-09-29 23:55:33,984 - UHRR - DEBUG - rigctld set response to 'F 14264000': RPRT 0
+2025-09-29 23:55:33,984 - UHRR - INFO - rigctld set command 'F 14264000' successful
+2025-09-29 23:55:33,984 - UHRR - INFO - ✓ Frequency set to 14264000 Hz via rigctld
+2025-09-29 23:55:34,905 - UHRR - INFO - Sending rigctld set command: F 14263000
+2025-09-29 23:55:35,054 - UHRR - DEBUG - rigctld set response to 'F 14263000': RPRT 0
+2025-09-29 23:55:35,055 - UHRR - INFO - rigctld set command 'F 14263000' successful
+2025-09-29 23:55:35,055 - UHRR - INFO - ✓ Frequency set to 14263000 Hz via rigctld
+2025-09-29 23:55:35,203 - UHRR - INFO - Sending rigctld set command: F 14262900
+2025-09-29 23:55:35,353 - UHRR - DEBUG - rigctld set response to 'F 14262900': RPRT 0
+2025-09-29 23:55:35,353 - UHRR - INFO - rigctld set command 'F 14262900' successful
+2025-09-29 23:55:35,353 - UHRR - INFO - ✓ Frequency set to 14262900 Hz via rigctld
+2025-09-29 23:55:37,197 - UHRR - INFO - Sending rigctld set command: F 14263000
+2025-09-29 23:55:37,346 - UHRR - DEBUG - rigctld set response to 'F 14263000': RPRT 0
+2025-09-29 23:55:37,347 - UHRR - INFO - rigctld set command 'F 14263000' successful
+2025-09-29 23:55:37,347 - UHRR - INFO - ✓ Frequency set to 14263000 Hz via rigctld
+2025-09-29 23:55:38,273 - UHRR - INFO - Sending rigctld set command: F 14262000
+2025-09-29 23:55:38,422 - UHRR - DEBUG - rigctld set response to 'F 14262000': RPRT 0
+2025-09-29 23:55:38,422 - UHRR - INFO - rigctld set command 'F 14262000' successful
+2025-09-29 23:55:38,422 - UHRR - INFO - ✓ Frequency set to 14262000 Hz via rigctld
+2025-09-29 23:55:38,990 - UHRR - INFO - Sending rigctld set command: F 14261000
+2025-09-29 23:55:39,138 - UHRR - DEBUG - rigctld set response to 'F 14261000': RPRT 0
+2025-09-29 23:55:39,139 - UHRR - INFO - rigctld set command 'F 14261000' successful
+2025-09-29 23:55:39,139 - UHRR - INFO - ✓ Frequency set to 14261000 Hz via rigctld
+2025-09-29 23:55:39,699 - UHRR - INFO - Sending rigctld set command: F 14260000
+2025-09-29 23:55:39,848 - UHRR - DEBUG - rigctld set response to 'F 14260000': RPRT 0
+2025-09-29 23:55:39,848 - UHRR - INFO - rigctld set command 'F 14260000' successful
+2025-09-29 23:55:39,848 - UHRR - INFO - ✓ Frequency set to 14260000 Hz via rigctld
+2025-09-30 00:03:46,832 - UHRR - INFO - Sending rigctld set command: F 7050000
+2025-09-30 00:03:46,978 - UHRR - DEBUG - rigctld set response to 'F 7050000': RPRT 0
+2025-09-30 00:03:46,978 - UHRR - INFO - rigctld set command 'F 7050000' successful
+2025-09-30 00:03:46,978 - UHRR - INFO - ✓ Frequency set to 7050000 Hz via rigctld
+2025-09-30 00:03:48,113 - UHRR - INFO - Setting mode to: LSB
+2025-09-30 00:03:48,177 - UHRR - DEBUG - rigctld mode response to 'M LSB 2400': RPRT 0
+2025-09-30 00:03:48,177 - UHRR - INFO - ✓ Mode set to LSB via rigctld
+2025-09-30 00:03:56,439 - UHRR - INFO - Sending rigctld set command: F 14260000
+2025-09-30 00:03:56,589 - UHRR - DEBUG - rigctld set response to 'F 14260000': RPRT 0
+2025-09-30 00:03:56,589 - UHRR - INFO - rigctld set command 'F 14260000' successful
+2025-09-30 00:03:56,589 - UHRR - INFO - ✓ Frequency set to 14260000 Hz via rigctld
+2025-09-30 00:03:56,589 - UHRR - INFO - Setting mode to: USB
+2025-09-30 00:03:56,653 - UHRR - DEBUG - rigctld mode response to 'M USB 2400': RPRT 0
+2025-09-30 00:03:56,653 - UHRR - INFO - ✓ Mode set to USB via rigctld
+2025-09-30 00:03:59,904 - UHRR - INFO - Sending rigctld set command: F 7050000
+2025-09-30 00:04:00,049 - UHRR - DEBUG - rigctld set response to 'F 7050000': RPRT 0
+2025-09-30 00:04:00,050 - UHRR - INFO - rigctld set command 'F 7050000' successful
+2025-09-30 00:04:00,050 - UHRR - INFO - ✓ Frequency set to 7050000 Hz via rigctld
+2025-09-30 00:04:00,051 - UHRR - INFO - Setting mode to: LSB
+2025-09-30 00:04:00,114 - UHRR - DEBUG - rigctld mode response to 'M LSB 2400': RPRT 0
+2025-09-30 00:04:00,115 - UHRR - INFO - ✓ Mode set to LSB via rigctld
+2025-09-30 00:13:07,230 - tornado.access - INFO - 304 GET /rx_worklet_processor.js (2409:8a00:1894:9660:84e:6280:b8f7:34c8) 5.55ms
+2025-09-30 00:13:07,235 - tornado.access - INFO - 101 GET /WSaudioRX (2409:8a00:1894:9660:84e:6280:b8f7:34c8) 0.26ms
+2025-09-30 00:13:07,290 - tornado.access - INFO - 101 GET /WSaudioTX (2409:8a00:1894:9660:84e:6280:b8f7:34c8) 0.35ms
+2025-09-30 00:13:07,394 - tornado.access - INFO - 101 GET /WSCTRX (2409:8a00:1894:9660:84e:6280:b8f7:34c8) 0.45ms
+2025-09-30 00:13:07,452 - UHRR - INFO - Sending rigctld command: f
+2025-09-30 00:13:07,465 - UHRR - DEBUG - rigctld response to 'f': 7050000
+2025-09-30 00:13:07,465 - UHRR - INFO - rigctld command 'f' successful
+2025-09-30 00:13:07,466 - UHRR - INFO - Current frequency from rigctld: 7050000 Hz
+2025-09-30 00:13:07,466 - UHRR - INFO - Sending rigctld command: m
+2025-09-30 00:13:07,467 - UHRR - DEBUG - rigctld response to 'm': 2200
+2025-09-30 00:13:07,467 - UHRR - INFO - rigctld command 'm' successful
+2025-09-30 00:13:07,467 - UHRR - DEBUG - Raw mode response: '2200'
+2025-09-30 00:13:07,469 - UHRR - WARNING - IC-M710 returned only passband 2200, using stored mode LSB
+2025-09-30 00:14:55,869 - UHRR - INFO - Setting mode to: CW
+2025-09-30 00:14:55,943 - UHRR - DEBUG - rigctld mode response to 'M CW 500': RPRT 0
+2025-09-30 00:14:55,944 - UHRR - INFO - ✓ Mode set to CW via rigctld
+2025-09-30 00:15:16,727 - UHRR - INFO - Sending rigctld set command: F 7051000
+2025-09-30 00:15:16,875 - UHRR - DEBUG - rigctld set response to 'F 7051000': RPRT 0
+2025-09-30 00:15:16,875 - UHRR - INFO - rigctld set command 'F 7051000' successful
+2025-09-30 00:15:16,875 - UHRR - INFO - ✓ Frequency set to 7051000 Hz via rigctld
+2025-09-30 00:15:20,843 - UHRR - INFO - Sending rigctld set command: F 7052000
+2025-09-30 00:15:20,987 - UHRR - DEBUG - rigctld set response to 'F 7052000': RPRT 0
+2025-09-30 00:15:20,988 - UHRR - INFO - rigctld set command 'F 7052000' successful
+2025-09-30 00:15:20,988 - UHRR - INFO - ✓ Frequency set to 7052000 Hz via rigctld
+2025-09-30 00:15:23,804 - UHRR - INFO - Sending rigctld set command: F 7053000
+2025-09-30 00:15:23,949 - UHRR - DEBUG - rigctld set response to 'F 7053000': RPRT 0
+2025-09-30 00:15:23,950 - UHRR - INFO - rigctld set command 'F 7053000' successful
+2025-09-30 00:15:23,950 - UHRR - INFO - ✓ Frequency set to 7053000 Hz via rigctld

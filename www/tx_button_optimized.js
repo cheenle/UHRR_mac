@@ -11,7 +11,7 @@ let TXState = {
 };
 
 // 核心TX控制函数 - 详细日志版本
-function TXControl(action) {
+async function TXControl(action) {
     const timestamp = new Date().toISOString().substr(11, 12);
     console.log(`[${timestamp}] 🎯 TX控制: ${action}, 当前状态: ${TXState.isPressed}, 系统状态: ${poweron}`);
     
@@ -49,21 +49,54 @@ function TXControl(action) {
         
         // 执行TX功能 - 优先发送PTT命令
         try {
-            // 1. 立即发送PTT命令 - 最高优先级
-            console.log(`[${timestamp}] 🔧 立即发送PTT命令`);
+            // 0. 立即PTT优先，避免按下阶段无发射
+            console.log(`[${timestamp}] 🔧 按下即PTT:true`);
             if (typeof sendTRXptt === 'function') {
                 sendTRXptt(true);
-                console.log(`[${timestamp}] 📡 PTT命令已发送，WebSocket状态:`, wsControlTRX ? wsControlTRX.readyState : 'undefined');
-            } else {
-                console.error(`[${timestamp}] ❌ sendTRXptt函数未定义！`);
+                console.log(`[${timestamp}] 📡 已发送PTT:true`);
             }
+
+            // 1. 同步开始录音（发送 m:... 的 TX_init），并行让后端就绪
+            console.log(`[${timestamp}] 🔧 同步初始化TX（toggleRecord(true)）`);
+            toggleRecord(true);
+
+            // 2. 异步预热静音帧，避免阻塞UI
+            setTimeout(() => {
+                try {
+                    if (wsAudioTX && wsAudioTX.readyState === WebSocket.OPEN && typeof ap === 'object') {
+                        const warmup = new Float32Array(160);
+                        if (encode && ap && ap.opusEncoder) {
+                            const packets = ap.opusEncoder.encode_float(warmup);
+                            for (let i = 0; i < packets.length; i++) { wsAudioTX.send(packets[i]); }
+                        } else if (ap && ap.i16arr) {
+                            wsAudioTX.send(new Int16Array(warmup.length));
+                        }
+                    }
+                } catch(e) { console.warn('TX warmup skip:', e); }
+            }, 0);
+
+            // 3. PTT后再补3帧静音（异步分批），确保后端超时窗口中有数据
+            [20, 50, 80].forEach((delay)=>{
+                setTimeout(() => {
+                    try {
+                        if (wsAudioTX && wsAudioTX.readyState === WebSocket.OPEN && typeof ap === 'object') {
+                            const warm2 = new Float32Array(160);
+                            if (encode && ap && ap.opusEncoder) {
+                                const packets = ap.opusEncoder.encode_float(warm2);
+                                for (let i = 0; i < packets.length; i++) { wsAudioTX.send(packets[i]); }
+                            } else if (ap && ap.i16arr) {
+                                wsAudioTX.send(new Int16Array(warm2.length));
+                            }
+                        }
+                    } catch(e) { /* ignore */ }
+                }, delay);
+            });
             
             // 2. 然后执行其他功能
             console.log(`[${timestamp}] 🔧 调用button_pressed()`);
             button_pressed();
             
-            console.log(`[${timestamp}] 🔧 调用toggleRecord(true)`);
-            toggleRecord(true);
+            // toggleRecord(true) 已提前调用
             
             console.log(`[${timestamp}] 🔧 调用toggleaudioRX()`);
             toggleaudioRX();

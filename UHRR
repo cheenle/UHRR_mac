@@ -354,13 +354,18 @@ class WS_AudioTXHandler(tornado.websocket.WebSocketHandler):
 
 	def stoppttontimeout(self):
 		global last_AudioTXHandler_msg_time
+		# 使用未收帧计数法，减少瞬时抖动误判
+		if not hasattr(self, 'miss_count'):
+			self.miss_count = 0
 		try:
-			# PTT timeout should be immediate when no audio data is received
-			# This prevents PTT from staying on after user releases TX button
-			if time.time() > last_AudioTXHandler_msg_time + 0.5:  # 0.5 second timeout
-				if self.ws_connection and CTRX.infos["PTT"]==True:
+			# 每100ms检查一次，连续5次未收到帧（约0.5s）则熄灭PTT
+			if time.time() > last_AudioTXHandler_msg_time + 0.1:
+				self.miss_count += 1
+				if self.miss_count >= 5 and self.ws_connection and CTRX.infos["PTT"]==True:
 					CTRX.setPTT("false")
-					print("stop ptt on timeout (0.5s)")
+					print("stop ptt on timeout by miss_count (5x100ms)")
+			else:
+				self.miss_count = 0
 		except:
 			return None
 		# Check more frequently for faster response
@@ -407,6 +412,9 @@ class WS_AudioTXHandler(tornado.websocket.WebSocketHandler):
 	def on_message(self, data) :
 		global last_AudioTXHandler_msg_time
 		last_AudioTXHandler_msg_time=time.time()
+		# 收到数据即清零未收计数
+		if hasattr(self, 'miss_count'):
+			self.miss_count = 0
 		
 		if str(data).startswith('m:') :
 			self.TX_init(str(data[2:]))
