@@ -10,3 +10,22 @@
 2025-09-30 00:51:51,486 - UHRR - DEBUG - Raw mode response: '2200'
 2025-09-30 00:51:51,486 - UHRR - WARNING - IC-M710 returned only passband 2200, using stored mode USB
 2025-09-30 00:51:51,487 - asyncio - DEBUG - Using selector: KqueueSelector
+2025-09-30 00:58:52,125 - tornado.access - INFO - 200 GET / (2409:8a00:1894:9660:3187:9de5:2a4d:e381) 3.73ms
+2025-09-30 00:58:52,193 - tornado.access - INFO - 200 GET /style.css (2409:8a00:1894:9660:3187:9de5:2a4d:e381) 8.13ms
+2025-09-30 00:58:52,243 - tornado.access - INFO - 200 GET /img/poweroff.png (2409:8a00:1894:9660:3187:9de5:2a4d:e381) 27.79ms
+2025-09-30 00:58:52,284 - tornado.access - INFO - 200 GET /img/spinner.gif (2409:8a00:1894:9660:3187:9de5:2a4d:e381) 2.06ms
+2025-09-30 00:58:52,289 - tornado.access - INFO - 200 GET /tx_button_optimized.js (2409:8a00:1894:9660:3187:9de5:2a4d:e381) 1.01ms
+2025-09-30 00:58:52,314 - tornado.access - INFO - 200 GET /img/config.png (2409:8a00:1894:9660:3187:9de5:2a4d:e381) 1.09ms
+2025-09-30 00:58:52,325 - tornado.access - INFO - 200 GET /img/panfft.png (2409:8a00:1894:9660:3187:9de5:2a4d:e381) 1.08ms
+2025-09-30 00:58:52,345 - tornado.access - INFO - 200 GET /img/critsred.png (2409:8a00:1894:9660:3187:9de5:2a4d:e381) 1.44ms
+2025-09-30 00:58:52,352 - tornado.access - INFO - 200 GET /controls.js (2409:8a00:1894:9660:3187:9de5:2a4d:e381) 67.27ms
+2025-09-30 00:58:52,399 - tornado.access - INFO - 200 GET /img/smeter.png (2409:8a00:1894:9660:3187:9de5:2a4d:e381) 2.08ms
+2025-09-30 00:59:08,559 - tornado.access - INFO - 200 GET /img/poweron.png (2409:8a00:1894:9660:3187:9de5:2a4d:e381) 4.57ms
+2025-09-30 00:59:08,561 - tornado.access - INFO - 200 GET /img/critsgrey.png (2409:8a00:1894:9660:3187:9de5:2a4d:e381) 1.69ms
+2025-09-30 00:59:08,580 - tornado.access - INFO - 200 GET /rx_worklet_processor.js (2409:8a00:1894:9660:3187:9de5:2a4d:e381) 0.91ms
+2025-09-30 00:59:08,662 - tornado.access - INFO - 101 GET /WSaudioRX (2409:8a00:1894:9660:3187:9de5:2a4d:e381) 1.25ms
+2025-09-30 00:59:08,682 - tornado.access - INFO - 200 GET /img/critsgreen.png (2409:8a00:1894:9660:3187:9de5:2a4d:e381) 2.81ms
+2025-09-30 00:59:08,740 - tornado.access - INFO - 101 GET /WSaudioTX (2409:8a00:1894:9660:3187:9de5:2a4d:e381) 0.82ms
+2025-09-30 00:59:31,589 - tornado.access - INFO - 200 GET / (2409:8a00:1894:9660:3187:9de5:2a4d:e381) 4.04ms
+2025-09-30 00:59:35,693 - tornado.access - INFO - 101 GET /WSaudioRX (2409:8a00:1894:9660:3187:9de5:2a4d:e381) 0.83ms
+2025-09-30 00:59:35,698 - tornado.access - INFO - 101 GET /WSaudioTX (2409:8a00:1894:9660:3187:9de5:2a4d:e381) 0.43ms
