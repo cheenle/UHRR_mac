@@ -65,6 +65,10 @@ async function TXControl(action) {
                 try {
                     if (wsAudioTX && wsAudioTX.readyState === WebSocket.OPEN && typeof ap === 'object') {
                         const warmup = new Float32Array(160);
+                        // 添加轻微的音频信号而不是纯静音
+                        for(let i = 0; i < warmup.length; i++) {
+                            warmup[i] = Math.sin(i * 0.1) * 0.01; // 微弱的正弦波
+                        }
                         if (encode && ap && ap.opusEncoder) {
                             const packets = ap.opusEncoder.encode_float(warmup);
                             for (let i = 0; i < packets.length; i++) { wsAudioTX.send(packets[i]); }
@@ -75,12 +79,16 @@ async function TXControl(action) {
                 } catch(e) { console.warn('TX warmup skip:', e); }
             }, 0);
 
-            // 3. PTT后再补3帧静音（异步分批），确保后端超时窗口中有数据
-            [20, 50, 80].forEach((delay)=>{
+            // 3. PTT后再补5帧静音（异步分批），确保后端超时窗口中有数据
+            [20, 40, 60, 80, 100].forEach((delay)=>{
                 setTimeout(() => {
                     try {
                         if (wsAudioTX && wsAudioTX.readyState === WebSocket.OPEN && typeof ap === 'object') {
                             const warm2 = new Float32Array(160);
+                            // 添加轻微的音频信号而不是纯静音
+                            for(let i = 0; i < warm2.length; i++) {
+                                warm2[i] = Math.sin(i * 0.1) * 0.01; // 微弱的正弦波
+                            }
                             if (encode && ap && ap.opusEncoder) {
                                 const packets = ap.opusEncoder.encode_float(warm2);
                                 for (let i = 0; i < packets.length; i++) { wsAudioTX.send(packets[i]); }

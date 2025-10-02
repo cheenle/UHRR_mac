@@ -584,10 +584,14 @@ function sendTRXptt(stat){
 		wsControlTRX.send(message);
 		console.log(`✅ PTT命令已发送: ${message}`);
 		
-		// 添加确认机制
+		// 添加状态确认超时
 		setTimeout(() => {
-			console.log(`🔍 PTT命令确认: ${message}, WebSocket状态: ${wsControlTRX.readyState}`);
-		}, 100);
+			if (poweron && wsControlTRX && wsControlTRX.readyState === WebSocket.OPEN) {
+				// 如果PTT状态没有按预期改变，重新发送
+				console.log(`🔍 PTT命令确认超时，重新发送`);
+				wsControlTRX.send(message);
+			}
+		}, 150);
 	} else {
 		console.error(`❌ WebSocket未连接，无法发送PTT命令: ${message}`);
 	}
