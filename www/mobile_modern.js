@@ -18,9 +18,11 @@ let wsAudioTX = null;
 let audioContext = null;
 let audioRXSourceNode = null;
 let audioRXGainNode = null;
+let audioRXBiquadFilterNode = null; // Add filter node like desktop version
 let audioBufferReady = false;
-let audioRXAudioBuffer = [];
+let audioRXAudioBuffer = []; // Audio buffer queue
 let audioRXSampleRate = 24000; // Match server-side sample rate
+let audioRXProcessing = false; // Flag to prevent concurrent processing
 
 // DOM Elements
 const domElements = {
@@ -413,9 +415,39 @@ function connectWebSocket() {
                     audioContext = new (window.AudioContext || window.webkitAudioContext)({sampleRate: 24000});
                     console.log('Web Audio API initialized with sample rate: 24000');
                     
-                    // Create audio processing nodes
+                    // Create audio processing nodes like desktop version
                     audioRXGainNode = audioContext.createGain();
                     audioRXGainNode.gain.value = 0.8; // Set initial volume to 80%
+                    
+                    // Add biquad filter node like desktop version
+                    audioRXBiquadFilterNode = audioContext.createBiquadFilter();
+                    audioRXBiquadFilterNode.type = "lowshelf";
+                    // Clamp frequency to valid range (max 12000Hz for 24000Hz sample rate)
+                    audioRXBiquadFilterNode.frequency.setValueAtTime(12000, audioContext.currentTime);
+                    audioRXBiquadFilterNode.gain.setValueAtTime(0, audioContext.currentTime);
+                    
+                    // Try to use ScriptProcessor for better audio buffering like desktop version
+                    const BUFF_SIZE = 256;
+                    audioRXSourceNode = audioContext.createScriptProcessor(BUFF_SIZE, 1, 1);
+                    audioRXSourceNode.onaudioprocess = function(event) {
+                        var out = event.outputBuffer.getChannelData(0);
+                        if (audioRXAudioBuffer.length === 0) { 
+                            out.fill(0); 
+                            return; 
+                        }
+                        var cur = audioRXAudioBuffer[0];
+                        var n = Math.min(cur.length, out.length);
+                        for (var j = 0; j < n; j++) out[j] = cur[j];
+                        for (var k = n; k < out.length; k++) out[k] = 0;
+                        if (n >= cur.length) audioRXAudioBuffer.shift(); else audioRXAudioBuffer[0] = cur.slice(n);
+                    };
+                    
+                    // Connect nodes: source -> filter -> gain -> destination
+                    audioRXSourceNode.connect(audioRXBiquadFilterNode);
+                    audioRXBiquadFilterNode.connect(audioRXGainNode);
+                    audioRXGainNode.connect(audioContext.destination);
+                    
+                    console.log('Audio processing nodes initialized');
                 } catch (e) {
                     console.error('Web Audio API initialization failed:', e);
                 }
@@ -423,29 +455,27 @@ function connectWebSocket() {
         };
         
         wsAudioRX.onmessage = function(event) {
-            // Handle incoming audio data
+            // Handle incoming audio data using buffer queue like desktop version
             if (event.data instanceof ArrayBuffer) {
                 try {
-                    // Convert received data to Float32Array
+                    // 码率统计：RX (borrowed from desktop version)
+                    if (!window.__rxBytes) { window.__rxBytes = 0; }
+                    if (event.data && event.data.byteLength) {
+                        window.__rxBytes += event.data.byteLength;
+                    }
+                    
+                    // Convert received data to Float32Array and add to buffer queue
                     const audioData = new Float32Array(event.data);
                     
-                    // Play audio if context is running
-                    if (audioContext && audioContext.state === 'running') {
-                        const buffer = audioContext.createBuffer(1, audioData.length, 24000);
-                        buffer.copyToChannel(audioData, 0);
-                        
-                        const source = audioContext.createBufferSource();
-                        source.buffer = buffer;
-                        
-                        // Connect through gain node for volume control
-                        if (audioRXGainNode) {
-                            source.connect(audioRXGainNode);
-                            audioRXGainNode.connect(audioContext.destination);
-                        } else {
-                            source.connect(audioContext.destination);
-                        }
-                        source.start();
+                    // 限制缓冲区大小，防止累积过多音频数据 (borrowed from desktop version)
+                    if (audioRXAudioBuffer.length > 10) {
+                        console.log('⚠️ 音频缓冲区过大，清除旧数据');
+                        audioRXAudioBuffer = audioRXAudioBuffer.slice(-5); // 只保留最新的5个缓冲区
                     }
+                    
+                    audioRXAudioBuffer.push(audioData);
+                    console.log('DEBUG: Audio buffer length after push:', audioRXAudioBuffer.length);
+                    
                 } catch (error) {
                     console.error('Error processing audio data:', error);
                 }
