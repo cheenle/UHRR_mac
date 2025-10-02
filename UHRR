@@ -816,6 +816,9 @@ class TRXRIG:
 		ptt_value = 1 if ptt_state else 0
 		logger.info(f"Setting PTT: status={status}, ptt_state={ptt_state}, ptt_value={ptt_value}")
 		
+		# 保存旧的PTT状态
+		old_ptt_state = self.infos.get("PTT", False)
+		
 		if self.rig == "rigctld_daemon":
 			# Use faster, direct command for PTT to reduce lag
 			try:
@@ -830,7 +833,6 @@ class TRXRIG:
 				if response == "RPRT 0":
 					self.infos["PTT"] = ptt_state
 					logger.info(f"✓ PTT set to {status} via rigctld (fast)")
-					return ptt_state
 				else:
 					logger.error(f"PTT command failed: {response}")
 			except Exception as e:
@@ -849,6 +851,18 @@ class TRXRIG:
 					logger.error(f"Failed to set PTT, error code: {result}")
 			except Exception as e:
 				logger.error(f"Error setting PTT: {e}")
+		
+		# 如果PTT状态发生变化，广播新状态
+		new_ptt_state = self.infos.get("PTT", False)
+		if old_ptt_state != new_ptt_state:
+			# 广播PTT状态变化
+			try:
+				global ControlTRXHandlerClients
+				for client in ControlTRXHandlerClients:
+					client.write_message(f"getPTT:{str(new_ptt_state).lower()}")
+			except Exception as e:
+				logger.error(f"Error broadcasting PTT status: {e}")
+		
 		return self.infos.get("PTT", False)
 		
 	def getPTT(self,status):
@@ -908,6 +922,8 @@ class WS_ControlTRX(tornado.websocket.WebSocketHandler):
 			if self.StrgLVL != CTRX.infos["StrgLVL"]:
 				self.write_message("getSignalLevel:"+str(CTRX.infos["StrgLVL"]))
 				self.StrgLVL=CTRX.infos["StrgLVL"]
+			# 定期发送PTT状态
+			self.write_message("getPTT:"+str(CTRX.infos["PTT"]).lower())
 		except:
 			print("error TXMETER")
 			return None

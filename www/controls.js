@@ -466,6 +466,16 @@ function ControlTRX_start(){
 	wsControlTRX.onclose = wsControlTRXclose;
 	wsControlTRX.onerror = wsControlTRXerror;
 	wsControlTRX.onmessage = wsControlTRXcrtol;
+	
+	// 定期查询PTT状态，确保同步
+	if (window.pttQueryInterval) {
+		clearInterval(window.pttQueryInterval);
+	}
+	window.pttQueryInterval = setInterval(() => {
+		if (wsControlTRX && wsControlTRX.readyState === WebSocket.OPEN) {
+			wsControlTRX.send("getPTT");
+		}
+	}, 2000); // 每2秒查询一次
 }
 
 var SignalLevel=0;
@@ -475,12 +485,20 @@ function wsControlTRXcrtol( msg ){
 	else if(words[0] == "getFreq"){showTRXfreq(words[1]);TRXfrequency=parseInt(words[1]);if (typeof panfft !== 'undefined') {panfft.setcenterfrequency(words[1]);}}
 	else if(words[0] == "getMode"){showTRXmode(words[1]);}
 	else if(words[0] == "getSignalLevel"){SignalLevel=words[1];drawRXSmeter();}
+	else if(words[0] == "getPTT"){updatePTTStatus(words[1] === "true");}
 	else if(words[0] == "panfft"){document.getElementById("div-panfft").style.display = "block";}
 }
 
 function ControlTRX_stop()
 {
 	wsControlTRX.close();
+	// 清理PTT状态查询定时器
+	if (window.pttQueryInterval) {
+		clearInterval(window.pttQueryInterval);
+		window.pttQueryInterval = null;
+	}
+	// 重置PTT状态显示
+	updatePTTStatus(false);
 } 
 
 function ControlTRX_getFreq(){
@@ -496,6 +514,13 @@ function wsControlTRXopen(){
 
 function wsControlTRXclose(){
 	document.getElementById("indwsControlTRX").innerHTML='<img src="img/critsred.png">wsCtrl';
+	// 清理PTT状态查询定时器
+	if (window.pttQueryInterval) {
+		clearInterval(window.pttQueryInterval);
+		window.pttQueryInterval = null;
+	}
+	// 重置PTT状态显示
+	updatePTTStatus(false);
 }
 
 function wsControlTRXerror(err){
@@ -584,6 +609,9 @@ function sendTRXptt(stat){
 		wsControlTRX.send(message);
 		console.log(`✅ PTT命令已发送: ${message}`);
 		
+		// 更新本地PTT状态显示
+		updatePTTStatus(stat === "true");
+		
 		// 添加状态确认超时
 		setTimeout(() => {
 			if (poweron && wsControlTRX && wsControlTRX.readyState === WebSocket.OPEN) {
@@ -594,6 +622,20 @@ function sendTRXptt(stat){
 		}, 150);
 	} else {
 		console.error(`❌ WebSocket未连接，无法发送PTT命令: ${message}`);
+	}
+}
+
+// 添加PTT状态更新函数
+function updatePTTStatus(isPTTOn) {
+	const pttIndicator = document.getElementById('ptt-status-indicator');
+	if (pttIndicator) {
+		if (isPTTOn) {
+			pttIndicator.textContent = 'PTT: ON';
+			pttIndicator.style.color = '#00ff00'; // 绿色表示发射中
+		} else {
+			pttIndicator.textContent = 'PTT: OFF';
+			pttIndicator.style.color = '#ff4444'; // 红色表示未发射
+		}
 	}
 }	
 
