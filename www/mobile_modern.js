@@ -409,8 +409,9 @@ function connectWebSocket() {
             // Initialize Web Audio API for audio playback
             if (!audioContext) {
                 try {
-                    audioContext = new (window.AudioContext || window.webkitAudioContext)({sampleRate: 8000});
-                    console.log('Web Audio API initialized with sample rate: 8000');
+                    // Use 24000Hz sample rate to match server-side configuration
+                    audioContext = new (window.AudioContext || window.webkitAudioContext)({sampleRate: 24000});
+                    console.log('Web Audio API initialized with sample rate: 24000');
                     
                     // Create audio processing nodes
                     audioRXGainNode = audioContext.createGain();
@@ -430,7 +431,7 @@ function connectWebSocket() {
                     
                     // Play audio if context is running
                     if (audioContext && audioContext.state === 'running') {
-                        const buffer = audioContext.createBuffer(1, audioData.length, 8000);
+                        const buffer = audioContext.createBuffer(1, audioData.length, 24000);
                         buffer.copyToChannel(audioData, 0);
                         
                         const source = audioContext.createBufferSource();
