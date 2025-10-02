@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="HamRadio">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#1a1a1a">
+    <title>Ham Radio Modern Mobile</title>
+    <link rel="apple-touch-icon" href="favicon.png">
+    <link rel="manifest" href="manifest.json">
+    <link rel="stylesheet" type="text/css" href="mobile_modern.css">
+</head>
+<body>
+    <!-- Safe area insets for iPhone X+ -->
+    <div class="safe-area-top"></div>
+    
+    <!-- Main container with bottom navigation -->
+    <div class="mobile-modern-container">
+        <!-- Header with essential controls -->
+        <header class="app-header">
+            <div class="header-main">
+                <button id="menu-toggle" class="header-btn menu-btn" aria-label="Menu">
+                    <span class="hamburger"></span>
+                </button>
+                
+                <div class="frequency-display-large">
+                    <div class="freq-main" id="freq-main-display">
+                        <span class="freq-digit" id="freq-100mhz">0</span>
+                        <span class="freq-digit" id="freq-10mhz">0</span>
+                        <span class="freq-digit" id="freq-1mhz">7</span>
+                        <span class="freq-separator">.</span>
+                        <span class="freq-digit" id="freq-100khz">0</span>
+                        <span class="freq-digit" id="freq-10khz">5</span>
+                        <span class="freq-digit" id="freq-1khz">3</span>
+                        <span class="freq-separator">.</span>
+                        <span class="freq-digit" id="freq-100hz">0</span>
+                        <span class="freq-digit" id="freq-10hz">0</span>
+                        <span class="freq-digit" id="freq-1hz">0</span>
+                        <span class="freq-unit">MHz</span>
+                    </div>
+                    <div class="freq-sub">
+                        <span class="vfo-indicator" id="vfo-indicator">VFO-A</span>
+                        <span class="mode-indicator" id="mode-indicator">USB</span>
+                    </div>
+                </div>
+                
+                <button id="power-btn" class="header-btn power-btn" aria-label="Power">
+                    <span class="power-icon">⏻</span>
+                </button>
+            </div>
+            
+            <!-- Status indicators -->
+            <div class="status-bar">
+                <div class="status-item connected" id="status-ctrl">CTRL</div>
+                <div class="status-item" id="status-rx">RX</div>
+                <div class="status-item" id="status-tx">TX</div>
+                <div class="signal-strength">
+                    <div class="signal-bars">
+                        <div class="signal-bar"></div>
+                        <div class="signal-bar"></div>
+                        < div class="signal-bar"></div>
+                        <div class="signal-bar"></div>
+                        <div class="signal-bar"></div>
+                    </div>
+                    <span class="signal-text">S9</span>
+                </div>
+            </div>
+        </header>
+        
+        <!-- Main content area -->
+        <main class="main-content">
+            <!-- S-Meter visualization -->
+            <section class="s-meter-section">
+                <canvas id="s-meter-canvas" width="350" height="100"></canvas>
+                <div class="s-meter-labels">
+                    <span>S1</span>
+                    <span>S3</span>
+                    <span>S5</span>
+                    <span>S7</span>
+                    <span>S9</span>
+                    <span>+20</span>
+                    <span>+40</span>
+                    <span>+60</span>
+                </div>
+            </section>
+            
+            <!-- Quick controls -->
+            <section class="quick-controls">
+                <div class="control-row">
+                    <button class="quick-btn vfo-btn active" id="vfo-a-btn">VFO A</button>
+                    <button class="quick-btn vfo-btn" id="vfo-b-btn">VFO B</button>
+                    <button class="quick-btn mode-btn" id="mode-btn">USB</button>
+                </div>
+                
+                <div class="control-row">
+                    <button class="quick-btn band-btn" id="band-btn">20m</button>
+                    <button class="quick-btn filter-btn" id="filter-btn">MID</button>
+                    <button class="quick-btn step-btn" id="step-btn">10Hz</button>
+                </div>
+            </section>
+            
+            <!-- Frequency tuning -->
+            <section class="frequency-tuning">
+                <div class="tuning-controls">
+                    <button class="tune-btn" id="tune-down-1k" data-step="-1000">-1k</button>
+                    <button class="tune-btn" id="tune-down-100" data-step="-100">-100</button>
+                    <button class="tune-btn" id="tune-down-10" data-step="-10">-10</button>
+                    <button class="tune-btn" id="tune-up-10" data-step="10">+10</button>
+                    <button class="tune-btn" id="tune-up-100" data-step="100">+100</button>
+                    <button class="tune-btn" id="tune-up-1k" data-step="1000">+1k</button>
+                </div>
+            </section>
+        </main>
+        
+        <!-- PTT Section - Bottom of screen for easy access -->
+        <footer class="ptt-section">
+            <div class="ptt-container">
+                <button id="ptt-btn" class="ptt-button" aria-label="Push to Talk">
+                    <span class="ptt-label">PTT</span>
+                    <span class="ptt-sublabel">TAP & HOLD</span>
+                </button>
+            </div>
+            
+            <!-- Bottom navigation -->
+            <nav class="bottom-nav">
+                <button class="nav-btn active" data-tab="main">
+                    <span class="nav-icon">📻</span>
+                    <span class="nav-label">Radio</span>
+                </button>
+                <button class="nav-btn" data-tab="memory">
+                    <span class="nav-icon">💾</span>
+                    <span class="nav-label">Memory</span>
+                </button>
+                <button class="nav-btn" data-tab="settings">
+                    <span class="nav-icon">⚙️</span>
+                    <span class="nav-label">Settings</span>
+                </button>
+                <button class="nav-btn" data-tab="digital">
+                    <span class="nav-icon">💻</span>
+                    <span class="nav-label">Digital</span>
+                </button>
+            </nav>
+        </footer>
+    </div>
+    
+    <!-- Off-canvas menu -->
+    <div class="off-canvas-menu" id="main-menu">
+        <div class="menu-header">
+            <h2>Menu</h2>
+            <button id="menu-close" class="menu-close-btn">×</button>
+        </div>
+        <div class="menu-content">
+            <ul class="menu-list">
+                <li><a href="#" class="menu-item" data-action="bands">Band Selection</a></li>
+                <li><a href="#" class="menu-item" data-action="modes">Mode Selection</a></li>
+                <li><a href="#" class="menu-item" data-action="memory">Memory Management</a></li>
+                <li><a href="#" class="menu-item" data-action="settings">Radio Settings</a></li>
+                <li><a href="#" class="menu-item" data-action="audio">Audio Controls</a></li>
+                <li><a href="#" class="menu-item" data-action="digital">Digital Modes</a></li>
+                <li><a href="#" class="menu-item" data-action="logbook">Logbook</a></li>
+                <li><a href="#" class="menu-item" data-action="about">About</a></li>
+            </ul>
+        </div>
+    </div>
+    
+    <!-- Overlay for off-canvas menu -->
+    <div class="menu-overlay" id="menu-overlay"></div>
+    
+    <!-- Safe area insets for iPhone X+ -->
+    <div class="safe-area-bottom"></div>
+    
+    <script src="mobile_modern.js"></script>
+</body>
+</html>
