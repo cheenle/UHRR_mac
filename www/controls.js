@@ -614,14 +614,34 @@ function sendTRXptt(stat){
 		// 不再在这里更新本地PTT状态显示，而是等待设备反馈
 		// updatePTTStatus(stat === "true");
 		
-		// 添加状态确认超时
-		setTimeout(() => {
+		// 添加更强的状态确认机制
+		let retries = 0;
+		const maxRetries = 3;
+		const retryInterval = 100; // 100ms
+		
+		const confirmPTT = () => {
 			if (poweron && wsControlTRX && wsControlTRX.readyState === WebSocket.OPEN) {
-				// 如果PTT状态没有按预期改变，重新发送
-				console.log(`🔍 PTT命令确认超时，重新发送`);
-				wsControlTRX.send(message);
+				// 查询当前PTT状态确认
+				wsControlTRX.send("getPTT");
+				
+				// 设置更短的确认超时
+				setTimeout(() => {
+					// 这里我们不直接检查状态，而是依赖WebSocket消息处理
+					// 如果在一定时间内没有收到确认，重新发送
+					retries++;
+					if (retries < maxRetries) {
+						console.log(`🔍 PTT命令确认超时，第${retries}次重试`);
+						wsControlTRX.send(message);
+						confirmPTT();
+					} else {
+						console.error(`❌ PTT命令发送失败，已重试${maxRetries}次`);
+					}
+				}, retryInterval);
 			}
-		}, 150);
+		};
+		
+		// 立即开始确认
+		setTimeout(confirmPTT, 50);
 	} else {
 		console.error(`❌ WebSocket未连接，无法发送PTT命令: ${message}`);
 	}

@@ -358,18 +358,19 @@ class WS_AudioTXHandler(tornado.websocket.WebSocketHandler):
 		if not hasattr(self, 'miss_count'):
 			self.miss_count = 0
 		try:
-			# 每150ms检查一次，连续7次未收到帧（约1.05s）则熄灭PTT
-			if time.time() > last_AudioTXHandler_msg_time + 0.15:
+			# 每200ms检查一次，连续10次未收到帧（约2秒）则熄灭PTT
+			# 增加容忍度以应对网络延迟和浏览器处理延迟
+			if time.time() > last_AudioTXHandler_msg_time + 0.2:
 				self.miss_count += 1
-				if self.miss_count >= 7 and self.ws_connection and CTRX.infos["PTT"]==True:
+				if self.miss_count >= 10 and self.ws_connection and CTRX.infos["PTT"]==True:
 					CTRX.setPTT("false")
-					print("stop ptt on timeout by miss_count (7x150ms)")
+					print("stop ptt on timeout by miss_count (10x200ms)")
 			else:
 				self.miss_count = 0
 		except:
 			return None
 		# Check more frequently for faster response
-		tornado.ioloop.IOLoop.instance().add_timeout(datetime.timedelta(seconds=0.15), self.stoppttontimeout)
+		tornado.ioloop.IOLoop.instance().add_timeout(datetime.timedelta(seconds=0.2), self.stoppttontimeout)
 
 
 	def TX_init(self, msg) :
@@ -819,38 +820,56 @@ class TRXRIG:
 		# 保存旧的PTT状态
 		old_ptt_state = self.infos.get("PTT", False)
 		
-		if self.rig == "rigctld_daemon":
-			# Use faster, direct command for PTT to reduce lag
-			try:
-				import socket
-				sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-				sock.settimeout(1)  # Reduced timeout for faster response
-				sock.connect(('127.0.0.1', 4532))
-				command = f"T {ptt_value}\n"
-				sock.sendall(command.encode())
-				response = sock.recv(1024).decode().strip()
-				sock.close()
-				if response == "RPRT 0":
-					self.infos["PTT"] = ptt_state
-					logger.info(f"✓ PTT set to {status} via rigctld (fast)")
-				else:
-					logger.error(f"PTT command failed: {response}")
-			except Exception as e:
-				logger.error(f"Fast PTT command failed: {e}")
-		elif not self.rig:
-			self.infos["PTT"] = ptt_state
-			logger.info(f"Simulated: PTT set to {status}")
-		else:
-			try:
-				vfo = self.infos.get("VFO", 1)  # Default to VFO A
-				result = self.rig.rig_set_ptt(vfo, ptt_value)
-				if result == 0:
-					self.infos["PTT"] = ptt_state
-					logger.info(f"PTT set to {status}")
-				else:
-					logger.error(f"Failed to set PTT, error code: {result}")
-			except Exception as e:
-				logger.error(f"Error setting PTT: {e}")
+		# 增加重试机制确保PTT命令成功执行
+		max_retries = 3
+		success = False
+		
+		for attempt in range(max_retries):
+			if self.rig == "rigctld_daemon":
+				# Use faster, direct command for PTT to reduce lag
+				try:
+					import socket
+					sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+					sock.settimeout(1)  # Reduced timeout for faster response
+					sock.connect(('127.0.0.1', 4532))
+					command = f"T {ptt_value}\n"
+					sock.sendall(command.encode())
+					response = sock.recv(1024).decode().strip()
+					sock.close()
+					if response == "RPRT 0":
+						self.infos["PTT"] = ptt_state
+						logger.info(f"✓ PTT set to {status} via rigctld (fast) on attempt {attempt + 1}")
+						success = True
+						break
+					else:
+						logger.error(f"PTT command failed on attempt {attempt + 1}: {response}")
+				except Exception as e:
+					logger.error(f"Fast PTT command failed on attempt {attempt + 1}: {e}")
+			elif not self.rig:
+				self.infos["PTT"] = ptt_state
+				logger.info(f"Simulated: PTT set to {status}")
+				success = True
+				break
+			else:
+				try:
+					vfo = self.infos.get("VFO", 1)  # Default to VFO A
+					result = self.rig.rig_set_ptt(vfo, ptt_value)
+					if result == 0:
+						self.infos["PTT"] = ptt_state
+						logger.info(f"PTT set to {status} on attempt {attempt + 1}")
+						success = True
+						break
+					else:
+						logger.error(f"Failed to set PTT on attempt {attempt + 1}, error code: {result}")
+				except Exception as e:
+					logger.error(f"Error setting PTT on attempt {attempt + 1}: {e}")
+			
+			# 如果失败且还有重试机会，等待一小段时间再重试
+			if not success and attempt < max_retries - 1:
+				time.sleep(0.05)  # 50ms延迟
+		
+		if not success:
+			logger.error(f"❌ Failed to set PTT after {max_retries} attempts")
 		
 		# 如果PTT状态发生变化，广播新状态
 		new_ptt_state = self.infos.get("PTT", False)
