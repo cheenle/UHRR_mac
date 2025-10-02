@@ -977,6 +977,8 @@ class WS_ControlTRX(tornado.websocket.WebSocketHandler):
 			yield self.send_to_all_clients("getMode:"+str(CTRX.getMode()))	
 		elif(action == "setMode"):
 			yield self.send_to_all_clients("getMode:"+str(CTRX.setMode(datato)))
+		elif(action == "getPTT"):
+			yield self.send_to_all_clients("getPTT:"+str(CTRX.getPTT()).lower())
 
 		LastPing = time.time();
 			

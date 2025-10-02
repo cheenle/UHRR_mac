@@ -475,7 +475,7 @@ function ControlTRX_start(){
 		if (wsControlTRX && wsControlTRX.readyState === WebSocket.OPEN) {
 			wsControlTRX.send("getPTT");
 		}
-	}, 2000); // 每2秒查询一次
+	}, 5000); // 每5秒查询一次，避免过于频繁
 }
 
 var SignalLevel=0;
@@ -510,6 +510,8 @@ function wsControlTRXopen(){
 	document.getElementById("indwsControlTRX").innerHTML='<img src="img/critsgreen.png">wsCtrl';
 	wsControlTRX.send("getFreq:");
 	wsControlTRX.send("getMode:");
+	// 连接建立后立即查询PTT状态
+	wsControlTRX.send("getPTT");
 }
 
 function wsControlTRXclose(){
@@ -609,8 +611,8 @@ function sendTRXptt(stat){
 		wsControlTRX.send(message);
 		console.log(`✅ PTT命令已发送: ${message}`);
 		
-		// 更新本地PTT状态显示
-		updatePTTStatus(stat === "true");
+		// 不再在这里更新本地PTT状态显示，而是等待设备反馈
+		// updatePTTStatus(stat === "true");
 		
 		// 添加状态确认超时
 		setTimeout(() => {
