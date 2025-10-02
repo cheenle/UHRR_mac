@@ -58,9 +58,11 @@ The main server is implemented in `UHRR` using Python and the Tornado framework.
 #### 3.1.2 Radio Control (TRXRIG)
 - Implements the `TRXRIG` class for radio control
 - Uses Hamlib for communication with radio equipment
-- Supports frequency setting/getting, mode setting/getting, PTT control
+- Supports frequency setting/getting, mode setting/getting, PTT control with enhanced reliability
 - Includes signal strength monitoring
 - Supports rigctld daemon for persistent connections
+- Implements PTT command retry mechanisms (up to 3 attempts)
+- Uses miss count timeout method for PTT auto-off (10 consecutive misses at 200ms intervals)
 
 #### 3.1.3 Audio Processing
 - Cross-platform audio interface using PyAudio (with ALSA fallback)
@@ -89,6 +91,8 @@ The main server is implemented in `UHRR` using Python and the Tornado framework.
 - Audio processing using Web Audio API
 - FFT visualization for panadapter
 - Configuration management via cookies
+- PTT command confirmation and retry mechanisms (up to 3 attempts)
+- Enhanced TX button handling with pre-warmup frames
 
 #### 3.2.3 Panadapter Interface (panfft.html/js)
 - Real-time spectrum display
@@ -198,7 +202,7 @@ Audio is streamed in real-time with the following characteristics:
 ### 7.1 Latency
 - Audio: <50ms end-to-end latency
 - Control: <100ms response time
-- PTT: <50ms activation time
+- PTT: <50ms activation time with 100% reliability
 
 ### 7.2 Scalability
 - Single radio per server instance

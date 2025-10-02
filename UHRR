@@ -514,6 +514,7 @@ class TRXRIG:
 		self.infos["MODE"] = "USB"
 		self.infos["VFO"] = 0
 		self.infos["StrgLVL"] = "0"
+		self.infos["PTT"] = False
 		
 		if self.rig:
 			print("Radio control initialized successfully")
@@ -522,6 +523,8 @@ class TRXRIG:
 			self.getvfo()
 			self.getFreq()
 			self.getMode()
+			# Start PTT monitoring after radio is initialized
+			self.start_ptt_monitoring()
 		else:
 			print("Running in simulation mode - radio commands will be simulated")
 		
@@ -884,8 +887,41 @@ class TRXRIG:
 		
 		return self.infos.get("PTT", False)
 		
-	def getPTT(self,status):
-		return self.infos["PTT"]
+	def getPTT(self):
+		"""Get actual PTT state from radio hardware when possible, fallback to stored state"""
+		# If we have radio connection, query actual PTT state
+		if self.rig == "rigctld_daemon":
+			actual_ptt = self._rigctld_get_ptt()
+			if actual_ptt is not None:
+				# Update stored state to match actual hardware state
+				self.infos["PTT"] = actual_ptt
+				return actual_ptt
+		
+		# Fallback to stored state
+		return self.infos.get("PTT", False)
+	
+	def _rigctld_get_ptt(self):
+		"""Get actual PTT state from rigctld daemon"""
+		logger.info("Querying actual PTT state from rigctld")
+		try:
+			import socket
+			sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+			sock.settimeout(3)
+			sock.connect(('127.0.0.1', 4532))
+			# Send 't' command to get PTT state (0 = off, 1 = on)
+			sock.sendall(b"t\n")
+			response = sock.recv(1024).decode().strip()
+			sock.close()
+			logger.debug(f"rigctld PTT response: {response}")
+			
+			# Parse response (rigctld returns 0 for off, 1 for on)
+			if response.isdigit():
+				ptt_state = bool(int(response))
+				logger.info(f"Actual PTT state from rigctld: {ptt_state}")
+				return ptt_state
+		except Exception as e:
+			logger.error(f"Error querying PTT state from rigctld: {e}")
+		return None
 		
 	def setPower(self,status=1):
 		if self.rig == "rigctl_subprocess":
@@ -917,6 +953,42 @@ class TRXRIG:
 				print(f"Error setting power: {e}")
 				self.infos["powerstat"] = status  # Set anyway for consistency
 		return self.infos.get("powerstat", 1)
+	
+	def start_ptt_monitoring(self):
+		"""Start background thread to monitor actual PTT state"""
+		if self.rig == "rigctld_daemon":  # Only if we have radio connection
+			import threading
+			monitor_thread = threading.Thread(target=self._ptt_monitor_loop, daemon=True)
+			monitor_thread.start()
+			logger.info("Started PTT monitoring thread")
+	
+	def _ptt_monitor_loop(self):
+		"""Background loop to monitor PTT state"""
+		import time
+		while True:
+			try:
+				# Get actual PTT state
+				actual_ptt = self._rigctld_get_ptt()
+				if actual_ptt is not None:
+					stored_ptt = self.infos.get("PTT", False)
+					
+					# If states differ, update and broadcast
+					if actual_ptt != stored_ptt:
+						logger.warning(f"PTT state mismatch - Stored: {stored_ptt}, Actual: {actual_ptt}")
+						self.infos["PTT"] = actual_ptt
+						
+						# Broadcast the corrected state
+						global ControlTRXHandlerClients
+						for client in ControlTRXHandlerClients:
+							try:
+								client.write_message(f"getPTT:{str(actual_ptt).lower()}")
+							except Exception as e:
+								logger.error(f"Error broadcasting PTT state: {e}")
+				
+				time.sleep(2)  # Check every 2 seconds
+			except Exception as e:
+				logger.error(f"Error in PTT monitoring loop: {e}")
+				time.sleep(5)  # Back off on error
 
 class ticksTRXRIG(threading.Thread):
 

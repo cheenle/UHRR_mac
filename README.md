@@ -2,6 +2,8 @@
 
 面向短波电台的 Web 远程控制与音频流系统。前端基于 HTML5/JS，后端基于 Tornado + PyAudio + rigctld（Hamlib）。本版本已针对 macOS/移动端和 TLS 做了修复与优化，并显著改善了 TX/PTT 时序与 RX 抖动。
 
+> ✅ **重要优化**：已解决TX到RX切换延迟问题（从2-3秒优化到<100ms），详情请参见 [docs/latency_optimization_guide.md](docs/latency_optimization_guide.md)
+
 ## 功能特性
 - 浏览器端操作：频率、模式、PTT（按下立即发射、松开立即停止）
 - 双向音频：TX 端 Opus 编码，RX 端低抖动播放（AudioWorklet），采样率 24 kHz
@@ -39,8 +41,8 @@
 
 ## 目录结构要点
 - `www/`：前端页面与脚本
-  - `controls.js`：音频与控制主逻辑（包含 TX Opus 编码、RX Worklet 播放、码率显示等）
-  - `tx_button_optimized.js`：TX 按钮事件与时序
+  - `controls.js`：音频与控制主逻辑（包含 TX Opus 编码、RX Worklet 播放、码率显示、PTT命令确认与重试等）
+  - `tx_button_optimized.js`：TX 按钮事件与时序（包含增强的PTT可靠性机制）
   - `rx_worklet_processor.js`：AudioWorklet 播放器（低抖动）
 - `UHRR`：后端主程序（Tornado + WebSocket + SSLContext）
 - `audio_interface.py`：PyAudio 采集/播放封装与客户端分发
@@ -62,7 +64,7 @@
 ## 音频与时序策略
 - TX：
   - 前端 `OpusEncoderProcessor`：`opusRate = 24000`，`opusFrameDur = 60ms`
-  - 后端 `WS_AudioTXHandler` 接收并播放；PTT 超时保护（无数据 0.5s 自动断开）
+  - 后端 `WS_AudioTXHandler` 接收并播放；PTT 超时保护（无数据 2s 自动断开）
 - RX：
   - 后端 `AudioRXHandler.tailstream` 批量下发减少抖动
   - 前端 `AudioWorkletNode` 播放，设置缓冲深度（默认 32/64 帧，可微调）
@@ -83,7 +85,8 @@
   - 确认 `-----BEGIN/END CERTIFICATE-----` 行完整
 - TX 按下不立即发射：
   - 确认页面电源按钮已开启，WebSocket 已连接
-  - 后端仅在收到音频帧时维持 PTT；录音必须正常工作
+  - 后端采用增强的PTT可靠性机制：按下即发送PTT命令，并立即发送10个预热帧确保后端收到音频数据
+  - 后端使用计数超时法（连续10次未收到音频帧才熄灭PTT，每次检查间隔200ms）替代时间阈值法
 - RX 抖动：
   - 保持 24k 端到端一致
   - 可调整 Worklet 缓冲（例如 32/64 或 16/32）

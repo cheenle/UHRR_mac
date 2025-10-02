@@ -131,6 +131,16 @@ async function TXControl(action) {
             if (typeof sendTRXptt === 'function') {
                 sendTRXptt(false);
                 console.log(`[${timestamp}] 📡 PTT停止命令已发送，WebSocket状态:`, wsControlTRX ? wsControlTRX.readyState : 'undefined');
+                
+                // 立即清除RX音频缓冲区以减少TX->RX切换延迟
+                if (typeof AudioRX_source_node !== 'undefined' && AudioRX_source_node && AudioRX_source_node.port) {
+                    try {
+                        AudioRX_source_node.port.postMessage({type: 'flush'});
+                        console.log(`[${timestamp}] 🔄 RX工作节点缓冲区在PTT释放后立即清除`);
+                    } catch(e) {
+                        console.log(`[${timestamp}] ⚠️ 清除RX工作节点缓冲区时出错:`, e);
+                    }
+                }
             } else {
                 console.error(`[${timestamp}] ❌ sendTRXptt函数未定义！`);
             }

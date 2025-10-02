@@ -215,8 +215,10 @@ function AudioRX_start(){
         try {
             await AudioRX_context.audioWorklet.addModule('rx_worklet_processor.js');
             const rxNode = new AudioWorkletNode(AudioRX_context, 'rx-player');
-            // 调整为稳态与延迟更均衡：最小32帧，最大64帧
-            try { rxNode.port.postMessage({ type: 'config', min: 32, max: 64 }); } catch(_){}
+            // Store rxNode in AudioRX_source_node so we can access it later for flushing
+            AudioRX_source_node = rxNode;
+            // 调整为稳态与延迟更均衡：最小16帧，最大32帧
+            try { rxNode.port.postMessage({ type: 'config', min: 16, max: 32 }); } catch(_){}
             // 将网络收到的帧直接投递到 worklet
             window.__pushRxFrame = function(f32) {
                 rxNode.port.postMessage({ type: 'push', payload: f32 });
@@ -330,6 +332,15 @@ function toggleaudioRX(stat="None"){
 		if (AudioRX_audiobuffer.length > 3) {
 			console.log('🧹 TX结束后清除音频缓冲区，减少延迟');
 			AudioRX_audiobuffer = AudioRX_audiobuffer.slice(-2); // 只保留最新的2个缓冲区
+		}
+		// 立即清除RX音频工作节点缓冲区以减少TX->RX切换延迟
+		if (typeof AudioRX_source_node !== 'undefined' && AudioRX_source_node && AudioRX_source_node.port) {
+			try {
+				AudioRX_source_node.port.postMessage({type: 'flush'});
+				console.log('🔄 RX工作节点缓冲区在PTT释放后立即清除');
+			} catch(e) {
+				console.log('⚠️ 清除RX工作节点缓冲区时出错:', e);
+			}
 		}
 	}
 }
@@ -603,8 +614,25 @@ function sendTRXfreq(freq=0){
 		if (wsControlTRX.readyState === WebSocket.OPEN) {wsControlTRX.send("setFreq:"+freq);}
 }
 
+// 全局PTT状态跟踪变量，用于防止重复命令
+var lastPTTState = null;
+var lastPTTTime = 0;
+var PTT_DEBOUNCE_DELAY = 50; // 50ms防抖延迟
+
 function sendTRXptt(stat){
 	const message = "setPTT:"+stat;
+	const currentTime = Date.now();
+	
+	// 防抖机制：如果状态相同且时间间隔太短，则忽略
+	if (lastPTTState === stat && (currentTime - lastPTTTime) < PTT_DEBOUNCE_DELAY) {
+		console.log(`🔄 PTT命令防抖：忽略重复命令 (${stat})，距离上次命令 ${(currentTime - lastPTTTime)}ms`);
+		return;
+	}
+	
+	// 更新最后状态和时间
+	lastPTTState = stat;
+	lastPTTTime = currentTime;
+	
 	console.log(`📤 发送PTT命令: ${message}, WebSocket状态: ${wsControlTRX.readyState}`);
 	if (wsControlTRX.readyState === WebSocket.OPEN) {
 		// 立即发送，不使用延迟
@@ -616,8 +644,8 @@ function sendTRXptt(stat){
 		
 		// 添加更强的状态确认机制
 		let retries = 0;
-		const maxRetries = 3;
-		const retryInterval = 100; // 100ms
+		const maxRetries = 2; // 减少重试次数
+		const retryInterval = 50; // 减少重试间隔到50ms
 		
 		const confirmPTT = () => {
 			if (poweron && wsControlTRX && wsControlTRX.readyState === WebSocket.OPEN) {
@@ -641,9 +669,11 @@ function sendTRXptt(stat){
 		};
 		
 		// 立即开始确认
-		setTimeout(confirmPTT, 50);
+		setTimeout(confirmPTT, 20); // 减少初始延迟到20ms
 	} else {
 		console.error(`❌ WebSocket未连接，无法发送PTT命令: ${message}`);
+		// 如果发送失败，重置状态以便下次可以重新发送
+		lastPTTState = null;
 	}
 }
 
