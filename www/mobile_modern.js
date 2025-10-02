@@ -187,6 +187,13 @@ function togglePower() {
     } else {
         connectWebSocket();
         domElements.powerButton.querySelector('.power-icon').textContent = '⏼';
+        // Test audio immediately after connection
+        setTimeout(() => {
+            if (typeof AudioRX_start === 'function') {
+                console.log('Starting desktop-compatible audio...');
+                AudioRX_start();
+            }
+        }, 2000);
     }
 }
 
