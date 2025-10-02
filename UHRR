@@ -1404,16 +1404,16 @@ class MobileHandler(BaseHandler):
 		self.set_header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
 		# Set mobile-specific headers
 		self.set_header('X-Mobile-Interface', 'true')
-		# Serve the mobile HTML file
+		# Serve the modern mobile HTML file
 		try:
-			print("Attempting to read www/mobile.html")
-			with open("www/mobile.html", "r") as f:
+			print("Attempting to read www/mobile_modern.html")
+			with open("www/mobile_modern.html", "r") as f:
 				content = f.read()
-				print(f"Read {len(content)} characters from mobile.html")
+				print(f"Read {len(content)} characters from mobile_modern.html")
 				self.write(content)
 				print("Mobile content written to response")
 		except Exception as e:
-			print(f"Error reading mobile.html: {e}")
+			print(f"Error reading mobile_modern.html: {e}")
 			self.write("<html><body><h1>Mobile Interface Error</h1><p>Please check the server logs.</p></body></html>")
 
 ############ Main ##############
