@@ -10,7 +10,7 @@ var AudioRX_biquadFilter_node = "";
 var AudioRX_analyser = "";
 var audiobufferready = false;
 var AudioRX_audiobuffer = [];
-var AudioRX_sampleRate = 24000;
+var AudioRX_sampleRate = 16000;
 
 // Audio functions copied directly from controls.js
 function AudioRX_start() {
