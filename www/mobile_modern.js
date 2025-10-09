@@ -21,7 +21,7 @@ let audioRXGainNode = null;
 let audioRXBiquadFilterNode = null; // Add filter node like desktop version
 let audioBufferReady = false;
 let audioRXAudioBuffer = []; // Audio buffer queue
-let audioRXSampleRate = 16000; // Match server-side sample rate
+let audioRXSampleRate = 12000; // Match server-side sample rate
 let audioRXProcessing = false; // Flag to prevent concurrent processing
 
 // DOM Elements
@@ -418,9 +418,9 @@ function connectWebSocket() {
             // Initialize Web Audio API for audio playback
             if (!audioContext) {
                 try {
-                    // Use 16000Hz sample rate to match server-side configuration
-                    audioContext = new (window.AudioContext || window.webkitAudioContext)({sampleRate: 16000});
-                    console.log('Web Audio API initialized with sample rate: 16000');
+                    // Use 12000Hz sample rate to match server-side configuration
+                    audioContext = new (window.AudioContext || window.webkitAudioContext)({sampleRate: 12000});
+                    console.log('Web Audio API initialized with sample rate: 12000');
                     
                     // Create audio processing nodes like desktop version
                     audioRXGainNode = audioContext.createGain();
@@ -430,7 +430,7 @@ function connectWebSocket() {
                     audioRXBiquadFilterNode = audioContext.createBiquadFilter();
                     audioRXBiquadFilterNode.type = "lowshelf";
                     // Clamp frequency to valid range (max 8000Hz for 16000Hz sample rate)
-                    audioRXBiquadFilterNode.frequency.setValueAtTime(12000, audioContext.currentTime);
+                    audioRXBiquadFilterNode.frequency.setValueAtTime(6000, audioContext.currentTime);
                     audioRXBiquadFilterNode.gain.setValueAtTime(0, audioContext.currentTime);
                     
                     // Try to use ScriptProcessor for better audio buffering like desktop version
