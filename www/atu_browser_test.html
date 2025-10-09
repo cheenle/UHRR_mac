@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ATU浏览器连接测试</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #1a1a1a, #2d2d2d);
+            color: white;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            color: #4CAF50;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .test-section {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+
+        .test-controls {
+            display: flex;
+            gap: 10px;
+            margin: 15px 0;
+            flex-wrap: wrap;
+        }
+
+        button {
+            background: linear-gradient(135deg, #4CAF50, #45a049);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3);
+        }
+
+        button:disabled {
+            background: #666;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .log {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+            padding: 15px;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .log-entry {
+            margin: 5px 0;
+            padding: 3px 0;
+        }
+
+        .log-info { color: #2196F3; }
+        .log-success { color: #4CAF50; }
+        .log-warning { color: #FF9800; }
+        .log-error { color: #f44336; }
+
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+
+        .status-connected {
+            background-color: #4CAF50;
+            box-shadow: 0 0 8px #4CAF50;
+        }
+
+        .status-disconnected {
+            background-color: #f44336;
+            box-shadow: 0 0 8px #f44336;
+        }
+
+        .iframe-test {
+            width: 100%;
+            height: 400px;
+            border: 2px solid #4CAF50;
+            border-radius: 10px;
+            background: white;
+        }
+
+        .url-input {
+            width: 100%;
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #666;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            font-size: 14px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>ATU浏览器连接测试</h1>
+
+        <div class="test-section">
+            <h3>🌐 ATU设备Web界面测试</h3>
+            <p>请在下方输入框中输入ATU设备的URL，然后点击测试按钮。</p>
+
+            <input type="text" id="atuUrl" class="url-input" value="http://192.168.1.12/" placeholder="输入ATU设备URL，例如: http://192.168.1.12/">
+            <div class="test-controls">
+                <button id="testWebBtn">测试Web界面</button>
+                <button id="loadWebBtn">直接访问</button>
+            </div>
+
+            <div id="webTestResult" style="margin-top: 15px;"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>🔌 WebSocket连接测试</h3>
+            <p>测试不同端口的WebSocket连接。</p>
+
+            <input type="text" id="wsUrl" class="url-input" value="ws://192.168.1.12:81/" placeholder="输入WebSocket URL，例如: ws://192.168.1.12:81/">
+            <div class="test-controls">
+                <button id="testWsBtn">测试WebSocket</button>
+                <button id="testPortsBtn">测试常用端口</button>
+            </div>
+
+            <div id="wsTestResult" style="margin-top: 15px;"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>📊 实时监控器测试</h3>
+            <p>测试我们的ATU实时监控器是否能正常工作。</p>
+
+            <div class="test-controls">
+                <button id="testMonitorBtn">测试监控器连接</button>
+                <button id="openDiagnosticBtn">打开诊断工具</button>
+            </div>
+
+            <div id="monitorTestResult" style="margin-top: 15px;"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>📝 操作日志</h3>
+            <div class="log" id="debugLog"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>💡 使用说明</h3>
+            <div style="line-height: 1.6;">
+                <p><strong>第一步</strong>：尝试访问ATU设备的Web界面，确认设备正常工作。</p>
+                <p><strong>第二步</strong>：测试WebSocket连接，找到正确的端口。</p>
+                <p><strong>第三步</strong>：使用诊断工具进行详细分析。</p>
+                <p><strong>如果都不工作</strong>：可能是设备配置问题或网络限制。</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class AtuBrowserTester {
+            constructor() {
+                this.debugLog = [];
+                this.logElement = document.getElementById('debugLog');
+            }
+
+            log(message, type = 'info') {
+                const timestamp = new Date().toLocaleTimeString();
+                const logEntry = {
+                    timestamp,
+                    message,
+                    type
+                };
+
+                this.debugLog.push(logEntry);
+
+                // 只保留最新的50条日志
+                if (this.debugLog.length > 50) {
+                    this.debugLog.shift();
+                }
+
+                this.updateDebugDisplay();
+
+                console.log(`[${timestamp}] [ATU Browser Test] ${message}`);
+            }
+
+            updateDebugDisplay() {
+                if (!this.logElement) return;
+
+                this.logElement.innerHTML = '';
+
+                this.debugLog.slice(-20).forEach(entry => {
+                    const logDiv = document.createElement('div');
+                    logDiv.className = `log-entry log-${entry.type}`;
+                    logDiv.textContent = `[${entry.timestamp}] ${entry.message}`;
+                    this.logElement.appendChild(logDiv);
+                });
+
+                this.logElement.scrollTop = this.logElement.scrollHeight;
+            }
+
+            async testAtuWebInterface() {
+                const url = document.getElementById('atuUrl').value || 'http://192.168.1.12/';
+                const resultDiv = document.getElementById('webTestResult');
+
+                this.log(`开始测试Web界面: ${url}`, 'info');
+                resultDiv.innerHTML = '<p style="color: #2196F3;">⏳ 测试中...</p>';
+
+                try {
+                    const response = await fetch(url, {
+                        method: 'HEAD',
+                        mode: 'no-cors'
+                    });
+
+                    if (response.ok || response.type === 'opaque') {
+                        resultDiv.innerHTML = '<p style="color: #4CAF50;">✅ Web界面访问成功！设备正常工作。</p>';
+                        this.log('Web界面测试成功', 'success');
+                        return true;
+                    } else {
+                        throw new Error(`HTTP ${response.status}`);
+                    }
+                } catch (error) {
+                    resultDiv.innerHTML = `<p style="color: #f44336;">❌ Web界面访问失败: ${error.message}</p><p>💡 请检查设备是否开机且网络连接正常。</p>`;
+                    this.log(`Web界面测试失败: ${error.message}`, 'error');
+                    return false;
+                }
+            }
+
+            loadAtuInterface() {
+                const url = document.getElementById('atuUrl').value || 'http://192.168.1.12/';
+                window.open(url, '_blank');
+                this.log(`打开ATU设备界面: ${url}`, 'info');
+            }
+
+            async testWebSocketConnection() {
+                const url = document.getElementById('wsUrl').value || 'ws://192.168.1.12:81/';
+                const resultDiv = document.getElementById('wsTestResult');
+
+                this.log(`开始测试WebSocket: ${url}`, 'info');
+                resultDiv.innerHTML = '<p style="color: #2196F3;">⏳ 测试中...</p>';
+
+                try {
+                    const socket = new WebSocket(url);
+
+                    // 设置超时
+                    const timeout = setTimeout(() => {
+                        socket.close();
+                        throw new Error('连接超时');
+                    }, 3000);
+
+                    socket.onopen = () => {
+                        clearTimeout(timeout);
+                        resultDiv.innerHTML = '<p style="color: #4CAF50;">✅ WebSocket连接成功！</p>';
+                        this.log('WebSocket连接成功', 'success');
+
+                        // 发送测试命令
+                        try {
+                            const buffer = new ArrayBuffer(2);
+                            const dataView = new DataView(buffer);
+                            dataView.setUint8(0, 0xFF);
+                            dataView.setUint8(1, 0x00);
+                            socket.send(buffer);
+                            this.log('发送同步命令', 'info');
+                        } catch (sendError) {
+                            this.log(`发送命令失败: ${sendError.message}`, 'warning');
+                        }
+
+                        setTimeout(() => socket.close(), 1000);
+                    };
+
+                    socket.onerror = (error) => {
+                        clearTimeout(timeout);
+                        resultDiv.innerHTML = `<p style="color: #f44336;">❌ WebSocket连接失败</p><p>💡 请检查端口号是否正确，或尝试其他端口。</p>`;
+                        this.log(`WebSocket连接失败`, 'error');
+                    };
+
+                } catch (error) {
+                    resultDiv.innerHTML = `<p style="color: #f44336;">❌ WebSocket测试失败: ${error.message}</p>`;
+                    this.log(`WebSocket测试失败: ${error.message}`, 'error');
+                }
+            }
+
+            async testCommonPorts() {
+                const baseIp = '192.168.1.12';
+                const commonPorts = [80, 81, 8080, 8081, 23, 2323];
+
+                this.log('开始测试常用端口...', 'info');
+                const resultDiv = document.getElementById('wsTestResult');
+                resultDiv.innerHTML = '<p style="color: #2196F3;">⏳ 测试常用端口中...</p>';
+
+                const results = [];
+
+                for (const port of commonPorts) {
+                    this.log(`测试端口 ${port}...`, 'info');
+
+                    try {
+                        const socket = new WebSocket(`ws://${baseIp}:${port}/`);
+
+                        await new Promise((resolve, reject) => {
+                            const timeout = setTimeout(() => {
+                                socket.close();
+                                reject(new Error('超时'));
+                            }, 1500);
+
+                            socket.onopen = () => {
+                                clearTimeout(timeout);
+                                socket.close();
+                                resolve(true);
+                            };
+
+                            socket.onerror = () => {
+                                clearTimeout(timeout);
+                                reject(new Error('连接失败'));
+                            };
+                        });
+
+                        results.push({port, status: 'success'});
+                        this.log(`端口 ${port}: ✅ 开放 (WebSocket)`, 'success');
+
+                    } catch (error) {
+                        results.push({port, status: 'failed'});
+                        this.log(`端口 ${port}: ❌ 关闭`, 'warning');
+                    }
+
+                    // 小延迟避免过于频繁
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                }
+
+                const successPorts = results.filter(r => r.status === 'success');
+
+                if (successPorts.length > 0) {
+                    resultDiv.innerHTML = `
+                        <p style="color: #4CAF50;">✅ 发现开放的WebSocket端口: ${successPorts.map(p => p.port).join(', ')}</p>
+                        <p>💡 建议使用端口: ${successPorts[0].port}</p>
+                    `;
+
+                    // 自动填写建议的端口
+                    document.getElementById('wsUrl').value = `ws://${baseIp}:${successPorts[0].port}/`;
+                } else {
+                    resultDiv.innerHTML = `
+                        <p style="color: #f44336;">❌ 未发现开放的WebSocket端口</p>
+                        <p>💡 请检查设备配置或尝试手动指定端口。</p>
+                    `;
+                }
+
+                this.log(`端口扫描完成，发现 ${successPorts.length} 个可用端口`, 'info');
+            }
+
+            async testMonitorConnection() {
+                const resultDiv = document.getElementById('monitorTestResult');
+
+                this.log('开始测试监控器连接...', 'info');
+                resultDiv.innerHTML = '<p style="color: #2196F3;">⏳ 测试中...</p>';
+
+                try {
+                    // 测试诊断工具是否可用
+                    const response = await fetch('/atu_diagnostic.html');
+
+                    if (response.ok) {
+                        resultDiv.innerHTML = '<p style="color: #4CAF50;">✅ 诊断工具可用</p>';
+                        this.log('诊断工具连接成功', 'success');
+                    } else {
+                        throw new Error(`HTTP ${response.status}`);
+                    }
+                } catch (error) {
+                    resultDiv.innerHTML = `<p style="color: #f44336;">❌ 诊断工具连接失败: ${error.message}</p>`;
+                    this.log(`诊断工具连接失败: ${error.message}`, 'error');
+                }
+            }
+
+            openDiagnosticTool() {
+                window.open('/atu_diagnostic.html', '_blank');
+                this.log('打开诊断工具', 'info');
+            }
+        }
+
+        // 创建全局实例
+        const atuTester = new AtuBrowserTester();
+
+        // 页面加载完成后自动测试和绑定事件
+        window.addEventListener('load', () => {
+            atuTester.log('页面加载完成，开始ATU连接测试...', 'info');
+
+            // 绑定按钮事件
+            document.getElementById('testWebBtn').addEventListener('click', () => atuTester.testAtuWebInterface());
+            document.getElementById('loadWebBtn').addEventListener('click', () => atuTester.loadAtuInterface());
+            document.getElementById('testWsBtn').addEventListener('click', () => atuTester.testWebSocketConnection());
+            document.getElementById('testPortsBtn').addEventListener('click', () => atuTester.testCommonPorts());
+            document.getElementById('testMonitorBtn').addEventListener('click', () => atuTester.testMonitorConnection());
+            document.getElementById('openDiagnosticBtn').addEventListener('click', () => atuTester.openDiagnosticTool());
+
+            atuTester.log('按钮事件绑定完成', 'success');
+        });
+
+        // 将方法暴露到全局，方便调试
+        window.testAtuWebInterface = () => atuTester.testAtuWebInterface();
+        window.loadAtuInterface = () => atuTester.loadAtuInterface();
+        window.testWebSocketConnection = () => atuTester.testWebSocketConnection();
+        window.testCommonPorts = () => atuTester.testCommonPorts();
+        window.testMonitorConnection = () => atuTester.testMonitorConnection();
+        window.openDiagnosticTool = () => atuTester.openDiagnosticTool();
+    </script>
+</body>
+</html>

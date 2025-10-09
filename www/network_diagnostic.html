@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Network Diagnostic Tool</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #1a1a1a;
+            color: white;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        h1 {
+            color: #4CAF50;
+            text-align: center;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            background-color: #2a2a2a;
+            border-radius: 10px;
+            border: 1px solid #444;
+        }
+        .result {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 5px;
+            font-family: monospace;
+            white-space: pre-wrap;
+        }
+        .success {
+            background-color: #2E7D32;
+            color: white;
+        }
+        .error {
+            background-color: #C62828;
+            color: white;
+        }
+        .info {
+            background-color: #1565C0;
+            color: white;
+        }
+        .warning {
+            background-color: #EF6C00;
+            color: white;
+        }
+        button {
+            background-color: #444;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            margin: 5px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #555;
+        }
+        input, select {
+            padding: 8px;
+            margin: 5px;
+            border-radius: 5px;
+            border: 1px solid #666;
+            background-color: #333;
+            color: white;
+        }
+        label {
+            display: inline-block;
+            width: 150px;
+            text-align: right;
+            margin-right: 10px;
+        }
+        .port-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin: 10px 0;
+        }
+        .port-button {
+            padding: 8px 12px;
+            background-color: #333;
+            border: 1px solid #666;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .port-button:hover {
+            background-color: #444;
+        }
+        .port-button.active {
+            background-color: #4CAF50;
+            border-color: #45a049;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Network Diagnostic Tool</h1>
+        
+        <div class="test-section">
+            <h3>Target Device</h3>
+            <div>
+                <label for="target-ip">Target IP:</label>
+                <input type="text" id="target-ip" value="192.168.1.12" placeholder="IP Address">
+            </div>
+            <div>
+                <label for="target-port">Port:</label>
+                <input type="number" id="target-port" value="81" placeholder="Port" min="1" max="65535">
+            </div>
+            <div>
+                <label>Common Ports:</label>
+                <div class="port-list">
+                    <button class="port-button" data-port="80">80 (HTTP)</button>
+                    <button class="port-button" data-port="81">81 (ATR-1000)</button>
+                    <button class="port-button" data-port="443">443 (HTTPS)</button>
+                    <button class="port-button" data-port="8080">8080</button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h3>Diagnostic Tests</h3>
+            <button id="test-ping">Test Ping</button>
+            <button id="test-port">Test Port Connection</button>
+            <button id="test-websocket">Test WebSocket</button>
+            <button id="test-all">Run All Tests</button>
+            <button id="clear-results">Clear Results</button>
+        </div>
+        
+        <div class="test-section">
+            <h3>Diagnostic Results</h3>
+            <div id="results"></div>
+        </div>
+        
+        <div class="test-section">
+            <h3>Network Information</h3>
+            <div id="network-info">
+                <p>Browser Information: <span id="browser-info"></span></p>
+                <p>Current Host: <span id="current-host"></span></p>
+                <p>Current Protocol: <span id="current-protocol"></span></p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const targetIp = document.getElementById('target-ip');
+        const targetPort = document.getElementById('target-port');
+        const resultsDiv = document.getElementById('results');
+        
+        // Display network information
+        document.getElementById('browser-info').textContent = navigator.userAgent;
+        document.getElementById('current-host').textContent = window.location.host;
+        document.getElementById('current-protocol').textContent = window.location.protocol;
+        
+        // Port button handlers
+        document.querySelectorAll('.port-button').forEach(button => {
+            button.addEventListener('click', function() {
+                targetPort.value = this.getAttribute('data-port');
+                // Update active state
+                document.querySelectorAll('.port-button').forEach(btn => btn.classList.remove('active'));
+                this.classList.add('active');
+            });
+        });
+        
+        // Set initial active port
+        document.querySelector('.port-button[data-port="81"]').classList.add('active');
+        
+        function addResult(message, type = 'info') {
+            const resultDiv = document.createElement('div');
+            resultDiv.className = `result ${type}`;
+            resultDiv.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            resultsDiv.appendChild(resultDiv);
+            resultsDiv.scrollTop = resultsDiv.scrollHeight;
+        }
+        
+        function clearResults() {
+            resultsDiv.innerHTML = '';
+        }
+        
+        async function testPing() {
+            const ip = targetIp.value || '192.168.1.12';
+            addResult(`Testing connectivity to ${ip}...`, 'info');
+            
+            // Note: True ping is not possible from browser due to security restrictions
+            // We'll simulate with a fetch request
+            try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 3000);
+                
+                const response = await fetch(`http://${ip}`, {
+                    method: 'HEAD',
+                    mode: 'no-cors',
+                    signal: controller.signal
+                });
+                
+                clearTimeout(timeoutId);
+                addResult(`✓ Host ${ip} is reachable`, 'success');
+            } catch (error) {
+                if (error.name === 'AbortError') {
+                    addResult(`✗ Host ${ip} is not responding (timeout)`, 'warning');
+                } else {
+                    addResult(`✓ Host ${ip} is reachable (network level)`, 'success');
+                }
+            }
+        }
+        
+        async function testPortConnection() {
+            const ip = targetIp.value || '192.168.1.12';
+            const port = targetPort.value || '81';
+            addResult(`Testing TCP connection to ${ip}:${port}...`, 'info');
+            
+            // Note: True port scanning is not possible from browser
+            // We'll test with a WebSocket connection attempt
+            try {
+                const url = `ws://${ip}:${port}/`;
+                addResult(`Attempting WebSocket connection to ${url}...`, 'info');
+                
+                const socket = new WebSocket(url);
+                let connected = false;
+                
+                socket.onopen = function() {
+                    connected = true;
+                    addResult(`✓ Successfully connected to ${ip}:${port}`, 'success');
+                    socket.close();
+                };
+                
+                socket.onerror = function(error) {
+                    if (!connected) {
+                        addResult(`✗ Failed to connect to ${ip}:${port} - ${error.message}`, 'error');
+                    }
+                };
+                
+                socket.onclose = function() {
+                    if (!connected) {
+                        addResult(`✗ Connection to ${ip}:${port} was closed`, 'warning');
+                    }
+                };
+                
+                // Timeout after 5 seconds
+                setTimeout(() => {
+                    if (!connected) {
+                        addResult(`✗ Connection to ${ip}:${port} timed out`, 'warning');
+                        try {
+                            socket.close();
+                        } catch (e) {
+                            // Ignore errors when closing
+                        }
+                    }
+                }, 5000);
+                
+            } catch (error) {
+                addResult(`✗ Error testing port ${ip}:${port} - ${error.message}`, 'error');
+            }
+        }
+        
+        async function testWebSocket() {
+            const ip = targetIp.value || '192.168.1.12';
+            const port = targetPort.value || '81';
+            const url = `ws://${ip}:${port}/`;
+            
+            addResult(`Testing WebSocket connection to ${url}...`, 'info');
+            
+            try {
+                const socket = new WebSocket(url);
+                let connected = false;
+                
+                socket.onopen = function() {
+                    connected = true;
+                    addResult(`✓ WebSocket connection established to ${url}`, 'success');
+                    
+                    // Try to send a simple message (ATR-1000 sync command)
+                    try {
+                        const SCMD_FLAG = 0xFF;
+                        const SCMD_SYNC = 0;
+                        const buffer = new ArrayBuffer(2);
+                        const dataView = new DataView(buffer);
+                        dataView.setUint8(0, SCMD_FLAG);
+                        dataView.setUint8(1, SCMD_SYNC);
+                        socket.send(buffer);
+                        addResult('✓ Sent ATR-1000 sync command', 'success');
+                    } catch (sendError) {
+                        addResult(`⚠ Error sending command: ${sendError.message}`, 'warning');
+                    }
+                    
+                    // Close after a short delay
+                    setTimeout(() => {
+                        socket.close();
+                    }, 1000);
+                };
+                
+                socket.onmessage = function(event) {
+                    addResult(`✓ Received WebSocket message (${event.data.byteLength} bytes)`, 'success');
+                };
+                
+                socket.onerror = function(error) {
+                    if (!connected) {
+                        addResult(`✗ WebSocket error: ${error.message}`, 'error');
+                    }
+                };
+                
+                socket.onclose = function() {
+                    if (connected) {
+                        addResult('✓ WebSocket connection closed normally', 'success');
+                    } else {
+                        addResult('✗ WebSocket connection failed', 'error');
+                    }
+                };
+                
+                // Timeout after 10 seconds
+                setTimeout(() => {
+                    if (!connected) {
+                        addResult('✗ WebSocket connection timed out', 'warning');
+                        try {
+                            socket.close();
+                        } catch (e) {
+                            // Ignore errors
+                        }
+                    }
+                }, 10000);
+                
+            } catch (error) {
+                addResult(`✗ Failed to create WebSocket: ${error.message}`, 'error');
+            }
+        }
+        
+        async function runAllTests() {
+            await testPing();
+            await new Promise(resolve => setTimeout(resolve, 1000)); // Small delay
+            await testPortConnection();
+            await new Promise(resolve => setTimeout(resolve, 1000)); // Small delay
+            await testWebSocket();
+        }
+        
+        document.getElementById('test-ping').addEventListener('click', testPing);
+        document.getElementById('test-port').addEventListener('click', testPortConnection);
+        document.getElementById('test-websocket').addEventListener('click', testWebSocket);
+        document.getElementById('test-all').addEventListener('click', runAllTests);
+        document.getElementById('clear-results').addEventListener('click', clearResults);
+        
+        // Initialize
+        addResult('Network Diagnostic Tool Ready', 'info');
+        addResult('Enter target IP and port, then run tests', 'info');
+    </script>
+</body>
+</html>

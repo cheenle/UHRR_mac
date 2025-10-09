@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
+    <title>UHRR Responsive Test</title>
+    <link rel="stylesheet" type="text/css" href="style.css">
+    <link rel="stylesheet" type="text/css" href="responsive.css">
+    <style>
+        /* Test container */
+        .test-container {
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 20px;
+            background: #333;
+            border-radius: 10px;
+        }
+        
+        .test-buttons {
+            display: flex;
+            gap: 10px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+        
+        .test-btn {
+            padding: 10px 20px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        
+        .test-btn:hover {
+            background: #0056b3;
+        }
+        
+        .viewport-info {
+            background: #222;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+            color: #fff;
+        }
+        
+        .device-frame {
+            width: 100%;
+            max-width: 400px;
+            height: 700px;
+            border: 10px solid #333;
+            border-radius: 20px;
+            margin: 20px auto;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .device-screen {
+            width: 100%;
+            height: 100%;
+            background: #1a1a1a;
+            overflow: auto;
+            padding: 10px;
+            box-sizing: border-box;
+        }
+        
+        @media (max-width: 768px) {
+            .device-frame {
+                max-width: 100%;
+                height: 500px;
+                border-width: 5px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>UHRR Responsive Design Test</h1>
+        
+        <div class="viewport-info">
+            <h2>Viewport Information</h2>
+            <p>Current Viewport Size: <span id="viewport-size">Loading...</span></p>
+            <p>Device Type: <span id="device-type">Loading...</span></p>
+            <p>Touch Support: <span id="touch-support">Loading...</span></p>
+        </div>
+        
+        <div class="test-buttons">
+            <button class="test-btn" onclick="resizeToDesktop()">Desktop View (1200px)</button>
+            <button class="test-btn" onclick="resizeToTablet()">Tablet View (768px)</button>
+            <button class="test-btn" onclick="resizeToMobile()">Mobile View (480px)</button>
+            <button class="test-btn" onclick="resetView()">Reset View</button>
+        </div>
+        
+        <div class="device-frame">
+            <div class="device-screen">
+                <h2>Responsive Test Content</h2>
+                <p>This is a test of the responsive design. Resize your browser window to see how the layout adapts.</p>
+                
+                <div class="button_unpressed" style="display: inline-block; padding: 15px 25px; margin: 10px;">
+                    Test Button
+                </div>
+                
+                <div class="button_pressed" style="display: inline-block; padding: 15px 25px; margin: 10px;">
+                    Pressed Button
+                </div>
+                
+                <div style="margin: 20px 0; background: #222; padding: 15px; border-radius: 5px;">
+                    <h3>Frequency Display Test</h3>
+                    <div style="text-align: center; font-size: 24px; font-family: monospace; background: black; padding: 10px; border-radius: 5px;">
+                        <span>14</span><span>.</span><span>230</span><span>.</span><span>000</span>
+                    </div>
+                </div>
+                
+                <div style="margin: 20px 0;">
+                    <h3>Slider Test</h3>
+                    <input type="range" min="0" max="100" value="50" style="width: 100%;">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function updateViewportInfo() {
+            const width = window.innerWidth;
+            const height = window.innerHeight;
+            const isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+            const isMobile = width <= 768;
+            
+            document.getElementById('viewport-size').textContent = `${width} × ${height}px`;
+            document.getElementById('device-type').textContent = isMobile ? 'Mobile/Tablet' : 'Desktop';
+            document.getElementById('touch-support').textContent = isTouch ? 'Yes' : 'No';
+        }
+        
+        function resizeToDesktop() {
+            window.resizeTo(1200, 800);
+        }
+        
+        function resizeToTablet() {
+            window.resizeTo(768, 1024);
+        }
+        
+        function resizeToMobile() {
+            window.resizeTo(480, 800);
+        }
+        
+        function resetView() {
+            window.resizeTo(1024, 768);
+        }
+        
+        // Update viewport info on load and resize
+        window.addEventListener('load', updateViewportInfo);
+        window.addEventListener('resize', updateViewportInfo);
+        
+        // Add touch feedback to buttons
+        document.addEventListener('DOMContentLoaded', function() {
+            const buttons = document.querySelectorAll('.test-btn, .button_unpressed, .button_pressed');
+            
+            buttons.forEach(button => {
+                button.addEventListener('touchstart', function(e) {
+                    this.style.transform = 'scale(0.95)';
+                    this.style.transition = 'transform 0.1s';
+                });
+                
+                button.addEventListener('touchend', function(e) {
+                    this.style.transform = 'scale(1)';
+                });
+                
+                // Also add for mouse events
+                button.addEventListener('mousedown', function(e) {
+                    this.style.transform = 'scale(0.95)';
+                    this.style.transition = 'transform 0.1s';
+                });
+                
+                button.addEventListener('mouseup', function(e) {
+                    this.style.transform = 'scale(1)';
+                });
+                
+                button.addEventListener('mouseleave', function(e) {
+                    this.style.transform = 'scale(1)';
+                });
+            });
+        });
+    </script>
+</body>
+</html>

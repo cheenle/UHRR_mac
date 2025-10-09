@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "https://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>PayloadContent</key>
+  <array>
+    <dict>
+      <key>PayloadType</key>
+      <string>com.apple.vpn.managed</string>
+      <key>PayloadVersion</key>
+      <integer>1</integer>
+      <key>PayloadIdentifier</key>
+      <string>net.vlsc.vpn.ikev2.payload</string>
+      <key>PayloadUUID</key>
+      <string>7F1E6F9C-3A57-448C-9C2B-7B2E8C8E6B11</string>
+      <key>PayloadDisplayName</key>
+      <string>VLSC IKEv2</string>
+      <key>UserDefinedName</key>
+      <string>VLSC IKEv2</string>
+      <key>VPNType</key>
+      <string>IKEv2</string>
+      <key>OverridePrimary</key>
+      <integer>1</integer>
+      <key>Proxies</key>
+      <dict/>
+      <key>IKEv2</key>
+      <dict>
+        <key>RemoteAddress</key>
+        <string>www.vlsc.net</string>
+        <key>RemoteIdentifier</key>
+        <string>www.vlsc.net</string>
+        <key>LocalIdentifier</key>
+        <string></string>
+        <!-- 使用 EAP（用户名/密码），不配置证书/PSK -->
+        <key>AuthenticationMethod</key>
+        <string>None</string>
+        <key>ExtendedAuthEnabled</key>
+        <integer>1</integer>
+        <!-- 全局走 VPN：由系统侧“发送所有流量”控制；同时提供 OnDemand 连接规则 -->
+        <key>OnDemandEnabled</key>
+        <integer>1</integer>
+        <key>OnDemandRules</key>
+        <array>
+          <dict>
+            <key>Action</key>
+            <string>Connect</string>
+          </dict>
+        </array>
+        <key>DeadPeerDetectionRate</key>
+        <string>Medium</string>
+        <key>DisableMOBIKE</key>
+        <integer>0</integer>
+        <key>EnablePFS</key>
+        <integer>1</integer>
+        <key>UseConfigurationAttributeInternalIPSubnet</key>
+        <integer>1</integer>
+        <key>ChildSecurityAssociationParameters</key>
+        <dict>
+          <key>EncryptionAlgorithm</key>
+          <string>AES-256-GCM</string>
+          <key>IntegrityAlgorithm</key>
+          <string>SHA2-256</string>
+          <key>DiffieHellmanGroup</key>
+          <integer>14</integer>
+          <key>LifeTimeInMinutes</key>
+          <integer>1440</integer>
+        </dict>
+      </dict>
+    </dict>
+  </array>
+  <key>PayloadDisplayName</key>
+  <string>VLSC IKEv2 Profile</string>
+  <key>PayloadIdentifier</key>
+  <string>net.vlsc.vpn.ikev2.profile</string>
+  <key>PayloadRemovalDisallowed</key>
+  <false/>
+  <key>PayloadType</key>
+  <string>Configuration</string>
+  <key>PayloadUUID</key>
+  <string>F5A47B88-2C20-4A5B-9E7E-0D7A5F9E3E99</string>
+  <key>PayloadVersion</key>
+  <integer>1</integer>
+</dict>
+</plist>
+
+

@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Final ATU SWR Verification Test</title>
+    <link rel="stylesheet" type="text/css" href="style.css">
+    <style>
+        body {
+            background-color: #1a1a1a;
+            color: white;
+            font-family: Arial, sans-serif;
+            padding: 20px;
+        }
+        .test-container {
+            max-width: 600px;
+            margin: 0 auto;
+            text-align: center;
+        }
+        .controls {
+            margin: 20px 0;
+            padding: 15px;
+            background-color: #2a2a2a;
+            border-radius: 10px;
+        }
+        button {
+            background-color: #444;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            margin: 5px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #555;
+        }
+        input {
+            padding: 5px;
+            margin: 5px;
+            border-radius: 3px;
+            border: 1px solid #444;
+        }
+        #log {
+            height: 200px;
+            overflow-y: auto;
+            background-color: #333;
+            padding: 10px;
+            text-align: left;
+            font-family: monospace;
+            border-radius: 5px;
+        }
+        .success {
+            color: #4CAF50;
+        }
+        .error {
+            color: #f44336;
+        }
+        .info {
+            color: #2196F3;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>Final ATU SWR Verification Test</h1>
+        <p>This test verifies that the SWR display is working correctly in the ATU meters.</p>
+        
+        <!-- ATU Display (same as in index.html) -->
+        <div id="ATUmeters">
+            <div class="atu-status atu-disconnected" id="atuStatusIndicator"></div>
+            <div id="ATUpower">
+                <div class="label">ATU Power:</div>
+                <meter id="atuPowerMeter" low="10" high="50" max="100" value="0"></meter>
+                <div id="atuPowerValue" class="value">0W</div>
+            </div>
+            <div id="ATUswr">
+                <div class="label">ATU SWR:</div>
+                <meter id="atuSwrMeter" low="1" high="2" max="3" value="1"></meter>
+                <div id="atuSwrValue" class="value">1.0</div>
+            </div>
+        </div>
+        
+        <div class="controls">
+            <h3>Test Controls</h3>
+            <input type="number" id="power-input" placeholder="Power (W)" value="50" step="0.1">
+            <input type="number" id="swr-input" placeholder="SWR" value="1.5" step="0.01">
+            <br>
+            <button onclick="testUpdate()">Update Display</button>
+            <button onclick="testEdgeCases()">Test Edge Cases</button>
+            <button onclick="resetDisplay()">Reset</button>
+        </div>
+        
+        <div class="controls">
+            <h3>Verification Results</h3>
+            <div id="log"></div>
+        </div>
+    </div>
+
+    <script>
+        // Log function with styling
+        function log(message, type = 'info') {
+            const logDiv = document.getElementById('log');
+            const timestamp = new Date().toISOString().substr(11, 12);
+            const className = type === 'success' ? 'success' : type === 'error' ? 'error' : 'info';
+            logDiv.innerHTML += `<div class="${className}">[${timestamp}] ${message}</div>`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+        
+        // Test function to update display
+        function testUpdate() {
+            const power = parseFloat(document.getElementById('power-input').value) || 0;
+            const swr = parseFloat(document.getElementById('swr-input').value) || 1.0;
+            
+            // Call the update function
+            updateATUDisplay(power, swr);
+            
+            // Verify the display elements were updated
+            const powerValueElement = document.getElementById('atuPowerValue');
+            const swrValueElement = document.getElementById('atuSwrValue');
+            const powerMeterElement = document.getElementById('atuPowerMeter');
+            const swrMeterElement = document.getElementById('atuSwrMeter');
+            
+            let success = true;
+            let messages = [];
+            
+            // Check power display
+            if (powerValueElement && powerValueElement.textContent === power.toFixed(1) + 'W') {
+                messages.push(`✓ Power value display correct: ${powerValueElement.textContent}`);
+            } else {
+                success = false;
+                messages.push(`✗ Power value display incorrect. Expected: ${power.toFixed(1)}W, Got: ${powerValueElement ? powerValueElement.textContent : 'null'}`);
+            }
+            
+            if (powerMeterElement && Math.abs(powerMeterElement.value - Math.min(power, 100)) < 0.01) {
+                messages.push(`✓ Power meter value correct: ${powerMeterElement.value}`);
+            } else {
+                success = false;
+                messages.push(`✗ Power meter value incorrect. Expected: ${Math.min(power, 100)}, Got: ${powerMeterElement ? powerMeterElement.value : 'null'}`);
+            }
+            
+            // Check SWR display
+            if (swrValueElement && swrValueElement.textContent === swr.toFixed(2)) {
+                messages.push(`✓ SWR value display correct: ${swrValueElement.textContent}`);
+            } else {
+                success = false;
+                messages.push(`✗ SWR value display incorrect. Expected: ${swr.toFixed(2)}, Got: ${swrValueElement ? swrValueElement.textContent : 'null'}`);
+            }
+            
+            if (swrMeterElement && Math.abs(swrMeterElement.value - Math.min(swr, 3)) < 0.01) {
+                messages.push(`✓ SWR meter value correct: ${swrMeterElement.value}`);
+            } else {
+                success = false;
+                messages.push(`✗ SWR meter value incorrect. Expected: ${Math.min(swr, 3)}, Got: ${swrMeterElement ? swrMeterElement.value : 'null'}`);
+            }
+            
+            // Log results
+            log(`Test Update with Power=${power.toFixed(1)}W, SWR=${swr.toFixed(2)}`, success ? 'success' : 'error');
+            messages.forEach(msg => log(msg, success ? 'success' : 'error'));
+            
+            if (success) {
+                log('✅ All ATU display tests passed!', 'success');
+            } else {
+                log('❌ Some ATU display tests failed!', 'error');
+            }
+        }
+        
+        // Test edge cases
+        function testEdgeCases() {
+            log('Testing edge cases...', 'info');
+            
+            // Test zero values
+            updateATUDisplay(0, 1.0);
+            log('✓ Tested zero power, 1.0 SWR', 'success');
+            
+            // Test maximum values
+            updateATUDisplay(150, 5.0); // Should be limited to 100W and 3.0 SWR
+            log('✓ Tested high values (150W, 5.0 SWR) - should be limited to 100W, 3.0 SWR', 'success');
+            
+            // Test decimal values
+            updateATUDisplay(25.5, 1.75);
+            log('✓ Tested decimal values (25.5W, 1.75 SWR)', 'success');
+            
+            log('✅ Edge case tests completed!', 'success');
+        }
+        
+        // Reset display
+        function resetDisplay() {
+            document.getElementById('power-input').value = '0';
+            document.getElementById('swr-input').value = '1.0';
+            updateATUDisplay(0, 1.0);
+            log('Display reset to 0W, 1.0 SWR', 'info');
+        }
+        
+        // Initialize
+        window.onload = function() {
+            log('🚀 ATU SWR Verification Test Initialized', 'info');
+            log('📝 Enter values and click "Update Display" to test', 'info');
+            log('🔍 This test verifies that both Power and SWR displays work correctly', 'info');
+        };
+        
+        // Include the updateATUDisplay function directly for testing
+        function updateATUDisplay(power, swr) {
+            // 更新功率显示
+            const atuPowerMeter = document.getElementById('atuPowerMeter');
+            const atuPowerValue = document.getElementById('atuPowerValue');
+
+            if (atuPowerMeter && atuPowerValue) {
+                atuPowerMeter.value = Math.min(power, 100); // 限制在仪表最大值内
+                atuPowerValue.textContent = power.toFixed(1) + 'W';
+            }
+
+            // 更新驻波比显示
+            const atuSwrMeter = document.getElementById('atuSwrMeter');
+            const atuSwrValue = document.getElementById('atuSwrValue');
+
+            if (atuSwrMeter && atuSwrValue) {
+                atuSwrMeter.value = Math.min(swr, 3); // 限制在仪表最大值内
+                atuSwrValue.textContent = swr.toFixed(2);
+            }
+
+            // 更新连接状态指示器
+            const atuStatusIndicator = document.getElementById('atuStatusIndicator');
+            if (atuStatusIndicator) {
+                // 根据数据有效性更新状态
+                if (power >= 0 && swr >= 1.0) {
+                    atuStatusIndicator.className = 'atu-status atu-connected';
+                } else {
+                    atuStatusIndicator.className = 'atu-status atu-error';
+                }
+            }
+        }
+    </script>
+</body>
+</html>

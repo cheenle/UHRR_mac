@@ -1,0 +1,526 @@
+/* Responsive CSS for UHRR - Works for both desktop and mobile */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+}
+
+/* Base styles that work for both desktop and mobile */
+body {
+    font-family: 'Arial', sans-serif;
+    background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+    color: #ffffff;
+    min-height: 100vh;
+    touch-action: manipulation;
+}
+
+#div-princ {
+    margin: 20px auto;
+    width: 95%;
+    max-width: 1800px;
+    min-height: 860px;
+    background-color: #171717;
+    box-shadow: 5px 5px 5px 5px rgba(0, 0, 0, 0.5), 0px 0px 0px 0px rgba(255, 255, 255, 0.5) inset;
+    border-radius: 30px;
+    position: relative;
+    padding: 20px;
+}
+
+/* Header section with power button and status indicators */
+#button_power {
+    position: absolute;
+    left: 50px;
+    top: 50px;
+    width: 100px;
+    height: 100px;
+}
+
+#callsign {
+    position: absolute;
+    right: 50px;
+    top: 20px;
+    height: 80px;
+    width: 300px;
+    font: normal bold 25px tahoma;
+    text-align: center;
+}
+
+/* S-Meter section */
+#canRXsmeter {
+    position: absolute;
+    right: 50px;
+    top: 80px;
+    width: 250px;
+    height: 50px;
+    background: black;
+    border-radius: 5px;
+    box-shadow: 0px 2px 2px 0px rgba(0, 0, 0, 0.5) inset, 0px 2px 2px 0px rgba(255, 255, 255, 0.5);
+    background: url(img/smeter.png) no-repeat center center;
+}
+
+#div-smeterdigitRX {
+    position: absolute;
+    right: 50px;
+    top: 140px;
+    text-align: center;
+    font: normal bold 25px tahoma;
+    width: 250px;
+}
+
+/* Audio controls section */
+#RX-GAIN_control, #TX-GAIN_control {
+    width: 300px;
+    position: absolute;
+    left: 50px;
+    font: normal bold 25px tahoma;
+    text-align: center;
+}
+
+#RX-GAIN_control {
+    top: 200px;
+    height: 140px;
+}
+
+#TX-GAIN_control {
+    top: 450px;
+    height: 140px;
+}
+
+div#Rxmeters > div, div#Txmeters > div {
+    text-align: center;
+    width: 300px;
+    position: absolute;
+    left: 50px;
+    font: normal bold 25px tahoma;
+}
+
+div#Rxmeters > div {
+    top: 300px;
+}
+
+div#Txmeters > div {
+    top: 550px;
+}
+
+/* Frequency section */
+#div-freq {
+    position: absolute;
+    left: 400px;
+    top: 80px;
+    height: 200px;
+    width: 450px;
+}
+
+#freq_disp {
+    border-radius: 5px;
+    box-shadow: 0px 2px 2px 0px rgba(0, 0, 0, 0.5) inset, 0px 2px 2px 0px rgba(255, 255, 255, 0.5);
+    background-color: black;
+    width: 100%;
+    padding-top: 5px;
+    margin-top: 10px;
+    margin-bottom: 10px;
+    height: 60px;
+    text-align: center;
+}
+
+#freq_disp > li {
+    display: inline-block;
+    font: normal bold 37px tahoma;
+    text-align: center;
+    width: 8%;
+}
+
+#freq_but {
+    width: 100%;
+    margin: 0;
+    padding-left: 0px;
+    text-align: center;
+}
+
+#freq_but > li {
+    display: inline-block;
+    font: normal bold 25px tahoma;
+    text-align: center;
+    margin-top: 5px;
+    margin-bottom: 5px;
+    width: 8%;
+}
+
+/* Mode selection */
+#div-mode_menu {
+    position: absolute;
+    left: 900px;
+    top: 80px;
+    width: 450px;
+    height: 200px;
+}
+
+#div-mode_menu > ul {
+    padding: 0;
+    margin: 0;
+    width: 100%;
+    height: 200px;
+}
+
+#div-mode_menu > ul > li {
+    display: inline-block;
+    font: normal bold 45px tahoma;
+    width: 222px;
+    height: 65px;
+    text-align: center;
+}
+
+/* Visualizers */
+#canBFSPC, #canBFFFT {
+    position: absolute;
+    width: 450px;
+    height: 250px;
+    background: black;
+    border-radius: 5px;
+    box-shadow: 0px 2px 2px 0px rgba(0, 0, 0, 0.5) inset, 0px 2px 2px 0px rgba(255, 255, 255, 0.5);
+}
+
+#canBFSPC {
+    left: 400px;
+    top: 320px;
+}
+
+#canBFFFT {
+    left: 900px;
+    top: 320px;
+}
+
+/* Band shortcuts */
+#div-bandshortcut {
+    position: absolute;
+    right: 50px;
+    top: 250px;
+    width: 300px;
+}
+
+#div-bandshortcut > ul {
+    padding: 0;
+    margin: 0;
+    width: 100%;
+}
+
+#div-bandshortcut > ul > li {
+    display: inline-block;
+    font: normal bold 25px tahoma;
+    text-align: center;
+    width: 32%;
+    margin-bottom: 10px;
+}
+
+/* Filter shortcuts */
+#div-filtershortcut {
+    position: absolute;
+    left: 400px;
+    top: 600px;
+    width: 450px;
+    height: 200px;
+}
+
+#div-filtershortcut > ul {
+    padding: 0;
+    width: 100%;
+    height: 200px;
+    margin: 0;
+}
+
+#div-filtershortcut > ul > li {
+    display: inline-block;
+    font: normal bold 25px tahoma;
+    text-align: center;
+    width: 32%;
+    margin-bottom: 10px;
+}
+
+/* TX section */
+#div-TX {
+    position: absolute;
+    right: 50px;
+    top: 590px;
+    width: 300px;
+    height: 200px;
+}
+
+#TX-record {
+    text-align: center;
+    font: normal bold 90px tahoma;
+    height: 140px;
+    width: 100%;
+    display: inline-block;
+    min-height: 120px;
+    min-width: 200px;
+    padding: 20px;
+    margin: 10px;
+    border-radius: 15px;
+    transition: all 0.1s ease;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    touch-action: manipulation;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+}
+
+/* Squelch control */
+#SQUELCH_control {
+    margin: 0;
+    padding: 0;
+    width: 300px;
+    height: 70px;
+    position: absolute;
+    right: 50px;
+    top: 180px;
+    font: normal bold 25px tahoma;
+    text-align: center;
+}
+
+/* Personal frequency */
+#personalfrequency {
+    position: absolute;
+    right: 50px;
+    top: 420px;
+    height: 110px;
+    width: 300px;
+    font: normal bold 25px tahoma;
+    text-align: center;
+    margin: 0;
+    padding: 0;
+}
+
+#personalfrequency > select {
+    width: 100%;
+    font: normal bold 25px tahoma;
+}
+
+/* Socket controls */
+#div-scoketscontrols {
+    position: absolute;
+    left: 900px;
+    top: 700px;
+    width: 580px;
+}
+
+#div-scoketscontrols > p {
+    display: inline-block;
+    font: normal bold 25px tahoma;
+    text-align: center;
+    margin-right: 10px;
+}
+
+/* Configuration and panadapter links */
+#div-conf, #div-panfft {
+    position: absolute;
+    right: 50px;
+    top: 20px;
+    width: 580px;
+}
+
+#div-conf {
+    top: 20px;
+}
+
+#div-panfft {
+    top: 55px;
+    display: none;
+}
+
+#div-conf > a > img, #div-panfft > a > img {
+    margin-right: 5px;
+    width: 25px;
+    height: 25px;
+}
+
+/* Status indicators */
+#div-latencymeter {
+    font: normal bold 25px tahoma;
+    position: absolute;
+    right: 50px;
+    top: 750px;
+}
+
+#div-bitrates {
+    font: normal bold 18px tahoma;
+    position: absolute;
+    right: 50px;
+    top: 780px;
+    color: #00aaff;
+}
+
+/* Button styles */
+.button_pressed {
+    box-shadow: 0px 2px 2px 0px rgba(0, 0, 0, 0.5) inset, 0px 2px 2px 0px rgba(255, 255, 255, 0.5);
+}
+
+.button_unpressed {
+    box-shadow: 0px 2px 2px 0px rgba(0, 0, 0, 0.5), 0px 2px 2px 0px rgba(255, 255, 255, 0.5) inset;
+}
+
+/* Mobile-specific styles */
+@media (max-width: 1024px) {
+    #div-princ {
+        width: 98%;
+        min-height: auto;
+        border-radius: 15px;
+        padding: 10px;
+    }
+    
+    /* Stack elements vertically for mobile */
+    #button_power {
+        position: relative;
+        left: auto;
+        top: auto;
+        display: block;
+        margin: 10px auto;
+    }
+    
+    #callsign, #canRXsmeter, #div-smeterdigitRX {
+        position: relative;
+        left: auto;
+        right: auto;
+        top: auto;
+        margin: 10px auto;
+        text-align: center;
+    }
+    
+    #RX-GAIN_control, #TX-GAIN_control, div#Rxmeters > div, div#Txmeters > div {
+        position: relative;
+        left: auto;
+        top: auto;
+        margin: 20px auto;
+    }
+    
+    #div-freq, #div-mode_menu, #canBFSPC, #canBFFFT {
+        position: relative;
+        left: auto;
+        top: auto;
+        margin: 20px auto;
+        width: 95%;
+    }
+    
+    #div-bandshortcut, #div-filtershortcut, #div-TX, #SQUELCH_control, #personalfrequency {
+        position: relative;
+        left: auto;
+        right: auto;
+        top: auto;
+        margin: 20px auto;
+        width: 95%;
+    }
+    
+    #div-scoketscontrols, #div-conf, #div-panfft, #div-latencymeter, #div-bitrates {
+        position: relative;
+        left: auto;
+        right: auto;
+        top: auto;
+        margin: 10px auto;
+        text-align: center;
+    }
+    
+    /* Adjust font sizes for mobile */
+    #freq_disp > li {
+        font-size: 28px;
+    }
+    
+    #div-mode_menu > ul > li {
+        font-size: 35px;
+        width: 45%;
+        margin-bottom: 10px;
+    }
+    
+    #TX-record {
+        font-size: 70px;
+        min-height: 100px;
+        padding: 15px;
+    }
+    
+    /* Make buttons larger for touch */
+    #freq_but > li, #div-bandshortcut > ul > li, #div-filtershortcut > ul > li {
+        min-height: 44px;
+        min-width: 44px;
+        padding: 10px;
+    }
+}
+
+/* Very small mobile devices */
+@media (max-width: 480px) {
+    #div-princ {
+        width: 100%;
+        border-radius: 0;
+        padding: 5px;
+    }
+    
+    #freq_disp > li {
+        font-size: 20px;
+    }
+    
+    #div-mode_menu > ul > li {
+        font-size: 25px;
+        width: 100%;
+        margin-bottom: 5px;
+    }
+    
+    #TX-record {
+        font-size: 50px;
+        min-height: 80px;
+        padding: 10px;
+    }
+    
+    .button_unpressed, .button_pressed {
+        min-height: 36px;
+        min-width: 36px;
+        font-size: 20px;
+    }
+}
+
+/* Touch device optimizations */
+@media (hover: none) and (pointer: coarse) {
+    .button_unpressed, .button_pressed {
+        min-height: 44px;
+        min-width: 44px;
+        padding: 12px;
+    }
+    
+    #TX-record {
+        min-height: 120px;
+        min-width: 120px;
+        padding: 20px;
+    }
+    
+    #freq_but > li {
+        min-height: 44px;
+        min-width: 44px;
+    }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+    #TX-record {
+        border: 3px solid #fff;
+    }
+    
+    .button_unpressed, .button_pressed {
+        border: 2px solid #fff;
+    }
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+    body {
+        background: #000;
+        color: #fff;
+    }
+    
+    #div-princ {
+        background-color: #1a1a1a;
+    }
+}

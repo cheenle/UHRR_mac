@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Audio Debug</title>
+</head>
+<body>
+    <h1>Audio Debug Test</h1>
+    <button id="startAudio">Start Audio</button>
+    <div id="status"></div>
+    <script>
+        document.getElementById('startAudio').addEventListener('click', function() {
+            console.log('Starting audio test...');
+            document.getElementById('status').textContent = 'Starting audio test...';
+            
+            // Try to initialize AudioContext
+            try {
+                var AudioRX_context = new (window.AudioContext || window.webkitAudioContext)({
+                    latencyHint: "interactive",
+                    sampleRate: 24000
+                });
+                console.log('AudioContext created successfully');
+                document.getElementById('status').textContent = 'AudioContext created successfully';
+                
+                // Try to create WebSocket connection
+                var protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+                var wsAudioRX = new WebSocket(protocol + '//' + window.location.host + '/WSaudioRX');
+                wsAudioRX.binaryType = 'arraybuffer';
+                
+                wsAudioRX.onopen = function() {
+                    console.log('Audio WebSocket connected');
+                    document.getElementById('status').textContent = 'Audio WebSocket connected';
+                };
+                
+                wsAudioRX.onmessage = function(event) {
+                    console.log('Received audio data:', event.data.byteLength);
+                    document.getElementById('status').textContent = 'Received audio data: ' + event.data.byteLength + ' bytes';
+                };
+                
+                wsAudioRX.onerror = function(error) {
+                    console.error('Audio WebSocket error:', error);
+                    document.getElementById('status').textContent = 'Audio WebSocket error: ' + error;
+                };
+                
+                wsAudioRX.onclose = function() {
+                    console.log('Audio WebSocket closed');
+                    document.getElementById('status').textContent = 'Audio WebSocket closed';
+                };
+            } catch (error) {
+                console.error('Error initializing audio:', error);
+                document.getElementById('status').textContent = 'Error: ' + error.message;
+            }
+        });
+    </script>
+</body>
+</html>
