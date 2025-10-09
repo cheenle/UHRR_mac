@@ -10089,3 +10089,172 @@ tornado.websocket.WebSocketClosedError
 2025-10-10 02:54:37,367 - UHRR - INFO - Querying actual PTT state from rigctld
 2025-10-10 02:54:37,368 - UHRR - DEBUG - rigctld PTT response: 0
 2025-10-10 02:54:37,368 - UHRR - INFO - Actual PTT state from rigctld: False
+2025-10-10 03:34:45,035 - UHRR - INFO - Testing rigctld daemon connection...
+2025-10-10 03:34:45,036 - UHRR - INFO - ✓ rigctld daemon responding! Initial frequency: 7310000
+2025-10-10 03:34:45,036 - UHRR - INFO - Sending rigctld command: f
+2025-10-10 03:34:45,036 - UHRR - DEBUG - rigctld response to 'f': 7310000
+2025-10-10 03:34:45,036 - UHRR - INFO - rigctld command 'f' successful
+2025-10-10 03:34:45,036 - UHRR - INFO - Current frequency from rigctld: 7310000 Hz
+2025-10-10 03:34:45,036 - UHRR - INFO - Sending rigctld command: m
+2025-10-10 03:34:45,037 - UHRR - DEBUG - rigctld response to 'm': 2200
+2025-10-10 03:34:45,037 - UHRR - INFO - rigctld command 'm' successful
+2025-10-10 03:34:45,037 - UHRR - DEBUG - Raw mode response: '2200'
+2025-10-10 03:34:45,037 - UHRR - WARNING - IC-M710 returned only passband 2200, using stored mode USB
+2025-10-10 03:34:45,037 - UHRR - INFO - Querying actual PTT state from rigctld
+2025-10-10 03:34:45,037 - UHRR - INFO - Started PTT monitoring thread
+2025-10-10 03:34:45,037 - UHRR - DEBUG - rigctld PTT response: 0
+2025-10-10 03:34:45,037 - UHRR - INFO - Actual PTT state from rigctld: False
+2025-10-10 03:34:45,038 - asyncio - DEBUG - Using selector: KqueueSelector
+2025-10-10 03:34:47,988 - UHRR - INFO - Testing rigctld daemon connection...
+2025-10-10 03:34:47,989 - UHRR - INFO - ✓ rigctld daemon responding! Initial frequency: 7310000
+2025-10-10 03:34:47,989 - UHRR - INFO - Sending rigctld command: f
+2025-10-10 03:34:47,989 - UHRR - DEBUG - rigctld response to 'f': 7310000
+2025-10-10 03:34:47,989 - UHRR - INFO - rigctld command 'f' successful
+2025-10-10 03:34:47,989 - UHRR - INFO - Current frequency from rigctld: 7310000 Hz
+2025-10-10 03:34:47,989 - UHRR - INFO - Sending rigctld command: m
+2025-10-10 03:34:47,990 - UHRR - DEBUG - rigctld response to 'm': 2200
+2025-10-10 03:34:47,990 - UHRR - INFO - rigctld command 'm' successful
+2025-10-10 03:34:47,990 - UHRR - DEBUG - Raw mode response: '2200'
+2025-10-10 03:34:47,990 - UHRR - WARNING - IC-M710 returned only passband 2200, using stored mode USB
+2025-10-10 03:34:47,990 - UHRR - INFO - Querying actual PTT state from rigctld
+2025-10-10 03:34:47,990 - UHRR - INFO - Started PTT monitoring thread
+2025-10-10 03:34:47,991 - asyncio - DEBUG - Using selector: KqueueSelector
+2025-10-10 03:34:47,991 - UHRR - DEBUG - rigctld PTT response: 0
+2025-10-10 03:34:47,991 - UHRR - INFO - Actual PTT state from rigctld: False
+2025-10-10 03:34:49,996 - UHRR - INFO - Querying actual PTT state from rigctld
+2025-10-10 03:34:49,997 - UHRR - DEBUG - rigctld PTT response: 0
+2025-10-10 03:34:49,998 - UHRR - INFO - Actual PTT state from rigctld: False
+2025-10-10 03:34:52,002 - UHRR - INFO - Querying actual PTT state from rigctld
+2025-10-10 03:34:52,003 - UHRR - DEBUG - rigctld PTT response: 0
+2025-10-10 03:34:52,003 - UHRR - INFO - Actual PTT state from rigctld: False
+2025-10-10 03:34:54,007 - UHRR - INFO - Querying actual PTT state from rigctld
+2025-10-10 03:34:54,008 - UHRR - DEBUG - rigctld PTT response: 0
+2025-10-10 03:34:54,008 - UHRR - INFO - Actual PTT state from rigctld: False
+2025-10-10 03:34:56,013 - UHRR - INFO - Querying actual PTT state from rigctld
+2025-10-10 03:34:56,014 - UHRR - DEBUG - rigctld PTT response: 0
+2025-10-10 03:34:56,014 - UHRR - INFO - Actual PTT state from rigctld: False
+2025-10-10 03:34:58,019 - UHRR - INFO - Querying actual PTT state from rigctld
+2025-10-10 03:34:58,020 - UHRR - DEBUG - rigctld PTT response: 0
+2025-10-10 03:34:58,020 - UHRR - INFO - Actual PTT state from rigctld: False
+2025-10-10 03:35:00,023 - UHRR - INFO - Querying actual PTT state from rigctld
+2025-10-10 03:35:00,024 - UHRR - DEBUG - rigctld PTT response: 0
+2025-10-10 03:35:00,024 - UHRR - INFO - Actual PTT state from rigctld: False
+2025-10-10 03:35:02,028 - UHRR - INFO - Querying actual PTT state from rigctld
+2025-10-10 03:35:02,031 - UHRR - DEBUG - rigctld PTT response: 0
+2025-10-10 03:35:02,031 - UHRR - INFO - Actual PTT state from rigctld: False
+2025-10-10 03:35:04,035 - UHRR - INFO - Querying actual PTT state from rigctld
+2025-10-10 03:35:04,037 - UHRR - DEBUG - rigctld PTT response: 0
+2025-10-10 03:35:04,037 - UHRR - INFO - Actual PTT state from rigctld: False
+2025-10-10 03:35:06,043 - UHRR - INFO - Querying actual PTT state from rigctld
+2025-10-10 03:35:06,045 - UHRR - DEBUG - rigctld PTT response: 0
+2025-10-10 03:35:06,045 - UHRR - INFO - Actual PTT state from rigctld: False
+2025-10-10 03:35:08,051 - UHRR - INFO - Querying actual PTT state from rigctld
+2025-10-10 03:35:08,053 - UHRR - DEBUG - rigctld PTT response: 0
+2025-10-10 03:35:08,053 - UHRR - INFO - Actual PTT state from rigctld: False
+2025-10-10 03:35:10,057 - UHRR - INFO - Querying actual PTT state from rigctld
+2025-10-10 03:35:10,059 - UHRR - DEBUG - rigctld PTT response: 0
+2025-10-10 03:35:10,059 - UHRR - INFO - Actual PTT state from rigctld: False
+2025-10-10 03:35:12,060 - UHRR - INFO - Querying actual PTT state from rigctld
+2025-10-10 03:35:12,061 - UHRR - DEBUG - rigctld PTT response: 0
+2025-10-10 03:35:12,062 - UHRR - INFO - Actual PTT state from rigctld: False
+2025-10-10 03:35:14,066 - UHRR - INFO - Querying actual PTT state from rigctld
+2025-10-10 03:35:14,067 - UHRR - DEBUG - rigctld PTT response: 0
+2025-10-10 03:35:14,067 - UHRR - INFO - Actual PTT state from rigctld: False
+2025-10-10 03:35:16,069 - UHRR - INFO - Querying actual PTT state from rigctld
+2025-10-10 03:35:16,070 - UHRR - DEBUG - rigctld PTT response: 0
+2025-10-10 03:35:16,071 - UHRR - INFO - Actual PTT state from rigctld: False
+2025-10-10 03:35:18,075 - UHRR - INFO - Querying actual PTT state from rigctld
+2025-10-10 03:35:18,077 - UHRR - DEBUG - rigctld PTT response: 0
+2025-10-10 03:35:18,078 - UHRR - INFO - Actual PTT state from rigctld: False
+2025-10-10 03:35:20,080 - UHRR - INFO - Querying actual PTT state from rigctld
+2025-10-10 03:35:20,081 - UHRR - DEBUG - rigctld PTT response: 0
+2025-10-10 03:35:20,081 - UHRR - INFO - Actual PTT state from rigctld: False
+2025-10-10 03:35:22,086 - UHRR - INFO - Querying actual PTT state from rigctld
+2025-10-10 03:35:22,088 - UHRR - DEBUG - rigctld PTT response: 0
+2025-10-10 03:35:22,088 - UHRR - INFO - Actual PTT state from rigctld: False
+2025-10-10 03:35:24,093 - UHRR - INFO - Querying actual PTT state from rigctld
+2025-10-10 03:35:24,095 - UHRR - DEBUG - rigctld PTT response: 0
+2025-10-10 03:35:24,095 - UHRR - INFO - Actual PTT state from rigctld: False
+2025-10-10 03:35:26,100 - UHRR - INFO - Querying actual PTT state from rigctld
+2025-10-10 03:35:26,103 - UHRR - DEBUG - rigctld PTT response: 0
+2025-10-10 03:35:26,103 - UHRR - INFO - Actual PTT state from rigctld: False
+2025-10-10 03:35:28,105 - UHRR - INFO - Querying actual PTT state from rigctld
+2025-10-10 03:35:28,107 - UHRR - DEBUG - rigctld PTT response: 0
+2025-10-10 03:35:28,107 - UHRR - INFO - Actual PTT state from rigctld: False
+2025-10-10 03:35:29,672 - tornado.access - INFO - 200 GET / (2409:8a00:1894:9660:3c2:9ee7:c14f:8623) 2.05ms
+2025-10-10 03:35:29,789 - tornado.access - INFO - 200 GET /controls.js (2409:8a00:1894:9660:3c2:9ee7:c14f:8623) 74.54ms
+2025-10-10 03:35:30,110 - UHRR - INFO - Querying actual PTT state from rigctld
+2025-10-10 03:35:30,112 - UHRR - DEBUG - rigctld PTT response: 0
+2025-10-10 03:35:30,112 - UHRR - INFO - Actual PTT state from rigctld: False
+2025-10-10 03:35:32,116 - UHRR - INFO - Querying actual PTT state from rigctld
+2025-10-10 03:35:32,117 - UHRR - DEBUG - rigctld PTT response: 0
+2025-10-10 03:35:32,117 - UHRR - INFO - Actual PTT state from rigctld: False
+2025-10-10 03:35:34,121 - UHRR - INFO - Querying actual PTT state from rigctld
+2025-10-10 03:35:34,122 - UHRR - DEBUG - rigctld PTT response: 0
+2025-10-10 03:35:34,122 - UHRR - INFO - Actual PTT state from rigctld: False
+2025-10-10 03:35:36,126 - UHRR - INFO - Querying actual PTT state from rigctld
+2025-10-10 03:35:36,128 - UHRR - DEBUG - rigctld PTT response: 0
+2025-10-10 03:35:36,128 - UHRR - INFO - Actual PTT state from rigctld: False
+2025-10-10 03:35:36,330 - tornado.access - INFO - 101 GET /WSaudioRX (2409:8a00:1894:9660:3c2:9ee7:c14f:8623) 1.10ms
+2025-10-10 03:35:36,460 - tornado.access - INFO - 101 GET /WSaudioTX (2409:8a00:1894:9660:3c2:9ee7:c14f:8623) 1.29ms
+2025-10-10 03:35:36,540 - tornado.access - INFO - 101 GET /WSCTRX (2409:8a00:1894:9660:3c2:9ee7:c14f:8623) 1.08ms
+2025-10-10 03:35:36,600 - UHRR - INFO - Sending rigctld command: f
+2025-10-10 03:35:36,602 - UHRR - DEBUG - rigctld response to 'f': 7310000
+2025-10-10 03:35:36,602 - UHRR - INFO - rigctld command 'f' successful
+2025-10-10 03:35:36,602 - UHRR - INFO - Current frequency from rigctld: 7310000 Hz
+2025-10-10 03:35:36,602 - UHRR - INFO - Sending rigctld command: m
+2025-10-10 03:35:36,603 - UHRR - DEBUG - rigctld response to 'm': 2200
+2025-10-10 03:35:36,603 - UHRR - INFO - rigctld command 'm' successful
+2025-10-10 03:35:36,603 - UHRR - DEBUG - Raw mode response: '2200'
+2025-10-10 03:35:36,603 - UHRR - WARNING - IC-M710 returned only passband 2200, using stored mode USB
+2025-10-10 03:35:36,609 - UHRR - INFO - Querying actual PTT state from rigctld
+2025-10-10 03:35:36,610 - UHRR - DEBUG - rigctld PTT response: 0
+2025-10-10 03:35:36,610 - UHRR - INFO - Actual PTT state from rigctld: False
+2025-10-10 03:35:38,129 - UHRR - INFO - Querying actual PTT state from rigctld
+2025-10-10 03:35:38,130 - UHRR - DEBUG - rigctld PTT response: 0
+2025-10-10 03:35:38,130 - UHRR - INFO - Actual PTT state from rigctld: False
+2025-10-10 03:35:40,132 - UHRR - INFO - Querying actual PTT state from rigctld
+2025-10-10 03:35:40,134 - UHRR - DEBUG - rigctld PTT response: 0
+2025-10-10 03:35:40,134 - UHRR - INFO - Actual PTT state from rigctld: False
+2025-10-10 03:35:41,350 - UHRR - INFO - Querying actual PTT state from rigctld
+2025-10-10 03:35:41,351 - UHRR - DEBUG - rigctld PTT response: 0
+2025-10-10 03:35:41,351 - UHRR - INFO - Actual PTT state from rigctld: False
+2025-10-10 03:35:42,136 - UHRR - INFO - Querying actual PTT state from rigctld
+2025-10-10 03:35:42,137 - UHRR - DEBUG - rigctld PTT response: 0
+2025-10-10 03:35:42,137 - UHRR - INFO - Actual PTT state from rigctld: False
+2025-10-10 03:35:44,138 - UHRR - INFO - Querying actual PTT state from rigctld
+2025-10-10 03:35:44,138 - UHRR - DEBUG - rigctld PTT response: 0
+2025-10-10 03:35:44,138 - UHRR - INFO - Actual PTT state from rigctld: False
+2025-10-10 03:35:46,143 - UHRR - INFO - Querying actual PTT state from rigctld
+2025-10-10 03:35:46,144 - UHRR - DEBUG - rigctld PTT response: 0
+2025-10-10 03:35:46,144 - UHRR - INFO - Actual PTT state from rigctld: False
+2025-10-10 03:35:46,350 - UHRR - INFO - Querying actual PTT state from rigctld
+2025-10-10 03:35:46,351 - UHRR - DEBUG - rigctld PTT response: 0
+2025-10-10 03:35:46,351 - UHRR - INFO - Actual PTT state from rigctld: False
+2025-10-10 03:35:48,148 - UHRR - INFO - Querying actual PTT state from rigctld
+2025-10-10 03:35:48,148 - UHRR - DEBUG - rigctld PTT response: 0
+2025-10-10 03:35:48,148 - UHRR - INFO - Actual PTT state from rigctld: False
+2025-10-10 03:35:50,153 - UHRR - INFO - Querying actual PTT state from rigctld
+2025-10-10 03:35:50,155 - UHRR - DEBUG - rigctld PTT response: 0
+2025-10-10 03:35:50,155 - UHRR - INFO - Actual PTT state from rigctld: False
+2025-10-10 03:35:51,348 - UHRR - INFO - Querying actual PTT state from rigctld
+2025-10-10 03:35:51,350 - UHRR - DEBUG - rigctld PTT response: 0
+2025-10-10 03:35:51,350 - UHRR - INFO - Actual PTT state from rigctld: False
+2025-10-10 03:35:52,157 - UHRR - INFO - Querying actual PTT state from rigctld
+2025-10-10 03:35:52,158 - UHRR - DEBUG - rigctld PTT response: 0
+2025-10-10 03:35:52,159 - UHRR - INFO - Actual PTT state from rigctld: False
+2025-10-10 03:35:54,162 - UHRR - INFO - Querying actual PTT state from rigctld
+2025-10-10 03:35:54,164 - UHRR - DEBUG - rigctld PTT response: 0
+2025-10-10 03:35:54,164 - UHRR - INFO - Actual PTT state from rigctld: False
+2025-10-10 03:35:56,168 - UHRR - INFO - Querying actual PTT state from rigctld
+2025-10-10 03:35:56,169 - UHRR - DEBUG - rigctld PTT response: 0
+2025-10-10 03:35:56,169 - UHRR - INFO - Actual PTT state from rigctld: False
+2025-10-10 03:35:56,402 - UHRR - INFO - Querying actual PTT state from rigctld
+2025-10-10 03:35:56,406 - UHRR - DEBUG - rigctld PTT response: 0
+2025-10-10 03:35:56,406 - UHRR - INFO - Actual PTT state from rigctld: False
+2025-10-10 03:35:58,174 - UHRR - INFO - Querying actual PTT state from rigctld
+2025-10-10 03:35:58,175 - UHRR - DEBUG - rigctld PTT response: 0
+2025-10-10 03:35:58,175 - UHRR - INFO - Actual PTT state from rigctld: False
+2025-10-10 03:36:00,180 - UHRR - INFO - Querying actual PTT state from rigctld
+2025-10-10 03:36:00,180 - UHRR - DEBUG - rigctld PTT response: 0
+2025-10-10 03:36:00,181 - UHRR - INFO - Actual PTT state from rigctld: False
