@@ -243,14 +243,20 @@ class loadWavdata(threading.Thread):
 		
 		if PYAUDIO_AVAILABLE:
 			try:
+				print("🎵 正在初始化PyAudioCapture...")
 				self.audio_capture = PyAudioCapture(config)
+				print("🎵 PyAudioCapture对象创建成功")
 				self.inp = self.audio_capture.stream
+				print("🎵 PyAudio stream获取成功")
 				self.audio_available = True
 				# Start the PyAudioCapture thread to handle stereo processing
+				print("🎵 正在启动PyAudioCapture线程...")
 				self.audio_capture.start()
-				print('PyAudio audio interface initialized and stereo processing started')
+				print('✅ PyAudio audio interface initialized and stereo processing started')
 			except Exception as e:
-				print(f"PyAudio initialization failed: {e}")
+				print(f"❌ PyAudio initialization failed: {e}")
+				import traceback
+				traceback.print_exc()
 				print("Running without audio capture (audio devices not available)")
 		else:
 			# Fallback to ALSA
@@ -818,7 +824,7 @@ class TRXRIG:
 	def setPTT(self, status):
 		ptt_state = (status == "true")
 		ptt_value = 1 if ptt_state else 0
-		logger.info(f"Setting PTT: status={status}, ptt_state={ptt_state}, ptt_value={ptt_value}")
+		# logger.info(f"Setting PTT: status={status}, ptt_state={ptt_state}, ptt_value={ptt_value}")
 		
 		# 保存旧的PTT状态
 		old_ptt_state = self.infos.get("PTT", False)
@@ -841,7 +847,7 @@ class TRXRIG:
 					sock.close()
 					if response == "RPRT 0":
 						self.infos["PTT"] = ptt_state
-						logger.info(f"✓ PTT set to {status} via rigctld (fast) on attempt {attempt + 1}")
+						# logger.info(f"✓ PTT set to {status} via rigctld (fast) on attempt {attempt + 1}")
 						success = True
 						break
 					else:
@@ -850,7 +856,7 @@ class TRXRIG:
 					logger.error(f"Fast PTT command failed on attempt {attempt + 1}: {e}")
 			elif not self.rig:
 				self.infos["PTT"] = ptt_state
-				logger.info(f"Simulated: PTT set to {status}")
+				# logger.info(f"Simulated: PTT set to {status}")
 				success = True
 				break
 			else:
@@ -859,7 +865,7 @@ class TRXRIG:
 					result = self.rig.rig_set_ptt(vfo, ptt_value)
 					if result == 0:
 						self.infos["PTT"] = ptt_state
-						logger.info(f"PTT set to {status} on attempt {attempt + 1}")
+						# logger.info(f"PTT set to {status} on attempt {attempt + 1}")
 						success = True
 						break
 					else:
@@ -902,7 +908,7 @@ class TRXRIG:
 	
 	def _rigctld_get_ptt(self):
 		"""Get actual PTT state from rigctld daemon"""
-		logger.info("Querying actual PTT state from rigctld")
+		# logger.info("Querying actual PTT state from rigctld")
 		try:
 			import socket
 			sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -912,12 +918,12 @@ class TRXRIG:
 			sock.sendall(b"t\n")
 			response = sock.recv(1024).decode().strip()
 			sock.close()
-			logger.debug(f"rigctld PTT response: {response}")
+			# logger.debug(f"rigctld PTT response: {response}")
 			
 			# Parse response (rigctld returns 0 for off, 1 for on)
 			if response.isdigit():
 				ptt_state = bool(int(response))
-				logger.info(f"Actual PTT state from rigctld: {ptt_state}")
+				# logger.info(f"Actual PTT state from rigctld: {ptt_state}")
 				return ptt_state
 		except Exception as e:
 			logger.error(f"Error querying PTT state from rigctld: {e}")
@@ -960,7 +966,7 @@ class TRXRIG:
 			import threading
 			monitor_thread = threading.Thread(target=self._ptt_monitor_loop, daemon=True)
 			monitor_thread.start()
-			logger.info("Started PTT monitoring thread")
+			# logger.info("Started PTT monitoring thread")
 	
 	def _ptt_monitor_loop(self):
 		"""Background loop to monitor PTT state"""
@@ -1358,15 +1364,15 @@ class TestRadioHandler(BaseHandler):
 			logger.info(f"New frequency result: {new_freq}")
 			
 			# Test PTT
-			logger.info("Testing PTT on...")
+			# logger.info("Testing PTT on...")
 			ptt_on = CTRX.setPTT("true")
-			logger.info(f"PTT on result: {ptt_on}")
+			# logger.info(f"PTT on result: {ptt_on}")
 			
 			time.sleep(1)
 			
-			logger.info("Testing PTT off...")
+			# logger.info("Testing PTT off...")
 			ptt_off = CTRX.setPTT("false")
-			logger.info(f"PTT off result: {ptt_off}")
+			# logger.info(f"PTT off result: {ptt_off}")
 			
 			response = f"""Radio Test Results:
 

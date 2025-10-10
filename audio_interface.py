@@ -155,6 +155,9 @@ class PyAudioCapture(threading.Thread):
         # Import globals at runtime to avoid circular imports
         import __main__
         
+        print("🎵 PyAudioCapture线程已启动，开始音频捕获...")
+        frame_count = 0
+        
         while True:
             # Always capture audio data regardless of flagWavstart
             # This ensures continuous audio streaming even when clients reconnect
@@ -163,6 +166,9 @@ class PyAudioCapture(threading.Thread):
                 # Reduce delay for better responsiveness
                 time.sleep(0.005)
                 if len(data) > 0:
+                    frame_count += 1
+                    if frame_count % 100 == 0:
+                        print(f"🎵 音频捕获中... 帧数: {frame_count}, 数据长度: {len(data)}")
                     # Convert stereo to mono if needed
                     if self.stereo_mode:
                         # Convert stereo data (Float32) to mono by averaging left and right channels

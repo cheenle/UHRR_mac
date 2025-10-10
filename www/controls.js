@@ -201,12 +201,24 @@ function AudioRX_start(){
 			AudioRX_audiobuffer = AudioRX_audiobuffer.slice(-5); // 只保留最新的5个缓冲区
 		}
 		// Convert Int16 to Float32 for Web Audio API
-		const int16Data = new Int16Array(msg.data);
-		const float32Data = new Float32Array(int16Data.length);
-		for (let i = 0; i < int16Data.length; i++) {
-			float32Data[i] = int16Data[i] / 32767.0;
+		try {
+			const int16Data = new Int16Array(msg.data);
+			const float32Data = new Float32Array(int16Data.length);
+			for (let i = 0; i < int16Data.length; i++) {
+				float32Data[i] = int16Data[i] / 32767.0;
+			}
+			AudioRX_audiobuffer.push(float32Data);
+			console.log(`🎵 Int16解码成功: ${int16Data.length} 样本, 范围: [${Math.min(...int16Data)}, ${Math.max(...int16Data)}]`);
+		} catch (e) {
+			console.error("❌ Int16解码失败:", e);
+			// 回退到原始Float32处理
+			try {
+				AudioRX_audiobuffer.push(new Float32Array(msg.data));
+				console.log("🔄 回退到Float32处理");
+			} catch (e2) {
+				console.error("❌ 回退处理也失败:", e2);
+			}
 		}
-		AudioRX_audiobuffer.push(float32Data);
 		console.log('DEBUG: Audio buffer length after push:', AudioRX_audiobuffer.length);
 	}
 
@@ -234,11 +246,23 @@ function AudioRX_start(){
                 if (!window.__rxBytes) window.__rxBytes = 0;
                 if (msg && msg.data && msg.data.byteLength) window.__rxBytes += msg.data.byteLength;
                 try {
-                    window.__pushRxFrame(new Float32Array(msg.data));
+                    // Convert Int16 to Float32 for Web Audio API
+                    const int16Data = new Int16Array(msg.data);
+                    const float32Data = new Float32Array(int16Data.length);
+                    for (let i = 0; i < int16Data.length; i++) {
+                        float32Data[i] = int16Data[i] / 32767.0;
+                    }
+                    window.__pushRxFrame(float32Data);
                 } catch(e) {
                     // 出错回退到原有缓冲播放
                     try {
-                        AudioRX_audiobuffer.push(new Float32Array(msg.data));
+                        // Convert Int16 to Float32 for Web Audio API
+                        const int16Data = new Int16Array(msg.data);
+                        const float32Data = new Float32Array(int16Data.length);
+                        for (let i = 0; i < int16Data.length; i++) {
+                            float32Data[i] = int16Data[i] / 32767.0;
+                        }
+                        AudioRX_audiobuffer.push(float32Data);
                     } catch(_) {}
                 }
             };

@@ -397,8 +397,12 @@ function connectWebSockets() {
         // Handle incoming audio data - simple direct playback
         if (event.data instanceof ArrayBuffer) {
             try {
-                // Convert received data to Float32Array
-                const audioData = new Float32Array(event.data);
+                // Convert Int16 to Float32 for Web Audio API
+                const int16Data = new Int16Array(event.data);
+                const audioData = new Float32Array(int16Data.length);
+                for (let i = 0; i < int16Data.length; i++) {
+                    audioData[i] = int16Data[i] / 32767.0;
+                }
                 
                 // Play audio immediately if context is running
                 if (audioContext && audioContext.state === 'running') {
