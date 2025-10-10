@@ -11516,3 +11516,28 @@ tornado.websocket.WebSocketClosedError
 2025-10-10 08:57:21,985 - UHRR - INFO - rigctld command 'm' successful
 2025-10-10 08:57:21,985 - UHRR - DEBUG - Raw mode response: '2200'
 2025-10-10 08:57:21,985 - UHRR - WARNING - IC-M710 returned only passband 2200, using stored mode USB
+2025-10-10 09:01:08,582 - tornado.general - INFO - /Users/cheenle/UHRR/UHRR_mac/./UHRR modified; restarting server
+2025-10-10 09:01:10,740 - UHRR - INFO - Testing rigctld daemon connection...
+2025-10-10 09:01:10,766 - UHRR - INFO - ✓ rigctld daemon responding! Initial frequency: 7050000
+2025-10-10 09:01:10,770 - UHRR - INFO - Sending rigctld command: f
+2025-10-10 09:01:10,809 - UHRR - DEBUG - rigctld response to 'f': 7050000
+2025-10-10 09:01:10,809 - UHRR - INFO - rigctld command 'f' successful
+2025-10-10 09:01:10,809 - UHRR - INFO - Current frequency from rigctld: 7050000 Hz
+2025-10-10 09:01:10,809 - UHRR - INFO - Sending rigctld command: m
+2025-10-10 09:01:10,872 - UHRR - DEBUG - rigctld response to 'm': 2200
+2025-10-10 09:01:10,872 - UHRR - INFO - rigctld command 'm' successful
+2025-10-10 09:01:10,872 - UHRR - DEBUG - Raw mode response: '2200'
+2025-10-10 09:01:10,872 - UHRR - WARNING - IC-M710 returned only passband 2200, using stored mode USB
+2025-10-10 09:01:10,878 - asyncio - DEBUG - Using selector: KqueueSelector
+2025-10-10 09:01:15,235 - tornado.access - INFO - 101 GET /WSaudioRX (2409:8a00:1894:9660:3c2:9ee7:c14f:8623) 1.60ms
+2025-10-10 09:01:15,347 - tornado.access - INFO - 101 GET /WSaudioTX (2409:8a00:1894:9660:3c2:9ee7:c14f:8623) 0.26ms
+2025-10-10 09:01:15,444 - tornado.access - INFO - 101 GET /WSCTRX (2409:8a00:1894:9660:3c2:9ee7:c14f:8623) 0.39ms
+2025-10-10 09:01:15,510 - UHRR - INFO - Sending rigctld command: f
+2025-10-10 09:01:15,511 - UHRR - DEBUG - rigctld response to 'f': 7050000
+2025-10-10 09:01:15,511 - UHRR - INFO - rigctld command 'f' successful
+2025-10-10 09:01:15,511 - UHRR - INFO - Current frequency from rigctld: 7050000 Hz
+2025-10-10 09:01:15,511 - UHRR - INFO - Sending rigctld command: m
+2025-10-10 09:01:15,512 - UHRR - DEBUG - rigctld response to 'm': 2200
+2025-10-10 09:01:15,512 - UHRR - INFO - rigctld command 'm' successful
+2025-10-10 09:01:15,512 - UHRR - DEBUG - Raw mode response: '2200'
+2025-10-10 09:01:15,512 - UHRR - WARNING - IC-M710 returned only passband 2200, using stored mode USB

@@ -66,9 +66,9 @@ The main server is implemented in `UHRR` using Python and the Tornado framework.
 
 #### 3.1.3 Audio Processing
 - Cross-platform audio interface using PyAudio (with ALSA fallback)
-- Real-time audio capture and playback
-- Opus codec for efficient audio compression
-- Automatic stereo-to-mono conversion for better audio quality
+- Real-time audio capture and playback at 16kHz sample rate
+- Int16 data format for 50% bandwidth reduction
+- Optimized audio streaming with minimal latency
 
 #### 3.1.4 Panadapter Functionality
 - RTL-SDR integration for spectrum monitoring
@@ -103,9 +103,10 @@ The main server is implemented in `UHRR` using Python and the Tornado framework.
 ### 3.3 Audio Processing
 
 #### 3.3.1 Codecs
-- Opus codec for efficient audio compression
-- Configurable bitrates and frame sizes
+- Int16 data format for 50% bandwidth reduction
+- 16kHz sample rate for optimal voice quality
 - Real-time encoding/decoding with low latency
+- Optimized for voice communication
 
 #### 3.3.2 Audio Interfaces
 - **PyAudio**: Cross-platform audio I/O with device enumeration
@@ -165,8 +166,8 @@ Control messages use a simple "action:data" format:
 ### 4.3 Audio Streaming
 
 Audio is streamed in real-time with the following characteristics:
-- Sample rate: Configurable (typically 8kHz for voice)
-- Format: 16-bit PCM or Opus-encoded
+- Sample rate: 16kHz (optimized for voice quality)
+- Format: Int16 PCM (50% bandwidth reduction)
 - Buffer size: Optimized for low latency
 - Direction: Bidirectional (RX and TX)
 
@@ -212,7 +213,7 @@ Audio is streamed in real-time with the following characteristics:
 ### 7.3 Resource Usage
 - CPU: 5-15% on typical hardware
 - Memory: 50-100MB
-- Network: 16-64 kbps for audio streaming
+- Network: 256 kbps for audio streaming (16kHz Int16)
 
 ## 8. Deployment
 

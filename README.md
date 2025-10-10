@@ -6,7 +6,7 @@
 
 ## 功能特性
 - 浏览器端操作：频率、模式、PTT（按下立即发射、松开立即停止）
-- 双向音频：TX 端 Opus 编码，RX 端低抖动播放（AudioWorklet），采样率 24 kHz
+- 双向音频：TX 端 Int16 编码，RX 端低抖动播放（AudioWorklet），采样率 16 kHz
 - TLS/证书：支持自有证书链（fullchain + 私钥）
 - 后端：Tornado WebSocket，PyAudio 采集/播放，rigctld 控制电台
 - **增强的PTT可靠性机制**：按下即发送PTT命令，并立即发送预热帧确保后端收到音频数据
@@ -70,11 +70,11 @@
 
 ## 音频与时序策略
 - TX：
-  - 前端 `OpusEncoderProcessor`：`opusRate = 24000`，`opusFrameDur = 60ms`
+  - 前端 `Int16Encoder`：`sampleRate = 16000`，`format = Int16`
   - 后端 `WS_AudioTXHandler` 接收并播放；PTT 超时保护（无数据 2s 自动断开）
   - **增强的PTT可靠性机制**：按下即发送PTT命令，并立即发送10个预热帧确保后端收到音频数据
 - RX：
-  - 后端 `AudioRXHandler.tailstream` 批量下发减少抖动
+  - 后端 `AudioRXHandler` 使用 Int16 格式，16kHz 采样率
   - 前端 `AudioWorkletNode` 播放，设置缓冲深度（优化后 16/32 帧，平衡延迟与稳定性）
   - **优化的缓冲区管理**：TX释放时立即清除RX缓冲区，实现<100ms的切换响应
 
@@ -97,7 +97,7 @@
   - 后端采用增强的PTT可靠性机制：按下即发送PTT命令，并立即发送10个预热帧确保后端收到音频数据
   - 后端使用计数超时法（连续10次未收到音频帧才熄灭PTT，每次检查间隔200ms）替代时间阈值法
 - RX 抖动：
-  - 保持 24k 端到端一致
+  - 保持 16k 端到端一致
   - 可调整 Worklet 缓冲（例如 16/32 或 32/64）
 - TX到RX切换延迟：
   - 已优化缓冲区清除机制和PTT命令处理，实现<100ms切换响应
