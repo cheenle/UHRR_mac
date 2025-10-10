@@ -56,7 +56,7 @@ let audioRXGainNode = null;
 let audioRXBiquadFilterNode = null;
 let audioRXAnalyser = null;
 let audioRXAudioBuffer = [];
-let audioRXSampleRate = 8000;
+let audioRXSampleRate = 16000;
 let audioBufferReady = false;
 
 // Function to resume audio context on user interaction
@@ -370,7 +370,7 @@ function connectWebSockets() {
         // Initialize Web Audio API for audio playback
         if (!audioContext) {
             try {
-                audioContext = new (window.AudioContext || window.webkitAudioContext)({sampleRate: audioRXSampleRate});
+                audioContext = new (window.AudioContext || window.webkitAudioContext)({sampleRate: 16000});
                 console.log('Web Audio API initialized with sample rate:', audioRXSampleRate);
                 
                 // Create audio processing nodes

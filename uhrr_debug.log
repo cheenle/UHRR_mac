@@ -11432,3 +11432,87 @@ tornado.websocket.WebSocketClosedError
 2025-10-10 08:50:45,923 - UHRR - INFO - rigctld command 'm' successful
 2025-10-10 08:50:45,923 - UHRR - DEBUG - Raw mode response: '2200'
 2025-10-10 08:50:45,923 - UHRR - WARNING - IC-M710 returned only passband 2200, using stored mode USB
+2025-10-10 08:52:56,366 - UHRR - INFO - Sending rigctld set command: F 7050000
+2025-10-10 08:52:56,523 - UHRR - DEBUG - rigctld set response to 'F 7050000': RPRT 0
+2025-10-10 08:52:56,524 - UHRR - INFO - rigctld set command 'F 7050000' successful
+2025-10-10 08:52:56,524 - UHRR - INFO - ✓ Frequency set to 7050000 Hz via rigctld
+2025-10-10 08:52:59,355 - UHRR - INFO - Setting mode to: LSB
+2025-10-10 08:52:59,419 - UHRR - DEBUG - rigctld mode response to 'M LSB 2400': RPRT 0
+2025-10-10 08:52:59,420 - UHRR - INFO - ✓ Mode set to LSB via rigctld
+2025-10-10 08:56:26,032 - tornado.general - INFO - /Users/cheenle/UHRR/UHRR_mac/audio_interface.py modified; restarting server
+2025-10-10 08:56:28,950 - UHRR - INFO - Testing rigctld daemon connection...
+2025-10-10 08:56:28,954 - UHRR - INFO - ✓ rigctld daemon responding! Initial frequency: 7050000
+2025-10-10 08:56:28,955 - UHRR - INFO - Sending rigctld command: f
+2025-10-10 08:56:28,955 - UHRR - DEBUG - rigctld response to 'f': 7050000
+2025-10-10 08:56:28,955 - UHRR - INFO - rigctld command 'f' successful
+2025-10-10 08:56:28,955 - UHRR - INFO - Current frequency from rigctld: 7050000 Hz
+2025-10-10 08:56:28,956 - UHRR - INFO - Sending rigctld command: m
+2025-10-10 08:56:28,957 - UHRR - DEBUG - rigctld response to 'm': 2200
+2025-10-10 08:56:28,957 - UHRR - INFO - rigctld command 'm' successful
+2025-10-10 08:56:28,957 - UHRR - DEBUG - Raw mode response: '2200'
+2025-10-10 08:56:28,957 - UHRR - WARNING - IC-M710 returned only passband 2200, using stored mode USB
+2025-10-10 08:56:28,962 - asyncio - DEBUG - Using selector: KqueueSelector
+2025-10-10 08:56:31,467 - tornado.general - INFO - /Users/cheenle/UHRR/UHRR_mac/audio_interface.py modified; restarting server
+2025-10-10 08:56:31,931 - UHRR - INFO - Testing rigctld daemon connection...
+2025-10-10 08:56:31,932 - UHRR - INFO - ✓ rigctld daemon responding! Initial frequency: 7050000
+2025-10-10 08:56:31,932 - UHRR - INFO - Sending rigctld command: f
+2025-10-10 08:56:31,932 - UHRR - DEBUG - rigctld response to 'f': 7050000
+2025-10-10 08:56:31,932 - UHRR - INFO - rigctld command 'f' successful
+2025-10-10 08:56:31,933 - UHRR - INFO - Current frequency from rigctld: 7050000 Hz
+2025-10-10 08:56:31,933 - UHRR - INFO - Sending rigctld command: m
+2025-10-10 08:56:31,933 - UHRR - DEBUG - rigctld response to 'm': 2200
+2025-10-10 08:56:31,933 - UHRR - INFO - rigctld command 'm' successful
+2025-10-10 08:56:31,933 - UHRR - DEBUG - Raw mode response: '2200'
+2025-10-10 08:56:31,933 - UHRR - WARNING - IC-M710 returned only passband 2200, using stored mode USB
+2025-10-10 08:56:31,934 - asyncio - DEBUG - Using selector: KqueueSelector
+2025-10-10 08:56:33,939 - tornado.general - INFO - /Users/cheenle/UHRR/UHRR_mac/audio_interface.py modified; restarting server
+2025-10-10 08:56:34,639 - UHRR - INFO - Testing rigctld daemon connection...
+2025-10-10 08:56:34,641 - UHRR - INFO - ✓ rigctld daemon responding! Initial frequency: 7050000
+2025-10-10 08:56:34,641 - UHRR - INFO - Sending rigctld command: f
+2025-10-10 08:56:34,641 - UHRR - DEBUG - rigctld response to 'f': 7050000
+2025-10-10 08:56:34,642 - UHRR - INFO - rigctld command 'f' successful
+2025-10-10 08:56:34,642 - UHRR - INFO - Current frequency from rigctld: 7050000 Hz
+2025-10-10 08:56:34,642 - UHRR - INFO - Sending rigctld command: m
+2025-10-10 08:56:34,642 - UHRR - DEBUG - rigctld response to 'm': 2200
+2025-10-10 08:56:34,642 - UHRR - INFO - rigctld command 'm' successful
+2025-10-10 08:56:34,642 - UHRR - DEBUG - Raw mode response: '2200'
+2025-10-10 08:56:34,642 - UHRR - WARNING - IC-M710 returned only passband 2200, using stored mode USB
+2025-10-10 08:56:34,644 - asyncio - DEBUG - Using selector: KqueueSelector
+2025-10-10 08:57:05,443 - tornado.access - INFO - 101 GET /WSaudioRX (2409:8a00:1894:9660:3c2:9ee7:c14f:8623) 0.82ms
+2025-10-10 08:57:05,547 - tornado.access - INFO - 101 GET /WSaudioTX (2409:8a00:1894:9660:3c2:9ee7:c14f:8623) 0.26ms
+2025-10-10 08:57:05,680 - tornado.access - INFO - 101 GET /WSCTRX (2409:8a00:1894:9660:3c2:9ee7:c14f:8623) 0.25ms
+2025-10-10 08:57:05,741 - UHRR - INFO - Sending rigctld command: f
+2025-10-10 08:57:05,742 - UHRR - DEBUG - rigctld response to 'f': 7050000
+2025-10-10 08:57:05,742 - UHRR - INFO - rigctld command 'f' successful
+2025-10-10 08:57:05,742 - UHRR - INFO - Current frequency from rigctld: 7050000 Hz
+2025-10-10 08:57:05,743 - UHRR - INFO - Sending rigctld command: m
+2025-10-10 08:57:05,743 - UHRR - DEBUG - rigctld response to 'm': 2200
+2025-10-10 08:57:05,743 - UHRR - INFO - rigctld command 'm' successful
+2025-10-10 08:57:05,743 - UHRR - DEBUG - Raw mode response: '2200'
+2025-10-10 08:57:05,743 - UHRR - WARNING - IC-M710 returned only passband 2200, using stored mode USB
+2025-10-10 08:57:15,075 - UHRR - INFO - Testing rigctld daemon connection...
+2025-10-10 08:57:15,076 - UHRR - INFO - ✓ rigctld daemon responding! Initial frequency: 7050000
+2025-10-10 08:57:15,076 - UHRR - INFO - Sending rigctld command: f
+2025-10-10 08:57:15,077 - UHRR - DEBUG - rigctld response to 'f': 7050000
+2025-10-10 08:57:15,077 - UHRR - INFO - rigctld command 'f' successful
+2025-10-10 08:57:15,077 - UHRR - INFO - Current frequency from rigctld: 7050000 Hz
+2025-10-10 08:57:15,077 - UHRR - INFO - Sending rigctld command: m
+2025-10-10 08:57:15,077 - UHRR - DEBUG - rigctld response to 'm': 2200
+2025-10-10 08:57:15,077 - UHRR - INFO - rigctld command 'm' successful
+2025-10-10 08:57:15,077 - UHRR - DEBUG - Raw mode response: '2200'
+2025-10-10 08:57:15,077 - UHRR - WARNING - IC-M710 returned only passband 2200, using stored mode USB
+2025-10-10 08:57:15,078 - asyncio - DEBUG - Using selector: KqueueSelector
+2025-10-10 08:57:19,242 - tornado.access - INFO - 200 GET / (2409:8a00:1894:9660:3c2:9ee7:c14f:8623) 2.34ms
+2025-10-10 08:57:19,350 - tornado.access - INFO - 200 GET /controls.js (2409:8a00:1894:9660:3c2:9ee7:c14f:8623) 60.64ms
+2025-10-10 08:57:21,782 - tornado.access - INFO - 101 GET /WSaudioRX (2409:8a00:1894:9660:3c2:9ee7:c14f:8623) 0.38ms
+2025-10-10 08:57:21,849 - tornado.access - INFO - 101 GET /WSaudioTX (2409:8a00:1894:9660:3c2:9ee7:c14f:8623) 0.38ms
+2025-10-10 08:57:21,928 - tornado.access - INFO - 101 GET /WSCTRX (2409:8a00:1894:9660:3c2:9ee7:c14f:8623) 0.45ms
+2025-10-10 08:57:21,983 - UHRR - INFO - Sending rigctld command: f
+2025-10-10 08:57:21,984 - UHRR - DEBUG - rigctld response to 'f': 7050000
+2025-10-10 08:57:21,984 - UHRR - INFO - rigctld command 'f' successful
+2025-10-10 08:57:21,984 - UHRR - INFO - Current frequency from rigctld: 7050000 Hz
+2025-10-10 08:57:21,985 - UHRR - INFO - Sending rigctld command: m
+2025-10-10 08:57:21,985 - UHRR - DEBUG - rigctld response to 'm': 2200
+2025-10-10 08:57:21,985 - UHRR - INFO - rigctld command 'm' successful
+2025-10-10 08:57:21,985 - UHRR - DEBUG - Raw mode response: '2200'
+2025-10-10 08:57:21,985 - UHRR - WARNING - IC-M710 returned only passband 2200, using stored mode USB

@@ -10,7 +10,7 @@ var AudioRX_biquadFilter_node = "";
 var AudioRX_analyser = "";
 var audiobufferready = false;
 var AudioRX_audiobuffer = [];
-var AudioRX_sampleRate = 12000;
+var AudioRX_sampleRate = 16000;
 
 // Audio functions copied directly from controls.js
 function AudioRX_start() {
@@ -160,7 +160,7 @@ function AudioRX_start() {
 
     AudioRX_biquadFilter_node.type = "lowshelf";
     // Clamp frequency to valid range for 24kHz sample rate
-    AudioRX_biquadFilter_node.frequency.setValueAtTime(12000, AudioRX_context.currentTime);
+    AudioRX_biquadFilter_node.frequency.setValueAtTime(16000, AudioRX_context.currentTime);
     AudioRX_biquadFilter_node.gain.setValueAtTime(0, AudioRX_context.currentTime);
 
     AudioRX_SetGAIN();

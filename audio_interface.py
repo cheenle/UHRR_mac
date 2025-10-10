@@ -93,12 +93,12 @@ class PyAudioCapture(threading.Thread):
             self.stream = self.p.open(
                 format=pyaudio.paFloat32,
                 channels=device_channels,
-                rate=12000,
+                rate=16000,
                 input=True,
                 input_device_index=device_index,
                 frames_per_buffer=512
             )
-            print(f'PyAudio input stream opened successfully with {device_channels} channel(s) at 12000 Hz')
+            print(f'PyAudio input stream opened successfully with {device_channels} channel(s) at 16000 Hz')
             self.stereo_mode = (device_channels == 2)
         except Exception as e:
             print(f"Failed to open PyAudio input stream with {device_channels} channels: {e}")
@@ -107,12 +107,12 @@ class PyAudioCapture(threading.Thread):
                 self.stream = self.p.open(
                     format=pyaudio.paFloat32,
                     channels=1,
-                    rate=12000,
+                    rate=16000,
                     input=True,
                     input_device_index=device_index,
                     frames_per_buffer=512
                 )
-                print('PyAudio input stream opened successfully with MONO (1 channel) at 12000 Hz - fallback')
+                print('PyAudio input stream opened successfully with MONO (1 channel) at 16000 Hz - fallback')
                 self.stereo_mode = False
             except Exception as e2:
                 print(f"Failed to open mono PyAudio input stream: {e2}")
@@ -121,11 +121,11 @@ class PyAudioCapture(threading.Thread):
                     self.stream = self.p.open(
                         format=pyaudio.paFloat32,
                         channels=1,
-                        rate=12000,
+                        rate=16000,
                         input=True,
                         frames_per_buffer=512
                     )
-                    print('Opened with default input device (mono) at 12000 Hz')
+                    print('Opened with default input device (mono) at 16000 Hz')
                     self.stereo_mode = False
                 except Exception as e3:
                     print(f"Failed to open default input device: {e3}")

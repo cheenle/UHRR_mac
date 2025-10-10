@@ -18,7 +18,7 @@ let muteRX = false;
 let volumeRX = 0.5;
 let isRecording = false;
 let AudioRX_audiobuffer = [];
-let AudioRX_sampleRate = 12000; // 参考原始代码
+let AudioRX_sampleRate = 16000; // 参考原始代码
 let AudioTX_analyser = null; // TX音频分析器
 let Audio_analyser = null; // 当前音频分析器
 

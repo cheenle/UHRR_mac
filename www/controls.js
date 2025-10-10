@@ -157,7 +157,7 @@ var AudioRX_biquadFilter_node = "";
 var AudioRX_analyser = "";
 var audiobufferready = false;
 var AudioRX_audiobuffer = [];
-var AudioRX_sampleRate=12000;
+var AudioRX_sampleRate=16000;
 var audioSyncMonitor = {
 	lastProcessTime: 0,
 	bufferCount: 0,
