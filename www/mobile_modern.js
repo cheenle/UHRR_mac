@@ -471,8 +471,12 @@ function connectWebSocket() {
                         window.__rxBytes += event.data.byteLength;
                     }
                     
-                    // Convert received data to Float32Array and add to buffer queue
-                    const audioData = new Float32Array(event.data);
+                    // Convert Int16 to Float32 for Web Audio API
+                    const int16Data = new Int16Array(event.data);
+                    const audioData = new Float32Array(int16Data.length);
+                    for (let i = 0; i < int16Data.length; i++) {
+                        audioData[i] = int16Data[i] / 32767.0;
+                    }
                     
                     // 限制缓冲区大小，防止累积过多音频数据 (borrowed from desktop version)
                     if (audioRXAudioBuffer.length > 10) {

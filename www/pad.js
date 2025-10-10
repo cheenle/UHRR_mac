@@ -779,8 +779,15 @@ function handleControlMessage(data) {
 function handleAudioRXData(data) {
     if (!AudioRX_context) return;
     
+    // Convert Int16 to Float32 for Web Audio API
+    const int16Data = new Int16Array(data);
+    const float32Data = new Float32Array(int16Data.length);
+    for (let i = 0; i < int16Data.length; i++) {
+        float32Data[i] = int16Data[i] / 32767.0;
+    }
+    
     // 将音频数据添加到缓冲区 - 参考原始代码
-    AudioRX_audiobuffer.push(new Float32Array(data));
+    AudioRX_audiobuffer.push(float32Data);
     
     // 限制缓冲区大小，防止内存溢出
     if (AudioRX_audiobuffer.length > 20) {

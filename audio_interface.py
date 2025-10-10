@@ -174,8 +174,13 @@ class PyAudioCapture(threading.Thread):
                         # Convert numpy array to bytes for WebSocket transmission
                         data = mono_data.tobytes()
                     
-                    # Send data to WebSocket clients only if there are connected clients
+                    # Send Int16 data to WebSocket clients (50% bandwidth reduction)
                     try:
+                        # Convert Float32 to Int16 for 50% bandwidth reduction
+                        float32_data = np.frombuffer(data, dtype=np.float32)
+                        int16_data = (float32_data * 32767).astype(np.int16)
+                        compressed_data = int16_data.tobytes()
+                        
                         # Access the global AudioRXHandlerClients list from the main module
                         import sys
                         main_module = sys.modules['__main__']
@@ -191,11 +196,14 @@ class PyAudioCapture(threading.Thread):
 
                             if client_count > 0:
                                 for c in AudioRXHandlerClients:
-                                    c.Wavframes.append(data)
+                                    c.Wavframes.append(compressed_data)
                                 # Print logs only every 1000 frames to reduce log volume
                                 if self._log_counter % 1000 == 0:
-                                    print(f"DEBUG: Checking clients - found {client_count} clients")
-                                    print(f"Audio data sent to {client_count} clients ({self._log_counter} frames)")
+                                    original_size = len(data)
+                                    compressed_size = len(compressed_data)
+                                    bandwidth_saved = (1 - compressed_size / original_size) * 100
+                                    print(f"🎵 Int16优化 - 客户端: {client_count}, 帧: {self._log_counter}")
+                                    print(f"📊 带宽节省: {bandwidth_saved:.1f}% ({original_size} → {compressed_size} 字节)")
                             else:
                                 # Print logs only every 1000 frames when no clients are connected
                                 if self._log_counter % 1000 == 0:

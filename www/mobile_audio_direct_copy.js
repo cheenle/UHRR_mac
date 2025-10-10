@@ -58,7 +58,13 @@ function AudioRX_start() {
             console.log('⚠️ 音频缓冲区过大，清除旧数据');
             AudioRX_audiobuffer = AudioRX_audiobuffer.slice(-5); // 只保留最新的5个缓冲区
         }
-        AudioRX_audiobuffer.push(new Float32Array(msg.data));
+        // Convert Int16 to Float32 for Web Audio API
+        const int16Data = new Int16Array(msg.data);
+        const float32Data = new Float32Array(int16Data.length);
+        for (let i = 0; i < int16Data.length; i++) {
+            float32Data[i] = int16Data[i] / 32767.0;
+        }
+        AudioRX_audiobuffer.push(float32Data);
         console.log('DEBUG: Audio buffer length after push:', AudioRX_audiobuffer.length);
     }
 
@@ -99,11 +105,23 @@ function AudioRX_start() {
                 if (!window.__rxBytes) window.__rxBytes = 0;
                 if (msg && msg.data && msg.data.byteLength) window.__rxBytes += msg.data.byteLength;
                 try {
-                    window.__pushRxFrame(new Float32Array(msg.data));
+                    // Convert Int16 to Float32 for Web Audio API
+                    const int16Data = new Int16Array(msg.data);
+                    const float32Data = new Float32Array(int16Data.length);
+                    for (let i = 0; i < int16Data.length; i++) {
+                        float32Data[i] = int16Data[i] / 32767.0;
+                    }
+                    window.__pushRxFrame(float32Data);
                 } catch (e) {
                     // 出错回退到原有缓冲播放
                     try {
-                        AudioRX_audiobuffer.push(new Float32Array(msg.data));
+                        // Convert Int16 to Float32 for Web Audio API
+        const int16Data = new Int16Array(msg.data);
+        const float32Data = new Float32Array(int16Data.length);
+        for (let i = 0; i < int16Data.length; i++) {
+            float32Data[i] = int16Data[i] / 32767.0;
+        }
+        AudioRX_audiobuffer.push(float32Data);
                     } catch (_) {}
                 }
             };
