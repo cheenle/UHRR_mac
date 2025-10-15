@@ -392,6 +392,22 @@ class WS_AudioTXHandler(tornado.websocket.WebSocketHandler):
 			try:
 				self.audio_playback = PyAudioPlayback(config, itrate, is_encoded, op_rate, op_frm_dur)
 				logger.info(f'PyAudio TX initialized: rate={itrate}, encoded={is_encoded}')
+				
+				# 使用PyAudio TX初始化作为可靠的PTT触发条件
+				# 当PyAudio TX初始化成功时，自动设置PTT=1
+				global CTRX
+				if CTRX and CTRX.infos.get("PTT") == False:
+					logger.info("🎯 PyAudio TX初始化成功，自动触发PTT=1")
+					CTRX.setPTT("true")
+					
+					# 广播PTT状态变化
+					try:
+						global ControlTRXHandlerClients
+						for client in ControlTRXHandlerClients:
+							client.write_message(f"getPTT:true")
+					except Exception as e:
+						logger.error(f"Error broadcasting PTT status: {e}")
+					
 			except Exception as e:
 				logger.error(f'PyAudio TX initialization failed: {e}')
 				raise
@@ -529,14 +545,13 @@ class TRXRIG:
 			self.getvfo()
 			self.getFreq()
 			self.getMode()
-			# Start PTT monitoring after radio is initialized
-			self.start_ptt_monitoring()
+			# PTT monitoring disabled to reduce rigctld load
 		else:
 			print("Running in simulation mode - radio commands will be simulated")
 		
 	def _rigctld_command(self, cmd):
 		"""Send command to rigctld daemon and return the result"""
-		logger.info(f"Sending rigctld command: {cmd}")
+		#logger.debug(f"Sending rigctld command: {cmd}")
 		if not self.rig or self.rig != "rigctld_daemon":
 			logger.error(f"Rigctld not available for command: {cmd}")
 			return None
@@ -548,8 +563,8 @@ class TRXRIG:
 			sock.sendall((cmd + '\n').encode())
 			response = sock.recv(1024).decode().strip()
 			sock.close()
-			logger.debug(f"rigctld response to '{cmd}': {response}")
-			logger.info(f"rigctld command '{cmd}' successful")
+			#logger.debug(f"rigctld response to '{cmd}': {response}")
+			#logger.debug(f"rigctld command '{cmd}' successful")
 			return response
 		except Exception as e:
 			logger.error(f"Error communicating with rigctld for command '{cmd}': {e}")
@@ -929,6 +944,7 @@ class TRXRIG:
 			logger.error(f"Error querying PTT state from rigctld: {e}")
 		return None
 		
+		
 	def setPower(self,status=1):
 		if self.rig == "rigctl_subprocess":
 			# For rigctl, power is handled automatically when radio is on
@@ -991,7 +1007,7 @@ class TRXRIG:
 							except Exception as e:
 								logger.error(f"Error broadcasting PTT state: {e}")
 				
-				time.sleep(2)  # Check every 2 seconds
+				time.sleep(5)  # Check every 5 seconds
 			except Exception as e:
 				logger.error(f"Error in PTT monitoring loop: {e}")
 				time.sleep(5)  # Back off on error
@@ -1021,8 +1037,10 @@ class WS_ControlTRX(tornado.websocket.WebSocketHandler):
 				self.StrgLVL=CTRX.infos["StrgLVL"]
 			# 定期发送PTT状态
 			self.write_message("getPTT:"+str(CTRX.infos["PTT"]).lower())
-		except:
-			print("error TXMETER")
+			
+			
+		except Exception as e:
+			logger.error(f"error TXMETER: {e}")
 			return None
 		tornado.ioloop.IOLoop.instance().add_timeout(datetime.timedelta(seconds=float(config['CTRL']['interval_smeter_update'])), self.sendPTINFOS)
 

@@ -552,7 +552,18 @@ function wsControlTRXopen(){
 	wsControlTRX.send("getFreq:");
 	wsControlTRX.send("getMode:");
 	// 连接建立后立即查询PTT状态
-	wsControlTRX.send("getPTT");
+	wsControlTRX.send("getPTT:");
+	updatePTTStatus(false);
+	
+	// 启动定期PTT状态检查（每5秒一次，确保状态准确性）
+	if (window.pttStatusCheckInterval) {
+		clearInterval(window.pttStatusCheckInterval);
+	}
+	window.pttStatusCheckInterval = setInterval(() => {
+		if (poweron && wsControlTRX && wsControlTRX.readyState === WebSocket.OPEN) {
+			wsControlTRX.send("getPTT:");
+		}
+	}, 5000); // 每5秒检查一次PTT状态
 }
 
 function wsControlTRXclose(){
@@ -561,6 +572,11 @@ function wsControlTRXclose(){
 	if (window.pttQueryInterval) {
 		clearInterval(window.pttQueryInterval);
 		window.pttQueryInterval = null;
+	}
+	// 清理定期状态检查定时器
+	if (window.pttStatusCheckInterval) {
+		clearInterval(window.pttStatusCheckInterval);
+		window.pttStatusCheckInterval = null;
 	}
 	// 重置PTT状态显示
 	updatePTTStatus(false);
@@ -647,61 +663,55 @@ function sendTRXfreq(freq=0){
 // 全局PTT状态跟踪变量，用于防止重复命令
 var lastPTTState = null;
 var lastPTTTime = 0;
-var PTT_DEBOUNCE_DELAY = 50; // 50ms防抖延迟
+var PTT_DEBOUNCE_DELAY = 100; // 防抖延迟改回100ms
+var PTT_COMMAND_SENT = false; // 跟踪是否已发送PTT命令
+var PTT_DEVICE_STATE = false; // 设备确认的PTT状态（优先使用）
+var PTT_PREDICTED_STATE = false; // 本地预测的PTT状态（仅用于临时显示）
+var PTT_LAST_UPDATE_TIME = 0; // 最后状态更新时间
+var PTT_USER_INTENT = false; // 用户意图状态（按下TX时为true，松开时为false）
 
 function sendTRXptt(stat){
 	const message = "setPTT:"+stat;
 	const currentTime = Date.now();
 	
-	// 防抖机制：如果状态相同且时间间隔太短，则忽略
+	// 更新用户意图状态
+	PTT_USER_INTENT = stat;
+	
+	// 防抖机制：如果状态相同且时间间隔太短，则忽略（但确保第一命令能发送）
 	if (lastPTTState === stat && (currentTime - lastPTTTime) < PTT_DEBOUNCE_DELAY) {
 		console.log(`🔄 PTT命令防抖：忽略重复命令 (${stat})，距离上次命令 ${(currentTime - lastPTTTime)}ms`);
-		return;
+		// 即使防抖，也确保至少发送一次命令
+		if (lastPTTTime === 0 || lastPTTState === null) {
+			console.log(`⚠️ 防抖机制：但这是第一次命令，强制发送`);
+		} else {
+			return;
+		}
 	}
 	
 	// 更新最后状态和时间
 	lastPTTState = stat;
 	lastPTTTime = currentTime;
+	PTT_COMMAND_SENT = true;
 	
-	console.log(`📤 发送PTT命令: ${message}, WebSocket状态: ${wsControlTRX.readyState}`);
-	if (wsControlTRX.readyState === WebSocket.OPEN) {
-		// 立即发送，不使用延迟
+	// 立即更新本地预测状态（快速视觉反馈）
+	PTT_PREDICTED_STATE = stat;
+	PTT_LAST_UPDATE_TIME = currentTime;
+	updatePTTStatusDisplay(stat, false); // false表示是预测状态
+	
+	// 详细调试日志：前端TX动作时间戳
+	console.log(`📤 [前端TX动作] 时间戳: ${currentTime}, 状态: ${stat ? 'ON' : 'OFF'}, 用户意图: ${PTT_USER_INTENT}, WebSocket状态: ${wsControlTRX ? wsControlTRX.readyState : 'NULL'}, poweron: ${poweron}`);
+	
+	if (wsControlTRX && wsControlTRX.readyState === WebSocket.OPEN && poweron) {
+		// 简化：只发送一次PTT命令，移除三次重试机制
 		wsControlTRX.send(message);
-		console.log(`✅ PTT命令已发送: ${message}`);
+		console.log(`✅ [PTT发送] 时间戳: ${currentTime}, 命令: ${message}, 延迟: 0ms`);
 		
-		// 不再在这里更新本地PTT状态显示，而是等待设备反馈
-		// updatePTTStatus(stat === "true");
-		
-		// 添加更强的状态确认机制
-		let retries = 0;
-		const maxRetries = 2; // 减少重试次数
-		const retryInterval = 50; // 减少重试间隔到50ms
-		
-		const confirmPTT = () => {
-			if (poweron && wsControlTRX && wsControlTRX.readyState === WebSocket.OPEN) {
-				// 查询当前PTT状态确认
-				wsControlTRX.send("getPTT");
-				
-				// 设置更短的确认超时
-				setTimeout(() => {
-					// 这里我们不直接检查状态，而是依赖WebSocket消息处理
-					// 如果在一定时间内没有收到确认，重新发送
-					retries++;
-					if (retries < maxRetries) {
-						console.log(`🔍 PTT命令确认超时，第${retries}次重试`);
-						wsControlTRX.send(message);
-						confirmPTT();
-					} else {
-						console.error(`❌ PTT命令发送失败，已重试${maxRetries}次`);
-					}
-				}, retryInterval);
-			}
-		};
-		
-		// 立即开始确认
-		setTimeout(confirmPTT, 20); // 减少初始延迟到20ms
+		// 最终重置命令发送标志
+		setTimeout(() => {
+			PTT_COMMAND_SENT = false;
+		}, 1000);
 	} else {
-		console.error(`❌ WebSocket未连接，无法发送PTT命令: ${message}`);
+		console.error(`❌ [PTT发送失败] WebSocket状态: ${wsControlTRX ? wsControlTRX.readyState : 'NULL'}, poweron: ${poweron}`);
 		// 如果发送失败，重置状态以便下次可以重新发送
 		lastPTTState = null;
 	}
@@ -709,16 +719,100 @@ function sendTRXptt(stat){
 
 // 添加PTT状态更新函数
 function updatePTTStatus(isPTTOn) {
+	// 更新设备确认状态（优先使用）
+	PTT_DEVICE_STATE = isPTTOn;
+	PTT_LAST_UPDATE_TIME = Date.now();
+	
+	// 检查状态一致性：如果设备状态与用户意图不一致，记录警告
+	if (PTT_DEVICE_STATE !== PTT_USER_INTENT) {
+		console.warn(`⚠️ PTT状态不一致：用户意图=${PTT_USER_INTENT}, 设备状态=${PTT_DEVICE_STATE}`);
+	}
+	
+	// 立即更新显示，使用设备确认状态
+	updatePTTStatusDisplay(isPTTOn, true);
+}
+
+// 统一的PTT状态显示函数 - 设备状态优先于预测状态
+function updatePTTStatusDisplay(isPTTOn, isDeviceConfirmed) {
 	const pttIndicator = document.getElementById('ptt-status-indicator');
-	if (pttIndicator) {
+	if (!pttIndicator) return;
+	
+	// 如果设备状态与用户意图不一致，优先显示用户意图
+	if (isDeviceConfirmed && PTT_DEVICE_STATE !== PTT_USER_INTENT) {
+		console.warn(`🔄 PTT显示：设备状态(${PTT_DEVICE_STATE})与用户意图(${PTT_USER_INTENT})不一致，优先显示用户意图`);
+		isPTTOn = PTT_USER_INTENT;
+		isDeviceConfirmed = false; // 标记为预测状态
+	}
+	
+	// 设备确认状态优先显示
+	if (isDeviceConfirmed) {
+		// 设备确认的状态 - 使用标准显示
 		if (isPTTOn) {
 			pttIndicator.textContent = 'PTT: ON';
 			pttIndicator.style.color = '#00ff00'; // 绿色表示发射中
+			pttIndicator.style.fontWeight = 'bold';
+			pttIndicator.style.textShadow = '0 0 8px #00ff00';
+			pttIndicator.style.animation = 'none'; // 清除任何动画
 		} else {
 			pttIndicator.textContent = 'PTT: OFF';
 			pttIndicator.style.color = '#ff4444'; // 红色表示未发射
+			pttIndicator.style.fontWeight = 'normal';
+			pttIndicator.style.textShadow = 'none';
+			pttIndicator.style.animation = 'none'; // 清除任何动画
+		}
+	} else {
+		// 预测状态 - 使用特殊视觉反馈（仅在设备状态未知时显示）
+		// 如果设备状态已知，优先显示设备状态
+		if (Date.now() - PTT_LAST_UPDATE_TIME < 3000) { // 3秒内的预测状态才显示
+			if (isPTTOn) {
+				pttIndicator.textContent = 'PTT: ON (预测)';
+				pttIndicator.style.color = '#ffff00'; // 黄色表示预测状态
+				pttIndicator.style.fontWeight = 'bold';
+				pttIndicator.style.textShadow = '0 0 12px #ffff00';
+				pttIndicator.style.animation = 'none';
+			} else {
+				pttIndicator.textContent = 'PTT: OFF (预测)';
+				pttIndicator.style.color = '#ff8800'; // 橙色表示预测状态
+				pttIndicator.style.fontWeight = 'normal';
+				pttIndicator.style.textShadow = '0 0 8px #ff8800';
+				pttIndicator.style.animation = 'none';
+			}
+		} else {
+			// 预测状态过期，显示为未知状态
+			pttIndicator.textContent = 'PTT: 未知';
+			pttIndicator.style.color = '#888888';
+			pttIndicator.style.fontWeight = 'normal';
+			pttIndicator.style.textShadow = 'none';
+			pttIndicator.style.animation = 'pttBlink 2s infinite';
 		}
 	}
+}
+
+// 定期同步PTT状态显示，确保显示正确
+function syncPTTStatusDisplay() {
+	const pttIndicator = document.getElementById('ptt-status-indicator');
+	if (!pttIndicator) return;
+	
+	// 如果设备状态与用户意图不一致，强制查询设备状态
+	if (PTT_DEVICE_STATE !== PTT_USER_INTENT) {
+		console.log(`🔄 PTT状态同步：用户意图(${PTT_USER_INTENT})与设备状态(${PTT_DEVICE_STATE})不一致，强制查询设备状态`);
+		if (poweron && wsControlTRX && wsControlTRX.readyState === WebSocket.OPEN) {
+			wsControlTRX.send("getPTT");
+		}
+	}
+	
+	// 始终优先显示设备状态
+	updatePTTStatusDisplay(PTT_DEVICE_STATE, true);
+	
+	// 每1秒同步一次，更频繁地检查状态一致性
+	setTimeout(syncPTTStatusDisplay, 1000);
+}
+
+// 启动PTT状态同步
+if (typeof window !== 'undefined') {
+	window.addEventListener('load', function() {
+		setTimeout(syncPTTStatusDisplay, 1000); // 页面加载后1秒开始同步
+	});
 }	
 
 function showTRXmode(mode){
@@ -1509,5 +1603,197 @@ function toggleRecord(sendit = false)
 {
     if( !sendit ){stopRecord();}
     else {if (wsAudioTX.readyState !== WebSocket.CLOSED) {startRecord();}}
+}
+
+// ATU状态显示框切换功能
+function toggleAtuStatus() {
+    console.log('🖱️ ATU状态显示框切换函数被调用');
+    const atuStatusDiv = document.getElementById('div-atu-status');
+    if (atuStatusDiv) {
+        console.log(`📊 ATU状态显示框当前显示状态: ${atuStatusDiv.style.display}`);
+        if (atuStatusDiv.style.display === 'none' || atuStatusDiv.style.display === '') {
+            atuStatusDiv.style.display = 'block';
+            // 重新定位ATU状态显示框
+            if (typeof repositionAtuStatus === 'function') {
+                repositionAtuStatus();
+            }
+            // 连接ATU WebSocket
+            connectToAtuServer();
+            console.log('📊 ATU状态显示框已显示');
+        } else {
+            atuStatusDiv.style.display = 'none';
+            // 断开ATU WebSocket连接
+            disconnectFromAtuServer();
+            console.log('📊 ATU状态显示框已隐藏');
+        }
+    } else {
+        console.error('❌ ATU状态显示框未找到');
+    }
+}
+
+// ATU WebSocket连接管理
+let atuSocket = null;
+let atuIsConnected = false;
+
+function connectToAtuServer() {
+    if (atuIsConnected) {
+        console.log('🔌 ATU WebSocket已连接，跳过重复连接');
+        return;
+    }
+    
+    const hostname = window.location.hostname;
+    const serverUrl = `wss://${hostname}:8889/atu/ws`;
+    
+    console.log(`🔌 连接ATU服务器: ${serverUrl}`);
+    console.log(`🔌 当前主机名: ${hostname}`);
+    updateAtuConnectionStatus('连接中...', '#ffa500');
+    
+    try {
+        atuSocket = new WebSocket(serverUrl);
+        
+        const connectionTimeout = setTimeout(() => {
+            if (atuSocket && atuSocket.readyState === WebSocket.CONNECTING) {
+                console.log('⏰ ATU WebSocket连接超时');
+                atuSocket.close();
+                updateAtuConnectionStatus('连接超时', '#ff4444');
+            }
+        }, 5000);
+        
+        atuSocket.onopen = () => {
+            clearTimeout(connectionTimeout);
+            atuIsConnected = true;
+            updateAtuConnectionStatus('已连接', '#44ff44');
+            console.log('✅ ATU WebSocket连接成功');
+        };
+        
+        atuSocket.onclose = (event) => {
+            clearTimeout(connectionTimeout);
+            atuIsConnected = false;
+            updateAtuConnectionStatus('连接关闭', '#ff4444');
+            console.log(`❌ ATU WebSocket连接关闭，代码: ${event.code}, 原因: ${event.reason}`);
+            // 自动重连
+            setTimeout(() => {
+                const atuStatusDiv = document.getElementById('div-atu-status');
+                if (atuStatusDiv && atuStatusDiv.style.display === 'block') {
+                    console.log('🔄 尝试重新连接ATU服务器...');
+                    connectToAtuServer();
+                }
+            }, 5000);
+        };
+        
+        atuSocket.onerror = (event) => {
+            clearTimeout(connectionTimeout);
+            atuIsConnected = false;
+            updateAtuConnectionStatus('连接错误', '#ff4444');
+            console.log('❌ ATU WebSocket连接错误:', event);
+        };
+        
+        atuSocket.onmessage = (event) => {
+            console.log('📨 接收到ATU服务器消息:', event.data);
+            handleAtuMessage(event.data);
+        };
+        
+    } catch (error) {
+        console.error('❌ ATU WebSocket连接失败:', error);
+        updateAtuConnectionStatus('连接失败', '#ff4444');
+    }
+}
+
+function disconnectFromAtuServer() {
+    if (atuSocket) {
+        atuSocket.close();
+        atuSocket = null;
+    }
+    atuIsConnected = false;
+    updateAtuConnectionStatus('未连接', '#ff4444');
+}
+
+function updateAtuConnectionStatus(text, color) {
+    const statusElement = document.getElementById('atu-connection-status');
+    if (statusElement) {
+        statusElement.textContent = text;
+        statusElement.style.color = color;
+    }
+}
+
+function handleAtuMessage(message) {
+    try {
+        const data = JSON.parse(message);
+        
+        if (data.type === 'data') {
+            updateAtuDisplay(data.data);
+        } else if (data.type === 'status') {
+            console.log(`ATU状态: ${data.message}, 连接: ${data.connected}`);
+        }
+    } catch (error) {
+        console.error('❌ ATU消息处理错误:', error);
+    }
+}
+
+function updateAtuDisplay(data) {
+    // 更新功率显示
+    const powerElement = document.getElementById('atu-power-value');
+    if (powerElement && data.power !== undefined) {
+        powerElement.textContent = data.power;
+        // 根据功率值设置颜色
+        if (data.power > 0) {
+            powerElement.style.color = '#ff9900';
+        } else {
+            powerElement.style.color = '#ffffff';
+        }
+    }
+    
+    // 更新SWR显示
+    const swrElement = document.getElementById('atu-swr-value');
+    if (swrElement && data.swr !== undefined) {
+        swrElement.textContent = data.swr;
+        // 根据SWR值设置颜色
+        if (data.swr > 2.0) {
+            swrElement.style.color = '#ff4444'; // 红色表示高SWR
+        } else if (data.swr > 1.5) {
+            swrElement.style.color = '#ff9900'; // 橙色表示中等SWR
+        } else {
+            swrElement.style.color = '#44ff44'; // 绿色表示良好SWR
+        }
+    }
+    
+    // 更新PTT状态
+    const pttElement = document.getElementById('atu-ptt-value');
+    if (pttElement) {
+        if (data.ptt !== undefined) {
+            pttElement.textContent = data.ptt ? 'ON' : 'OFF';
+            pttElement.style.color = data.ptt ? '#ff4444' : '#ffffff';
+        } else {
+            // 如果没有PTT数据，根据功率判断
+            const isTransmitting = data.power > 0;
+            pttElement.textContent = isTransmitting ? 'ON' : 'OFF';
+            pttElement.style.color = isTransmitting ? '#ff4444' : '#ffffff';
+        }
+    }
+    
+    console.log(`📡 ATU数据更新: 功率=${data.power}W, SWR=${data.swr}`);
+}
+
+// 页面加载完成后绑定ATU图标点击事件
+if (typeof window !== 'undefined') {
+    window.addEventListener('load', function() {
+        console.log('📄 页面加载完成，开始绑定ATU图标点击事件');
+        // 延迟绑定，确保DOM元素已加载
+        setTimeout(function() {
+            const atuMonitorDiv = document.getElementById('div-atumonitor');
+            if (atuMonitorDiv) {
+                console.log('✅ 找到ATU监控图标元素');
+                atuMonitorDiv.addEventListener('click', function(event) {
+                    console.log('🖱️ ATU图标被点击');
+                    event.preventDefault();
+                    event.stopPropagation();
+                    toggleAtuStatus();
+                });
+                console.log('✅ ATU图标点击事件绑定成功');
+            } else {
+                console.error('❌ ATU监控图标未找到');
+            }
+        }, 1000);
+    });
 }
 	
