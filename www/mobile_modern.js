@@ -15,14 +15,8 @@ let wsAudioRX = null;
 let wsAudioTX = null;
 
 // Audio context for mobile
-let audioContext = null;
-let audioRXSourceNode = null;
-let audioRXGainNode = null;
-let audioRXBiquadFilterNode = null; // Add filter node like desktop version
-let audioBufferReady = false;
-let audioRXAudioBuffer = []; // Audio buffer queue
-let audioRXSampleRate = 16000; // Match server-side sample rate
-let audioRXProcessing = false; // Flag to prevent concurrent processing
+let mobileAudioContext = null;
+let audioContextInitialized = false;
 
 // DOM Elements
 const domElements = {
@@ -51,6 +45,10 @@ document.addEventListener('DOMContentLoaded', function() {
     initializeSMeter();
     connectWebSocket();
     updateFrequencyDisplay();
+    
+    // 添加一次性的全局触摸事件监听器来初始化音频上下文
+    document.addEventListener('touchstart', initAudioOnFirstTouch, { once: true });
+    document.addEventListener('mousedown', initAudioOnFirstTouch, { once: true });
 });
 
 // Initialize DOM elements
@@ -71,6 +69,40 @@ function initializeElements() {
     domElements.navButtons = document.querySelectorAll('.nav-btn');
     domElements.quickButtons = document.querySelectorAll('.quick-btn');
     domElements.tuneButtons = document.querySelectorAll('.tune-btn');
+}
+
+// 在用户首次交互时初始化音频上下文
+function initAudioOnFirstTouch() {
+    if (audioContextInitialized) return;
+    
+    try {
+        // 尝试初始化桌面版音频系统
+        if (typeof AudioRX_start === 'function') {
+            console.log('Initializing desktop-compatible audio system on first touch...');
+            // 初始化音频上下文
+            if (!window.AudioRX_context) {
+                window.AudioRX_context = new (window.AudioContext || window.webkitAudioContext)({
+                    latencyHint: "interactive",
+                    sampleRate: 16000
+                });
+                console.log('AudioContext created for desktop-compatible system');
+            }
+            
+            // 如果音频上下文处于暂停状态，恢复它
+            if (window.AudioRX_context.state === 'suspended') {
+                window.AudioRX_context.resume().then(() => {
+                    console.log('AudioContext resumed successfully');
+                }).catch(err => {
+                    console.error('Failed to resume AudioContext:', err);
+                });
+            }
+        }
+        
+        audioContextInitialized = true;
+        console.log('Audio context initialized on user gesture');
+    } catch (e) {
+        console.error('Failed to initialize audio context:', e);
+    }
 }
 
 // Setup event listeners
@@ -148,6 +180,11 @@ function handlePTTStart(e) {
     e.preventDefault();
     if (!isConnected) return;
     
+    // Initialize audio context on first user interaction
+    if (!audioContextInitialized) {
+        initAudioOnFirstTouch();
+    }
+    
     isTransmitting = true;
     updateTXStatus(true);
     sendWebSocketMessage('setPTT:true');
@@ -159,6 +196,11 @@ function handlePTTStart(e) {
     if (navigator.vibrate) {
         navigator.vibrate(50);
     }
+    
+    // 发送预热帧确保后端及时响应
+    setTimeout(() => {
+        sendPTTWarmupFrames();
+    }, 50);
 }
 
 // Handle PTT end (receive)
@@ -179,15 +221,44 @@ function handlePTTEnd(e) {
     }
 }
 
+// 发送PTT预热帧
+function sendPTTWarmupFrames() {
+    // 如果WebSocket TX连接可用，发送预热帧
+    if (typeof wsAudioTX !== 'undefined' && wsAudioTX && wsAudioTX.readyState === WebSocket.OPEN) {
+        console.log('Sending PTT warmup frames...');
+        // 发送10个预热帧
+        for(let i = 0; i < 10; i++) {
+            setTimeout(() => {
+                try {
+                    // 创建一个静音帧
+                    const warmup = new Int16Array(160); // 160个样本
+                    if (wsAudioTX && wsAudioTX.readyState === WebSocket.OPEN) {
+                        wsAudioTX.send(warmup);
+                        console.log(`Sent warmup frame ${i+1}/10`);
+                    }
+                } catch(e) {
+                    console.warn(`PTT warmup frame ${i} failed:`, e);
+                }
+            }, i * 10); // 每10ms发送一帧
+        }
+    } else {
+        console.log('WebSocket TX not available for warmup frames');
+    }
+}
+
 // Toggle power state
 function togglePower() {
     if (isConnected) {
         disconnectWebSocket();
         domElements.powerButton.querySelector('.power-icon').textContent = '⏻';
+        // Stop audio when disconnecting
+        if (typeof AudioRX_stop === 'function') {
+            AudioRX_stop();
+        }
     } else {
         connectWebSocket();
         domElements.powerButton.querySelector('.power-icon').textContent = '⏼';
-        // Test audio immediately after connection
+        // Start audio using desktop-compatible implementation
         setTimeout(() => {
             if (typeof AudioRX_start === 'function') {
                 console.log('Starting desktop-compatible audio...');
@@ -415,90 +486,33 @@ function connectWebSocket() {
         wsAudioRX.binaryType = 'arraybuffer';
         wsAudioRX.onopen = function() {
             console.log('Audio RX WebSocket connected');
-            // Initialize Web Audio API for audio playback
-            if (!audioContext) {
-                try {
-                    // Use 16000Hz sample rate to match server-side configuration
-                    audioContext = new (window.AudioContext || window.webkitAudioContext)({sampleRate: 16000});
-                    console.log('Web Audio API initialized with sample rate: 16000');
-                    
-                    // Create audio processing nodes like desktop version
-                    audioRXGainNode = audioContext.createGain();
-                    audioRXGainNode.gain.value = 0.8; // Set initial volume to 80%
-                    
-                    // Add biquad filter node like desktop version
-                    audioRXBiquadFilterNode = audioContext.createBiquadFilter();
-                    audioRXBiquadFilterNode.type = "lowshelf";
-                    // Clamp frequency to valid range (max 8000Hz for 16000Hz sample rate)
-                    audioRXBiquadFilterNode.frequency.setValueAtTime(8000, audioContext.currentTime);
-                    audioRXBiquadFilterNode.gain.setValueAtTime(0, audioContext.currentTime);
-                    
-                    // Try to use ScriptProcessor for better audio buffering like desktop version
-                    const BUFF_SIZE = 256;
-                    audioRXSourceNode = audioContext.createScriptProcessor(BUFF_SIZE, 1, 1);
-                    audioRXSourceNode.onaudioprocess = function(event) {
-                        var out = event.outputBuffer.getChannelData(0);
-                        if (audioRXAudioBuffer.length === 0) { 
-                            out.fill(0); 
-                            return; 
-                        }
-                        var cur = audioRXAudioBuffer[0];
-                        var n = Math.min(cur.length, out.length);
-                        for (var j = 0; j < n; j++) out[j] = cur[j];
-                        for (var k = n; k < out.length; k++) out[k] = 0;
-                        if (n >= cur.length) audioRXAudioBuffer.shift(); else audioRXAudioBuffer[0] = cur.slice(n);
-                    };
-                    
-                    // Connect nodes: source -> filter -> gain -> destination
-                    audioRXSourceNode.connect(audioRXBiquadFilterNode);
-                    audioRXBiquadFilterNode.connect(audioRXGainNode);
-                    audioRXGainNode.connect(audioContext.destination);
-                    
-                    console.log('Audio processing nodes initialized');
-                } catch (e) {
-                    console.error('Web Audio API initialization failed:', e);
-                }
+            // Use desktop-compatible event handlers
+            if (typeof wsAudioRXopen === 'function') {
+                wsAudioRXopen();
             }
         };
         
         wsAudioRX.onmessage = function(event) {
-            // Handle incoming audio data using buffer queue like desktop version
-            if (event.data instanceof ArrayBuffer) {
-                try {
-                    // 码率统计：RX (borrowed from desktop version)
-                    if (!window.__rxBytes) { window.__rxBytes = 0; }
-                    if (event.data && event.data.byteLength) {
-                        window.__rxBytes += event.data.byteLength;
-                    }
-                    
-                    // Convert Int16 to Float32 for Web Audio API
-                    const int16Data = new Int16Array(event.data);
-                    const audioData = new Float32Array(int16Data.length);
-                    for (let i = 0; i < int16Data.length; i++) {
-                        audioData[i] = int16Data[i] / 32767.0;
-                    }
-                    
-                    // 限制缓冲区大小，防止累积过多音频数据 (borrowed from desktop version)
-                    if (audioRXAudioBuffer.length > 10) {
-                        console.log('⚠️ 音频缓冲区过大，清除旧数据');
-                        audioRXAudioBuffer = audioRXAudioBuffer.slice(-5); // 只保留最新的5个缓冲区
-                    }
-                    
-                    audioRXAudioBuffer.push(audioData);
-                    console.log('DEBUG: Audio buffer length after push:', audioRXAudioBuffer.length);
-                    
-                } catch (error) {
-                    console.error('Error processing audio data:', error);
-                }
+            // Use desktop-compatible message handler
+            if (typeof appendwsAudioRX === 'function') {
+                // Create a mock message object to match the desktop interface
+                const mockMsg = { data: event.data };
+                appendwsAudioRX(mockMsg);
             }
         };
         
         wsAudioRX.onclose = function() {
             console.log('Audio RX WebSocket disconnected');
+            if (typeof wsAudioRXclose === 'function') {
+                wsAudioRXclose();
+            }
         };
         
         wsAudioRX.onerror = function(error) {
             console.error('Audio RX WebSocket error:', error);
+            if (typeof wsAudioRXerror === 'function') {
+                wsAudioRXerror(error);
+            }
         };
         
         // Audio TX WebSocket

@@ -3,14 +3,16 @@ class RxPlayerProcessor extends AudioWorkletProcessor {
     super();
     this.queue = [];
     this.channelCount = 1;
-    this.targetMinFrames = 3; // 预热/最小深度（帧）
-    this.targetMaxFrames = 6; // 最高保留深度（帧）
+    // 优化移动端的缓冲区参数
+    this.targetMinFrames = 2; // 减少预热深度以降低延迟
+    this.targetMaxFrames = 4; // 减少最大保留深度
     this.port.onmessage = (event) => {
       const data = event.data;
       if (data && data.type === 'push' && data.payload instanceof Float32Array) {
         this.queue.push(data.payload);
+        // 调整队列长度限制
         if (this.queue.length > this.targetMaxFrames) {
-          this.queue.splice(0, this.queue.length - this.targetMaxFrames + 2);
+          this.queue.splice(0, this.queue.length - this.targetMaxFrames + 1);
         }
       } else if (data && data.type === 'flush') {
         this.queue.length = 0;

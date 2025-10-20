@@ -403,6 +403,28 @@ Universal HamRadio Remote (UHRR) 是一个面向业余无线电爱好者的远�
 - 实时更新频谱可视化
 ```
 
+#### 5.1.5 ATU监控通道 (atu/ws)
+```
+客户端到服务器:
+- {"type": "command", "command": "sync"}      # 请求ATU数据同步
+- {"type": "command", "command": "status"}    # 查询ATU连接状态
+
+服务器到客户端:
+- {"type": "data", "data": {"power": 120, "swr": 1.0, "max_power": 200, "efficiency": 60.0}}  # ATU电表数据
+- {"type": "status", "message": "连接成功", "connected": true}  # ATU连接状态
+
+数据格式说明:
+- power: 实际输出功率 (瓦特)
+- swr: 驻波比 (无单位)
+- max_power: 最大输出功率 (瓦特)
+- efficiency: 传输效率 (百分比)
+
+客户端处理:
+- 实时显示功率和SWR数据
+- 根据数值变化更新显示颜色
+- 提供天调状态实时反馈
+```
+
 ### 5.2 音频数据格式
 
 #### 5.2.1 TX音频格式
