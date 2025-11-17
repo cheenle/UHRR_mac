@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Universal Hamradio Remote - Modern Interface</title>
+    <link rel="stylesheet" href="modern.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-left">
+                <div class="logo">
+                    <i class="fas fa-broadcast-tower"></i>
+                    <span>UHRR</span>
+                </div>
+                <div class="connection-status">
+                    <div class="status-indicator disconnected" id="connectionStatus"></div>
+                    <span id="connectionText">Disconnected</span>
+                </div>
+            </div>
+            <div class="header-right">
+                <button class="btn-icon" id="settingsBtn">
+                    <i class="fas fa-cog"></i>
+                </button>
+                <button class="btn-icon" id="fullscreenBtn">
+                    <i class="fas fa-expand"></i>
+                </button>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Left Panel - Controls -->
+            <div class="left-panel">
+                <!-- Frequency Display -->
+                <div class="frequency-display">
+                    <div class="frequency-main">
+                        <span class="frequency-digits" id="freqDisplay">14.200.000</span>
+                        <span class="frequency-unit">MHz</span>
+                    </div>
+                    <div class="frequency-controls">
+                        <button class="freq-btn" data-step="-1000000">
+                            <i class="fas fa-minus"></i>
+                        </button>
+                        <button class="freq-btn" data-step="1000000">
+                            <i class="fas fa-plus"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Mode Selector -->
+                <div class="mode-selector">
+                    <div class="section-title">Mode</div>
+                    <div class="mode-buttons">
+                        <button class="mode-btn active" data-mode="USB">USB</button>
+                        <button class="mode-btn" data-mode="LSB">LSB</button>
+                        <button class="mode-btn" data-mode="CW">CW</button>
+                        <button class="mode-btn" data-mode="FM">FM</button>
+                        <button class="mode-btn" data-mode="AM">AM</button>
+                    </div>
+                </div>
+
+                <!-- Audio Controls -->
+                <div class="audio-controls">
+                    <div class="section-title">Audio</div>
+                    <div class="control-group">
+                        <label>AF Gain</label>
+                        <div class="slider-container">
+                            <input type="range" class="slider" id="afGain" min="0" max="100" value="50">
+                            <span class="slider-value">50</span>
+                        </div>
+                    </div>
+                    <div class="control-group">
+                        <label>MIC Gain</label>
+                        <div class="slider-container">
+                            <input type="range" class="slider" id="micGain" min="0" max="100" value="50">
+                            <span class="slider-value">50</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Band Controls -->
+                <div class="band-controls">
+                    <div class="section-title">Band</div>
+                    <div class="band-buttons">
+                        <button class="band-btn" data-band="160m">160m</button>
+                        <button class="band-btn" data-band="80m">80m</button>
+                        <button class="band-btn" data-band="40m">40m</button>
+                        <button class="band-btn" data-band="30m">30m</button>
+                        <button class="band-btn active" data-band="20m">20m</button>
+                        <button class="band-btn" data-band="17m">17m</button>
+                        <button class="band-btn" data-band="15m">15m</button>
+                        <button class="band-btn" data-band="12m">12m</button>
+                        <button class="band-btn" data-band="10m">10m</button>
+                        <button class="band-btn" data-band="6m">6m</button>
+                        <button class="band-btn" data-band="4m">4m</button>
+                        <button class="band-btn" data-band="2m">2m</button>
+                    </div>
+                </div>
+
+                <!-- Power Controls -->
+                <div class="power-controls">
+                    <button class="power-btn" id="powerBtn">
+                        <i class="fas fa-power-off"></i>
+                        <span>Connect</span>
+                    </button>
+                    <button class="ptt-btn" id="pttBtn">
+                        <i class="fas fa-microphone"></i>
+                        <span>PTT</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Right Panel - Spectrum Display -->
+            <div class="right-panel">
+                <div class="spectrum-container">
+                    <div class="spectrum-header">
+                        <div class="section-title">Spectrum</div>
+                        <div class="spectrum-controls">
+                            <button class="btn-icon" id="spectrumSettings">
+                                <i class="fas fa-sliders-h"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="spectrum-display">
+                        <canvas id="spectrumCanvas" width="800" height="300"></canvas>
+                    </div>
+                    <div class="spectrum-info">
+                        <span class="center-frequency">Center: 14.200 MHz</span>
+                        <span class="span">Span: 200 kHz</span>
+                    </div>
+                </div>
+
+                <!-- Meters -->
+                <div class="meters-container">
+                    <div class="meter-item">
+                        <div class="meter-label">S-Meter</div>
+                        <div class="meter-bar">
+                            <div class="meter-fill" id="sMeter"></div>
+                        </div>
+                        <div class="meter-value" id="sMeterValue">S0</div>
+                    </div>
+                    <div class="meter-item">
+                        <div class="meter-label">Power</div>
+                        <div class="meter-bar">
+                            <div class="meter-fill" id="powerMeter"></div>
+                        </div>
+                        <div class="meter-value" id="powerValue">0W</div>
+                    </div>
+                    <div class="meter-item">
+                        <div class="meter-label">SWR</div>
+                        <div class="meter-bar">
+                            <div class="meter-fill" id="swrMeter"></div>
+                        </div>
+                        <div class="meter-value" id="swrValue">1.0</div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <div class="status-bar">
+                <div class="status-item">
+                    <i class="fas fa-wifi"></i>
+                    <span id="networkStatus">Network: Good</span>
+                </div>
+                <div class="status-item">
+                    <i class="fas fa-clock"></i>
+                    <span id="clock">00:00:00</span>
+                </div>
+                <div class="status-item">
+                    <i class="fas fa-user"></i>
+                    <span id="userStatus">Ready</span>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Scripts -->
+    <script src="modern.js"></script>
+    <script src="controls.js"></script>
+</body>
+</html>
