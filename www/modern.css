@@ -443,6 +443,312 @@ body {
     font-size: 1.5rem;
 }
 
+/* TX Controls */
+.tx-controls {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: var(--radius-lg);
+    padding: 1.5rem;
+    backdrop-filter: blur(20px);
+}
+
+.tx-buttons {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+#TX-record, #TX-record-lock {
+    padding: 0.75rem 1.5rem;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    font-weight: 600;
+    transition: var(--transition);
+    backdrop-filter: blur(10px);
+    user-select: none;
+}
+
+#TX-record {
+    background: rgba(239, 68, 68, 0.2);
+    color: var(--danger-color);
+}
+
+#TX-record:hover {
+    background: rgba(239, 68, 68, 0.3);
+}
+
+#TX-record.button_pressed {
+    background: var(--danger-color);
+    color: var(--text-white);
+    box-shadow: 0 0 20px rgba(239, 68, 68, 0.5);
+}
+
+#TX-record-lock {
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--text-white);
+}
+
+#TX-record-lock:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+#TX-record-lock.button_pressed {
+    background: var(--primary-color);
+    color: var(--text-white);
+    box-shadow: 0 0 20px rgba(37, 99, 235, 0.5);
+}
+
+#ptt-status-indicator {
+    color: var(--text-light) !important;
+    font-size: 0.9rem;
+}
+
+#TX-record_record_opus {
+    color: var(--text-light);
+}
+
+#TX-record_record_opus input {
+    margin-right: 0.5rem;
+}
+
+/* Power & SWR Display */
+.power-swr-display {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: var(--radius-lg);
+    padding: 1.5rem;
+    backdrop-filter: blur(20px);
+}
+
+#div-power-swr {
+    background: rgba(0, 0, 0, 0.3) !important;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(10px);
+}
+
+#power-display, #swr-display {
+    flex: 1;
+    padding: 1rem;
+    text-align: center;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: var(--radius-md);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+#power-value, #swr-value {
+    font-family: 'Courier New', monospace;
+    font-weight: bold;
+    margin-top: 0.5rem;
+}
+
+/* Filter Controls */
+.filter-controls {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: var(--radius-lg);
+    padding: 1.5rem;
+    backdrop-filter: blur(20px);
+}
+
+.filter-buttons {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(70px, 1fr));
+    gap: 0.5rem;
+}
+
+.filter-btn {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: var(--text-white);
+    padding: 0.5rem;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: var(--transition);
+    font-weight: 500;
+    font-size: 0.8rem;
+    text-align: center;
+}
+
+.filter-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.filter-btn.active {
+    background: var(--primary-color);
+    border-color: var(--primary-color);
+    box-shadow: 0 0 20px rgba(37, 99, 235, 0.5);
+}
+
+#div-customfilter {
+    margin-top: 1rem !important;
+    background: rgba(255, 255, 255, 0.1) !important;
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+}
+
+#div-customfilter select,
+#div-customfilter input {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: var(--text-white);
+    padding: 0.25rem;
+    border-radius: var(--radius-sm);
+    margin: 0.25rem;
+}
+
+/* Squelch Control */
+.squelch-control {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: var(--radius-lg);
+    padding: 1.5rem;
+    backdrop-filter: blur(20px);
+}
+
+/* Personal Frequencies */
+.personal-frequencies {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: var(--radius-lg);
+    padding: 1.5rem;
+    backdrop-filter: blur(20px);
+}
+
+#personalfrequency {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+#selectpersonalfrequency {
+    flex: 1;
+    min-width: 100px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: var(--text-white);
+    padding: 0.5rem;
+    border-radius: var(--radius-md);
+}
+
+#personalfrequency button {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: var(--text-white);
+    padding: 0.5rem 1rem;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: var(--transition);
+    font-weight: 500;
+}
+
+#personalfrequency button:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+/* FFT Controls */
+.fft-controls {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: var(--radius-lg);
+    padding: 1.5rem;
+    backdrop-filter: blur(20px);
+}
+
+.visualizer {
+    width: 100%;
+    height: 200px;
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: var(--radius-md);
+    margin-bottom: 1rem;
+}
+
+.fft-sliders {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+}
+
+/* S-Meter Display */
+.smeter-display {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: var(--radius-lg);
+    padding: 1.5rem;
+    backdrop-filter: blur(20px);
+}
+
+#canRXsmeter {
+    width: 100%;
+    height: 50px;
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: var(--radius-md);
+    margin-bottom: 0.5rem;
+}
+
+/* Configuration Links */
+.config-links {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+}
+
+#div-conf a, #div-panfft a {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.5rem;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: var(--text-white);
+    text-decoration: none;
+    border-radius: var(--radius-md);
+    transition: var(--transition);
+    font-weight: 500;
+}
+
+#div-conf a:hover, #div-panfft a:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: translateY(-1px);
+}
+
+/* Callsign Display */
+.callsign-display {
+    text-align: center;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: var(--radius-md);
+    padding: 1rem;
+    backdrop-filter: blur(20px);
+}
+
+#callsign {
+    font-family: 'Courier New', monospace;
+    font-size: 1.2rem;
+    font-weight: bold;
+    color: var(--accent-color);
+    text-shadow: 0 0 10px rgba(245, 158, 11, 0.5);
+}
+
+/* Bitrate Display */
+.bitrate-display {
+    text-align: center;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: var(--radius-md);
+    padding: 0.75rem;
+    backdrop-filter: blur(20px);
+}
+
+#div-bitrates {
+    font-family: 'Courier New', monospace;
+    font-size: 0.9rem;
+    color: var(--text-light);
+}
+
 /* Spectrum Display */
 .spectrum-container {
     background: rgba(0, 0, 0, 0.3);

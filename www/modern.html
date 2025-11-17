@@ -8,7 +8,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
-<body>
+<body onload="bodyload();">
     <div class="app-container">
         <!-- Header -->
         <header class="header">
@@ -113,6 +113,146 @@
                         <span>PTT</span>
                     </button>
                 </div>
+
+                <!-- TX Controls -->
+                <div class="tx-controls">
+                    <div class="section-title">TX Control</div>
+                    <div class="tx-buttons">
+                        <span class="button_unpressed" id="TX-record">TX</span>	
+                        <span onclick="TXtogle();" class="button_unpressed" id="TX-record-lock">TX Lock</span>
+                        <div id="ptt-status-indicator" style="display: inline-block; margin-left: 10px; color: #ff4444; font-weight: bold;">PTT: OFF</div>
+                    </div>
+                    <form id="TX-record_record_opus">
+                        <input type="checkbox" id="encode" class="none" alt="Encode TX with opus codec">Encode TX</input><br>
+                    </form>
+                </div>
+
+                <!-- Power & SWR Display -->
+                <div class="power-swr-display">
+                    <div class="section-title">Power & SWR</div>
+                    <div id="div-power-swr" style="display: flex; gap: 20px; margin-top: 10px; align-items: center; background: rgba(0,0,0,0.3); padding: 10px; border-radius: 8px;">
+                        <div id="power-display" style="text-align: center;">
+                            <div style="font-size: 12px; color: #aaa;">功率</div>
+                            <div id="power-value" style="font-size: 26px; font-weight: bold; color: #4CAF50;">-- W</div>
+                        </div>
+                        <div id="swr-display" style="text-align: center;">
+                            <div style="font-size: 12px; color: #aaa;">驻波比</div>
+                            <div id="swr-value" style="font-size: 26px; font-weight: bold; color: #2196F3;">--</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Filter Controls -->
+                <div class="filter-controls">
+                    <div class="section-title">Audio Filter</div>
+                    <div class="filter-buttons" id="div-filtershortcut">
+                        <button onclick="if(poweron)togle_li();setaudiofilter();" class="filter-btn active" fq="0" fg="0" ft="highshelf" frq="22000">None</button>
+                        <button onclick="if(poweron)togle_li();setaudiofilter();" class="filter-btn" fq="0" fg="-20" ft="highshelf" frq="4400">LP 4.4k</button>
+                        <button onclick="if(poweron)togle_li();setaudiofilter();" class="filter-btn" fq="0" fg="-20" ft="highshelf" frq="3300">LP 3.3k</button>
+                        <button onclick="if(poweron)togle_li();setaudiofilter();" class="filter-btn" fq="0" fg="-20" ft="highshelf" frq="2700">LP 2.7k</button>
+                        <button onclick="if(poweron)togle_li();setaudiofilter();" class="filter-btn" fq="0" fg="-20" ft="highshelf" frq="2100">LP 2.1k</button>
+                        <button onclick="if(poweron)togle_li();setaudiofilter();" class="filter-btn" fq="0" fg="-20" ft="highshelf" frq="1000">LP 1.0k</button>
+                        <button onclick="if(poweron)togle_li();setaudiofilter();" class="filter-btn" fq="50" fg="-100" ft="bandpass" frq="300">BP 300Hz</button>
+                        <button onclick="if(poweron)togle_li();setaudiofilter();" class="filter-btn" fq="50" fg="-100" ft="bandpass" frq="500">BP 500Hz</button>
+                        <button onclick="if(poweron)togle_li();setaudiofilter();" class="filter-btn" fq="50" fg="-100" ft="bandpass" frq="800">BP 800Hz</button>
+                        <button onclick="if(poweron)togle_li();setaudiofilter();" class="filter-btn" fq="50" fg="-100" ft="bandpass" frq="1000">BP 1kHz</button>
+                        <button onclick="if(poweron)togle_li();setaudiofilter();" class="filter-btn" id="custom_filter_click" fq="0" fg="0" ft="highshelf" frq="22000">BP click</button>
+                        <button onclick="if(poweron){togle_li();document.getElementById('div-customfilter').style.display='block';}" class="filter-btn" fq="0" fg="0" ft="highshelf" frq="22000">Custom</button>
+                    </div>
+                    <div id="div-customfilter" style="display:none; margin-top:10px; padding:10px; background:rgba(255,255,255,0.1); border-radius:8px;">
+                        filter_type:<select id="customfilter_T">
+                            <option >--Please choose a filter type--</option>
+                            <option value="lowpass">lowpass</option>
+                            <option value="highpass">highpass</option>
+                            <option value="bandpass">bandpass</option>
+                            <option value="lowshelf">lowshelf</option>
+                            <option value="highshelf">highshelf</option>
+                            <option value="peaking">peaking</option>
+                            <option value="notch">notch</option>
+                            <option value="allpass">allpass</option>
+                        </select><br>
+                        Freq:<input type="text" id="customfilter_F" value="click to FFT to set">hz<br>
+                        Q Factor:<input type ="text" id="customfilter_Q" value="50"><br>
+                        Gain:<input type ="text" id="customfilter_G" value="50"><br>
+                        <input value="ok" type ="button" onclick="document.getElementById('div-customfilter').style.display='none';setcustomaudiofilter();">
+                    </div>
+                </div>
+
+                <!-- Squelch Control -->
+                <div class="squelch-control">
+                    <div class="section-title">Squelch</div>
+                    <form id="SQUELCH_control">
+                        <div class="slider-container">
+                            <label>SQL:</label>
+                            <input type="range" class="slider" id="SQUELCH" min="0" max="100" value="0" oninput="if(poweron)drawRXSmeter();setCookie('SQUELCH', this.value, 180);" onchange="if(poweron)drawRXSmeter();setCookie('SQUELCH', this.value, 180);">
+                            <span class="slider-value" id="squelchValue">0</span>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Personal Frequencies -->
+                <div class="personal-frequencies">
+                    <div class="section-title">Personal Freqs</div>
+                    <form id="personalfrequency">
+                        <select id="selectpersonalfrequency"></select>
+                        <button onclick="recall_freqfromcokkies();">Recall</button>
+                        <button onclick="delete_freqfromcokkies();">Delete</button>
+                        <button onclick="save_freqtocokkies();">Save</button>
+                    </form>
+                </div>
+
+                <!-- FFT Spectrum Controls -->
+                <div class="fft-controls">
+                    <div class="section-title">FFT Spectrum</div>
+                    <canvas class="visualizer" id="canBFSPC" width="1024" height="200"></canvas>
+                    <canvas class="visualizer" id="canBFFFT" width="2048" height="200"></canvas>
+                    <div class="fft-sliders">
+                        <div class="slider-container">
+                            <label>Floor:</label>
+                            <input class="slider" value="0" step="5" type="range" id="canBFFFT_scale_floor" min="-100" max="100" oninput="updateFFTDisplay();">
+                            <span class="slider-value" id="fftFloorValue">0</span>
+                        </div>
+                        <div class="slider-container">
+                            <label>Mult dB:</label>
+                            <input class="slider" value="0" step="5" type="range" id="canBFFFT_scale_multdb" min="-100" max="100" oninput="updateFFTDisplay();">
+                            <span class="slider-value" id="fftMultdbValue">0</span>
+                        </div>
+                        <div class="slider-container">
+                            <label>Start:</label>
+                            <input class="slider" value="0" step="5" type="range" id="canBFFFT_scale_start" min="-200" max="200" oninput="updateFFTDisplay();">
+                            <span class="slider-value" id="fftStartValue">0</span>
+                        </div>
+                        <div class="slider-container">
+                            <label>Mult Hz:</label>
+                            <input class="slider" value="0" step="5" type="range" id="canBFFFT_scale_multhz" min="-200" max="200" oninput="updateFFTDisplay();">
+                            <span class="slider-value" id="fftMulthzValue">0</span>
+                        </div>
+                    </div>
+                    <label id="canvasBFFFT_coord" style="color: var(--text-light); font-size: 12px;">Coords: 0, 0</label>
+                </div>
+
+                <!-- S-Meter Display -->
+                <div class="smeter-display">
+                    <div class="section-title">S-Meter</div>
+                    <canvas id="canRXsmeter" width="250" height="50"></canvas>
+                    <div id="div-smeterdigitRX" style="text-align: center; color: var(--text-white); font-weight: bold; margin-top: 5px;">S9+40dB</div>
+                </div>
+
+                <!-- Configuration Links -->
+                <div class="config-links">
+                    <div id="div-conf"><a href="/CONFIG" target="_UHRRconfig"><i class="fas fa-cog"></i> Config</a></div>
+                    <div id="div-panfft"><a onclick="panfft = window.open( this.href, 'UHRRpanfft', 'width=1000, height=1000, menubar=no, toolbar=no, location=no, resizable=yes, scrollbars=no, status=no, dependent=yes'); return false;" href="/panfft.html" target="_UHRRpanfft"><i class="fas fa-chart-area"></i> PanFFT</a></div>
+                </div>
+
+                <!-- Callsign Display -->
+                <div class="callsign-display">
+                    <label id="callsign" style="color: var(--text-white); font-weight: bold;"></label>
+                </div>
+
+                <!-- Bitrate Display -->
+                <div class="bitrate-display">
+                    <div id="div-bitrates" style="color: var(--text-light); font-size: 12px;">bitrate RX: 0 kbps | TX: 0 kbps</div>
+                </div>
             </div>
 
             <!-- Right Panel - Spectrum Display -->
@@ -183,6 +323,9 @@
 
     <!-- Scripts -->
     <script src="modern.js"></script>
+    <script src="tx_button_optimized.js"></script>
+    <script src="audio_rx.js"></script>
+    <script src="control_trx.js"></script>
     <script src="controls.js"></script>
 </body>
 </html>
