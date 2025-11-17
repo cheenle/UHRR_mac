@@ -16,7 +16,7 @@ ip link add dev wg0 type wireguard
 # 设置 WireGuard 配置
 echo "[2/4] 配置 WireGuard..."
 wg set wg0 private-key /etc/wireguard/wg0.conf private-key
-wg set wg0 peer n4qHnoIirQIEErMh7/M+aA/rhkJSjcdDZyVGU9LXOHI= endpoint www.vlsc.net:6655 allowed-ips 0.0.0.0/0 persistent-keepalive 25
+wg set wg0 peer n4qHnoIirQIEErMh7/M+aA/rhkJSjcdDZyVGU9LXOHI= endpoint www.vlsc.net:9090 allowed-ips 0.0.0.0/0 persistent-keepalive 25
 
 # 配置 IP 地址
 echo "[3/4] 配置 IP 地址..."

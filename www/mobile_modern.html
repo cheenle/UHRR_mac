@@ -35,9 +35,9 @@
                         <span class="freq-digit" id="freq-10khz">5</span>
                         <span class="freq-digit" id="freq-1khz">3</span>
                         <span class="freq-separator">.</span>
-                        <span class="freq-digit" id="freq-100hz">0</span>
-                        <span class="freq-digit" id="freq-10hz">0</span>
-                        <span class="freq-digit" id="freq-1hz">0</span>
+                        <span class="freq-digit last-three" id="freq-100hz">0</span>
+                        <span class="freq-digit last-three" id="freq-10hz">0</span>
+                        <span class="freq-digit last-three" id="freq-1hz">0</span>
                         <span class="freq-unit">MHz</span>
                     </div>
                     <div class="freq-sub">
@@ -56,6 +56,9 @@
                 <div class="status-item connected" id="status-ctrl">CTRL</div>
                 <div class="status-item" id="status-rx">RX</div>
                 <div class="status-item" id="status-tx">TX</div>
+                <!-- Audio connection status indicators -->
+                <div class="status-item" id="indwsAudioRX"><img src="img/critsred.png">wsRX</div>
+                <div class="status-item" id="indwsAudioTX"><img src="img/critsred.png">wsTX</div>
                 <div class="signal-strength">
                     <div class="signal-bars">
                         <div class="signal-bar"></div>

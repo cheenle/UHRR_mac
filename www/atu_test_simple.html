@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ATU测试页面</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        #status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            background-color: #f0f0f0;
+        }
+        .connected {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .disconnected {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        button {
+            padding: 10px 15px;
+            margin: 5px;
+            border: none;
+            border-radius: 4px;
+            background-color: #007bff;
+            color: white;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        #data {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background-color: #f9f9f9;
+        }
+    </style>
+</head>
+<body>
+    <h1>ATU测试页面</h1>
+    
+    <div id="status" class="disconnected">未连接</div>
+    
+    <button onclick="connect()">连接</button>
+    <button onclick="disconnect()">断开</button>
+    <button onclick="sendSync()">发送同步命令</button>
+    
+    <div id="data">
+        <h2>ATU数据</h2>
+        <p>功率: <span id="power">--</span> W</p>
+        <p>驻波比: <span id="swr">--</span></p>
+        <p>最大功率: <span id="max-power">--</span> W</p>
+        <p>效率: <span id="efficiency">--</span> %</p>
+    </div>
+    
+    <div id="log" style="margin-top: 20px; padding: 10px; background-color: #000; color: #00ff00; font-family: monospace; height: 200px; overflow-y: scroll;"></div>
+
+    <script>
+        let ws = null;
+        let isConnected = false;
+        
+        function addToLog(message) {
+            const log = document.getElementById('log');
+            const timestamp = new Date().toISOString().substr(11, 12);
+            log.innerHTML += `[${timestamp}] ${message}\n`;
+            log.scrollTop = log.scrollHeight;
+        }
+        
+        function updateStatus(message, connected = false) {
+            const status = document.getElementById('status');
+            status.textContent = message;
+            status.className = connected ? 'connected' : 'disconnected';
+            isConnected = connected;
+        }
+        
+        function connect() {
+            if (ws) {
+                ws.close();
+            }
+            
+            const hostname = window.location.hostname;
+            const serverUrl = `wss://${hostname}:8889/atu/ws`;
+            
+            addToLog('连接到: ' + serverUrl);
+            
+            try {
+                ws = new WebSocket(serverUrl);
+                
+                ws.onopen = () => {
+                    updateStatus('已连接到ATU服务器', true);
+                    addToLog('WebSocket连接已建立');
+                };
+                
+                ws.onclose = () => {
+                    updateStatus('ATU服务器连接已关闭', false);
+                    addToLog('WebSocket连接已关闭');
+                };
+                
+                ws.onerror = (error) => {
+                    updateStatus('ATU服务器连接错误', false);
+                    addToLog('WebSocket错误: ' + error);
+                };
+                
+                ws.onmessage = (event) => {
+                    addToLog('收到消息: ' + event.data);
+                    
+                    try {
+                        const data = JSON.parse(event.data);
+                        
+                        if (data.type === 'data' && data.data) {
+                            const atuData = data.data;
+                            
+                            if (atuData.power !== undefined) {
+                                document.getElementById('power').textContent = atuData.power;
+                            }
+                            
+                            if (atuData.swr !== undefined) {
+                                document.getElementById('swr').textContent = atuData.swr;
+                            }
+                            
+                            if (atuData.max_power !== undefined) {
+                                document.getElementById('max-power').textContent = atuData.max_power;
+                            }
+                            
+                            if (atuData.efficiency !== undefined) {
+                                document.getElementById('efficiency').textContent = atuData.efficiency;
+                            }
+                        } else if (data.type === 'status') {
+                            addToLog('状态消息: ' + JSON.stringify(data));
+                        }
+                    } catch (e) {
+                        addToLog('消息解析错误: ' + e);
+                    }
+                };
+            } catch (error) {
+                updateStatus('连接创建失败', false);
+                addToLog('连接创建失败: ' + error);
+            }
+        }
+        
+        function disconnect() {
+            if (ws) {
+                ws.close();
+                addToLog('已请求断开连接');
+            }
+        }
+        
+        function sendSync() {
+            if (ws && isConnected) {
+                const syncCommand = {
+                    type: 'command',
+                    command: 'sync'
+                };
+                
+                ws.send(JSON.stringify(syncCommand));
+                addToLog('已发送同步命令');
+            } else {
+                addToLog('未连接，无法发送命令');
+            }
+        }
+        
+        // 页面加载完成后自动连接
+        window.onload = function() {
+            addToLog('页面已加载');
+        };
+    </script>
+</body>
+</html>

@@ -60,7 +60,7 @@ uci set network.wg0.mtu='1360'
 uci set network.wg0_peer=wireguard_wg0
 uci set network.wg0_peer.public_key='n4qHnoIirQIEErMh7/M+aA/rhkJSjcdDZyVGU9LXOHI='
 uci set network.wg0_peer.endpoint_host='38.55.129.87'
-uci set network.wg0_peer.endpoint_port='8866'
+uci set network.wg0_peer.endpoint_port='9090'
 uci set network.wg0_peer.allowed_ips='0.0.0.0/0'
 uci set network.wg0_peer.persistent_keepalive='15'
 
@@ -219,3 +219,4 @@ echo "2. 检查手机获得的 IP 地址（应该是 10.1.1.x）"
 echo "3. 检查手机获得的网关地址（应该是 10.1.1.1）"
 echo "4. 在手机上访问网站测试"
 echo "5. 检查出口 IP 是否为 VPN 服务器 IP (38.55.129.87)"
+

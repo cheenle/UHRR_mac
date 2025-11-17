@@ -1,11 +1,11 @@
 #!/bin/sh
 # OpenWrt WireGuard 客户端部署脚本
-# 连接到 www.vlsc.net:6655
+# 连接到 www.vlsc.net:9090
 
 set -e
 
 # 配置参数
-SERVER_ENDPOINT="www.vlsc.net:6655"
+SERVER_ENDPOINT="www.vlsc.net:9090"
 SERVER_PUBKEY="YOUR_SERVER_PUBLIC_KEY_HERE"  # 需要替换为实际公钥
 CLIENT_PRIVKEY="YOUR_CLIENT_PRIVATE_KEY_HERE"  # 需要替换为实际私钥
 CLIENT_IP="10.77.0.2/24"
@@ -87,7 +87,7 @@ uci set firewall.@zone[1].network='lan wg0'
 uci set network.wg0_peer=wireguard_wg0
 uci set network.wg0_peer.public_key="$SERVER_PUBKEY"
 uci set network.wg0_peer.endpoint_host="www.vlsc.net"
-uci set network.wg0_peer.endpoint_port="6655"
+uci set network.wg0_peer.endpoint_port="9090"
 uci set network.wg0_peer.allowed_ips="0.0.0.0/0"
 uci set network.wg0_peer.persistent_keepalive="25"
 
@@ -136,7 +136,7 @@ echo "1. 请将客户端公钥添加到服务器配置中:"
 echo "   $CLIENT_PUBKEY"
 echo
 echo "2. 如果连接失败，请检查:"
-echo "   - 服务器防火墙是否开放 6655/UDP 端口"
+echo "   - 服务器防火墙是否开放 9090/UDP 端口"
 echo "   - 服务器 WireGuard 配置是否正确"
 echo "   - 网络连接是否正常"
 echo

@@ -95,6 +95,22 @@ async function TXControl(action) {
             console.log(`[${timestamp}] 🔧 调用toggleaudioRX()`);
             toggleaudioRX();
             
+            // 4. 触发ATU数据更新 - 通过模拟PTT状态变化来确保同步
+            // 确保ATU监控系统知道PTT状态已改变
+            if (typeof window.updatePTTStatus === 'function') {
+                window.updatePTTStatus(true); // 明确通知PTT已激活
+            }
+            
+            // 确保ATU系统已初始化并连接后再调用
+            if (typeof window.initAtuDisplay !== 'undefined' && typeof window.startAtuSync !== 'undefined' && window.atuIsConnected) {
+                window.startAtuSync();
+            } else {
+                // 如果ATU系统未初始化，尝试初始化它
+                if (typeof window.initAtuDisplay === 'function') {
+                    window.initAtuDisplay();
+                }
+            }
+            
             console.log(`[${timestamp}] ✅ TX开始成功 - 所有函数调用完成`);
             return true;
         } catch (error) {
@@ -143,6 +159,13 @@ async function TXControl(action) {
                 }
             } else {
                 console.error(`[${timestamp}] ❌ sendTRXptt函数未定义！`);
+            }
+            
+            // 通知ATU系统PTT状态已改变
+            if (typeof window.updatePTTStatus === 'function') {
+                setTimeout(() => {
+                    window.updatePTTStatus(false); // 明确通知PTT已释放
+                }, 50); // 短暂延迟确保PTT状态已设置
             }
             
             console.log(`[${timestamp}] ✅ TX停止成功 - 所有函数调用完成`);

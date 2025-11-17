@@ -1,0 +1,456 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+import os
+import tornado.httpserver
+import ssl
+import tornado.ioloop
+import tornado.web
+import tornado.websocket
+import threading
+import time
+import datetime
+import configparser
+import sys
+import logging
+import socket
+import struct
+import json
+import websocket
+import asyncio
+import urllib.request
+import urllib.parse
+import urllib.error
+
+# 设置日志
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler('atu_server_debug.log'),
+        logging.StreamHandler()
+    ]
+)
+logger = logging.getLogger('ATU_SERVER')
+
+# 全局变量
+# 从环境变量或默认值获取ATU设备配置
+ATU_DEVICE_IP = os.environ.get('ATU_DEVICE_IP', '192.168.1.12')
+ATU_DEVICE_PORT = int(os.environ.get('ATU_DEVICE_PORT', '60001'))
+ATU_SERVER_PORT = int(os.environ.get('ATU_SERVER_PORT', '8889'))
+
+# ATU设备连接状态
+atu_device_connected = False
+atu_ws_client = None
+
+# WebSocket客户端列表
+atu_ws_clients = []
+
+# ATU命令定义
+SCMD_FLAG = 0xFF
+SCMD_SYNC = 1
+SCMD_METER_STATUS = 2
+SCMD_TUNE_STATUS = 3
+
+class AtuWebSocketClient:
+    """ATU设备WebSocket客户端 - 与前端完全相同的实现"""
+    
+    def __init__(self):
+        self.ws = None
+        self.running = True
+        self.connected = False
+        self.reconnect_interval = 2000  # 2秒重连间隔
+        self.sendpack = 0
+        self.recvpack = 0
+        self.last_received_time = time.time()
+        self.atu_hostname = ATU_DEVICE_IP  # 默认使用IP
+        
+    def get_atu_hostname(self):
+        """通过HTTP获取ATU设备的正确主机名"""
+        try:
+            # 首先尝试访问ATU设备的HTTP页面
+            http_url = f"http://{ATU_DEVICE_IP}/"
+            logger.info(f"尝试访问ATU设备HTTP页面: {http_url}")
+            
+            # 创建请求，模拟浏览器行为
+            req = urllib.request.Request(
+                http_url,
+                headers={
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                    'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
+                    'Connection': 'keep-alive'
+                }
+            )
+            
+            # 发送请求并获取响应
+            with urllib.request.urlopen(req, timeout=5) as response:
+                # 检查响应状态
+                if response.status == 200:
+                    logger.info("✓ ATU设备HTTP页面访问成功")
+                    
+                    # 解析响应URL，获取实际使用的主机名
+                    actual_url = response.geturl()
+                    parsed_url = urllib.parse.urlparse(actual_url)
+                    
+                    if parsed_url.hostname and parsed_url.hostname != ATU_DEVICE_IP:
+                        logger.info(f"检测到ATU设备实际主机名: {parsed_url.hostname}")
+                        return parsed_url.hostname
+                    else:
+                        logger.info(f"ATU设备使用IP地址: {ATU_DEVICE_IP}")
+                        return ATU_DEVICE_IP
+                
+        except Exception as e:
+            logger.warning(f"获取ATU设备主机名失败: {e}")
+            logger.info(f"将使用默认IP地址: {ATU_DEVICE_IP}")
+            return ATU_DEVICE_IP
+        
+        return ATU_DEVICE_IP
+        
+    def connect(self):
+        """连接到ATU设备WebSocket"""
+        global atu_device_connected
+        
+        # 首先获取正确的主机名
+        self.atu_hostname = self.get_atu_hostname()
+        
+        # 使用正确的主机名构造WebSocket URL
+        ws_url = f"ws://{self.atu_hostname}:{ATU_DEVICE_PORT}/"
+        logger.info(f"尝试连接ATU设备WebSocket: {ws_url}")
+        
+        try:
+            # 使用websocket-client创建WebSocket连接，与前端完全相同
+            self.ws = websocket.WebSocketApp(ws_url,
+                                            on_open=self.on_open,
+                                            on_message=self.on_message,
+                                            on_error=self.on_error,
+                                            on_close=self.on_close)
+            
+            # 在后台线程中运行WebSocket
+            def run_ws():
+                self.ws.run_forever()
+            
+            ws_thread = threading.Thread(target=run_ws)
+            ws_thread.daemon = True
+            ws_thread.start()
+            
+        except Exception as e:
+            logger.error(f"创建WebSocket连接失败: {e}")
+            self.connected = False
+            atu_device_connected = False
+            
+            # 尝试重新连接
+            if self.running:
+                logger.info(f"{self.reconnect_interval/1000}秒后尝试重新连接...")
+                time.sleep(self.reconnect_interval / 1000)
+                self.connect()
+    
+    def on_open(self, ws):
+        """WebSocket连接打开"""
+        global atu_device_connected
+        
+        logger.info("✓ ATU设备WebSocket连接成功")
+        self.connected = True
+        atu_device_connected = True
+        
+        # 发送连接成功通知
+        self.broadcast_to_clients({
+            'type': 'status',
+            'message': 'ATU设备已连接',
+            'connected': True
+        })
+        
+        # 发送同步命令
+        self.send_sync()
+        
+        # 发送调谐状态命令（调谐模式）
+        self.send_tune_status(True)
+        
+        # 启动数据请求循环
+        self.start_data_request_loop()
+    
+    def on_message(self, ws, message):
+        """接收到ATU设备消息"""
+        try:
+            # 解析二进制数据
+            if isinstance(message, bytes):
+                data = bytearray(message)
+                logger.debug(f"接收到ATU数据: {len(data)} 字节")
+                
+                # 解析数据
+                parsed_data = self.parse_atu_data(data)
+                if parsed_data:
+                    # 转发给WebSocket客户端
+                    self.broadcast_to_clients({
+                        'type': 'data',
+                        'data': parsed_data,
+                        'timestamp': datetime.datetime.now().isoformat()
+                    })
+            
+        except Exception as e:
+            logger.error(f"处理ATU消息错误: {e}")
+    
+    def on_error(self, ws, error):
+        """WebSocket错误"""
+        logger.error(f"ATU设备WebSocket错误: {error}")
+    
+    def on_close(self, ws, close_status_code, close_msg):
+        """WebSocket连接关闭"""
+        global atu_device_connected
+        
+        logger.warning("ATU设备WebSocket连接关闭")
+        self.connected = False
+        atu_device_connected = False
+        
+        # 发送连接断开通知
+        self.broadcast_to_clients({
+            'type': 'status',
+            'message': 'ATU设备连接断开',
+            'connected': False
+        })
+        
+        # 尝试重新连接
+        if self.running:
+            logger.info(f"{self.reconnect_interval/1000}秒后尝试重新连接...")
+            time.sleep(self.reconnect_interval / 1000)
+            self.connect()
+    
+    def parse_atu_data(self, data):
+        """解析ATU设备数据"""
+        try:
+            if len(data) < 10:
+                return None
+            
+            # 解析二进制数据
+            flag = data[0]
+            cmd = data[1]
+            data_len = data[2]
+            
+            # 检查是否为电表数据 (SCMD_METER_STATUS = 2)
+            if cmd == SCMD_METER_STATUS and data_len >= 6:
+                # 解析功率和SWR数据
+                # 正确偏移：SWR(4-5), 功率(6-7), 最大功率(8-9)
+                swr = struct.unpack('<H', bytes(data[4:6]))[0]
+                fwd_power = struct.unpack('<H', bytes(data[6:8]))[0]  # 正向功率
+                max_power = struct.unpack('<H', bytes(data[8:10]))[0]  # 最大功率
+                
+                # 处理SWR值格式
+                display_swr = swr
+                if swr >= 100:
+                    display_swr = swr / 100.0
+                
+                # 计算传输效率
+                efficiency = 0
+                if max_power > 0:
+                    efficiency = min(100, (fwd_power / max_power) * 100)
+                
+                parsed_data = {
+                    'power': fwd_power,
+                    'swr': round(display_swr, 2),
+                    'max_power': max_power,
+                    'efficiency': round(efficiency, 1)
+                }
+                
+                logger.debug(f"解析ATU数据: 功率={fwd_power}W, SWR={display_swr}, 最大功率={max_power}W, 效率={efficiency}%")
+                return parsed_data
+            
+            return None
+            
+        except Exception as e:
+            logger.error(f"解析ATU数据错误: {e}")
+            return None
+    
+    def send_sync(self):
+        """发送同步命令到ATU设备"""
+        if self.connected and self.ws:
+            try:
+                # ATU同步命令: [0xFF, 0x01, 0x00] - 与前端完全相同
+                sync_command = bytearray([SCMD_FLAG, SCMD_SYNC, 0x00])
+                self.ws.send(sync_command, opcode=websocket.ABNF.OPCODE_BINARY)
+                logger.info("发送同步命令到ATU设备: [0xFF, 0x01, 0x00]")
+                self.sendpack += 1
+            except Exception as e:
+                logger.error(f"发送同步命令失败: {e}")
+    
+    def send_tune_status(self, is_tune):
+        """发送调谐状态命令到ATU设备"""
+        if self.connected and self.ws:
+            try:
+                # ATU调谐状态命令: [0xFF, 0x03, 0x01, status] - 与前端完全相同
+                tune_command = bytearray([SCMD_FLAG, SCMD_TUNE_STATUS, 0x01, 1 if is_tune else 0])
+                self.ws.send(tune_command, opcode=websocket.ABNF.OPCODE_BINARY)
+                logger.info(f"发送调谐状态命令到ATU设备: {'调谐模式' if is_tune else '直通模式'}")
+                self.sendpack += 1
+            except Exception as e:
+                logger.error(f"发送调谐状态命令失败: {e}")
+    
+    def start_data_request_loop(self):
+        """启动数据请求循环"""
+        def data_request_loop():
+            request_count = 0
+            
+            while self.running and self.connected:
+                try:
+                    request_count += 1
+                    logger.info(f"数据请求循环第 {request_count} 次")
+                    self.send_sync()
+                    time.sleep(2)  # 每2秒发送一次请求
+                except Exception as e:
+                    logger.error(f"数据请求循环错误: {e}")
+                    break
+        
+        data_thread = threading.Thread(target=data_request_loop)
+        data_thread.daemon = True
+        data_thread.start()
+    
+    def broadcast_to_clients(self, message):
+        """广播消息给所有WebSocket客户端"""
+        global atu_ws_clients
+        
+        for client in atu_ws_clients[:]:  # 使用副本避免修改时迭代
+            try:
+                client.write_message(json.dumps(message))
+            except Exception as e:
+                logger.error(f"发送消息到客户端失败: {e}")
+                # 移除失效的客户端
+                if client in atu_ws_clients:
+                    atu_ws_clients.remove(client)
+    
+    def stop(self):
+        """停止客户端"""
+        self.running = False
+        if self.ws:
+            self.ws.close()
+
+class AtuWebSocketHandler(tornado.websocket.WebSocketHandler):
+    """ATU监控WebSocket处理器"""
+    
+    def check_origin(self, origin):
+        # 允许跨域访问
+        return True
+    
+    def open(self):
+        global atu_ws_clients
+        
+        if self not in atu_ws_clients:
+            atu_ws_clients.append(self)
+        
+        logger.info(f"新的ATU监控客户端连接，当前客户端数: {len(atu_ws_clients)}")
+        
+        # 发送当前状态
+        self.write_message(json.dumps({
+            'type': 'status',
+            'message': '连接成功',
+            'connected': atu_device_connected
+        }))
+    
+    def on_message(self, message):
+        try:
+            data = json.loads(message)
+            
+            if data.get('type') == 'command':
+                # 处理客户端命令
+                command = data.get('command')
+                if command == 'sync':
+                    # 发送同步命令到ATU设备
+                    self.send_sync_command()
+                elif command == 'status':
+                    # 返回当前状态
+                    self.write_message(json.dumps({
+                        'type': 'status',
+                        'message': '状态查询',
+                        'connected': atu_device_connected
+                    }))
+                    
+        except Exception as e:
+            logger.error(f"处理客户端消息错误: {e}")
+    
+
+    def send_sync_command(self):
+        """发送同步命令到ATU设备"""
+        global atu_device_connected, atu_ws_client
+        
+        if atu_device_connected and atu_ws_client and atu_ws_client.connected:
+            try:
+                atu_ws_client.send_sync()
+            except Exception as e:
+                logger.error(f"发送同步命令失败: {e}")
+                atu_device_connected = False
+    
+    def on_close(self):
+        global atu_ws_clients
+        
+        if self in atu_ws_clients:
+            atu_ws_clients.remove(self)
+        
+        logger.info(f"ATU监控客户端断开连接，剩余客户端数: {len(atu_ws_clients)}")
+
+class AtuMonitorHandler(tornado.web.RequestHandler):
+    """ATU监控页面处理器"""
+    
+    def get(self):
+        try:
+            # 读取ATU监控页面
+            with open("www/atu_monitor.html", "r") as f:
+                content = f.read()
+            self.write(content)
+        except Exception as e:
+            logger.error(f"读取ATU监控页面失败: {e}")
+            self.write("<html><body><h1>ATU监控系统</h1><p>页面加载失败，请检查服务器日志。</p></body></html>")
+
+class AtuStatusHandler(tornado.web.RequestHandler):
+    """ATU状态API处理器"""
+    
+    def get(self):
+        global atu_device_connected
+        
+        status = {
+            'atu_device_connected': atu_device_connected,
+            'atu_device_ip': ATU_DEVICE_IP,
+            'atu_device_port': ATU_DEVICE_PORT,
+            'websocket_clients': len(atu_ws_clients),
+            'server_time': datetime.datetime.now().isoformat()
+        }
+        
+        self.set_header('Content-Type', 'application/json')
+        self.write(json.dumps(status))
+
+def main():
+    """主函数"""
+    
+    # 创建Tornado应用
+    app = tornado.web.Application([
+        (r'/atu/ws', AtuWebSocketHandler),
+        (r'/atu/monitor', AtuMonitorHandler),
+        (r'/atu/status', AtuStatusHandler),
+        (r'/atu/(.*)', tornado.web.StaticFileHandler, {'path': './www'}),
+        (r'/(.*)', tornado.web.StaticFileHandler, {'path': './www'})
+    ], debug=True)
+    
+    # 启动HTTP服务器
+    http_server = tornado.httpserver.HTTPServer(app)
+    http_server.listen(ATU_SERVER_PORT)
+    
+    logger.info(f"ATU服务器启动在端口 {ATU_SERVER_PORT}")
+    logger.info(f"ATU监控页面: http://localhost:{ATU_SERVER_PORT}/atu/monitor")
+    logger.info(f"ATU状态API: http://localhost:{ATU_SERVER_PORT}/atu/status")
+    
+    # 启动ATU设备WebSocket客户端
+    global atu_ws_client
+    atu_ws_client = AtuWebSocketClient()
+    atu_ws_client.connect()
+    
+    try:
+        # 启动Tornado事件循环
+        tornado.ioloop.IOLoop.current().start()
+    except KeyboardInterrupt:
+        logger.info("收到中断信号，正在关闭服务器...")
+    finally:
+        # 清理资源
+        if atu_ws_client:
+            atu_ws_client.stop()
+        
+        logger.info("ATU服务器已关闭")
+
+if __name__ == "__main__":
+    main()

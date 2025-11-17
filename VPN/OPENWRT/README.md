@@ -7,10 +7,10 @@
 ## 网络拓扑
 
 ```
-互联网 ←→ VPN服务器(www.vlsc.net:8866) ←→ OpenWrt路由器(192.168.1.6) ←→ 手机/电脑(10.1.1.x)
+互联网 ←→ VPN服务器(www.vlsc.net:9090) ←→ OpenWrt路由器(192.168.1.6) ←→ 手机/电脑(10.1.1.x)
 ```
 
-- **VPN 服务器**: 38.55.129.87:8877
+- **VPN 服务器**: 38.55.129.87:9090
 - **OpenWrt 内网**: 10.1.1.0/24 (网关: 10.1.1.1)
 - **VPN 内网**: 10.77.0.0/24 (OpenWrt: 10.77.0.2, 服务器: 10.77.0.1)
 
@@ -43,7 +43,7 @@ uci set network.wg0.mtu='1360'
 uci set network.wg0_peer=wireguard_wg0
 uci set network.wg0_peer.public_key='n4qHnoIirQIEErMh7/M+aA/rhkJSjcdDZyVGU9LXOHI='
 uci set network.wg0_peer.endpoint_host='38.55.129.87'
-uci set network.wg0_peer.endpoint_port='8877'
+uci set network.wg0_peer.endpoint_port='9090'
 uci set network.wg0_peer.allowed_ips='0.0.0.0/0'
 uci set network.wg0_peer.persistent_keepalive='15'
 ```

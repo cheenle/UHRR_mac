@@ -2,18 +2,21 @@
 
 # UHRR System Control Script
 # Start and stop script for Universal HamRadio Remote HTML5 system
+ulimit -n 10240
 
 # Configuration
-RIGCTL_MODEL="30003"  # IC-M710
-RIGCTL_DEVICE="/dev/cu.usbserial-230"
+RIGCTL_MODEL="30003"  # IC-R9000
+RIGCTL_DEVICE="/dev/cu.usbserial-120"
 RIGCTL_SPEED="4800"
 RIGCTL_STOP_BITS="2"
 RIGCTL_HOST="127.0.0.1"
 RIGCTL_PORT="4532"
-UHRR_PORT="8443"
+UHRR_PORT="8877"
+ATU_SERVER_PORT="8889"
 LOG_DIR="/Users/cheenle/UHRR/UHRR_mac"
 RIGCTLD_LOG="$LOG_DIR/rigctld.log"
 UHRR_LOG="$LOG_DIR/uhrr.log"
+ATU_LOG="$LOG_DIR/atu_server.log"
 
 # Colors for output
 RED='\033[0;31m'
@@ -152,6 +155,42 @@ stop_uhrr() {
     rm -f "$LOG_DIR/uhrr.pid"
 }
 
+# Function to start ATU server
+start_atu_server() {
+    if is_running "ATU_SERVER_WEBSOCKET"; then
+        print_warning "ATU server is already running"
+        return 1
+    fi
+    
+    print_status "Starting ATU server..."
+    
+    # Clear log files
+    > "$ATU_LOG"
+    
+    # Start ATU server
+    python3 "$LOG_DIR/ATU_SERVER_WEBSOCKET.py" > "$ATU_LOG" 2>&1 &
+    
+    local pid=$!
+    sleep 3
+    
+    if is_running "ATU_SERVER_WEBSOCKET"; then
+        print_success "ATU server started successfully (PID: $pid)"
+        echo "ATU server PID: $pid" > "$LOG_DIR/atu_server.pid"
+        print_success "ATU server is now accessible at https://localhost:$ATU_SERVER_PORT"
+        return 0
+    else
+        print_error "Failed to start ATU server"
+        print_error "Check $ATU_LOG for details"
+        return 1
+    fi
+}
+
+# Function to stop ATU server
+stop_atu_server() {
+    kill_process "ATU_SERVER_WEBSOCKET"
+    rm -f "$LOG_DIR/atu_server.pid"
+}
+
 # Function to show status
 show_status() {
     echo "=== UHRR System Status ==="
@@ -208,7 +247,7 @@ restart_system() {
     start
 }
 
-# Function to start both services
+# Function to start all services
 start() {
     print_status "Starting UHRR system..."
     
@@ -217,7 +256,7 @@ start() {
         print_warning "Radio device $RIGCTL_DEVICE not found, starting anyway..."
     fi
     
-    start_rigctld
+        start_rigctld
     sleep 2
     start_uhrr
     
@@ -229,7 +268,7 @@ start() {
     fi
 }
 
-# Function to stop both services
+# Function to stop all services
 stop() {
     print_status "Stopping UHRR system..."
     stop_uhrr
@@ -266,26 +305,34 @@ case "$1" in
     stop-uhrr)
         stop_uhrr
         ;;
+    start-atu)
+        start_atu_server
+        ;;
+    stop-atu)
+        stop_atu_server
+        ;;
     *)
         echo "UHRR System Control Script"
-        echo "Usage: $0 {start|stop|restart|status|logs [lines] [service]|start-rigctld|stop-rigctld|start-uhrr|stop-uhrr}"
+        echo "Usage: $0 {start|stop|restart|status|logs [lines] [service]|start-rigctld|stop-rigctld|start-uhrr|stop-uhrr|start-atu|stop-atu}"
         echo ""
         echo "Commands:"
-        echo "  start          - Start both rigctld and UHRR services"
-        echo "  stop           - Stop both rigctld and UHRR services"
+        echo "  start          - Start rigctld and UHRR services"
+        echo "  stop           - Stop rigctld and UHRR services"
         echo "  restart        - Restart the entire system"
         echo "  status         - Show current status of services"
         echo "  logs [n] [service] - Show last n lines of logs (default 20)"
-        echo "                   service can be 'rigctld' or 'uhrr'"
+        echo "                   service can be 'rigctld', 'uhrr' or 'atu'"
         echo "  start-rigctld  - Start only rigctld service"
         echo "  stop-rigctld   - Stop only rigctld service"
         echo "  start-uhrr     - Start only UHRR service"
         echo "  stop-uhrr      - Stop only UHRR service"
+        
         echo ""
         echo "Examples:"
         echo "  $0 start"
         echo "  $0 logs 50 rigctld"
         echo "  $0 status"
+        echo "  $0 start-atu"
         exit 1
         ;;
 esac

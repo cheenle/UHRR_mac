@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ATU模拟测试</title>
+    <script src="atu_simulator.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            background-color: #f0f0f0;
+            font-weight: bold;
+        }
+        .connected {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .disconnected {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        button {
+            padding: 10px 15px;
+            margin: 5px;
+            border: none;
+            border-radius: 4px;
+            background-color: #007bff;
+            color: white;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        button:disabled {
+            background-color: #6c757d;
+            cursor: not-allowed;
+        }
+        .controls {
+            margin: 20px 0;
+            text-align: center;
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        .instructions {
+            background-color: #e9ecef;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>ATU模拟测试</h1>
+        
+        <div id="status" class="status disconnected">未连接</div>
+        
+        <div class="instructions">
+            <h3>使用说明：</h3>
+            <ol>
+                <li>点击"连接到ATU服务器"建立连接</li>
+                <li>点击"开始模拟"发送模拟的ATU数据</li>
+                <li>观察atu_realtime_display.html页面是否能正确显示数据</li>
+                <li>点击"停止模拟"停止发送数据</li>
+                <li>点击"断开连接"关闭WebSocket连接</li>
+            </ol>
+        </div>
+        
+        <div class="controls">
+            <button onclick="atuSimulator.connect()">连接到ATU服务器</button>
+            <button onclick="atuSimulator.ws && atuSimulator.ws.close()">断开连接</button>
+            <br>
+            <button onclick="atuSimulator.startSimulation()">开始模拟</button>
+            <button onclick="atuSimulator.stopSimulation()">停止模拟</button>
+        </div>
+        
+        <div class="instructions">
+            <h3>调试方法：</h3>
+            <p>打开开发者工具控制台查看详细日志</p>
+            <p>也可以在控制台直接调用以下函数：</p>
+            <ul>
+                <li><code>connect()</code> - 连接到服务器</li>
+                <li><code>startSim()</code> - 开始模拟</li>
+                <li><code>stopSim()</code> - 停止模拟</li>
+            </ul>
+        </div>
+    </div>
+</body>
+</html>

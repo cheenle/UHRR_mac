@@ -1,0 +1,14 @@
+{
+  "14.100": {
+    "frequency": 14.1,
+    "swr": 0,
+    "relay": {
+      "network": "LC",
+      "inductor": 15,
+      "capacitor": 25,
+      "inductance": 1.5,
+      "capacitance": 250
+    },
+    "timestamp": "2025-10-28T22:18:48.403590"
+  }
+}

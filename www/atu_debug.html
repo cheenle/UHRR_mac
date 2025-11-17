@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ATU调试页面</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .data-display {
+            font-size: 24px;
+            margin: 10px 0;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background-color: #f9f9f9;
+        }
+        .log {
+            height: 400px;
+            overflow-y: scroll;
+            background-color: #000;
+            color: #00ff00;
+            padding: 10px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            margin-top: 20px;
+        }
+        button {
+            padding: 10px 15px;
+            margin: 5px;
+            border: none;
+            border-radius: 4px;
+            background-color: #007bff;
+            color: white;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>ATU调试页面</h1>
+        
+        <div id="connection-status" class="data-display">连接状态: 未连接</div>
+        
+        <div id="power-display" class="data-display">功率: --</div>
+        <div id="swr-display" class="data-display">驻波比: --</div>
+        <div id="max-power-display" class="data-display">最大功率: --</div>
+        <div id="efficiency-display" class="data-display">效率: --</div>
+        
+        <div>
+            <button onclick="connectWs()">连接</button>
+            <button onclick="disconnectWs()">断开</button>
+            <button onclick="sendSync()">发送同步命令</button>
+            <button onclick="clearLog()">清空日志</button>
+        </div>
+        
+        <div class="log" id="log">启动调试页面...</div>
+    </div>
+
+    <script>
+        let ws = null;
+        let isConnected = false;
+        let logElement = document.getElementById('log');
+        
+        function addToLog(message) {
+            const timestamp = new Date().toISOString().substr(11, 12);
+            logElement.innerHTML += `[${timestamp}] ${message}\n`;
+            logElement.scrollTop = logElement.scrollHeight;
+        }
+        
+        function updateDisplay() {
+            document.getElementById('connection-status').textContent = 
+                '连接状态: ' + (isConnected ? '已连接' : '未连接');
+        }
+        
+        function connectWs() {
+            if (ws) {
+                addToLog('正在关闭现有连接...');
+                ws.close();
+            }
+            
+            const hostname = window.location.hostname;
+            const serverUrl = `wss://${hostname}:8889/atu/ws`;
+            
+            addToLog('尝试连接到: ' + serverUrl);
+            
+            try {
+                ws = new WebSocket(serverUrl);
+                
+                ws.onopen = () => {
+                    isConnected = true;
+                    addToLog('WebSocket连接已建立');
+                    updateDisplay();
+                };
+                
+                ws.onclose = () => {
+                    isConnected = false;
+                    addToLog('WebSocket连接已关闭');
+                    updateDisplay();
+                };
+                
+                ws.onerror = (error) => {
+                    isConnected = false;
+                    addToLog('WebSocket错误: ' + error);
+                    updateDisplay();
+                };
+                
+                ws.onmessage = (event) => {
+                    addToLog('收到消息: ' + event.data);
+                    
+                    try {
+                        const data = JSON.parse(event.data);
+                        
+                        if (data.type === 'data' && data.data) {
+                            const atuData = data.data;
+                            
+                            // 更新显示
+                            if (atuData.power !== undefined) {
+                                document.getElementById('power-display').textContent = 
+                                    '功率: ' + atuData.power + ' W';
+                            }
+                            
+                            if (atuData.swr !== undefined) {
+                                document.getElementById('swr-display').textContent = 
+                                    '驻波比: ' + atuData.swr;
+                            }
+                            
+                            if (atuData.max_power !== undefined) {
+                                document.getElementById('max-power-display').textContent = 
+                                    '最大功率: ' + atuData.max_power + ' W';
+                            }
+                            
+                            if (atuData.efficiency !== undefined) {
+                                document.getElementById('efficiency-display').textContent = 
+                                    '效率: ' + atuData.efficiency + ' %';
+                            }
+                        } else if (data.type === 'status') {
+                            addToLog('状态消息: ' + JSON.stringify(data));
+                        }
+                    } catch (e) {
+                        addToLog('消息解析错误: ' + e);
+                    }
+                };
+            } catch (error) {
+                addToLog('连接创建失败: ' + error);
+            }
+        }
+        
+        function disconnectWs() {
+            if (ws) {
+                ws.close();
+                addToLog('已请求断开连接');
+            }
+        }
+        
+        function sendSync() {
+            if (ws && isConnected) {
+                const syncCommand = {
+                    type: 'command',
+                    command: 'sync'
+                };
+                
+                ws.send(JSON.stringify(syncCommand));
+                addToLog('已发送同步命令');
+            } else {
+                addToLog('未连接，无法发送命令');
+            }
+        }
+        
+        function clearLog() {
+            logElement.innerHTML = '';
+        }
+        
+        // 页面加载后自动连接
+        window.onload = function() {
+            addToLog('页面已加载，准备连接到ATU服务器...');
+        };
+    </script>
+</body>
+</html>

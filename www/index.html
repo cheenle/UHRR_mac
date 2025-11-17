@@ -187,6 +187,30 @@
 				</form>
 			</div>
 			
+			<!-- 功率和SWR显示 -->
+			<div id="div-power-swr" style="display: flex; gap: 20px; margin-top: 10px; align-items: center; background: rgba(0,0,0,0.3); padding: 10px; border-radius: 8px;">
+				<div id="power-display" style="text-align: center;">
+					<div style="font-size: 12px; color: #aaa;">功率</div>
+					<div id="power-value" style="font-size: 26px; font-weight: bold; color: #4CAF50;">-- W</div>
+				</div>
+				<div id="swr-display" style="text-align: center;">
+					<div style="font-size: 12px; color: #aaa;">驻波比</div>
+					<div id="swr-value" style="font-size: 26px; font-weight: bold; color: #2196F3;">--</div>
+				</div>
+				<div id="efficiency-display" style="text-align: center;">
+					<div style="font-size: 12px; color: #aaa;">效率</div>
+					<div id="efficiency-value" style="font-size: 26px; font-weight: bold; color: #FF9800;">-- %</div>
+				</div>
+			</div>
+			
+			<!-- ATU控制按钮 -->
+			<div id="div-atu-controls" style="display: flex; gap: 10px; margin-top: 10px; align-items: center; background: rgba(0,0,0,0.3); padding: 10px; border-radius: 8px;">
+				<button id="atu-tune-btn" style="padding: 8px 16px; background: #2196F3; color: white; border: none; border-radius: 4px; cursor: pointer;">ATU调谐</button>
+				<button id="atu-bypass-btn" style="padding: 8px 16px; background: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer;">ATU直通</button>
+				<button id="atu-reset-btn" style="padding: 8px 16px; background: #FF9800; color: white; border: none; border-radius: 4px; cursor: pointer;">ATU重置</button>
+				<button id="atu-autotune-toggle" style="padding: 8px 16px; background: #9C27B0; color: white; border: none; border-radius: 4px; cursor: pointer;">自动调谐: OFF</button>
+			</div>
+			
 			<div id="div-scoketscontrols">
 				<p id="indwsAudioTX"><img src="img/critsred.png">wsTX</p>
 				<p id="indwsAudioRX"><img src="img/critsred.png">wsRX</p>
@@ -197,7 +221,122 @@
 			<div id="div-bitrates">bitrate RX: 0.0 kbps | TX: 0.0 kbps</div>
 			
 		</div>	
+		
 		<script src="controls.js"></script>
-	<script src="tx_button_optimized.js"></script>
+		<script src="tx_button_optimized.js"></script>
+		<script src="atu.js"></script>
+		<script src="atu_autotune.js"></script>
+		<script src="atu_test.js"></script>
+		
+		<script>
+			// 添加ATU控制按钮事件监听器
+			document.addEventListener('DOMContentLoaded', function() {
+				// ATU调谐按钮
+				const tuneBtn = document.getElementById('atu-tune-btn');
+				if (tuneBtn) {
+					tuneBtn.addEventListener('click', function() {
+						if (typeof atuTester !== 'undefined' && atuTester && atuTester.isConnected) {
+							atuTester.startFullTune();
+						} else if (typeof atuSocket !== 'undefined' && atuSocket && atuSocket.readyState === WebSocket.OPEN) {
+							// 发送完整调谐命令
+							const tuneCommand = {
+								type: 'command',
+								command: 'tune_mode',
+								value: 2 // 2 = 完整调谐
+							};
+							atuSocket.send(JSON.stringify(tuneCommand));
+							
+							// 发送调谐状态命令
+							const statusCommand = {
+								type: 'command',
+								command: 'tune_status',
+								value: 1 // 1 = 调谐状态
+							};
+							atuSocket.send(JSON.stringify(statusCommand));
+							
+							console.log('📤 发送ATU调谐命令');
+						} else {
+							console.log('❌ ATU未连接');
+						}
+					});
+				}
+				
+				// ATU直通按钮
+				const bypassBtn = document.getElementById('atu-bypass-btn');
+				if (bypassBtn) {
+					bypassBtn.addEventListener('click', function() {
+						if (typeof atuTester !== 'undefined' && atuTester && atuTester.isConnected) {
+							atuTester.setBypass();
+						} else if (typeof atuSocket !== 'undefined' && atuSocket && atuSocket.readyState === WebSocket.OPEN) {
+							// 发送直通状态命令
+							const statusCommand = {
+								type: 'command',
+								command: 'tune_status',
+								value: 0 // 0 = 直通状态
+							};
+							atuSocket.send(JSON.stringify(statusCommand));
+							
+							console.log('📤 发送ATU直通命令');
+						} else {
+							console.log('❌ ATU未连接');
+						}
+					});
+				}
+				
+				// ATU重置按钮
+				const resetBtn = document.getElementById('atu-reset-btn');
+				if (resetBtn) {
+					resetBtn.addEventListener('click', function() {
+						if (typeof atuTester !== 'undefined' && atuTester && atuTester.isConnected) {
+							atuTester.setTuneMode(0); // 重置模式
+						} else if (typeof atuSocket !== 'undefined' && atuSocket && atuSocket.readyState === WebSocket.OPEN) {
+							// 发送重置命令
+							const resetCommand = {
+								type: 'command',
+								command: 'tune_mode',
+								value: 0 // 0 = 重置
+							};
+							atuSocket.send(JSON.stringify(resetCommand));
+							
+							console.log('📤 发送ATU重置命令');
+						} else {
+							console.log('❌ ATU未连接');
+						}
+					});
+				}
+				
+				// 自动调谐切换按钮
+				const autotuneToggle = document.getElementById('atu-autotune-toggle');
+				if (autotuneToggle) {
+					autotuneToggle.addEventListener('click', function() {
+						if (typeof atuAutoTune !== 'undefined') {
+							if (atuAutoTune.isEnabled) {
+								atuAutoTune.disable();
+								autotuneToggle.textContent = '自动调谐: OFF';
+								autotuneToggle.style.background = '#9C27B0';
+							} else {
+								atuAutoTune.enable();
+								autotuneToggle.textContent = '自动调谐: ON';
+								autotuneToggle.style.background = '#4CAF50';
+							}
+						}
+					});
+				}
+				
+				// 如果atuTester可用，尝试连接
+				if (typeof atuTester !== 'undefined') {
+					// 延迟连接以确保服务器已启动
+					setTimeout(() => {
+						atuTester.connect();
+					}, 2000);
+				}
+				
+				// 如果ATU显示系统可用，初始化它
+				if (typeof initAtuDisplay !== 'undefined') {
+					// 尽早初始化ATU显示以确保在用户操作前准备好
+					initAtuDisplay();
+				}
+			});
+		</script>
 	</body>
 </html>

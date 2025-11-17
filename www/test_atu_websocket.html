@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>ATU WebSocket 测试</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .status { padding: 10px; margin: 5px; border-radius: 5px; }
+        .connected { background: #d4edda; color: #155724; }
+        .disconnected { background: #f8d7da; color: #721c24; }
+        .connecting { background: #fff3cd; color: #856404; }
+        button { padding: 10px 20px; margin: 5px; cursor: pointer; }
+        #messages { height: 300px; overflow-y: auto; border: 1px solid #ccc; padding: 10px; }
+    </style>
+</head>
+<body>
+    <h1>ATU WebSocket 连接测试</h1>
+    
+    <div>
+        <button onclick="connect()">连接</button>
+        <button onclick="disconnect()">断开</button>
+        <button onclick="sendTest()">发送测试消息</button>
+    </div>
+    
+    <div id="status" class="status disconnected">未连接</div>
+    
+    <div>
+        <h3>消息日志:</h3>
+        <div id="messages"></div>
+    </div>
+    
+    <script>
+        let socket = null;
+        let isConnected = false;
+        
+        function log(message) {
+            const messagesDiv = document.getElementById('messages');
+            const timestamp = new Date().toLocaleTimeString();
+            messagesDiv.innerHTML += `[${timestamp}] ${message}<br>`;
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+        
+        function updateStatus(status, message) {
+            const statusDiv = document.getElementById('status');
+            statusDiv.textContent = message;
+            statusDiv.className = `status ${status}`;
+        }
+        
+        function connect() {
+            if (isConnected) {
+                log('⚠️ 已经连接');
+                return;
+            }
+            
+            const hostname = window.location.hostname;
+            const serverUrl = `wss://${hostname}:8889/atu/ws`;
+            
+            log(`🔌 尝试连接到: ${serverUrl}`);
+            updateStatus('connecting', '连接中...');
+            
+            try {
+                socket = new WebSocket(serverUrl);
+                
+                const connectionTimeout = setTimeout(() => {
+                    if (socket && socket.readyState === WebSocket.CONNECTING) {
+                        log('⏰ 连接超时');
+                        socket.close();
+                        updateStatus('disconnected', '连接超时');
+                    }
+                }, 5000);
+                
+                socket.onopen = () => {
+                    clearTimeout(connectionTimeout);
+                    isConnected = true;
+                    updateStatus('connected', '已连接');
+                    log('✅ WebSocket连接成功');
+                };
+                
+                socket.onclose = (event) => {
+                    clearTimeout(connectionTimeout);
+                    isConnected = false;
+                    updateStatus('disconnected', '连接关闭');
+                    log(`❌ 连接关闭，代码: ${event.code}, 原因: ${event.reason}`);
+                };
+                
+                socket.onerror = (event) => {
+                    clearTimeout(connectionTimeout);
+                    isConnected = false;
+                    updateStatus('disconnected', '连接错误');
+                    log('❌ WebSocket连接错误');
+                    console.error('WebSocket错误:', event);
+                };
+                
+                socket.onmessage = (event) => {
+                    log(`📨 接收到消息: ${event.data}`);
+                };
+                
+            } catch (error) {
+                log(`❌ 连接失败: ${error}`);
+                updateStatus('disconnected', '连接失败');
+            }
+        }
+        
+        function disconnect() {
+            if (socket) {
+                socket.close();
+                socket = null;
+            }
+            isConnected = false;
+            updateStatus('disconnected', '未连接');
+            log('🔌 手动断开连接');
+        }
+        
+        function sendTest() {
+            if (!isConnected || !socket) {
+                log('⚠️ 请先连接');
+                return;
+            }
+            
+            const testMessage = {
+                type: 'command',
+                command: 'status'
+            };
+            
+            socket.send(JSON.stringify(testMessage));
+            log(`📤 发送测试消息: ${JSON.stringify(testMessage)}`);
+        }
+        
+        // 页面加载后自动连接
+        window.addEventListener('load', function() {
+            log('📄 页面加载完成');
+            setTimeout(connect, 1000);
+        });
+    </script>
+</body>
+</html>

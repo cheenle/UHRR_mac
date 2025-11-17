@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ATU连接诊断</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        .connected {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .disconnected {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        .info {
+            background-color: #d1ecf1;
+            color: #0c5460;
+        }
+        button {
+            padding: 10px 15px;
+            margin: 5px;
+            border: none;
+            border-radius: 4px;
+            background-color: #007bff;
+            color: white;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .log {
+            height: 500px;
+            overflow-y: scroll;
+            background-color: #000;
+            color: #00ff00;
+            padding: 10px;
+            font-family: monospace;
+            margin-top: 20px;
+            white-space: pre-wrap;
+            border-radius: 4px;
+        }
+        .stats {
+            display: flex;
+            justify-content: space-around;
+            margin: 20px 0;
+            padding: 15px;
+            background-color: #e9ecef;
+            border-radius: 5px;
+        }
+        .stat-item {
+            text-align: center;
+        }
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #007bff;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>ATU连接诊断工具</h1>
+        
+        <div id="connection-status" class="status disconnected">未连接到ATU服务器</div>
+        
+        <div>
+            <button onclick="connectWs()">连接ATU</button>
+            <button onclick="disconnectWs()">断开连接</button>
+            <button onclick="sendSync()">发送同步命令</button>
+            <button onclick="clearLog()">清空日志</button>
+            <button onclick="testConnection()">测试连接</button>
+        </div>
+        
+        <div class="stats">
+            <div class="stat-item">
+                <div>功率</div>
+                <div id="power-value" class="stat-value">-- W</div>
+            </div>
+            <div class="stat-item">
+                <div>驻波比</div>
+                <div id="swr-value" class="stat-value">--</div>
+            </div>
+            <div class="stat-item">
+                <div>效率</div>
+                <div id="efficiency-value" class="stat-value">-- %</div>
+            </div>
+            <div class="stat-item">
+                <div>数据包计数</div>
+                <div id="packet-count" class="stat-value">0</div>
+            </div>
+        </div>
+        
+        <div class="log" id="log">等待连接...</div>
+    </div>
+
+    <script>
+        let ws = null;
+        let isConnected = false;
+        let logElement = document.getElementById('log');
+        let packetCount = 0;
+        let lastPower = '--';
+        let lastSwr = '--';
+        let lastEfficiency = '--';
+        
+        function addToLog(message) {
+            const timestamp = new Date().toISOString().substr(11, 12);
+            logElement.innerHTML += `[${timestamp}] ${message}\n`;
+            logElement.scrollTop = logElement.scrollHeight;
+        }
+        
+        function updateStatus(message, connected = false) {
+            const statusElement = document.getElementById('connection-status');
+            statusElement.textContent = message;
+            statusElement.className = connected ? 'status connected' : 'status disconnected';
+            isConnected = connected;
+        }
+        
+        function updateStats() {
+            document.getElementById('power-value').textContent = lastPower + ' W';
+            document.getElementById('swr-value').textContent = lastSwr;
+            document.getElementById('efficiency-value').textContent = lastEfficiency + ' %';
+            document.getElementById('packet-count').textContent = packetCount;
+        }
+        
+        function connectWs() {
+            if (ws) {
+                ws.close();
+            }
+            
+            const hostname = window.location.hostname;
+            const serverUrl = `wss://${hostname}:8889/atu/ws`;
+            
+            addToLog('尝试连接到: ' + serverUrl);
+            
+            try {
+                ws = new WebSocket(serverUrl);
+                
+                ws.onopen = () => {
+                    isConnected = true;
+                    updateStatus('已连接到ATU服务器', true);
+                    addToLog('✅ WebSocket连接已建立');
+                    addToLog('已连接到ATU服务器，开始接收数据...');
+                    
+                    // 连接成功后立即发送同步命令
+                    setTimeout(() => {
+                        sendSync();
+                    }, 500);
+                };
+                
+                ws.onclose = () => {
+                    isConnected = false;
+                    updateStatus('ATU服务器连接已关闭', false);
+                    addToLog('❌ WebSocket连接已关闭');
+                };
+                
+                ws.onerror = (error) => {
+                    isConnected = false;
+                    updateStatus('ATU服务器连接错误', false);
+                    addToLog('❌ WebSocket错误: ' + error);
+                };
+                
+                ws.onmessage = (event) => {
+                    addToLog('📥 收到消息: ' + event.data);
+                    
+                    try {
+                        const data = JSON.parse(event.data);
+                        
+                        if (data.type === 'data' && data.data) {
+                            const atuData = data.data;
+                            packetCount++;
+                            
+                            // 更新最后接收的值
+                            if (atuData.power !== undefined) lastPower = atuData.power;
+                            if (atuData.swr !== undefined) lastSwr = atuData.swr;
+                            if (atuData.efficiency !== undefined) lastEfficiency = atuData.efficiency;
+                            
+                            addToLog(`📊 数据 - 功率: ${atuData.power}W, SWR: ${atuData.swr}, 效率: ${atuData.efficiency}%`);
+                            updateStats();
+                        } else if (data.type === 'status') {
+                            addToLog('📋 状态消息: ' + JSON.stringify(data));
+                        } else {
+                            addToLog('📦 其他类型消息: ' + JSON.stringify(data));
+                        }
+                    } catch (e) {
+                        addToLog('❌ 消息解析错误: ' + e);
+                        addToLog('原始消息: ' + event.data);
+                    }
+                };
+            } catch (error) {
+                updateStatus('连接创建失败', false);
+                addToLog('❌ 连接创建失败: ' + error);
+            }
+        }
+        
+        function disconnectWs() {
+            if (ws) {
+                ws.close();
+                addToLog('已请求断开连接');
+            }
+        }
+        
+        function sendSync() {
+            if (ws && isConnected) {
+                const syncCommand = {
+                    type: 'command',
+                    command: 'sync'
+                };
+                
+                ws.send(JSON.stringify(syncCommand));
+                addToLog('📤 已发送同步命令');
+            } else {
+                addToLog('⚠️ 未连接，无法发送命令');
+            }
+        }
+        
+        function clearLog() {
+            logElement.innerHTML = '';
+            packetCount = 0;
+            updateStats();
+        }
+        
+        function testConnection() {
+            addToLog('🔍 开始测试连接...');
+            
+            if (isConnected) {
+                addToLog('✅ 连接状态: 已连接');
+                sendSync();
+            } else {
+                addToLog('❌ 连接状态: 未连接');
+                addToLog('💡 尝试重新连接...');
+                connectWs();
+            }
+            
+            // 检查是否在过去1分钟内收到数据
+            if (packetCount > 0) {
+                addToLog(`✅ 连接测试通过 - 已接收 ${packetCount} 个数据包`);
+            } else {
+                addToLog('⚠️ 连接测试: 尚未接收数据包，请稍候');
+            }
+        }
+        
+        // 页面加载完成后自动连接（可选）
+        window.onload = function() {
+            addToLog('📋 页面已加载，ATU连接诊断工具准备就绪');
+            addToLog('💡 点击"连接ATU"按钮开始连接');
+        };
+    </script>
+</body>
+</html>

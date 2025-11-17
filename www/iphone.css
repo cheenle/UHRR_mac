@@ -1,0 +1,457 @@
+/* iPhone专用Ham Radio远程控制CSS */
+/* 专为iPhone屏幕尺寸和交互特性优化 */
+
+/* CSS重置和基础样式 */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
+    background-color: #000;
+    color: #fff;
+    height: 100vh;
+    width: 100vw;
+    overflow: hidden;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+/* 安全区域适配 - iPhone X+ */
+.safe-area-top {
+    height: env(safe-area-inset-top);
+    background-color: #1a1a1a;
+}
+
+.safe-area-bottom {
+    height: env(safe-area-inset-bottom);
+    background-color: #1a1a1a;
+}
+
+/* 主容器 */
+.iphone-container {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    padding: 0 env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+    background-color: #000;
+}
+
+/* 顶部状态栏 */
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 15px;
+    background-color: #1a1a1a;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+    z-index: 100;
+}
+
+.header-left, .header-right {
+    width: 50px;
+}
+
+.header-center {
+    flex: 1;
+    text-align: center;
+}
+
+.icon-btn {
+    background: none;
+    border: none;
+    color: #fff;
+    font-size: 24px;
+    cursor: pointer;
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: background-color 0.2s;
+}
+
+.icon-btn:active {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.power-off {
+    color: #ff4444;
+}
+
+.power-on {
+    color: #4CAF50;
+}
+
+/* 频率显示 */
+.frequency-display {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.freq-main {
+    font-size: 28px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    font-variant-numeric: tabular-nums;
+}
+
+.freq-unit {
+    font-size: 14px;
+    color: #aaa;
+    margin-top: 2px;
+}
+
+/* 状态栏 */
+.status-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 15px;
+    background-color: #111;
+    border-bottom: 1px solid #333;
+}
+
+.status-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 12px;
+}
+
+.status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: #666;
+}
+
+.status-item.connected .status-dot {
+    background-color: #4CAF50;
+}
+
+.status-item.active .status-dot {
+    background-color: #2196F3;
+}
+
+.status-item#status-tx.active .status-dot {
+    background-color: #F44336;
+    animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.6; }
+    100% { opacity: 1; }
+}
+
+/* 信号强度 */
+.signal-strength {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.signal-bars {
+    display: flex;
+    height: 20px;
+    align-items: flex-end;
+    gap: 1px;
+}
+
+.signal-bar {
+    width: 3px;
+    background-color: #666;
+    border-radius: 1px 1px 0 0;
+}
+
+.signal-bar:nth-child(1) { height: 4px; }
+.signal-bar:nth-child(2) { height: 8px; }
+.signal-bar:nth-child(3) { height: 12px; }
+.signal-bar:nth-child(4) { height: 16px; }
+.signal-bar:nth-child(5) { height: 20px; }
+
+.signal-text {
+    font-size: 12px;
+    color: #aaa;
+    min-width: 25px;
+}
+
+/* 主内容区域 */
+.main-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 15px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+/* 模式和VFO选择 */
+.mode-vfo-section {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.mode-selector, .vfo-selector {
+    display: flex;
+    gap: 10px;
+}
+
+.mode-btn, .vfo-btn {
+    flex: 1;
+    background-color: #222;
+    border: none;
+    border-radius: 12px;
+    color: #aaa;
+    padding: 12px 5px;
+    font-size: 16px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+.mode-btn:active, .vfo-btn:active {
+    transform: scale(0.98);
+    background-color: #333;
+}
+
+.mode-btn.active, .vfo-btn.active {
+    background-color: #1a73e8;
+    color: white;
+}
+
+/* 频率控制 */
+.frequency-control {
+    margin: 10px 0;
+}
+
+.freq-digits {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 2px;
+    flex-wrap: wrap;
+}
+
+.freq-digit-group {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin: 0 2px;
+}
+
+.digit-up, .digit-down {
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #222;
+    border: none;
+    border-radius: 8px;
+    color: #fff;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    box-shadow: 0 2px 3px rgba(0, 0, 0, 0.2);
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: manipulation;
+}
+
+.digit-up:active, .digit-down:active {
+    background-color: #333;
+    transform: scale(0.95);
+}
+
+.digit-display {
+    width: 30px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    background-color: #111;
+    border-radius: 8px;
+    margin: 5px 0;
+    box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.3);
+}
+
+.freq-separator {
+    font-size: 24px;
+    font-weight: 600;
+    margin: 0 2px;
+    align-self: center;
+    color: #aaa;
+}
+
+/* 频段选择器 */
+.band-selector {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: center;
+    margin-top: 10px;
+}
+
+.band-btn {
+    background-color: #222;
+    border: none;
+    border-radius: 10px;
+    color: #fff;
+    padding: 10px 15px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    min-width: 70px;
+    transition: all 0.2s;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+.band-btn:active {
+    transform: scale(0.95);
+    background-color: #333;
+}
+
+/* PTT按钮区域 */
+.ptt-footer {
+    background-color: #1a1a1a;
+    padding: 15px;
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.3);
+}
+
+.ptt-container {
+    display: flex;
+    justify-content: center;
+}
+
+.ptt-button {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    background: radial-gradient(circle, #ff4444, #cc0000);
+    border: 3px solid #fff;
+    color: white;
+    font-size: 18px;
+    font-weight: bold;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 6px 15px rgba(255, 68, 68, 0.4);
+    transition: all 0.1s;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+.ptt-button:active {
+    transform: scale(0.95);
+    background: radial-gradient(circle, #ff6666, #dd0000);
+    box-shadow: 0 2px 8px rgba(255, 68, 68, 0.6);
+}
+
+.ptt-label {
+    font-size: 20px;
+    font-weight: bold;
+    margin-bottom: 3px;
+}
+
+.ptt-sublabel {
+    font-size: 10px;
+    opacity: 0.8;
+}
+
+/* 响应式设计 */
+@media (min-width: 428px) {
+    /* iPhone 14 Pro Max及以上 */
+    .freq-main {
+        font-size: 32px;
+    }
+    
+    .ptt-button {
+        width: 110px;
+        height: 110px;
+    }
+}
+
+@media (max-width: 375px) {
+    /* iPhone SE等小屏设备 */
+    .freq-main {
+        font-size: 24px;
+    }
+    
+    .digit-up, .digit-down {
+        width: 25px;
+        height: 25px;
+        font-size: 14px;
+    }
+    
+    .digit-display {
+        width: 25px;
+        height: 35px;
+        font-size: 20px;
+    }
+    
+    .ptt-button {
+        width: 90px;
+        height: 90px;
+    }
+}
+
+/* 暗色模式支持 */
+@media (prefers-color-scheme: dark) {
+    body {
+        background-color: #000;
+        color: #fff;
+    }
+    
+    .header, .ptt-footer {
+        background-color: #1a1a1a;
+    }
+}
+
+/* 高对比度模式支持 */
+@media (prefers-contrast: high) {
+    .ptt-button {
+        border: 4px solid #fff;
+    }
+    
+    .mode-btn, .vfo-btn, .band-btn {
+        border: 2px solid #fff;
+    }
+}
+
+/* 减少动画模式支持 */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+    
+    .ptt-button:active {
+        transform: none;
+    }
+    
+    .digit-up:active, .digit-down:active {
+        transform: none;
+    }
+}

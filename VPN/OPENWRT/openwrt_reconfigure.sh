@@ -9,7 +9,7 @@ OPENWRT_PASS="xy.cheenle"
 
 echo "=== OpenWrt WireGuard VPN 重新配置脚本 ==="
 echo "目标设备: $OPENWRT_IP"
-echo "服务器端口: 8877"
+echo "服务器端口: 9090"
 
 # 等待设备上线
 echo "[1/6] 等待 OpenWrt 设备上线..."
@@ -31,7 +31,7 @@ echo "[2/6] 更新 WireGuard 配置..."
 sshpass -p "$OPENWRT_PASS" ssh root@$OPENWRT_IP "
 # 更新 WireGuard 配置
 uci set network.wg0.private_key='MMiqBSUYiwLJBZL8UkR8LJBBNb3foISG3LDSMJbSolk='
-uci set network.wg0_peer.endpoint_port='8877'
+uci set network.wg0_peer.endpoint_port='9090'
 uci commit network
 
 echo '--- 当前配置 ---'
@@ -141,3 +141,4 @@ echo "2. 检查手机获得的 IP 地址（应该是 10.1.1.x）"
 echo "3. 检查手机获得的网关地址（应该是 10.1.1.1）"
 echo "4. 在手机上访问网站测试"
 echo "5. 检查出口 IP 是否为 VPN 服务器 IP (38.55.129.87)"
+

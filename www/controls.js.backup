@@ -18,8 +18,8 @@ function bodyload(){
 	checkCookie();
 	if(IS_MOBILE)initformobile();
 	
-	// 初始化PAD触摸屏TX按钮
-	initTXButtonTouch();
+	// TX按钮处理由tx_button_optimized.js统一管理
+	console.log('主界面加载完成');
 }
 
 function disableSFFC() { 
@@ -40,86 +40,13 @@ function disableSFFC() {
 //Mobiles routines///////////////////////////////////////////////////////////////////////////
 
 	function initformobile(){
-		x = document.getElementById('TX-record');
-		preventLongPressMenu(x);
+		// TX按钮处理已移至tx_button_optimized.js统一管理
+		// 这里只处理其他移动端优化
 		
-		// 优化的PAD触摸处理
-		let touchActive = false;
-		let touchStartTime = 0;
+		// 注意：不要对TX按钮调用preventLongPressMenu，会干扰tx_button_optimized.js的事件处理
+		// TX按钮的长按菜单阻止由tx_button_optimized.js处理
 		
-		// 触摸开始 - 立即响应
-		x.addEventListener("touchstart", function(e) {
-			e.preventDefault();
-			e.stopPropagation();
-			
-			touchActive = true;
-			touchStartTime = Date.now();
-			
-			// 立即视觉反馈
-			this.classList.add('button_pressed');
-			this.classList.remove('button_unpressed');
-			
-			// 立即执行TX开启
-			TXtogle('True');
-			
-		}, {passive: false, capture: true});
-		
-		// 触摸结束 - 立即释放
-		x.addEventListener("touchend", function(e) {
-			e.preventDefault();
-			e.stopPropagation();
-			
-			touchActive = false;
-			
-			// 立即视觉反馈
-			this.classList.add('button_unpressed');
-			this.classList.remove('button_pressed');
-			
-			// 立即执行TX关闭
-			TXtogle('False');
-			
-		}, {passive: false, capture: true});
-		
-		// 触摸取消 - 确保释放
-		x.addEventListener("touchcancel", function(e) {
-			e.preventDefault();
-			e.stopPropagation();
-			
-			touchActive = false;
-			
-			// 确保状态正确
-			this.classList.add('button_unpressed');
-			this.classList.remove('button_pressed');
-			
-			// 确保TX关闭
-			TXtogle('False');
-			
-		}, {passive: false, capture: true});
-		
-		// 触摸移动 - 防止意外触发
-		x.addEventListener("touchmove", function(e) {
-			if (!touchActive) return;
-			
-			const touch = e.touches[0];
-			const rect = this.getBoundingClientRect();
-			const x = touch.clientX - rect.left;
-			const y = touch.clientY - rect.top;
-			
-			// 如果触摸点移出按钮区域，取消操作
-			if (x < 0 || x > rect.width || y < 0 || y > rect.height) {
-				touchActive = false;
-				this.classList.add('button_unpressed');
-				this.classList.remove('button_pressed');
-				TXtogle('False');
-			}
-		}, {passive: false});
-		
-		// 优化触摸响应
-		x.style.touchAction = 'manipulation';
-		x.style.userSelect = 'none';
-		x.style.webkitTouchCallout = 'none';
-		x.style.webkitUserSelect = 'none';
-		
+		// 处理频谱缩放控件的触摸滚动
 		x = document.getElementById('canBFFFT_scale_floor');
 		x.addEventListener("touchstart", disableScrolling);
 		x.addEventListener("touchend", enableScrolling);
@@ -132,6 +59,8 @@ function disableSFFC() {
 		x = document.getElementById('canBFFFT_scale_start');
 		x.addEventListener("touchstart", disableScrolling);
 		x.addEventListener("touchend", enableScrolling);
+		
+		console.log('移动端初始化完成 - TX按钮由tx_button_optimized.js处理');
 	}
 
     function absorbEvent_(event) {
@@ -205,10 +134,15 @@ window.addEventListener('beforeunload', function (e) {
 });
 
 function check_connected() {
-	setTimeout(function () {
-		if (wsAudioRX.readyState === WebSocket.OPEN && wsAudioTX.readyState === WebSocket.OPEN && wsControlTRX.readyState === WebSocket.OPEN){document.getElementById("ombre-body").style.display = "none";document.getElementById("pop-upspinner").style.display = "none";}
-		else{check_connected();}
-	}, 1000);
+    setTimeout(function () {
+        // 放宽条件：只要控制通道和接收通道就绪，即可进入接收状态
+        if (wsControlTRX && wsControlTRX.readyState === WebSocket.OPEN && wsAudioRX && wsAudioRX.readyState === WebSocket.OPEN) {
+            document.getElementById("ombre-body").style.display = "none";
+            document.getElementById("pop-upspinner").style.display = "none";
+        } else {
+            check_connected();
+        }
+    }, 1000);
 }
 
 //RX Audio routines///////////////////////////////////////////////////////////////////////////
@@ -223,7 +157,12 @@ var AudioRX_biquadFilter_node = "";
 var AudioRX_analyser = "";
 var audiobufferready = false;
 var AudioRX_audiobuffer = [];
-var AudioRX_sampleRate=8000;
+var AudioRX_sampleRate=16000;
+var audioSyncMonitor = {
+	lastProcessTime: 0,
+	bufferCount: 0,
+	lagWarning: false
+};
 
 function AudioRX_start(){
 	document.getElementById("indwsAudioRX").innerHTML='<img src="img/critsgrey.png">wsRX';
@@ -236,35 +175,121 @@ function AudioRX_start(){
 	wsAudioRX.onclose = wsAudioRXclose;
 	wsAudioRX.onerror = wsAudioRXerror;
 
-	function appendwsAudioRX( msg ){
-		AudioRX_audiobuffer.push(new Float32Array(msg.data));
+	// 每秒打印一次码率（RX/TX）
+	if (!window.__brTimer) {
+		window.__rxBytes = 0; window.__txBytes = 0;
+		window.__brTimer = setInterval(function(){
+			var rxkbps = (window.__rxBytes||0) * 8 / 1000; // Kbps
+			var txkbps = (window.__txBytes||0) * 8 / 1000;
+			console.log(`[码率] RX: ${rxkbps.toFixed(1)} kbps, TX: ${txkbps.toFixed(1)} kbps`);
+			var brEl = document.getElementById('div-bitrates');
+			if (brEl) { brEl.textContent = `bitrate RX: ${rxkbps.toFixed(1)} kbps | TX: ${txkbps.toFixed(1)} kbps`; }
+			window.__rxBytes = 0; window.__txBytes = 0;
+		}, 1000);
 	}
 
-	const BUFF_SIZE = 256; // spec allows, yet do not go below 1024 
-	AudioRX_context = new AudioContext({latencyHint: "interactive",sampleRate: AudioRX_sampleRate});
-	AudioRX_gain_node = AudioRX_context.createGain();
-	AudioRX_biquadFilter_node = AudioRX_context.createBiquadFilter();
-	AudioRX_analyser = AudioRX_context.createAnalyser();
-	
-	AudioRX_source_node = AudioRX_context.createScriptProcessor(BUFF_SIZE, 1, 1);
-
-	AudioRX_source_node.onaudioprocess = (function() {
-		return function(event) {
-			var synth_buff = event.outputBuffer.getChannelData(0); // mono for now
-			let le = Boolean(AudioRX_audiobuffer.length);
-			if(le){
-				for (var i = 0, buff_size = synth_buff.length; i < buff_size; i++) {
-					synth_buff[i] = AudioRX_audiobuffer[0][i];
-				}
-				if(le){AudioRX_audiobuffer.shift();}
+	function appendwsAudioRX( msg ){
+		console.log('DEBUG: Received audio data message');
+		// 码率统计：RX
+		if (!window.__rxBytes) { window.__rxBytes = 0; }
+		if (msg && msg.data && msg.data.byteLength) {
+			window.__rxBytes += msg.data.byteLength;
+		}
+		// 限制缓冲区大小，防止累积过多音频数据
+		if (AudioRX_audiobuffer.length > 10) {
+			console.log('⚠️ 音频缓冲区过大，清除旧数据');
+			AudioRX_audiobuffer = AudioRX_audiobuffer.slice(-5); // 只保留最新的5个缓冲区
+		}
+		// Convert Int16 to Float32 for Web Audio API
+		try {
+			const int16Data = new Int16Array(msg.data);
+			const float32Data = new Float32Array(int16Data.length);
+			for (let i = 0; i < int16Data.length; i++) {
+				float32Data[i] = int16Data[i] / 32767.0;
 			}
-		};
-	}());
+			AudioRX_audiobuffer.push(float32Data);
+			console.log(`🎵 Int16解码成功: ${int16Data.length} 样本, 范围: [${Math.min(...int16Data)}, ${Math.max(...int16Data)}]`);
+		} catch (e) {
+			console.error("❌ Int16解码失败:", e);
+			// 回退到原始Float32处理
+			try {
+				AudioRX_audiobuffer.push(new Float32Array(msg.data));
+				console.log("🔄 回退到Float32处理");
+			} catch (e2) {
+				console.error("❌ 回退处理也失败:", e2);
+			}
+		}
+		console.log('DEBUG: Audio buffer length after push:', AudioRX_audiobuffer.length);
+	}
 
-	AudioRX_source_node.connect(AudioRX_biquadFilter_node);
-	AudioRX_biquadFilter_node.connect(AudioRX_gain_node);
-	AudioRX_gain_node.connect(AudioRX_analyser);
-	AudioRX_gain_node.connect( AudioRX_context.destination );
+    // 显式使用 24k 以与后端匹配
+    AudioRX_context = new AudioContext({ latencyHint: "interactive", sampleRate: AudioRX_sampleRate });
+    AudioRX_gain_node = AudioRX_context.createGain();
+    AudioRX_biquadFilter_node = AudioRX_context.createBiquadFilter();
+    AudioRX_analyser = AudioRX_context.createAnalyser();
+
+    // 优先使用 AudioWorkletNode 播放，失败则回退到 ScriptProcessor
+    (async () => {
+        try {
+            await AudioRX_context.audioWorklet.addModule('rx_worklet_processor.js');
+            const rxNode = new AudioWorkletNode(AudioRX_context, 'rx-player');
+            // Store rxNode in AudioRX_source_node so we can access it later for flushing
+            AudioRX_source_node = rxNode;
+            // 调整为稳态与延迟更均衡：最小16帧，最大32帧
+            try { rxNode.port.postMessage({ type: 'config', min: 16, max: 32 }); } catch(_){}
+            // 将网络收到的帧直接投递到 worklet
+            window.__pushRxFrame = function(f32) {
+                rxNode.port.postMessage({ type: 'push', payload: f32 });
+            };
+            // 直接重设 onmessage，避免旧处理函数仍被引用
+            wsAudioRX.onmessage = function(msg){
+                if (!window.__rxBytes) window.__rxBytes = 0;
+                if (msg && msg.data && msg.data.byteLength) window.__rxBytes += msg.data.byteLength;
+                try {
+                    // Convert Int16 to Float32 for Web Audio API
+                    const int16Data = new Int16Array(msg.data);
+                    const float32Data = new Float32Array(int16Data.length);
+                    for (let i = 0; i < int16Data.length; i++) {
+                        float32Data[i] = int16Data[i] / 32767.0;
+                    }
+                    window.__pushRxFrame(float32Data);
+                } catch(e) {
+                    // 出错回退到原有缓冲播放
+                    try {
+                        // Convert Int16 to Float32 for Web Audio API
+                        const int16Data = new Int16Array(msg.data);
+                        const float32Data = new Float32Array(int16Data.length);
+                        for (let i = 0; i < int16Data.length; i++) {
+                            float32Data[i] = int16Data[i] / 32767.0;
+                        }
+                        AudioRX_audiobuffer.push(float32Data);
+                    } catch(_) {}
+                }
+            };
+            rxNode.connect(AudioRX_biquadFilter_node);
+        } catch (e) {
+            // 回退到 ScriptProcessor
+            const BUFF_SIZE = 256;
+            AudioRX_source_node = AudioRX_context.createScriptProcessor(BUFF_SIZE, 1, 1);
+            AudioRX_source_node.onaudioprocess = (function() {
+                return function(event) {
+                    var out = event.outputBuffer.getChannelData(0);
+                    if (AudioRX_audiobuffer.length === 0) { out.fill(0); return; }
+                    var cur = AudioRX_audiobuffer[0];
+                    var n = Math.min(cur.length, out.length);
+                    for (var j = 0; j < n; j++) out[j] = cur[j];
+                    for (var k = n; k < out.length; k++) out[k] = 0;
+                    if (n >= cur.length) AudioRX_audiobuffer.shift(); else AudioRX_audiobuffer[0] = cur.slice(n);
+                };
+            }());
+            AudioRX_source_node.connect(AudioRX_biquadFilter_node);
+        }
+    })();
+
+    AudioRX_biquadFilter_node.connect(AudioRX_gain_node);
+    AudioRX_gain_node.connect(AudioRX_analyser);
+    AudioRX_gain_node.connect( AudioRX_context.destination );
+	
 	drawBF();
 	drawRXvol();
 	
@@ -300,6 +325,7 @@ function AudioRX_SetGAIN( vol="None" ){
 }
 
 function wsAudioRXopen(){
+	console.log('DEBUG: WebSocket audio RX connection opened');
 	document.getElementById("indwsAudioRX").innerHTML='<img src="img/critsgreen.png">wsRX';
 }
 
@@ -325,8 +351,28 @@ var muteRX=false;
 function toggleaudioRX(stat="None"){
 	muteRX=!muteRX;
 	if(stat != "None"){muteRX=stat;}
-	if(muteRX){AudioRX_SetGAIN(0);}
-	else{AudioRX_SetGAIN();}
+	if(muteRX){
+		AudioRX_SetGAIN(0);
+		console.log('🔇 RX音频静音');
+	}
+	else{
+		AudioRX_SetGAIN();
+		console.log('🔊 RX音频恢复');
+		// TX结束后，清除音频缓冲区，确保实时性
+		if (AudioRX_audiobuffer.length > 3) {
+			console.log('🧹 TX结束后清除音频缓冲区，减少延迟');
+			AudioRX_audiobuffer = AudioRX_audiobuffer.slice(-2); // 只保留最新的2个缓冲区
+		}
+		// 立即清除RX音频工作节点缓冲区以减少TX->RX切换延迟
+		if (typeof AudioRX_source_node !== 'undefined' && AudioRX_source_node && AudioRX_source_node.port) {
+			try {
+				AudioRX_source_node.port.postMessage({type: 'flush'});
+				console.log('🔄 RX工作节点缓冲区在PTT释放后立即清除');
+			} catch(e) {
+				console.log('⚠️ 清除RX工作节点缓冲区时出错:', e);
+			}
+		}
+	}
 }
 
 
@@ -454,11 +500,23 @@ var wsControlTRX = "";
 
 function ControlTRX_start(){
 	document.getElementById("indwsControlTRX").innerHTML='<img src="img/critsgrey.png">wsCtrl';
-	wsControlTRX = new WebSocket( 'wss://' + window.location.href.split( '/' )[2] + '/WSCTRX' );
+	const wsUrl = 'wss://' + window.location.href.split( '/' )[2] + '/WSCTRX';
+	console.log('🔌 尝试连接WebSocket:', wsUrl);
+	wsControlTRX = new WebSocket( wsUrl );
 	wsControlTRX.onopen = wsControlTRXopen;
 	wsControlTRX.onclose = wsControlTRXclose;
 	wsControlTRX.onerror = wsControlTRXerror;
 	wsControlTRX.onmessage = wsControlTRXcrtol;
+	
+	// 定期查询PTT状态，确保同步
+	if (window.pttQueryInterval) {
+		clearInterval(window.pttQueryInterval);
+	}
+	window.pttQueryInterval = setInterval(() => {
+		if (wsControlTRX && wsControlTRX.readyState === WebSocket.OPEN) {
+			wsControlTRX.send("getPTT");
+		}
+	}, 5000); // 每5秒查询一次，避免过于频繁
 }
 
 var SignalLevel=0;
@@ -468,12 +526,20 @@ function wsControlTRXcrtol( msg ){
 	else if(words[0] == "getFreq"){showTRXfreq(words[1]);TRXfrequency=parseInt(words[1]);if (typeof panfft !== 'undefined') {panfft.setcenterfrequency(words[1]);}}
 	else if(words[0] == "getMode"){showTRXmode(words[1]);}
 	else if(words[0] == "getSignalLevel"){SignalLevel=words[1];drawRXSmeter();}
+	else if(words[0] == "getPTT"){updatePTTStatus(words[1] === "true");}
 	else if(words[0] == "panfft"){document.getElementById("div-panfft").style.display = "block";}
 }
 
 function ControlTRX_stop()
 {
 	wsControlTRX.close();
+	// 清理PTT状态查询定时器
+	if (window.pttQueryInterval) {
+		clearInterval(window.pttQueryInterval);
+		window.pttQueryInterval = null;
+	}
+	// 重置PTT状态显示
+	updatePTTStatus(false);
 } 
 
 function ControlTRX_getFreq(){
@@ -481,16 +547,43 @@ function ControlTRX_getFreq(){
 }
 
 function wsControlTRXopen(){
+	console.log('✅ WebSocket控制连接成功建立');
 	document.getElementById("indwsControlTRX").innerHTML='<img src="img/critsgreen.png">wsCtrl';
 	wsControlTRX.send("getFreq:");
 	wsControlTRX.send("getMode:");
+	// 连接建立后立即查询PTT状态
+	wsControlTRX.send("getPTT:");
+	updatePTTStatus(false);
+	
+	// 启动定期PTT状态检查（每5秒一次，确保状态准确性）
+	if (window.pttStatusCheckInterval) {
+		clearInterval(window.pttStatusCheckInterval);
+	}
+	window.pttStatusCheckInterval = setInterval(() => {
+		if (poweron && wsControlTRX && wsControlTRX.readyState === WebSocket.OPEN) {
+			wsControlTRX.send("getPTT:");
+		}
+	}, 5000); // 每5秒检查一次PTT状态
 }
 
 function wsControlTRXclose(){
 	document.getElementById("indwsControlTRX").innerHTML='<img src="img/critsred.png">wsCtrl';
+	// 清理PTT状态查询定时器
+	if (window.pttQueryInterval) {
+		clearInterval(window.pttQueryInterval);
+		window.pttQueryInterval = null;
+	}
+	// 清理定期状态检查定时器
+	if (window.pttStatusCheckInterval) {
+		clearInterval(window.pttStatusCheckInterval);
+		window.pttStatusCheckInterval = null;
+	}
+	// 重置PTT状态显示
+	updatePTTStatus(false);
 }
 
 function wsControlTRXerror(err){
+	console.error('❌ WebSocket控制连接错误:', err);
     wsControlTRX.close();
 	document.getElementById("indwsControlTRX").innerHTML='<img src="img/critsred.png">wsCtrl';
 	ControlTRX_start();
@@ -567,8 +660,159 @@ function sendTRXfreq(freq=0){
 		if (wsControlTRX.readyState === WebSocket.OPEN) {wsControlTRX.send("setFreq:"+freq);}
 }
 
+// 全局PTT状态跟踪变量，用于防止重复命令
+var lastPTTState = null;
+var lastPTTTime = 0;
+var PTT_DEBOUNCE_DELAY = 100; // 防抖延迟改回100ms
+var PTT_COMMAND_SENT = false; // 跟踪是否已发送PTT命令
+var PTT_DEVICE_STATE = false; // 设备确认的PTT状态（优先使用）
+var PTT_PREDICTED_STATE = false; // 本地预测的PTT状态（仅用于临时显示）
+var PTT_LAST_UPDATE_TIME = 0; // 最后状态更新时间
+var PTT_USER_INTENT = false; // 用户意图状态（按下TX时为true，松开时为false）
+
 function sendTRXptt(stat){
-	if (wsControlTRX.readyState === WebSocket.OPEN) {wsControlTRX.send("setPTT:"+stat);}
+	const message = "setPTT:"+stat;
+	const currentTime = Date.now();
+	
+	// 更新用户意图状态
+	PTT_USER_INTENT = stat;
+	
+	// 防抖机制：如果状态相同且时间间隔太短，则忽略（但确保第一命令能发送）
+	if (lastPTTState === stat && (currentTime - lastPTTTime) < PTT_DEBOUNCE_DELAY) {
+		console.log(`🔄 PTT命令防抖：忽略重复命令 (${stat})，距离上次命令 ${(currentTime - lastPTTTime)}ms`);
+		// 即使防抖，也确保至少发送一次命令
+		if (lastPTTTime === 0 || lastPTTState === null) {
+			console.log(`⚠️ 防抖机制：但这是第一次命令，强制发送`);
+		} else {
+			return;
+		}
+	}
+	
+	// 更新最后状态和时间
+	lastPTTState = stat;
+	lastPTTTime = currentTime;
+	PTT_COMMAND_SENT = true;
+	
+	// 立即更新本地预测状态（快速视觉反馈）
+	PTT_PREDICTED_STATE = stat;
+	PTT_LAST_UPDATE_TIME = currentTime;
+	updatePTTStatusDisplay(stat, false); // false表示是预测状态
+	
+	// 详细调试日志：前端TX动作时间戳
+	console.log(`📤 [前端TX动作] 时间戳: ${currentTime}, 状态: ${stat ? 'ON' : 'OFF'}, 用户意图: ${PTT_USER_INTENT}, WebSocket状态: ${wsControlTRX ? wsControlTRX.readyState : 'NULL'}, poweron: ${poweron}`);
+	
+	if (wsControlTRX && wsControlTRX.readyState === WebSocket.OPEN && poweron) {
+		// 简化：只发送一次PTT命令，移除三次重试机制
+		wsControlTRX.send(message);
+		console.log(`✅ [PTT发送] 时间戳: ${currentTime}, 命令: ${message}, 延迟: 0ms`);
+		
+		// 最终重置命令发送标志
+		setTimeout(() => {
+			PTT_COMMAND_SENT = false;
+		}, 1000);
+	} else {
+		console.error(`❌ [PTT发送失败] WebSocket状态: ${wsControlTRX ? wsControlTRX.readyState : 'NULL'}, poweron: ${poweron}`);
+		// 如果发送失败，重置状态以便下次可以重新发送
+		lastPTTState = null;
+	}
+}
+
+// 添加PTT状态更新函数
+function updatePTTStatus(isPTTOn) {
+	// 更新设备确认状态（优先使用）
+	PTT_DEVICE_STATE = isPTTOn;
+	PTT_LAST_UPDATE_TIME = Date.now();
+	
+	// 检查状态一致性：如果设备状态与用户意图不一致，记录警告
+	if (PTT_DEVICE_STATE !== PTT_USER_INTENT) {
+		console.warn(`⚠️ PTT状态不一致：用户意图=${PTT_USER_INTENT}, 设备状态=${PTT_DEVICE_STATE}`);
+	}
+	
+	// 立即更新显示，使用设备确认状态
+	updatePTTStatusDisplay(isPTTOn, true);
+}
+
+// 统一的PTT状态显示函数 - 设备状态优先于预测状态
+function updatePTTStatusDisplay(isPTTOn, isDeviceConfirmed) {
+	const pttIndicator = document.getElementById('ptt-status-indicator');
+	if (!pttIndicator) return;
+	
+	// 如果设备状态与用户意图不一致，优先显示用户意图
+	if (isDeviceConfirmed && PTT_DEVICE_STATE !== PTT_USER_INTENT) {
+		console.warn(`🔄 PTT显示：设备状态(${PTT_DEVICE_STATE})与用户意图(${PTT_USER_INTENT})不一致，优先显示用户意图`);
+		isPTTOn = PTT_USER_INTENT;
+		isDeviceConfirmed = false; // 标记为预测状态
+	}
+	
+	// 设备确认状态优先显示
+	if (isDeviceConfirmed) {
+		// 设备确认的状态 - 使用标准显示
+		if (isPTTOn) {
+			pttIndicator.textContent = 'PTT: ON';
+			pttIndicator.style.color = '#00ff00'; // 绿色表示发射中
+			pttIndicator.style.fontWeight = 'bold';
+			pttIndicator.style.textShadow = '0 0 8px #00ff00';
+			pttIndicator.style.animation = 'none'; // 清除任何动画
+		} else {
+			pttIndicator.textContent = 'PTT: OFF';
+			pttIndicator.style.color = '#ff4444'; // 红色表示未发射
+			pttIndicator.style.fontWeight = 'normal';
+			pttIndicator.style.textShadow = 'none';
+			pttIndicator.style.animation = 'none'; // 清除任何动画
+		}
+	} else {
+		// 预测状态 - 使用特殊视觉反馈（仅在设备状态未知时显示）
+		// 如果设备状态已知，优先显示设备状态
+		if (Date.now() - PTT_LAST_UPDATE_TIME < 3000) { // 3秒内的预测状态才显示
+			if (isPTTOn) {
+				pttIndicator.textContent = 'PTT: ON (预测)';
+				pttIndicator.style.color = '#ffff00'; // 黄色表示预测状态
+				pttIndicator.style.fontWeight = 'bold';
+				pttIndicator.style.textShadow = '0 0 12px #ffff00';
+				pttIndicator.style.animation = 'none';
+			} else {
+				pttIndicator.textContent = 'PTT: OFF (预测)';
+				pttIndicator.style.color = '#ff8800'; // 橙色表示预测状态
+				pttIndicator.style.fontWeight = 'normal';
+				pttIndicator.style.textShadow = '0 0 8px #ff8800';
+				pttIndicator.style.animation = 'none';
+			}
+		} else {
+			// 预测状态过期，显示为未知状态
+			pttIndicator.textContent = 'PTT: 未知';
+			pttIndicator.style.color = '#888888';
+			pttIndicator.style.fontWeight = 'normal';
+			pttIndicator.style.textShadow = 'none';
+			pttIndicator.style.animation = 'pttBlink 2s infinite';
+		}
+	}
+}
+
+// 定期同步PTT状态显示，确保显示正确
+function syncPTTStatusDisplay() {
+	const pttIndicator = document.getElementById('ptt-status-indicator');
+	if (!pttIndicator) return;
+	
+	// 如果设备状态与用户意图不一致，强制查询设备状态
+	if (PTT_DEVICE_STATE !== PTT_USER_INTENT) {
+		console.log(`🔄 PTT状态同步：用户意图(${PTT_USER_INTENT})与设备状态(${PTT_DEVICE_STATE})不一致，强制查询设备状态`);
+		if (poweron && wsControlTRX && wsControlTRX.readyState === WebSocket.OPEN) {
+			wsControlTRX.send("getPTT");
+		}
+	}
+	
+	// 始终优先显示设备状态
+	updatePTTStatusDisplay(PTT_DEVICE_STATE, true);
+	
+	// 每1秒同步一次，更频繁地检查状态一致性
+	setTimeout(syncPTTStatusDisplay, 1000);
+}
+
+// 启动PTT状态同步
+if (typeof window !== 'undefined') {
+	window.addEventListener('load', function() {
+		setTimeout(syncPTTStatusDisplay, 1000); // 页面加载后1秒开始同步
+	});
 }	
 
 function showTRXmode(mode){
@@ -630,161 +874,10 @@ function drawRXSmeter() {
 		}
 }
 
-// TX按钮状态管理 - 统一状态管理
-let txButtonState = {
-	isPressed: false,
-	isLocked: false,
-	element: null,
-	lastTouchTime: 0,
-	debounceDelay: 50, // 减少防抖延迟
-	touchActive: false,
-	touchStartTime: 0,
-	eventHandlersAdded: false // 防止重复添加事件
-};
-
-function TXtogle(state="None")
-{
-	// 获取TX按钮元素
-	const txButton = document.getElementById('TX-record');
-	if (!txButton) {
-		console.error('TX按钮元素未找到');
-		return;
-	}
-	
-	// 更新状态管理
-	txButtonState.element = txButton;
-	
-	// 防抖检查 - 更严格的防抖
-	const now = Date.now();
-	if (now - txButtonState.lastTouchTime < txButtonState.debounceDelay) {
-		console.log('TX操作被防抖阻止');
-		return;
-	}
-	txButtonState.lastTouchTime = now;
-	
-	// 处理按下状态
-	if (state === "True") {
-		if (poweron && !txButtonState.isPressed) {
-			txButtonState.isPressed = true;
-			button_pressed();
-			toggleRecord(true);
-			toggleaudioRX();
-			sendTRXptt(true);
-			console.log('TX按钮按下 - 状态:', txButtonState.isPressed);
-		} else {
-			console.log('TX按下被阻止 - poweron:', poweron, 'isPressed:', txButtonState.isPressed);
-		}
-	}
-	// 处理释放状态
-	else if (state === "False") {
-		if (poweron && txButtonState.isPressed) {
-			txButtonState.isPressed = false;
-			button_unpressed();
-			toggleRecord();
-			toggleaudioRX();
-			sendTRXptt(false);
-			console.log('TX按钮释放 - 状态:', txButtonState.isPressed);
-		} else {
-			console.log('TX释放被阻止 - poweron:', poweron, 'isPressed:', txButtonState.isPressed);
-		}
-	}
-	// 处理切换状态（兼容旧代码）
-	else if (state === "None") {
-		if (txButtonState.isPressed) {
-			TXtogle("False");
-		} else {
-			TXtogle("True");
-		}
-	}
-}
+// TX按钮处理已移至tx_button_optimized.js
 
 
-// PAD触摸屏TX按钮优化
-function initTXButtonTouch() {
-	const txButton = document.getElementById('TX-record');
-	if (!txButton) return;
-	
-	// 触摸开始
-	txButton.addEventListener('touchstart', function(e) {
-		e.preventDefault();
-		e.stopPropagation();
-		
-		if (!poweron) return;
-		
-		// 防抖检查
-		const now = Date.now();
-		if (now - txButtonState.lastTouchTime < txButtonState.debounceDelay) {
-			return;
-		}
-		txButtonState.lastTouchTime = now;
-		
-		// 立即视觉反馈
-		txButton.style.transform = 'scale(0.95)';
-		txButton.style.backgroundColor = '#ff4444';
-		
-		// 触觉反馈（如果支持）
-		if (navigator.vibrate) {
-			navigator.vibrate(50);
-		}
-		
-		// 开始TX
-		TXtogle('True');
-		
-		console.log('TX触摸开始');
-	}, { passive: false });
-	
-	// 触摸结束
-	txButton.addEventListener('touchend', function(e) {
-		e.preventDefault();
-		e.stopPropagation();
-		
-		// 恢复视觉状态
-		txButton.style.transform = 'scale(1)';
-		txButton.style.backgroundColor = '';
-		
-		// 结束TX
-		TXtogle('False');
-		
-		console.log('TX触摸结束');
-	}, { passive: false });
-	
-	// 触摸取消（手指移出按钮区域）
-	txButton.addEventListener('touchcancel', function(e) {
-		e.preventDefault();
-		e.stopPropagation();
-		
-		// 恢复视觉状态
-		txButton.style.transform = 'scale(1)';
-		txButton.style.backgroundColor = '';
-		
-		// 结束TX
-		TXtogle('False');
-		
-		console.log('TX触摸取消');
-	}, { passive: false });
-	
-	// 触摸移动（防止意外触发）
-	txButton.addEventListener('touchmove', function(e) {
-		e.preventDefault();
-		e.stopPropagation();
-	}, { passive: false });
-	
-	// 鼠标事件（桌面兼容）
-	txButton.addEventListener('mousedown', function(e) {
-		if (!poweron) return;
-		TXtogle('True');
-	});
-	
-	txButton.addEventListener('mouseup', function(e) {
-		TXtogle('False');
-	});
-	
-	txButton.addEventListener('mouseleave', function(e) {
-		TXtogle('False');
-	});
-	
-	console.log('TX按钮触摸事件初始化完成');
-}
+// TX按钮处理已移至tx_button_optimized.js
 
 //Cookie routines///////////////////////////////////////////////////////////////////////////
 function setCookie(cname,cvalue,exdays) {
@@ -1297,26 +1390,34 @@ OpusEncoderProcessor.prototype.onAudioProcess = function( e )
 	this.instant = 0.0;
 	const that = this;
 	
-    if( isRecording )
+	    if( isRecording )
     {
 	var data = e.inputBuffer.getChannelData( 0 )
 	var i = 0, ds = this.downSample;
 	
 	if( encode )
 	{
-	    for( var idx = 0; idx < data.length; idx += ds )
-		this.f32arr[ i++ ] = data[ idx ]/10;
+		    for( var idx = 0; idx < data.length; idx += ds )
+			this.f32arr[ i++ ] = data[ idx ];
 
 	    var res = this.opusEncoder.encode_float( this.f32arr );
 
 	    for( var idx = 0; idx < res.length; ++idx )
-		this.wsh.send( res[ idx ] );
+		{
+			// 码率统计：TX（编码后）
+			if (!window.__txBytes) { window.__txBytes = 0; }
+			if (res[idx] && res[idx].byteLength) { window.__txBytes += res[idx].byteLength; }
+			this.wsh.send( res[ idx ] );
+		}
 	}
-	else
+		else
 	{
-	    for( var idx = 0; idx < data.length; idx += ds )
-		this.i16arr[ i++ ] = (data[ idx ] /10) * 0xFFFF; // int16
+		    for( var idx = 0; idx < data.length; idx += ds )
+			this.i16arr[ i++ ] = (data[ idx ]) * 0xFFFF; // int16
 
+	    // 码率统计：TX（PCM直发）
+	    if (!window.__txBytes) { window.__txBytes = 0; }
+	    window.__txBytes += this.i16arr.byteLength;
 	    this.wsh.send( this.i16arr );
 	}
 	
@@ -1383,7 +1484,30 @@ MediaHandler.prototype.callback = function( stream )
 }
 
 
-MediaHandler.prototype.error = function( err ) { alert( "Problem" ); }
+MediaHandler.prototype.error = function( err ) { 
+    console.error('MediaHandler error:', err);
+    // 提供更详细的错误信息
+    let errorMessage = "音频设备初始化失败";
+    if (err && err.name) {
+        switch(err.name) {
+            case "NotAllowedError":
+                errorMessage += "：请允许访问麦克风";
+                break;
+            case "NotFoundError":
+                errorMessage += "：未找到音频输入设备";
+                break;
+            case "NotReadableError":
+                errorMessage += "：音频设备不可读";
+                break;
+            case "OverconstrainedError":
+                errorMessage += "：音频设备参数不匹配";
+                break;
+            default:
+                errorMessage += "：" + err.name;
+        }
+    }
+    alert(errorMessage);
+}
 
 
 var isRecording = false, encode = false;
@@ -1462,9 +1586,13 @@ function stopRecord()
     document.getElementById( "encode" ).disabled = false;
     console.log( 'ended recording' ); 
 
+    // 立即停止音频播放，不播放录制的音频
     var msg = "s:";
     console.log( msg );
     wsAudioTX.send( msg );
+    
+    // 立即切换到接收状态，不等待音频播放完成
+    console.log( '立即切换到接收状态' );
 }
 
 function AudioTX_SetGAIN( vol ){
@@ -1475,5 +1603,197 @@ function toggleRecord(sendit = false)
 {
     if( !sendit ){stopRecord();}
     else {if (wsAudioTX.readyState !== WebSocket.CLOSED) {startRecord();}}
+}
+
+// ATU状态显示框切换功能
+function toggleAtuStatus() {
+    console.log('🖱️ ATU状态显示框切换函数被调用');
+    const atuStatusDiv = document.getElementById('div-atu-status');
+    if (atuStatusDiv) {
+        console.log(`📊 ATU状态显示框当前显示状态: ${atuStatusDiv.style.display}`);
+        if (atuStatusDiv.style.display === 'none' || atuStatusDiv.style.display === '') {
+            atuStatusDiv.style.display = 'block';
+            // 重新定位ATU状态显示框
+            if (typeof repositionAtuStatus === 'function') {
+                repositionAtuStatus();
+            }
+            // 连接ATU WebSocket
+            connectToAtuServer();
+            console.log('📊 ATU状态显示框已显示');
+        } else {
+            atuStatusDiv.style.display = 'none';
+            // 断开ATU WebSocket连接
+            disconnectFromAtuServer();
+            console.log('📊 ATU状态显示框已隐藏');
+        }
+    } else {
+        console.error('❌ ATU状态显示框未找到');
+    }
+}
+
+// ATU WebSocket连接管理
+let atuSocket = null;
+let atuIsConnected = false;
+
+function connectToAtuServer() {
+    if (atuIsConnected) {
+        console.log('🔌 ATU WebSocket已连接，跳过重复连接');
+        return;
+    }
+    
+    const hostname = window.location.hostname;
+    const serverUrl = `wss://${hostname}:8889/atu/ws`;
+    
+    console.log(`🔌 连接ATU服务器: ${serverUrl}`);
+    console.log(`🔌 当前主机名: ${hostname}`);
+    updateAtuConnectionStatus('连接中...', '#ffa500');
+    
+    try {
+        atuSocket = new WebSocket(serverUrl);
+        
+        const connectionTimeout = setTimeout(() => {
+            if (atuSocket && atuSocket.readyState === WebSocket.CONNECTING) {
+                console.log('⏰ ATU WebSocket连接超时');
+                atuSocket.close();
+                updateAtuConnectionStatus('连接超时', '#ff4444');
+            }
+        }, 5000);
+        
+        atuSocket.onopen = () => {
+            clearTimeout(connectionTimeout);
+            atuIsConnected = true;
+            updateAtuConnectionStatus('已连接', '#44ff44');
+            console.log('✅ ATU WebSocket连接成功');
+        };
+        
+        atuSocket.onclose = (event) => {
+            clearTimeout(connectionTimeout);
+            atuIsConnected = false;
+            updateAtuConnectionStatus('连接关闭', '#ff4444');
+            console.log(`❌ ATU WebSocket连接关闭，代码: ${event.code}, 原因: ${event.reason}`);
+            // 自动重连
+            setTimeout(() => {
+                const atuStatusDiv = document.getElementById('div-atu-status');
+                if (atuStatusDiv && atuStatusDiv.style.display === 'block') {
+                    console.log('🔄 尝试重新连接ATU服务器...');
+                    connectToAtuServer();
+                }
+            }, 5000);
+        };
+        
+        atuSocket.onerror = (event) => {
+            clearTimeout(connectionTimeout);
+            atuIsConnected = false;
+            updateAtuConnectionStatus('连接错误', '#ff4444');
+            console.log('❌ ATU WebSocket连接错误:', event);
+        };
+        
+        atuSocket.onmessage = (event) => {
+            console.log('📨 接收到ATU服务器消息:', event.data);
+            handleAtuMessage(event.data);
+        };
+        
+    } catch (error) {
+        console.error('❌ ATU WebSocket连接失败:', error);
+        updateAtuConnectionStatus('连接失败', '#ff4444');
+    }
+}
+
+function disconnectFromAtuServer() {
+    if (atuSocket) {
+        atuSocket.close();
+        atuSocket = null;
+    }
+    atuIsConnected = false;
+    updateAtuConnectionStatus('未连接', '#ff4444');
+}
+
+function updateAtuConnectionStatus(text, color) {
+    const statusElement = document.getElementById('atu-connection-status');
+    if (statusElement) {
+        statusElement.textContent = text;
+        statusElement.style.color = color;
+    }
+}
+
+function handleAtuMessage(message) {
+    try {
+        const data = JSON.parse(message);
+        
+        if (data.type === 'data') {
+            updateAtuDisplay(data.data);
+        } else if (data.type === 'status') {
+            console.log(`ATU状态: ${data.message}, 连接: ${data.connected}`);
+        }
+    } catch (error) {
+        console.error('❌ ATU消息处理错误:', error);
+    }
+}
+
+function updateAtuDisplay(data) {
+    // 更新功率显示
+    const powerElement = document.getElementById('atu-power-value');
+    if (powerElement && data.power !== undefined) {
+        powerElement.textContent = data.power;
+        // 根据功率值设置颜色
+        if (data.power > 0) {
+            powerElement.style.color = '#ff9900';
+        } else {
+            powerElement.style.color = '#ffffff';
+        }
+    }
+    
+    // 更新SWR显示
+    const swrElement = document.getElementById('atu-swr-value');
+    if (swrElement && data.swr !== undefined) {
+        swrElement.textContent = data.swr;
+        // 根据SWR值设置颜色
+        if (data.swr > 2.0) {
+            swrElement.style.color = '#ff4444'; // 红色表示高SWR
+        } else if (data.swr > 1.5) {
+            swrElement.style.color = '#ff9900'; // 橙色表示中等SWR
+        } else {
+            swrElement.style.color = '#44ff44'; // 绿色表示良好SWR
+        }
+    }
+    
+    // 更新PTT状态
+    const pttElement = document.getElementById('atu-ptt-value');
+    if (pttElement) {
+        if (data.ptt !== undefined) {
+            pttElement.textContent = data.ptt ? 'ON' : 'OFF';
+            pttElement.style.color = data.ptt ? '#ff4444' : '#ffffff';
+        } else {
+            // 如果没有PTT数据，根据功率判断
+            const isTransmitting = data.power > 0;
+            pttElement.textContent = isTransmitting ? 'ON' : 'OFF';
+            pttElement.style.color = isTransmitting ? '#ff4444' : '#ffffff';
+        }
+    }
+    
+    console.log(`📡 ATU数据更新: 功率=${data.power}W, SWR=${data.swr}`);
+}
+
+// 页面加载完成后绑定ATU图标点击事件
+if (typeof window !== 'undefined') {
+    window.addEventListener('load', function() {
+        console.log('📄 页面加载完成，开始绑定ATU图标点击事件');
+        // 延迟绑定，确保DOM元素已加载
+        setTimeout(function() {
+            const atuMonitorDiv = document.getElementById('div-atumonitor');
+            if (atuMonitorDiv) {
+                console.log('✅ 找到ATU监控图标元素');
+                atuMonitorDiv.addEventListener('click', function(event) {
+                    console.log('🖱️ ATU图标被点击');
+                    event.preventDefault();
+                    event.stopPropagation();
+                    toggleAtuStatus();
+                });
+                console.log('✅ ATU图标点击事件绑定成功');
+            } else {
+                console.error('❌ ATU监控图标未找到');
+            }
+        }, 1000);
+    });
 }
 	

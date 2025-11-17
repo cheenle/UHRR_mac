@@ -20,6 +20,7 @@ function bodyload(){
 	
 	// TX按钮处理由tx_button_optimized.js统一管理
 	console.log('主界面加载完成');
+	
 }
 
 function disableSFFC() { 
@@ -653,6 +654,18 @@ function showTRXfreq(freq){
 	document.getElementById("chz").innerHTML=freq.substring(6, 7);
 	document.getElementById("dhz").innerHTML=freq.substring(7, 8);
 	document.getElementById("uhz").innerHTML=freq.substring(8, 9);
+	
+	// 通知ATU自动调谐模块频率已更新
+	if (typeof window.atuAutoTune !== 'undefined' && atuAutoTune) {
+		atuAutoTune.frequency = parseInt(freq);
+	}
+}
+
+// 全局频率更新函数，供ATU自动调谐模块使用
+function updateFrequency(freq) {
+	if (typeof window.atuAutoTune !== 'undefined' && atuAutoTune) {
+		atuAutoTune.frequency = freq;
+	}
 }
 
 function sendTRXfreq(freq=0){
@@ -1605,195 +1618,4 @@ function toggleRecord(sendit = false)
     else {if (wsAudioTX.readyState !== WebSocket.CLOSED) {startRecord();}}
 }
 
-// ATU状态显示框切换功能
-function toggleAtuStatus() {
-    console.log('🖱️ ATU状态显示框切换函数被调用');
-    const atuStatusDiv = document.getElementById('div-atu-status');
-    if (atuStatusDiv) {
-        console.log(`📊 ATU状态显示框当前显示状态: ${atuStatusDiv.style.display}`);
-        if (atuStatusDiv.style.display === 'none' || atuStatusDiv.style.display === '') {
-            atuStatusDiv.style.display = 'block';
-            // 重新定位ATU状态显示框
-            if (typeof repositionAtuStatus === 'function') {
-                repositionAtuStatus();
-            }
-            // 连接ATU WebSocket
-            connectToAtuServer();
-            console.log('📊 ATU状态显示框已显示');
-        } else {
-            atuStatusDiv.style.display = 'none';
-            // 断开ATU WebSocket连接
-            disconnectFromAtuServer();
-            console.log('📊 ATU状态显示框已隐藏');
-        }
-    } else {
-        console.error('❌ ATU状态显示框未找到');
-    }
-}
 
-// ATU WebSocket连接管理
-let atuSocket = null;
-let atuIsConnected = false;
-
-function connectToAtuServer() {
-    if (atuIsConnected) {
-        console.log('🔌 ATU WebSocket已连接，跳过重复连接');
-        return;
-    }
-    
-    const hostname = window.location.hostname;
-    const serverUrl = `wss://${hostname}:8889/atu/ws`;
-    
-    console.log(`🔌 连接ATU服务器: ${serverUrl}`);
-    console.log(`🔌 当前主机名: ${hostname}`);
-    updateAtuConnectionStatus('连接中...', '#ffa500');
-    
-    try {
-        atuSocket = new WebSocket(serverUrl);
-        
-        const connectionTimeout = setTimeout(() => {
-            if (atuSocket && atuSocket.readyState === WebSocket.CONNECTING) {
-                console.log('⏰ ATU WebSocket连接超时');
-                atuSocket.close();
-                updateAtuConnectionStatus('连接超时', '#ff4444');
-            }
-        }, 5000);
-        
-        atuSocket.onopen = () => {
-            clearTimeout(connectionTimeout);
-            atuIsConnected = true;
-            updateAtuConnectionStatus('已连接', '#44ff44');
-            console.log('✅ ATU WebSocket连接成功');
-        };
-        
-        atuSocket.onclose = (event) => {
-            clearTimeout(connectionTimeout);
-            atuIsConnected = false;
-            updateAtuConnectionStatus('连接关闭', '#ff4444');
-            console.log(`❌ ATU WebSocket连接关闭，代码: ${event.code}, 原因: ${event.reason}`);
-            // 自动重连
-            setTimeout(() => {
-                const atuStatusDiv = document.getElementById('div-atu-status');
-                if (atuStatusDiv && atuStatusDiv.style.display === 'block') {
-                    console.log('🔄 尝试重新连接ATU服务器...');
-                    connectToAtuServer();
-                }
-            }, 5000);
-        };
-        
-        atuSocket.onerror = (event) => {
-            clearTimeout(connectionTimeout);
-            atuIsConnected = false;
-            updateAtuConnectionStatus('连接错误', '#ff4444');
-            console.log('❌ ATU WebSocket连接错误:', event);
-        };
-        
-        atuSocket.onmessage = (event) => {
-            console.log('📨 接收到ATU服务器消息:', event.data);
-            handleAtuMessage(event.data);
-        };
-        
-    } catch (error) {
-        console.error('❌ ATU WebSocket连接失败:', error);
-        updateAtuConnectionStatus('连接失败', '#ff4444');
-    }
-}
-
-function disconnectFromAtuServer() {
-    if (atuSocket) {
-        atuSocket.close();
-        atuSocket = null;
-    }
-    atuIsConnected = false;
-    updateAtuConnectionStatus('未连接', '#ff4444');
-}
-
-function updateAtuConnectionStatus(text, color) {
-    const statusElement = document.getElementById('atu-connection-status');
-    if (statusElement) {
-        statusElement.textContent = text;
-        statusElement.style.color = color;
-    }
-}
-
-function handleAtuMessage(message) {
-    try {
-        const data = JSON.parse(message);
-        
-        if (data.type === 'data') {
-            updateAtuDisplay(data.data);
-        } else if (data.type === 'status') {
-            console.log(`ATU状态: ${data.message}, 连接: ${data.connected}`);
-        }
-    } catch (error) {
-        console.error('❌ ATU消息处理错误:', error);
-    }
-}
-
-function updateAtuDisplay(data) {
-    // 更新功率显示
-    const powerElement = document.getElementById('atu-power-value');
-    if (powerElement && data.power !== undefined) {
-        powerElement.textContent = data.power;
-        // 根据功率值设置颜色
-        if (data.power > 0) {
-            powerElement.style.color = '#ff9900';
-        } else {
-            powerElement.style.color = '#ffffff';
-        }
-    }
-    
-    // 更新SWR显示
-    const swrElement = document.getElementById('atu-swr-value');
-    if (swrElement && data.swr !== undefined) {
-        swrElement.textContent = data.swr;
-        // 根据SWR值设置颜色
-        if (data.swr > 2.0) {
-            swrElement.style.color = '#ff4444'; // 红色表示高SWR
-        } else if (data.swr > 1.5) {
-            swrElement.style.color = '#ff9900'; // 橙色表示中等SWR
-        } else {
-            swrElement.style.color = '#44ff44'; // 绿色表示良好SWR
-        }
-    }
-    
-    // 更新PTT状态
-    const pttElement = document.getElementById('atu-ptt-value');
-    if (pttElement) {
-        if (data.ptt !== undefined) {
-            pttElement.textContent = data.ptt ? 'ON' : 'OFF';
-            pttElement.style.color = data.ptt ? '#ff4444' : '#ffffff';
-        } else {
-            // 如果没有PTT数据，根据功率判断
-            const isTransmitting = data.power > 0;
-            pttElement.textContent = isTransmitting ? 'ON' : 'OFF';
-            pttElement.style.color = isTransmitting ? '#ff4444' : '#ffffff';
-        }
-    }
-    
-    console.log(`📡 ATU数据更新: 功率=${data.power}W, SWR=${data.swr}`);
-}
-
-// 页面加载完成后绑定ATU图标点击事件
-if (typeof window !== 'undefined') {
-    window.addEventListener('load', function() {
-        console.log('📄 页面加载完成，开始绑定ATU图标点击事件');
-        // 延迟绑定，确保DOM元素已加载
-        setTimeout(function() {
-            const atuMonitorDiv = document.getElementById('div-atumonitor');
-            if (atuMonitorDiv) {
-                console.log('✅ 找到ATU监控图标元素');
-                atuMonitorDiv.addEventListener('click', function(event) {
-                    console.log('🖱️ ATU图标被点击');
-                    event.preventDefault();
-                    event.stopPropagation();
-                    toggleAtuStatus();
-                });
-                console.log('✅ ATU图标点击事件绑定成功');
-            } else {
-                console.error('❌ ATU监控图标未找到');
-            }
-        }, 1000);
-    });
-}
-	

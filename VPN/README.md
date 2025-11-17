@@ -5,7 +5,7 @@ VLSC VPN 子项目
 1. 网络拓扑
 - 服务器（VPS）：www.vlsc.net
   - WireGuard 接口：wg0
-  - 监听端口：8866/UDP
+  - 监听端口：9090/UDP
   - 服务端地址：10.77.0.1/24
   - NAT：MASQUERADE 到公网出口
   - 内部 DNS（Unbound）：10.77.0.1:53
@@ -23,17 +23,17 @@ VLSC VPN 子项目
 2. 配置清单
 - macOS 客户端：`vlsc-wg-client.conf`
   - [Interface] DNS=10.77.0.1，MTU=1360
-  - [Peer] Endpoint=www.vlsc.net:8866，AllowedIPs=0.0.0.0/0
+  - [Peer] Endpoint=www.vlsc.net:9090，AllowedIPs=0.0.0.0/0
 - 本地脚本：`VPN/scripts/`
   - `wg-up.sh`：启动 wg0 并显示出口 IP
   - `wg-down.sh`：停止 wg0
   - `wg-status.sh`：查看状态（接口/路由）
   - 如需一键安装+启动，可继续使用仓库根的 `wg_oneclick.sh`
 - 服务器：
-  - WireGuard 监听 8866/UDP
+  - WireGuard 监听 9090/UDP
   - Unbound 监听 10.77.0.1:53，上游 1.1.1.1/8.8.8.8
 - OpenWrt：
-  - wg0 MTU=1360，Endpoint=…:8866，AllowedIPs=0.0.0.0/0
+  - wg0 MTU=1360，Endpoint=…:9090，AllowedIPs=0.0.0.0/0
   - dnsmasq 上游 10.77.0.1
   - 防火墙 vpn zone: masq=1, mtu_fix=1，lan->vpn forwarding
   - nft TCPMSS clamp MSS=1320（仅 wg0 出口）
@@ -53,7 +53,7 @@ VLSC VPN 子项目
 
 5. 优化要点
 - MTU/MSS：建议 MTU=1360，配合 nft TCPMSS=1320。
-- 端口：采用 8866/UDP；变更需同步服务器与客户端、并放行防火墙。
+- 端口：采用 9090/UDP；变更需同步服务器与客户端、并放行防火墙。
 - DNS：推荐使用 10.77.0.1（Unbound 缓存）。
 
 6. 排错建议

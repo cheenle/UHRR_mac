@@ -75,26 +75,45 @@ function initializeElements() {
 function initAudioOnFirstTouch() {
     if (audioContextInitialized) return;
     
+    if (audioContextInitialized) return;
+    
     try {
         // 尝试初始化桌面版音频系统
         if (typeof AudioRX_start === 'function') {
             console.log('Initializing desktop-compatible audio system on first touch...');
             // 初始化音频上下文
             if (!window.AudioRX_context) {
-                window.AudioRX_context = new (window.AudioContext || window.webkitAudioContext)({
-                    latencyHint: "interactive",
+                // 检测是否为移动设备
+                const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+                
+                // 为移动设备优化音频上下文设置
+                const audioContextOptions = {
+                    latencyHint: isMobile ? "playback" : "interactive",
                     sampleRate: 16000
-                });
-                console.log('AudioContext created for desktop-compatible system');
+                };
+                
+                // iOS Safari特殊处理
+                if (isMobile && typeof webkitAudioContext !== 'undefined') {
+                    // iOS可能需要使用默认采样率
+                    delete audioContextOptions.sampleRate;
+                }
+                
+                window.AudioRX_context = new (window.AudioContext || window.webkitAudioContext)(audioContextOptions);
+                console.log('AudioContext created for desktop-compatible system with mobile optimization');
             }
             
             // 如果音频上下文处于暂停状态，恢复它
             if (window.AudioRX_context.state === 'suspended') {
                 window.AudioRX_context.resume().then(() => {
                     console.log('AudioContext resumed successfully');
+                    // 立即启动音频接收
+                    AudioRX_start();
                 }).catch(err => {
                     console.error('Failed to resume AudioContext:', err);
                 });
+            } else {
+                // 如果已经运行，直接启动音频接收
+                AudioRX_start();
             }
         }
         
@@ -175,37 +194,94 @@ function closeMenu() {
     domElements.menuOverlay.classList.remove('open');
 }
 
+// PTT timing variables
+let pttPressStartTime = 0;
+let pttShortPressTimer = null;
+const PTT_SHORT_PRESS_THRESHOLD = 300; // 300ms for short press
+
 // Handle PTT start (transmit)
 function handlePTTStart(e) {
     e.preventDefault();
     if (!isConnected) return;
+    
+    // Record press start time
+    pttPressStartTime = Date.now();
     
     // Initialize audio context on first user interaction
     if (!audioContextInitialized) {
         initAudioOnFirstTouch();
     }
     
-    isTransmitting = true;
-    updateTXStatus(true);
-    sendWebSocketMessage('setPTT:true');
+    // Set a timer to detect short press
+    pttShortPressTimer = setTimeout(() => {
+        // Long press - start transmitting
+        startTransmission();
+    }, PTT_SHORT_PRESS_THRESHOLD);
     
     // Add visual feedback
     domElements.pttButton.classList.add('active');
     
-    // Haptic feedback
+    // Haptic feedback for touch start
     if (navigator.vibrate) {
-        navigator.vibrate(50);
+        navigator.vibrate(15);
+    }
+}
+
+// Handle PTT end (receive)
+function handlePTTEnd(e) {
+    e.preventDefault();
+    const pressDuration = Date.now() - pttPressStartTime;
+    
+    // Clear the short press timer
+    if (pttShortPressTimer) {
+        clearTimeout(pttShortPressTimer);
+        pttShortPressTimer = null;
+    }
+    
+    // If press was short, treat as a toggle
+    if (pressDuration < PTT_SHORT_PRESS_THRESHOLD) {
+        if (isTransmitting) {
+            // Short press while transmitting - stop transmission
+            stopTransmission();
+        } else {
+            // Short press while receiving - start transmission
+            startTransmission();
+            // Auto stop after 1 second for short press
+            setTimeout(() => {
+                if (isTransmitting) {
+                    stopTransmission();
+                }
+            }, 1000);
+        }
+    } else {
+        // Long press - stop transmission
+        stopTransmission();
+    }
+}
+
+// Start transmission
+function startTransmission() {
+    if (isTransmitting) return;
+    
+    isTransmitting = true;
+    updateTXStatus(true);
+    sendWebSocketMessage('setPTT:true');
+    
+    // Haptic feedback for transmission start
+    if (navigator.vibrate) {
+        navigator.vibrate([50, 50, 50]);
     }
     
     // 发送预热帧确保后端及时响应
     setTimeout(() => {
         sendPTTWarmupFrames();
     }, 50);
+    
+    console.log('Transmission started');
 }
 
-// Handle PTT end (receive)
-function handlePTTEnd(e) {
-    e.preventDefault();
+// Stop transmission
+function stopTransmission() {
     if (!isTransmitting) return;
     
     isTransmitting = false;
@@ -215,10 +291,12 @@ function handlePTTEnd(e) {
     // Remove visual feedback
     domElements.pttButton.classList.remove('active');
     
-    // Haptic feedback
+    // Haptic feedback for transmission stop
     if (navigator.vibrate) {
         navigator.vibrate(25);
     }
+    
+    console.log('Transmission stopped');
 }
 
 // 发送PTT预热帧
@@ -259,12 +337,14 @@ function togglePower() {
         connectWebSocket();
         domElements.powerButton.querySelector('.power-icon').textContent = '⏼';
         // Start audio using desktop-compatible implementation
-        setTimeout(() => {
-            if (typeof AudioRX_start === 'function') {
-                console.log('Starting desktop-compatible audio...');
-                AudioRX_start();
-            }
-        }, 2000);
+        // 移除延迟，立即启动音频
+        if (typeof AudioRX_start === 'function') {
+            console.log('Starting desktop-compatible audio immediately...');
+            // 在连接建立后立即初始化音频上下文
+            setTimeout(() => {
+                initAudioOnFirstTouch();
+            }, 100);
+        }
     }
 }
 
@@ -340,6 +420,9 @@ function updateFrequencyDisplay() {
     document.getElementById('freq-100hz').textContent = freqStr[6];
     document.getElementById('freq-10hz').textContent = freqStr[7];
     document.getElementById('freq-1hz').textContent = freqStr[8];
+    
+    // Log frequency changes for debugging
+    console.log('Frequency updated to:', currentFrequency);
 }
 
 // Update TX status indicator
@@ -482,10 +565,16 @@ function connectWebSocket() {
         };
         
         // Audio RX WebSocket
+        console.log('Establishing audio RX WebSocket connection...');
         wsAudioRX = new WebSocket(`${baseUrl}/WSaudioRX`);
         wsAudioRX.binaryType = 'arraybuffer';
         wsAudioRX.onopen = function() {
             console.log('Audio RX WebSocket connected');
+            // Update status indicator
+            const indwsAudioRX = document.getElementById('indwsAudioRX');
+            if (indwsAudioRX) {
+                indwsAudioRX.innerHTML = '<img src="img/critsgreen.png">wsRX';
+            }
             // Use desktop-compatible event handlers
             if (typeof wsAudioRXopen === 'function') {
                 wsAudioRXopen();
@@ -503,6 +592,11 @@ function connectWebSocket() {
         
         wsAudioRX.onclose = function() {
             console.log('Audio RX WebSocket disconnected');
+            // Update status indicator
+            const indwsAudioRX = document.getElementById('indwsAudioRX');
+            if (indwsAudioRX) {
+                indwsAudioRX.innerHTML = '<img src="img/critsred.png">wsRX';
+            }
             if (typeof wsAudioRXclose === 'function') {
                 wsAudioRXclose();
             }
@@ -510,23 +604,44 @@ function connectWebSocket() {
         
         wsAudioRX.onerror = function(error) {
             console.error('Audio RX WebSocket error:', error);
+            // Update status indicator
+            const indwsAudioRX = document.getElementById('indwsAudioRX');
+            if (indwsAudioRX) {
+                indwsAudioRX.innerHTML = '<img src="img/critsred.png">wsRX';
+            }
             if (typeof wsAudioRXerror === 'function') {
                 wsAudioRXerror(error);
             }
         };
         
         // Audio TX WebSocket
+        console.log('Establishing audio TX WebSocket connection...');
         wsAudioTX = new WebSocket(`${baseUrl}/WSaudioTX`);
         wsAudioTX.onopen = function() {
             console.log('Audio TX WebSocket connected');
+            // Update status indicator
+            const indwsAudioTX = document.getElementById('indwsAudioTX');
+            if (indwsAudioTX) {
+                indwsAudioTX.innerHTML = '<img src="img/critsgreen.png">wsTX';
+            }
         };
         
         wsAudioTX.onclose = function() {
             console.log('Audio TX WebSocket disconnected');
+            // Update status indicator
+            const indwsAudioTX = document.getElementById('indwsAudioTX');
+            if (indwsAudioTX) {
+                indwsAudioTX.innerHTML = '<img src="img/critsred.png">wsTX';
+            }
         };
         
         wsAudioTX.onerror = function(error) {
             console.error('Audio TX WebSocket error:', error);
+            // Update status indicator
+            const indwsAudioTX = document.getElementById('indwsAudioTX');
+            if (indwsAudioTX) {
+                indwsAudioTX.innerHTML = '<img src="img/critsred.png">wsTX';
+            }
         };
         
     } catch (error) {

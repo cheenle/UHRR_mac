@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>ATU自动调谐测试页面</title>
+    <meta charset="UTF-8">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .log-container {
+            background-color: #000;
+            color: #00ff00;
+            padding: 15px;
+            border-radius: 5px;
+            height: 400px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            margin: 20px 0;
+        }
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin: 15px 0;
+            flex-wrap: wrap;
+        }
+        button {
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .btn-primary {
+            background-color: #007bff;
+            color: white;
+        }
+        .btn-success {
+            background-color: #28a745;
+            color: white;
+        }
+        .btn-danger {
+            background-color: #dc3545;
+            color: white;
+        }
+        .btn-warning {
+            background-color: #ffc107;
+            color: black;
+        }
+        .btn-info {
+            background-color: #17a2b8;
+            color: white;
+        }
+        .status {
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+            font-weight: bold;
+        }
+        .status-enabled {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .status-disabled {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>ATU自动调谐功能测试</h1>
+        
+        <div id="status" class="status status-disabled">
+            ATU自动调谐功能未启用
+        </div>
+        
+        <div class="controls">
+            <button id="enableBtn" class="btn-primary">启用自动调谐</button>
+            <button id="disableBtn" class="btn-danger">禁用自动调谐</button>
+            <button id="simulatePTTOn" class="btn-success">模拟PTT按下</button>
+            <button id="simulatePTTOff" class="btn-warning">模拟PTT释放</button>
+            <button id="clearLogs" class="btn-info">清空日志</button>
+            <button id="clearConfigs" class="btn-danger">清除存储配置</button>
+        </div>
+        
+        <div>
+            <h3>测试参数设置</h3>
+            <div class="controls">
+                <label>SWR阈值: <input type="number" id="swrThreshold" value="1.5" step="0.1" min="1.0" max="3.0"></label>
+                <label>最大调谐尝试次数: <input type="number" id="maxAttempts" value="3" min="1" max="10"></label>
+                <label>当前频率 (MHz): <input type="number" id="currentFreq" value="7.000" step="0.001"></label>
+            </div>
+        </div>
+        
+        <h3>操作日志</h3>
+        <div id="logContainer" class="log-container"></div>
+    </div>
+
+    <!-- 加载ATU自动调谐模块 -->
+    <script src="atu_autotune.js"></script>
+    
+    <script>
+        // 页面加载完成后初始化
+        window.addEventListener('load', function() {
+            // 初始化日志显示
+            const logContainer = document.getElementById('logContainer');
+            const statusDiv = document.getElementById('status');
+            
+            // 重写console.log以捕获日志
+            const originalLog = console.log;
+            console.log = function(...args) {
+                originalLog.apply(console, args);
+                
+                // 创建日志条目
+                const logEntry = document.createElement('div');
+                const timestamp = new Date().toLocaleTimeString();
+                logEntry.innerHTML = `[${timestamp}] ${args.join(' ')}`;
+                logEntry.style.marginBottom = '5px';
+                
+                // 添加到日志容器
+                logContainer.appendChild(logEntry);
+                
+                // 滚动到底部
+                logContainer.scrollTop = logContainer.scrollHeight;
+            };
+            
+            // 按钮事件处理
+            document.getElementById('enableBtn').addEventListener('click', function() {
+                atuAutoTune.enable();
+                statusDiv.textContent = 'ATU自动调谐功能已启用';
+                statusDiv.className = 'status status-enabled';
+            });
+            
+            document.getElementById('disableBtn').addEventListener('click', function() {
+                atuAutoTune.disable();
+                statusDiv.textContent = 'ATU自动调谐功能未启用';
+                statusDiv.className = 'status status-disabled';
+            });
+            
+            document.getElementById('simulatePTTOn').addEventListener('click', function() {
+                // 更新频率
+                const freq = parseFloat(document.getElementById('currentFreq').value);
+                if (window.updateFrequency) {
+                    window.updateFrequency(freq);
+                }
+                
+                // 模拟PTT按下
+                if (window.updatePTTStatus) {
+                    window.updatePTTStatus(true);
+                }
+            });
+            
+            document.getElementById('simulatePTTOff').addEventListener('click', function() {
+                // 模拟PTT释放
+                if (window.updatePTTStatus) {
+                    window.updatePTTStatus(false);
+                }
+            });
+            
+            document.getElementById('clearLogs').addEventListener('click', function() {
+                logContainer.innerHTML = '';
+            });
+            
+            document.getElementById('clearConfigs').addEventListener('click', function() {
+                atuAutoTune.clearStoredConfigs();
+            });
+            
+            // 参数设置
+            document.getElementById('swrThreshold').addEventListener('change', function() {
+                const threshold = parseFloat(this.value);
+                atuAutoTune.setSwrThreshold(threshold);
+            });
+            
+            document.getElementById('maxAttempts').addEventListener('change', function() {
+                const attempts = parseInt(this.value);
+                atuAutoTune.setMaxTuneAttempts(attempts);
+            });
+            
+            // 显示初始日志
+            console.log('🔧 ATU自动调谐测试页面已加载');
+            console.log('🔧 请先点击"启用自动调谐"按钮启用功能');
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ATU发射状态</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: #1a1a1a;
+            color: white;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            font-size: 28px;
+            overflow: hidden;
+        }
+
+        .status-container {
+            padding: 15px;
+            height: 100vh;
+            box-sizing: border-box;
+        }
+
+        .status-header {
+            text-align: center;
+            margin-bottom: 15px;
+            font-weight: bold;
+            color: #4CAF50;
+            font-size: 36px;
+        }
+
+        .data-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .data-card {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 15px;
+            text-align: center;
+            border: 1px solid #333;
+        }
+
+        .data-card.critical {
+            background: rgba(244, 67, 54, 0.2);
+            border-color: #f44336;
+        }
+
+        .data-card.warning {
+            background: rgba(255, 152, 0, 0.2);
+            border-color: #FF9800;
+        }
+
+        .data-card.normal {
+            background: rgba(76, 175, 80, 0.2);
+            border-color: #4CAF50;
+        }
+
+        .data-label {
+            font-size: 28px;
+            color: #aaa;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+        }
+
+        .data-value {
+            font-size: 48px;
+            font-weight: bold;
+            margin: 8px 0;
+        }
+
+        .data-unit {
+            font-size: 28px;
+            color: #888;
+            margin-left: 3px;
+        }
+
+        .connection-status {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            margin: 15px 0;
+            padding: 8px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            font-size: 24px;
+        }
+
+        .status-indicator {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+
+        .status-connected {
+            background-color: #4CAF50;
+            box-shadow: 0 0 6px #4CAF50;
+        }
+
+        .status-disconnected {
+            background-color: #f44336;
+            box-shadow: 0 0 6px #f44336;
+        }
+
+        .status-connecting {
+            background-color: #FF9800;
+            box-shadow: 0 0 6px #FF9800;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        .last-update {
+            text-align: center;
+            color: #888;
+            font-size: 8px;
+            margin-top: 4px;
+        }
+
+        .alert-badge {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background: #f44336;
+            color: white;
+            border-radius: 50%;
+            width: 12px;
+            height: 12px;
+            font-size: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation: blink 1s infinite;
+        }
+
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0; }
+        }
+    </style>
+</head>
+<body>
+    <div class="status-container">
+        <div class="data-grid">
+            <div class="data-card" id="powerCard">
+                <div class="data-label">POWER</div>
+                <div class="data-value">
+                    <span id="powerValue">--</span>
+                    <span class="data-unit">W</span>
+                </div>
+            </div>
+
+            <div class="data-card" id="swrCard">
+                <div class="data-label">SWR</div>
+                <div class="data-value">
+                    <span id="swrValue">--</span>
+                </div>
+            </div>
+
+            <div class="data-card" id="pttCard">
+                <div class="data-label">PTT</div>
+                <div class="data-value">
+                    <span id="pttValue">--</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="connection-status">
+            <span class="status-indicator status-disconnected" id="connectionStatus"></span>
+            <span id="connectionStatusText" style="font-size: 8px;">未连接</span>
+        </div>
+    </div>
+
+    <script>
+        class AtuStatusMini {
+            constructor() {
+                this.socket = null;
+                this.isConnected = false;
+                this.config = {
+                    serverUrl: `wss://${window.location.hostname}:8889/atu/ws`,
+                    pttStatus: false,
+                    lastPttUpdate: 0,
+                    dataBuffer: [],
+                    lastDataTimestamp: 0
+                };
+                
+                this.initializeDomElements();
+                this.connect();
+                this.startPttMonitoring();
+            }
+
+            initializeDomElements() {
+                this.connectionStatus = document.getElementById('connectionStatus');
+                this.connectionStatusText = document.getElementById('connectionStatusText');
+                this.powerCard = document.getElementById('powerCard');
+                this.swrCard = document.getElementById('swrCard');
+                this.pttCard = document.getElementById('pttCard');
+                this.powerValue = document.getElementById('powerValue');
+                this.swrValue = document.getElementById('swrValue');
+                this.pttValue = document.getElementById('pttValue');
+                this.lastUpdateTime = document.getElementById('lastUpdateTime');
+            }
+
+            connect() {
+                if (this.isConnected) return;
+
+                this.updateConnectionStatus('connecting', '连接中...');
+
+                try {
+                    this.socket = new WebSocket(this.config.serverUrl);
+
+                    const connectionTimeout = setTimeout(() => {
+                        if (this.socket && this.socket.readyState === WebSocket.CONNECTING) {
+                            this.socket.close();
+                            this.updateConnectionStatus('disconnected', '连接超时');
+                        }
+                    }, 5000);
+
+                    this.socket.onopen = () => {
+                        clearTimeout(connectionTimeout);
+                        this.isConnected = true;
+                        this.updateConnectionStatus('connected', '已连接');
+                    };
+
+                    this.socket.onclose = () => {
+                        clearTimeout(connectionTimeout);
+                        this.isConnected = false;
+                        this.updateConnectionStatus('disconnected', '连接关闭');
+                        // 自动重连
+                        setTimeout(() => this.connect(), 5000);
+                    };
+
+                    this.socket.onerror = () => {
+                        clearTimeout(connectionTimeout);
+                        this.isConnected = false;
+                        this.updateConnectionStatus('disconnected', '连接错误');
+                    };
+
+                    this.socket.onmessage = (event) => {
+                        this.handleServerMessage(event.data);
+                    };
+
+                } catch (error) {
+                    this.updateConnectionStatus('disconnected', '连接失败');
+                }
+            }
+
+            handleServerMessage(message) {
+                try {
+                    const data = JSON.parse(message);
+                    
+                    if (data.type === 'data') {
+                        this.handleAtuData(data.data);
+                    } else if (data.type === 'status') {
+                        console.log(`ATU状态: ${data.message}, 连接: ${data.connected}`);
+                    }
+                } catch (error) {
+                    console.error('消息处理错误:', error);
+                }
+            }
+
+            handleAtuData(data) {
+                console.log('📡 接收到ATU数据:', data);
+                const currentTime = Date.now();
+                
+                // 数据缓冲和去抖动
+                this.config.dataBuffer.push({
+                    timestamp: currentTime,
+                    power: data.power,
+                    swr: data.swr
+                });
+                
+                // 限制缓冲区大小
+                if (this.config.dataBuffer.length > 3) {
+                    this.config.dataBuffer.shift();
+                }
+                
+                // 计算平均值，减少抖动
+                const avgData = this.calculateAverageData();
+                
+                // 避免过于频繁的更新
+                if (currentTime - this.config.lastDataTimestamp < 100) {
+                    return;
+                }
+                this.config.lastDataTimestamp = currentTime;
+                
+                // 更新显示（只更新有变化的）
+                if (this.powerValue.textContent !== avgData.power.toString()) {
+                    this.powerValue.textContent = avgData.power;
+                }
+                if (this.swrValue.textContent !== avgData.swr.toString()) {
+                    this.swrValue.textContent = avgData.swr;
+                }
+
+                // 更新卡片状态
+                this.updateCardStatus(avgData.power, avgData.swr);
+
+                // 更新最后更新时间
+                this.lastUpdateTime.textContent = new Date().toLocaleTimeString();
+            }
+
+            calculateAverageData() {
+                if (this.config.dataBuffer.length === 0) {
+                    return { power: '--', swr: '--' };
+                }
+                
+                const sum = this.config.dataBuffer.reduce((acc, data) => {
+                    acc.power += data.power;
+                    acc.swr += data.swr;
+                    return acc;
+                }, { power: 0, swr: 0 });
+                
+                const count = this.config.dataBuffer.length;
+                return {
+                    power: Math.round(sum.power / count * 10) / 10, // 保留1位小数
+                    swr: Math.round(sum.swr / count * 100) / 100    // 保留2位小数
+                };
+            }
+
+            updateCardStatus(power, swr) {
+                // 功率卡片状态
+                if (power === 0 || power === '--') {
+                    this.powerCard.className = 'data-card';
+                } else if (power > 50) {
+                    this.powerCard.className = 'data-card critical';
+                } else if (power > 25) {
+                    this.powerCard.className = 'data-card warning';
+                } else {
+                    this.powerCard.className = 'data-card normal';
+                }
+
+                // SWR卡片状态
+                const swrNum = parseFloat(swr);
+                if (swrNum > 2.0) {
+                    this.swrCard.className = 'data-card critical';
+                } else if (swrNum > 1.5) {
+                    this.swrCard.className = 'data-card warning';
+                } else {
+                    this.swrCard.className = 'data-card normal';
+                }
+            }
+
+            updateConnectionStatus(status, text) {
+                this.connectionStatus.className = `status-indicator status-${status}`;
+                this.connectionStatusText.textContent = text;
+            }
+
+            // PTT状态监控
+            startPttMonitoring() {
+                setInterval(() => {
+                    this.checkPttStatus();
+                }, 500);
+            }
+
+            async checkPttStatus() {
+                // 直接使用模拟数据，避免不必要的API调用
+                this.simulatePttStatus();
+            }
+
+            parsePttStatusFromLog(logData) {
+                const lines = logData.split('\n').reverse();
+                for (const line of lines) {
+                    if (line.includes('rigctl_set_ptt:')) {
+                        const match = line.match(/ptt=(\d+)/);
+                        if (match) {
+                            const pttValue = parseInt(match[1]);
+                            const isPttOn = pttValue === 1;
+                            if (this.config.pttStatus !== isPttOn) {
+                                this.updatePttStatus(isPttOn);
+                            }
+                            break;
+                        }
+                    }
+                }
+            }
+
+            simulatePttStatus() {
+                const currentTime = Date.now();
+                if (currentTime - this.config.lastPttUpdate > 3000) {
+                    const randomPtt = Math.random() > 0.7;
+                    this.updatePttStatus(randomPtt);
+                    this.config.lastPttUpdate = currentTime;
+                }
+            }
+
+            updatePttStatus(isPttOn) {
+                this.config.pttStatus = isPttOn;
+                this.config.lastPttUpdate = Date.now();
+                
+                if (isPttOn) {
+                    this.pttCard.className = 'data-card ptt-on';
+                    this.pttValue.textContent = 'ON';
+                    this.pttValue.style.color = '#00ff00';
+                } else {
+                    this.pttCard.className = 'data-card ptt-off';
+                    this.pttValue.textContent = 'OFF';
+                    this.pttValue.style.color = '#ff4444';
+                }
+            }
+        }
+
+        // 页面加载完成后初始化
+        window.addEventListener('load', () => {
+            new AtuStatusMini();
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ATU位置测试</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+        }
+        
+        #test-tx-button {
+            position: fixed;
+            top: 200px;
+            left: 300px;
+            width: 80px;
+            height: 40px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            z-index: 100;
+        }
+        
+        #test-spectrum {
+            position: fixed;
+            top: 100px;
+            left: 50px;
+            width: 400px;
+            height: 80px;
+            background: linear-gradient(90deg, blue, green, yellow, red);
+            border: 2px solid #333;
+            z-index: 50;
+        }
+        
+        #test-atu-status {
+            position: fixed;
+            width: 300px;
+            height: 140px;
+            background: rgba(0,0,0,0.8);
+            border: 2px solid #4CAF50;
+            border-radius: 15px;
+            z-index: 1000;
+            display: none;
+        }
+        
+        .status-header {
+            background: #4CAF50;
+            color: white;
+            padding: 3px;
+            text-align: center;
+            font-weight: bold;
+            font-size: 12px;
+        }
+        
+        .test-info {
+            margin-top: 20px;
+            padding: 10px;
+            background: #f0f0f0;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>ATU位置测试页面</h1>
+    
+    <!-- 模拟TX按钮 -->
+    <button id="test-tx-button">TX按钮</button>
+    
+    <!-- 模拟频谱显示 -->
+    <div id="test-spectrum">频谱显示区域</div>
+    
+    <!-- ATU状态显示框 -->
+    <div id="test-atu-status">
+        <div class="status-header">ATU发射状态</div>
+        <div style="padding: 10px; color: white;">
+            发射功率: 25W<br>
+            驻波比: 1.2
+        </div>
+    </div>
+    
+    <div class="test-info">
+        <h3>测试说明：</h3>
+        <p>这个页面模拟了主界面的布局，用于测试ATU状态显示框的定位逻辑。</p>
+        <p>ATU状态显示框应该定位到TX按钮左边、频谱显示下边。</p>
+        <button onclick="testPositioning()">测试定位</button>
+        <button onclick="reposition()">重新定位</button>
+    </div>
+    
+    <script>
+        function testPositioning() {
+            const atuStatusDiv = document.getElementById('test-atu-status');
+            const txButton = document.getElementById('test-tx-button');
+            const spectrumDiv = document.getElementById('test-spectrum');
+            
+            // 获取TX按钮的位置和尺寸
+            const txRect = txButton.getBoundingClientRect();
+            
+            // 获取频谱显示的位置和尺寸
+            const spectrumRect = spectrumDiv.getBoundingClientRect();
+            
+            // 计算ATU状态显示框的位置
+            // 目标位置：与TX按钮同高度，左右位置与频谱显示框对齐
+            let left = spectrumRect.left; // 与频谱显示框左对齐
+            let top = txRect.top; // 与TX按钮同高度
+            
+            // 如果ATU框与频谱显示框重叠，则调整位置
+            if (top + 140 > spectrumRect.top && top < spectrumRect.bottom) {
+                // 如果重叠，将ATU框放在频谱显示框下方
+                top = spectrumRect.bottom + 10;
+            }
+            
+            // 边界检查
+            const viewportWidth = window.innerWidth;
+            const viewportHeight = window.innerHeight;
+            
+            if (left < 10) left = 10;
+            if (left + 300 > viewportWidth) left = viewportWidth - 310;
+            if (top < 10) top = 10;
+            if (top + 140 > viewportHeight) top = viewportHeight - 150;
+            
+            // 应用位置
+            atuStatusDiv.style.left = left + 'px';
+            atuStatusDiv.style.top = top + 'px';
+            atuStatusDiv.style.display = 'block';
+            
+            console.log('📍 ATU状态显示框位置:', { left, top });
+            console.log('📍 TX按钮位置:', { left: txRect.left, top: txRect.top });
+            console.log('📍 频谱显示位置:', { bottom: spectrumRect.bottom });
+            
+            alert(`ATU状态显示框已定位到：\nleft: ${left}px\ntop: ${top}px`);
+        }
+        
+        function reposition() {
+            const atuStatusDiv = document.getElementById('test-atu-status');
+            atuStatusDiv.style.display = 'none';
+            setTimeout(testPositioning, 100);
+        }
+        
+        // 页面加载后自动测试
+        window.addEventListener('load', () => {
+            setTimeout(testPositioning, 500);
+        });
+    </script>
+</body>
+</html>

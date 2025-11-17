@@ -128,7 +128,7 @@ class AtuMonitor {
 
     resetConfig() {
         this.config = {
-            serverUrl: `wss://${window.location.hostname}:8889/atu/ws`,
+            serverUrl: `wss://${window.location.hostname}:8877/atu/ws`,
             updateInterval: 1000,
             swrAlertThreshold: 2.0,
             maxHistoryLength: 100
@@ -232,8 +232,8 @@ class AtuMonitor {
         
         // 尝试常见服务器URL
         const commonUrls = [
-            `wss://${window.location.hostname}:8889/atu/ws`,
-            'wss://127.0.0.1:8889/atu/ws',
+            `wss://${window.location.hostname}:8877/atu/ws`,
+            'wss://127.0.0.1:8877/atu/ws',
             `wss://${window.location.hostname}:8890/atu/ws`,
             'wss://127.0.0.1:8890/atu/ws'
         ];

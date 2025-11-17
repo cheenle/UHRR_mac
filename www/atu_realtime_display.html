@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ATU实时功率和驻波比显示</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+        }
+        
+        .container {
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            padding: 30px;
+            text-align: center;
+            width: 80%;
+            max-width: 500px;
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 30px;
+        }
+        
+        .data-display {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 30px;
+        }
+        
+        .data-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        .label {
+            font-size: 18px;
+            color: #666;
+            margin-bottom: 10px;
+        }
+        
+        .value {
+            font-size: 36px;
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .power-high {
+            color: #ff9900;
+        }
+        
+        .swr-high {
+            color: #ff4444;
+        }
+        
+        .swr-medium {
+            color: #ff9900;
+        }
+        
+        .swr-good {
+            color: #44ff44;
+        }
+        
+        .status {
+            font-size: 16px;
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 20px;
+        }
+        
+        .connected {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        
+        .disconnected {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        
+        .debug {
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #000;
+            color: #00ff00;
+            font-family: monospace;
+            font-size: 12px;
+            text-align: left;
+            height: 200px;
+            overflow-y: scroll;
+            border-radius: 5px;
+        }
+        
+        .error {
+            color: #ff4444;
+            font-weight: bold;
+        }
+        
+        .info {
+            color: #4444ff;
+        }
+        
+        .success {
+            color: #44ff44;
+        }
+        
+        .warning {
+            color: #ff9900;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>ATU实时功率和驻波比</h1>
+        
+        <div class="data-display">
+            <div class="data-item">
+                <div class="label">功率</div>
+                <div id="power-value" class="value">-- W</div>
+            </div>
+            
+            <div class="data-item">
+                <div class="label">驻波比</div>
+                <div id="swr-value" class="value">--</div>
+            </div>
+        </div>
+        
+        <div id="connection-status" class="status disconnected">
+            未连接到ATU服务器
+        </div>
+        
+        <div id="debug" class="debug">
+            [调试信息]<br>
+            页面加载时间: <span id="load-time"></span><br>
+            当前状态: 初始化中...<br>
+        </div>
+    </div>
+
+    <script>
+        // ATU WebSocket连接管理（带详细日志）
+        let atuSocket = null;
+        let atuIsConnected = false;
+        let reconnectTimeout = null;
+        let messageCount = 0;
+        let lastMessageTime = null;
+        
+        // 调试日志函数
+        function debugLog(message, type = 'info') {
+            const debugElement = document.getElementById('debug');
+            const timestamp = new Date().toISOString().substr(11, 12);
+            const typeClass = type === 'error' ? 'error' : 
+                             type === 'success' ? 'success' : 
+                             type === 'warning' ? 'warning' : 'info';
+            
+            debugElement.innerHTML += `<div class="${typeClass}">[${timestamp}] ${message}</div>`;
+            debugElement.scrollTop = debugElement.scrollHeight;
+            
+            // 限制日志行数
+            const lines = debugElement.querySelectorAll('div');
+            if (lines.length > 100) {
+                debugElement.removeChild(lines[0]);
+            }
+        }
+        
+        // 初始化WebSocket连接
+        function initWebSocket() {
+            debugLog('开始初始化WebSocket连接...', 'info');
+            
+            // 如果已有连接，先关闭
+            if (atuSocket) {
+                debugLog('关闭现有连接', 'warning');
+                atuSocket.close();
+            }
+            
+            const hostname = window.location.hostname;
+            const serverUrl = `wss://${hostname}:8889/atu/ws`;
+            
+            debugLog('尝试连接到: ' + serverUrl, 'info');
+            
+            try {
+                atuSocket = new WebSocket(serverUrl);
+                
+                atuSocket.onopen = () => {
+                    atuIsConnected = true;
+                    updateConnectionStatus(true);
+                    debugLog('WebSocket连接已建立', 'success');
+                    debugLog('已连接到ATU服务器，准备接收数据', 'success');
+                    
+                    // 连接成功后立即发送同步命令
+                    setTimeout(() => {
+                        sendSyncCommand();
+                    }, 500);
+                    
+                    // 设置心跳检测
+                    clearInterval(window.heartbeatInterval);
+                    window.heartbeatInterval = setInterval(() => {
+                        if (atuSocket && atuSocket.readyState === WebSocket.OPEN) {
+                            // 发送一个心跳包来测试连接状态
+                            try {
+                                atuSocket.send(JSON.stringify({type: 'ping'}));
+                            } catch(e) {
+                                debugLog('心跳检测失败: ' + e.message, 'error');
+                            }
+                        } else {
+                            debugLog('WebSocket未连接，停止心跳检测', 'warning');
+                            clearInterval(window.heartbeatInterval);
+                        }
+                    }, 30000); // 每30秒发送一次心跳
+                };
+                
+                atuSocket.onclose = (event) => {
+                    atuIsConnected = false;
+                    updateConnectionStatus(false);
+                    debugLog(`WebSocket连接已关闭，代码: ${event.code}, 原因: ${event.reason}`, 'warning');
+                    debugLog('与ATU服务器断开连接', 'warning');
+                    
+                    // 自动重连，但增加随机延迟避免冲突
+                    if (reconnectTimeout) {
+                        clearTimeout(reconnectTimeout);
+                    }
+                    const reconnectDelay = 3000 + Math.random() * 2000;
+                    debugLog('将在 ' + Math.round(reconnectDelay/1000) + ' 秒后尝试重连', 'info');
+                    reconnectTimeout = setTimeout(() => {
+                        if (!atuIsConnected) {
+                            debugLog('开始重新连接...', 'info');
+                            initWebSocket();
+                        }
+                    }, reconnectDelay);
+                };
+                
+                atuSocket.onerror = (error) => {
+                    atuIsConnected = false;
+                    updateConnectionStatus(false);
+                    debugLog('WebSocket错误: ' + JSON.stringify(error), 'error');
+                };
+                
+                atuSocket.onmessage = (event) => {
+                    messageCount++;
+                    lastMessageTime = new Date();
+                    debugLog('收到消息 #' + messageCount + ' (' + event.data.length + ' 字节)', 'info');
+                    handleAtuMessage(event.data);
+                };
+            } catch (error) {
+                debugLog('ATU WebSocket连接失败: ' + error, 'error');
+                atuIsConnected = false;
+                updateConnectionStatus(false);
+                
+                // 连接失败后尝试重连
+                if (reconnectTimeout) {
+                    clearTimeout(reconnectTimeout);
+                }
+                reconnectTimeout = setTimeout(() => {
+                    if (!atuIsConnected) {
+                        debugLog('连接失败后尝试重新连接...', 'info');
+                        initWebSocket();
+                    }
+                }, 5000);
+            }
+        }
+        
+        // 处理ATU消息
+        function handleAtuMessage(message) {
+            try {
+                debugLog('开始解析消息: ' + message.substring(0, 100) + (message.length > 100 ? '...' : ''), 'info');
+                const data = JSON.parse(message);
+                debugLog('消息解析成功，类型: ' + data.type, 'success');
+                
+                // 检查消息类型
+                if (data.type === 'data') {
+                    debugLog('收到data类型数据: ' + JSON.stringify(data.data), 'info');
+                    updateAtuDisplay(data.data);
+                } else if (data.type === 'status') {
+                    debugLog('收到status类型数据: ' + JSON.stringify(data), 'info');
+                } else if (data.type === 'relay') {
+                    debugLog('收到relay类型数据: ' + JSON.stringify(data.data), 'info');
+                    // 可能包含继电器信息，也尝试更新显示
+                    if (data.data && data.data.relay) {
+                        debugLog('继电器信息: ' + JSON.stringify(data.data.relay), 'info');
+                    }
+                } else {
+                    // 检查是否是直接的数据格式（不带type字段）
+                    if (data.power !== undefined || data.swr !== undefined) {
+                        debugLog('收到直接数据格式: ' + JSON.stringify(data), 'info');
+                        updateAtuDisplay(data);
+                    } else {
+                        debugLog('收到未知类型消息: ' + JSON.stringify(data), 'warning');
+                    }
+                }
+            } catch (error) {
+                debugLog('ATU消息处理错误: ' + error + ', 原始消息: ' + message, 'error');
+            }
+        }
+        
+        // 更新ATU显示
+        function updateAtuDisplay(data) {
+            debugLog('更新显示数据: ' + JSON.stringify(data), 'info');
+            
+            // 更新功率显示
+            const powerElement = document.getElementById('power-value');
+            if (powerElement && data.power !== undefined) {
+                powerElement.textContent = data.power + ' W';
+                debugLog('功率更新为: ' + data.power + ' W', 'success');
+                
+                // 根据功率值设置颜色
+                if (data.power > 0) {
+                    powerElement.classList.add('power-high');
+                } else {
+                    powerElement.classList.remove('power-high');
+                }
+            }
+            
+            // 更新SWR显示
+            const swrElement = document.getElementById('swr-value');
+            if (swrElement && data.swr !== undefined) {
+                swrElement.textContent = data.swr;
+                debugLog('SWR更新为: ' + data.swr, 'success');
+                
+                // 移除所有颜色类
+                swrElement.classList.remove('swr-high', 'swr-medium', 'swr-good');
+                
+                // 根据SWR值设置颜色
+                if (data.swr > 2.0) {
+                    swrElement.classList.add('swr-high');
+                } else if (data.swr > 1.5) {
+                    swrElement.classList.add('swr-medium');
+                } else {
+                    swrElement.classList.add('swr-good');
+                }
+            }
+        }
+        
+        // 更新连接状态显示
+        function updateConnectionStatus(connected) {
+            const statusElement = document.getElementById('connection-status');
+            if (statusElement) {
+                if (connected) {
+                    statusElement.textContent = '已连接到ATU服务器';
+                    statusElement.className = 'status connected';
+                    debugLog('连接状态更新为: 已连接', 'success');
+                } else {
+                    statusElement.textContent = '未连接到ATU服务器';
+                    statusElement.className = 'status disconnected';
+                    debugLog('连接状态更新为: 未连接', 'warning');
+                }
+            }
+        }
+        
+        // 发送同步命令
+        function sendSyncCommand() {
+            if (!atuIsConnected || !atuSocket) {
+                debugLog('无法发送同步命令: 未连接', 'warning');
+                return;
+            }
+            
+            if (atuSocket.readyState !== WebSocket.OPEN) {
+                debugLog('无法发送同步命令: 连接未打开，当前状态：' + atuSocket.readyState, 'warning');
+                return;
+            }
+            
+            try {
+                const syncCommand = {
+                    type: 'command',
+                    command: 'sync'
+                };
+                
+                atuSocket.send(JSON.stringify(syncCommand));
+                debugLog('已发送同步命令', 'info');
+            } catch (error) {
+                debugLog('发送同步命令失败: ' + error, 'error');
+            }
+        }
+        
+        // 轮询获取ATU数据
+        function pollAtuData() {
+            debugLog('开始轮询ATU数据', 'info');
+            
+            // 通过WebSocket发送同步命令获取数据
+            sendSyncCommand();
+        }
+        
+        // 页面加载完成后初始化
+        window.addEventListener('load', function() {
+            // 显示页面加载时间
+            document.getElementById('load-time').textContent = new Date().toISOString().substr(11, 12);
+            
+            debugLog('页面已加载，初始化WebSocket连接...', 'info');
+            // 初始化WebSocket连接
+            initWebSocket();
+            
+            // 每2秒轮询一次ATU数据以获取实时数据
+            debugLog('启动定时轮询任务，每2秒轮询一次ATU数据', 'info');
+            setInterval(() => {
+                pollAtuData();
+            }, 2000);
+        });
+        
+        // 页面可见性变化时处理连接
+        document.addEventListener('visibilitychange', function() {
+            if (document.hidden) {
+                debugLog('页面隐藏，保持连接...', 'info');
+            } else {
+                debugLog('页面可见，检查连接状态...', 'info');
+                // 如果连接断开，重新连接
+                if (!atuIsConnected) {
+                    debugLog('连接已断开，尝试重新连接...', 'warning');
+                    initWebSocket();
+                }
+            }
+        });
+        
+        // 页面卸载时清理资源
+        window.addEventListener('beforeunload', function() {
+            debugLog('页面即将卸载，清理资源...', 'info');
+            if (reconnectTimeout) {
+                clearTimeout(reconnectTimeout);
+            }
+            if (window.heartbeatInterval) {
+                clearInterval(window.heartbeatInterval);
+            }
+            if (atuSocket) {
+                atuSocket.close();
+            }
+        });
+        
+        // 页面卸载时清理资源（unload事件）
+        window.addEventListener('unload', function() {
+            debugLog('页面卸载，最终清理...', 'info');
+            if (reconnectTimeout) {
+                clearTimeout(reconnectTimeout);
+            }
+            if (window.heartbeatInterval) {
+                clearInterval(window.heartbeatInterval);
+            }
+            if (atuSocket) {
+                atuSocket.close();
+            }
+        });
+        
+        // 处理页面错误
+        window.addEventListener('error', function(event) {
+            debugLog('页面发生错误: ' + event.message, 'error');
+        });
+    </script>
+</body>
+</html>

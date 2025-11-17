@@ -10,3 +10,4 @@ certs/
 server_*.log
 app*.log
 
+*.log
