@@ -1,6 +1,9 @@
 // Audio RX functions - Audio reception and processing
 
-const RXinstantMeter = document.querySelector('#RXinstant meter');
+// 避免重复声明 - 使用全局变量或检查是否存在
+if (typeof RXinstantMeter === 'undefined') {
+    var RXinstantMeter = document.querySelector('#RXinstant meter');
+}
 
 var wsAudioRX = "";
 var AudioRX_context = "";

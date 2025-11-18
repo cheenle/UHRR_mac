@@ -39,7 +39,7 @@ class ModernHamInterface {
     }
 
     initializeComponents() {
-        this.initializeS Meter();
+        this.initializeSMeter();
         this.initializePersonalFreqs();
         this.initializeBitrateMonitoring();
         console.log('现代界面组件初始化完成');
@@ -857,19 +857,21 @@ class ModernHamInterface {
         this.toggleTXLock();
     }
 
-    sendTRXmode() {
+    // 注意：避免函数名冲突，使用不同的内部实现
+    sendTRXmodeCompat() {
         this.sendTRXmode();
     }
 
     setaudiofilter() {
         // 滤波器设置将在setFilter中处理
+        console.log('设置音频滤波器');
     }
 
-    drawRXSmeter() {
+    drawRXSmeterCompat() {
         this.drawRXSmeter();
     }
 
-    updateFFTDisplay() {
+    updateFFTDisplayCompat() {
         this.updateFFTDisplay();
     }
 
@@ -911,5 +913,6 @@ class ModernHamInterface {
 
 // Initialize the modern interface when the page loads
 document.addEventListener('DOMContentLoaded', () => {
-    new ModernHamInterface();
+    window.modernInterface = new ModernHamInterface();
+    console.log('现代界面初始化完成，全局接口对象已创建');
 });
