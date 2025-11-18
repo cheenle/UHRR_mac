@@ -191,6 +191,12 @@ class ModernHamInterface {
         this.currentFrequency = freq;
         this.updateFrequencyDisplay();
         this.updateSpectrum();
+        
+        // 发送频率变更到服务器
+        if (wsControlTRX && wsControlTRX.readyState === WebSocket.OPEN) {
+            wsControlTRX.send(JSON.stringify({frequency: freq}));
+            console.log('📡 发送频率变更:', (freq / 1000000).toFixed(6), 'MHz');
+        }
     }
 
     setMode(mode) {
@@ -201,6 +207,12 @@ class ModernHamInterface {
             btn.classList.remove('active');
         });
         document.querySelector(`[data-mode="${mode}"]`).classList.add('active');
+        
+        // 发送模式变更到服务器
+        if (wsControlTRX && wsControlTRX.readyState === WebSocket.OPEN) {
+            wsControlTRX.send(JSON.stringify({mode: mode}));
+            console.log('📡 发送模式变更:', mode);
+        }
     }
 
     setBand(band) {
@@ -249,7 +261,14 @@ class ModernHamInterface {
             connectionStatus.classList.add('connected');
             connectionText.textContent = 'Connected';
             
+            // 真正启动WebSocket连接
+            this.startWebSocketConnections();
             this.startMeterUpdates();
+            
+            // 更新全局变量以兼容旧系统
+            poweron = true;
+            
+            console.log('🟢 现代界面连接已启动');
         } else {
             powerBtn.innerHTML = '<i class="fas fa-power-off"></i><span>Connect</span>';
             powerBtn.style.background = 'rgba(16, 185, 129, 0.2)';
@@ -259,9 +278,16 @@ class ModernHamInterface {
             connectionStatus.classList.remove('connected');
             connectionText.textContent = 'Disconnected';
             
+            // 真正停止WebSocket连接
+            this.stopWebSocketConnections();
             this.stopMeterUpdates();
             this.isTransmitting = false;
             this.updatePTTButton();
+            
+            // 更新全局变量以兼容旧系统
+            poweron = false;
+            
+            console.log('🔴 现代界面连接已断开');
         }
         
         this.updateMeters();
@@ -287,20 +313,53 @@ class ModernHamInterface {
         }
     }
 
+    updatePTTStatusDisplay(isPTTOn, isDeviceConfirmed) {
+        const pttIndicator = document.getElementById('ptt-status-indicator');
+        if (!pttIndicator) return;
+        
+        if (isPTTOn) {
+            pttIndicator.textContent = 'PTT: ON';
+            pttIndicator.style.color = '#00ff00';
+            pttIndicator.style.fontWeight = 'bold';
+            pttIndicator.style.textShadow = '0 0 8px #00ff00';
+        } else {
+            pttIndicator.textContent = 'PTT: OFF';
+            pttIndicator.style.color = '#ff4444';
+            pttIndicator.style.fontWeight = 'bold';
+            pttIndicator.style.textShadow = 'none';
+        }
+    }
+
     updateAFGain(value) {
         const sliderValue = document.querySelector('#afGain').nextElementSibling;
         sliderValue.textContent = value;
         
-        // Here you would send the AF gain to the server
-        console.log(`AF Gain set to: ${value}`);
+        // 发送AF增益到服务器
+        if (wsControlTRX && wsControlTRX.readyState === WebSocket.OPEN) {
+            wsControlTRX.send(JSON.stringify({afgain: value}));
+            console.log(`📡 发送AF增益: ${value}`);
+        }
+        
+        // 更新本地音频处理
+        if (typeof AudioRX_SetGAIN === 'function') {
+            AudioRX_SetGAIN();
+        }
     }
 
     updateMICGain(value) {
         const sliderValue = document.querySelector('#micGain').nextElementSibling;
         sliderValue.textContent = value;
         
-        // Here you would send the MIC gain to the server
-        console.log(`MIC Gain set to: ${value}`);
+        // 发送MIC增益到服务器
+        if (wsControlTRX && wsControlTRX.readyState === WebSocket.OPEN) {
+            wsControlTRX.send(JSON.stringify({micgain: value}));
+            console.log(`📡 发送MIC增益: ${value}`);
+        }
+        
+        // 更新本地音频处理
+        if (typeof AudioTX_SetGAIN === 'function') {
+            AudioTX_SetGAIN(value / 100);
+        }
     }
 
     updateSpectrum() {
@@ -419,6 +478,10 @@ class ModernHamInterface {
         // 调用TX按钮优化脚本的控制函数
         if (typeof TXControl === 'function') {
             TXControl('start');
+        } else {
+            console.warn('TXControl函数未定义，使用备用PTT逻辑');
+            // 备用PTT逻辑
+            this.startTransmitting();
         }
     }
 
@@ -429,7 +492,37 @@ class ModernHamInterface {
         // 调用TX按钮优化脚本的控制函数
         if (typeof TXControl === 'function') {
             TXControl('stop');
+        } else {
+            console.warn('TXControl函数未定义，使用备用PTT逻辑');
+            // 备用PTT逻辑
+            this.stopTransmitting();
         }
+    }
+
+    startTransmitting() {
+        this.isTransmitting = true;
+        this.updatePTTButton();
+        this.updatePTTStatusDisplay(true, true);
+        
+        // 发送PTT命令到服务器
+        if (wsControlTRX && wsControlTRX.readyState === WebSocket.OPEN) {
+            wsControlTRX.send(JSON.stringify({ptt: true}));
+        }
+        
+        console.log('🔴 开始发射');
+    }
+
+    stopTransmitting() {
+        this.isTransmitting = false;
+        this.updatePTTButton();
+        this.updatePTTStatusDisplay(false, true);
+        
+        // 发送PTT停止命令到服务器
+        if (wsControlTRX && wsControlTRX.readyState === WebSocket.OPEN) {
+            wsControlTRX.send(JSON.stringify({ptt: false}));
+        }
+        
+        console.log('🟢 停止发射');
     }
 
     toggleTXLock() {
@@ -454,16 +547,30 @@ class ModernHamInterface {
         // 设置当前按钮为活动状态
         button.classList.add('active');
         
-        // 调用旧界面的滤波器设置函数
+        // 获取滤波器参数
+        const fq = button.getAttribute('fq');
+        const fg = button.getAttribute('fg');
+        const ft = button.getAttribute('ft');
+        const frq = button.getAttribute('frq');
+        
+        // 发送滤波器参数到服务器
+        if (wsControlTRX && wsControlTRX.readyState === WebSocket.OPEN) {
+            wsControlTRX.send(JSON.stringify({
+                filter: {
+                    type: ft,
+                    frequency: parseInt(frq),
+                    gain: parseInt(fg),
+                    q: parseInt(fq)
+                }
+            }));
+            console.log('📡 发送滤波器设置:', {type: ft, frequency: frq, gain: fg, q: fq});
+        }
+        
+        // 调用旧界面的滤波器设置函数作为备选
         if (typeof setaudiofilter === 'function') {
             // 设置滤波器参数
-            const fq = button.getAttribute('fq');
-            const fg = button.getAttribute('fg');
-            const ft = button.getAttribute('ft');
-            const frq = button.getAttribute('frq');
-            
-            // 这里应该调用实际的滤波器设置逻辑
             console.log('设置滤波器:', {fq, fg, ft, frq});
+            setaudiofilter();
         }
     }
 
@@ -750,6 +857,28 @@ class ModernHamInterface {
         
         // 控制TRX WebSocket
         this.startControlTRX();
+    }
+
+    stopWebSocketConnections() {
+        // 关闭音频RX WebSocket
+        if (wsAudioRX && wsAudioRX.readyState === WebSocket.OPEN) {
+            wsAudioRX.close();
+            wsAudioRX = null;
+        }
+        
+        // 关闭音频TX WebSocket
+        if (wsAudioTX && wsAudioTX.readyState === WebSocket.OPEN) {
+            wsAudioTX.close();
+            wsAudioTX = null;
+        }
+        
+        // 关闭控制TRX WebSocket
+        if (wsControlTRX && wsControlTRX.readyState === WebSocket.OPEN) {
+            wsControlTRX.close();
+            wsControlTRX = null;
+        }
+        
+        console.log('🛑 所有WebSocket连接已断开');
     }
 
     startAudioRX() {
