@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # 服务器端配置更新脚本
-# 将WireGuard端口从9100更新为9200
+# 将WireGuard端口从9222更新为9122
 
 set -euo pipefail
 
@@ -26,12 +26,12 @@ ssh "$SERVER_USER@$SERVER_HOST" "sudo cp /etc/wireguard/wg0.conf /etc/wireguard/
 
 # 更新服务器端配置文件
 echo "[3/5] 更新服务器端配置文件..."
-ssh "$SERVER_USER@$SERVER_HOST" "sudo sed -i 's/ListenPort = 9100/ListenPort = 9200/g' /etc/wireguard/wg0.conf"
+ssh "$SERVER_USER@$SERVER_HOST" "sudo sed -i 's/ListenPort = 9222/ListenPort = 9122/g' /etc/wireguard/wg0.conf"
 
 # 更新防火墙规则
 echo "[4/5] 更新防火墙规则..."
-ssh "$SERVER_USER@$SERVER_HOST" "sudo ufw delete allow 9100/udp 2>/dev/null || true"
-ssh "$SERVER_USER@$SERVER_HOST" "sudo ufw allow 9200/udp"
+ssh "$SERVER_USER@$SERVER_HOST" "sudo ufw delete allow 9222/udp 2>/dev/null || true"
+ssh "$SERVER_USER@$SERVER_HOST" "sudo ufw allow 9122/udp"
 
 # 重启WireGuard服务
 echo "[5/5] 重启WireGuard服务..."
@@ -43,6 +43,6 @@ echo "WireGuard状态:"
 ssh "$SERVER_USER@$SERVER_HOST" "sudo wg show"
 echo
 echo "监听端口:"
-ssh "$SERVER_USER@$SERVER_HOST" "sudo netstat -tuln | grep 9200 || echo '端口9200未在监听'"
+ssh "$SERVER_USER@$SERVER_HOST" "sudo netstat -tuln | grep 9122 || echo '端口9200未在监听'"
 echo
 echo "服务器配置更新完成！"
