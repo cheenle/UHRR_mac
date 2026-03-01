@@ -1,5 +1,7 @@
 # Universal HamRadio Remote (UHRR)
 
+[![English](https://img.shields.io/badge/lang-English-blue.svg)](README_en.md) [![中文](https://img.shields.io/badge/lang-中文-red.svg)](README_CN.md)
+
 A web-based remote control and audio streaming system for shortwave radios. The frontend is based on HTML5/JS, and the backend is based on Tornado + PyAudio + rigctld (Hamlib). This version has been fixed and optimized for macOS/mobile and TLS, and significantly improved TX/PTT timing and RX jitter.
 
 > ✅ **Important Optimization**: Resolved TX to RX switching latency issue (optimized from 2-3s to <100ms), see [docs/latency_optimization_guide.md](docs/latency_optimization_guide.md) for details
