@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mobile Interface Test</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: #000;
+            color: #fff;
+            margin: 0;
+            padding: 20px;
+            text-align: center;
+        }
+        .test-container {
+            max-width: 500px;
+            margin: 0 auto;
+            background-color: #1a1a1a;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        }
+        .test-title {
+            font-size: 24px;
+            margin-bottom: 20px;
+            color: #4CAF50;
+        }
+        .test-status {
+            font-size: 18px;
+            margin: 15px 0;
+            padding: 10px;
+            border-radius: 8px;
+        }
+        .success {
+            background-color: rgba(76, 175, 80, 0.2);
+            color: #4CAF50;
+            border: 1px solid #4CAF50;
+        }
+        .error {
+            background-color: rgba(244, 67, 54, 0.2);
+            color: #F44336;
+            border: 1px solid #F44336;
+        }
+        .btn {
+            background: linear-gradient(145deg, #1a73e8, #0d47a1);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            padding: 15px 30px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            margin: 10px;
+            box-shadow: 0 4px 10px rgba(26, 115, 232, 0.3);
+            transition: all 0.2s;
+        }
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(26, 115, 232, 0.4);
+        }
+        .btn:active {
+            transform: translateY(0);
+        }
+        .btn-modern {
+            background: linear-gradient(145deg, #ff6600, #cc4400);
+            box-shadow: 0 4px 10px rgba(255, 102, 0, 0.3);
+        }
+        .btn-modern:hover {
+            box-shadow: 0 6px 15px rgba(255, 102, 0, 0.4);
+        }
+        .features-list {
+            text-align: left;
+            margin: 20px 0;
+            padding: 15px;
+            background-color: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+        }
+        .features-list h3 {
+            color: #4CAF50;
+            margin-top: 0;
+        }
+        .features-list ul {
+            padding-left: 20px;
+        }
+        .features-list li {
+            margin: 8px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1 class="test-title">.ham Radio Mobile Interface</h1>
+        
+        <div class="test-status success">
+            ✅ Modern Mobile Interface Ready
+        </div>
+        
+        <div class="features-list">
+            <h3>Key Features:</h3>
+            <ul>
+                <li>Responsive design for iPhone 15 and modern browsers</li>
+                <li>Touch-optimized controls with large PTT button</li>
+                <li>Safe area insets support for notches</li>
+                <li>Real-time S-Meter visualization</li>
+                <li>WebSocket connectivity for radio control</li>
+                <li>PWA support for app-like experience</li>
+                <li>Dark mode optimized interface</li>
+            </ul>
+        </div>
+        
+        <button class="btn" onclick="window.location.href='mobile.html'">
+            📱 Use Classic Mobile Interface
+        </button>
+        
+        <button class="btn btn-modern" onclick="window.location.href='mobile_modern.html'">
+            🚀 Use Modern Mobile Interface
+        </button>
+        
+        <div class="test-status" style="margin-top: 20px; font-size: 14px;">
+            Both interfaces work with the same backend
+        </div>
+    </div>
+</body>
+</html>

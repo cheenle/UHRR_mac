@@ -1,24 +1,39 @@
 // Modern Mobile Interface JavaScript for iPhone 15 and modern browsers
-// Handles all interactive elements, WebSocket connections, and radio controls
+// 完全兼容 controls.js 的实现，确保与桌面版一致的行为
+// 
+// 重要：此文件依赖 controls.js 先加载
+// 所有核心功能由 controls.js 提供，此文件仅处理移动端特定的 UI 逻辑
 
-// Global variables
-let websocket = null;
-let isConnected = false;
-let currentFrequency = 7053000; // Default frequency in Hz
-let currentMode = 'USB';
-let currentVFO = 'VFO-A';
-let isTransmitting = false;
+////////////////////////////////////////////////////////////
+// 移动端检测 - 使用 controls.js 的 IS_MOBILE 变量
+////////////////////////////////////////////////////////////
 
-// UHRR WebSocket connections
-let wsControlTRX = null;
-let wsAudioRX = null;
-let wsAudioTX = null;
+// controls.js 使用 const IS_MOBILE 声明，我们不能再声明
+// 直接使用 controls.js 中已定义的 IS_MOBILE
+// 如果需要本地判断，使用不同的变量名
+const IS_MOBILE_LOCAL = typeof IS_MOBILE !== 'undefined' ? IS_MOBILE : /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 
-// Audio context for mobile
-let mobileAudioContext = null;
-let audioContextInitialized = false;
+var audioContextInitialized = false;
 
-// DOM Elements
+////////////////////////////////////////////////////////////
+// 移动端特定状态（不影响 controls.js 的全局变量）
+////////////////////////////////////////////////////////////
+
+// 移动端 UI 状态
+var mobileState = {
+    isConnected: false,
+    currentFrequency: 7053000,
+    currentMode: 'USB',
+    currentVFO: 'VFO-A',
+    isTransmitting: false,
+    tuneStep: 100  // 默认步进 100Hz
+};
+
+// PTT 触摸状态由 tx_button_optimized.js 管理
+
+////////////////////////////////////////////////////////////
+// DOM 元素引用
+////////////////////////////////////////////////////////////
 const domElements = {
     menuToggle: null,
     menuClose: null,
@@ -38,20 +53,40 @@ const domElements = {
     tuneButtons: null
 };
 
-// Initialize the application
+////////////////////////////////////////////////////////////
+// 初始化
+////////////////////////////////////////////////////////////
+
 document.addEventListener('DOMContentLoaded', function() {
+    console.log('🚀 Mobile Modern 界面初始化...');
+    
     initializeElements();
     setupEventListeners();
     initializeSMeter();
-    connectWebSocket();
     updateFrequencyDisplay();
+    setupMenuItems();
     
-    // 添加一次性的全局触摸事件监听器来初始化音频上下文
+    // iOS Safari 需要用户交互才能初始化音频
     document.addEventListener('touchstart', initAudioOnFirstTouch, { once: true });
     document.addEventListener('mousedown', initAudioOnFirstTouch, { once: true });
+    
+    console.log('✅ Mobile Modern 界面初始化完成');
 });
 
-// Initialize DOM elements
+// 设置菜单项点击事件
+function setupMenuItems() {
+    document.querySelectorAll('.menu-item').forEach(item => {
+        item.addEventListener('click', function(e) {
+            e.preventDefault();
+            const action = this.dataset.action;
+            if (action) {
+                handleMenuItem(action);
+            }
+        });
+    });
+}
+
+// 初始化 DOM 元素引用
 function initializeElements() {
     domElements.menuToggle = document.getElementById('menu-toggle');
     domElements.menuClose = document.getElementById('menu-close');
@@ -75,359 +110,336 @@ function initializeElements() {
 function initAudioOnFirstTouch() {
     if (audioContextInitialized) return;
     
-    if (audioContextInitialized) return;
+    console.log('🔊 用户首次交互，尝试恢复 AudioContext...');
     
-    try {
-        // 尝试初始化桌面版音频系统
-        if (typeof AudioRX_start === 'function') {
-            console.log('Initializing desktop-compatible audio system on first touch...');
-            // 初始化音频上下文
-            if (!window.AudioRX_context) {
-                // 检测是否为移动设备
-                const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-                
-                // 为移动设备优化音频上下文设置
-                const audioContextOptions = {
-                    latencyHint: isMobile ? "playback" : "interactive",
-                    sampleRate: 16000
-                };
-                
-                // iOS Safari特殊处理
-                if (isMobile && typeof webkitAudioContext !== 'undefined') {
-                    // iOS可能需要使用默认采样率
-                    delete audioContextOptions.sampleRate;
-                }
-                
-                window.AudioRX_context = new (window.AudioContext || window.webkitAudioContext)(audioContextOptions);
-                console.log('AudioContext created for desktop-compatible system with mobile optimization');
-            }
-            
-            // 如果音频上下文处于暂停状态，恢复它
-            if (window.AudioRX_context.state === 'suspended') {
-                window.AudioRX_context.resume().then(() => {
-                    console.log('AudioContext resumed successfully');
-                    // 立即启动音频接收
-                    AudioRX_start();
-                }).catch(err => {
-                    console.error('Failed to resume AudioContext:', err);
-                });
+    // iOS Safari 关键：调用 controls.js 导出的恢复函数
+    if (typeof window.resumeAudioContext === 'function') {
+        window.resumeAudioContext().then(success => {
+            if (success) {
+                console.log('✅ AudioContext 恢复成功');
             } else {
-                // 如果已经运行，直接启动音频接收
-                AudioRX_start();
+                console.error('❌ AudioContext 恢复失败');
             }
-        }
-        
-        audioContextInitialized = true;
-        console.log('Audio context initialized on user gesture');
-    } catch (e) {
-        console.error('Failed to initialize audio context:', e);
+        });
     }
+    
+    // 检查 TX AudioContext
+    if (typeof mh !== 'undefined' && mh && mh.context) {
+        if (mh.context.state === 'suspended') {
+            mh.context.resume().then(() => {
+                console.log('✅ TX AudioContext 已恢复');
+            });
+        }
+    }
+    
+    audioContextInitialized = true;
+    console.log('✅ 音频上下文初始化完成');
 }
 
-// Setup event listeners
+////////////////////////////////////////////////////////////
+// 事件监听器设置
+////////////////////////////////////////////////////////////
+
 function setupEventListeners() {
-    // Menu toggle
+    // 菜单切换
     if (domElements.menuToggle) {
         domElements.menuToggle.addEventListener('click', toggleMenu);
+        // iOS Safari: 同时添加 touchend 事件
+        domElements.menuToggle.addEventListener('touchend', function(e) {
+            e.preventDefault();
+            toggleMenu();
+        }, { passive: false });
     }
-    
-    // Menu close
     if (domElements.menuClose) {
         domElements.menuClose.addEventListener('click', closeMenu);
+        domElements.menuClose.addEventListener('touchend', function(e) {
+            e.preventDefault();
+            closeMenu();
+        }, { passive: false });
     }
-    
-    // Menu overlay
     if (domElements.menuOverlay) {
         domElements.menuOverlay.addEventListener('click', closeMenu);
     }
     
-    // PTT button (touch optimized for mobile)
-    if (domElements.pttButton) {
-        domElements.pttButton.addEventListener('touchstart', handlePTTStart, { passive: false });
-        domElements.pttButton.addEventListener('touchend', handlePTTEnd, { passive: false });
-        domElements.pttButton.addEventListener('mousedown', handlePTTStart);
-        domElements.pttButton.addEventListener('mouseup', handlePTTEnd);
-        domElements.pttButton.addEventListener('mouseleave', handlePTTEnd);
-    }
+    // PTT 按钮 - 由 tx_button_optimized.js 自动初始化
+    // 不在这里设置，避免事件冲突
     
-    // Power button
+    // 电源按钮 - iOS Safari 关键修复
     if (domElements.powerButton) {
-        domElements.powerButton.addEventListener('click', togglePower);
+        // iOS Safari: 使用单一的触摸事件处理，避免 click 和 touchend 双重触发
+        let powerButtonClicked = false;
+        let powerButtonTimeout = null;
+        
+        const handlePowerClick = function(e) {
+            // 防抖：300ms 内只响应一次点击
+            if (powerButtonClicked) {
+                console.log('🔋 电源按钮防抖，忽略重复点击');
+                return;
+            }
+            
+            powerButtonClicked = true;
+            clearTimeout(powerButtonTimeout);
+            powerButtonTimeout = setTimeout(() => {
+                powerButtonClicked = false;
+            }, 300);
+            
+            console.log('🔋 电源按钮触发');
+            
+            // iOS Safari 关键：在用户交互事件内部立即恢复 AudioContext
+            // 这必须在事件处理函数内部同步执行，异步调用无效
+            if (typeof AudioRX_context !== 'undefined' && AudioRX_context && AudioRX_context.state === 'suspended') {
+                console.log('🔊 电源按钮点击：AudioContext suspended，尝试恢复...');
+                AudioRX_context.resume().then(() => {
+                    console.log('✅ AudioContext 已在电源按钮点击后恢复');
+                }).catch(err => {
+                    console.error('❌ AudioContext 恢复失败:', err);
+                });
+            }
+            
+            togglePower();
+        };
+        
+        // 只使用 click 事件（iOS Safari 会正确触发）
+        domElements.powerButton.addEventListener('click', handlePowerClick);
+        
+        // 添加视觉反馈
+        domElements.powerButton.addEventListener('touchstart', function(e) {
+            // 不阻止默认行为，让 click 事件正常触发
+            this.style.transform = 'scale(0.9)';
+        }, { passive: true });
+        
+        domElements.powerButton.addEventListener('touchend', function(e) {
+            this.style.transform = '';
+        }, { passive: true });
+        
+        domElements.powerButton.addEventListener('touchcancel', function(e) {
+            this.style.transform = '';
+        }, { passive: true });
     }
     
-    // Navigation buttons
+    // 导航按钮
     domElements.navButtons.forEach(button => {
         button.addEventListener('click', function() {
             switchTab(this.dataset.tab);
         });
     });
     
-    // Quick buttons
+    // 快捷按钮
     domElements.quickButtons.forEach(button => {
         button.addEventListener('click', function() {
             handleQuickButton(this);
         });
     });
     
-    // Tune buttons
+    // 频率调节按钮
     domElements.tuneButtons.forEach(button => {
         button.addEventListener('click', function() {
             tuneFrequency(parseInt(this.dataset.step));
         });
     });
     
-    // Prevent context menu on long press
+    // 防止长按菜单
     document.addEventListener('contextmenu', function(e) {
         e.preventDefault();
     });
-}
-
-// Toggle menu visibility
-function toggleMenu() {
-    domElements.mainMenu.classList.toggle('open');
-    domElements.menuOverlay.classList.toggle('open');
-}
-
-// Close menu
-function closeMenu() {
-    domElements.mainMenu.classList.remove('open');
-    domElements.menuOverlay.classList.remove('open');
-}
-
-// PTT timing variables
-let pttPressStartTime = 0;
-let pttShortPressTimer = null;
-const PTT_SHORT_PRESS_THRESHOLD = 300; // 300ms for short press
-
-// Handle PTT start (transmit)
-function handlePTTStart(e) {
-    e.preventDefault();
-    if (!isConnected) return;
     
-    // Record press start time
-    pttPressStartTime = Date.now();
-    
-    // Initialize audio context on first user interaction
-    if (!audioContextInitialized) {
-        initAudioOnFirstTouch();
-    }
-    
-    // Set a timer to detect short press
-    pttShortPressTimer = setTimeout(() => {
-        // Long press - start transmitting
-        startTransmission();
-    }, PTT_SHORT_PRESS_THRESHOLD);
-    
-    // Add visual feedback
-    domElements.pttButton.classList.add('active');
-    
-    // Haptic feedback for touch start
-    if (navigator.vibrate) {
-        navigator.vibrate(15);
-    }
-}
-
-// Handle PTT end (receive)
-function handlePTTEnd(e) {
-    e.preventDefault();
-    const pressDuration = Date.now() - pttPressStartTime;
-    
-    // Clear the short press timer
-    if (pttShortPressTimer) {
-        clearTimeout(pttShortPressTimer);
-        pttShortPressTimer = null;
-    }
-    
-    // If press was short, treat as a toggle
-    if (pressDuration < PTT_SHORT_PRESS_THRESHOLD) {
-        if (isTransmitting) {
-            // Short press while transmitting - stop transmission
-            stopTransmission();
-        } else {
-            // Short press while receiving - start transmission
-            startTransmission();
-            // Auto stop after 1 second for short press
-            setTimeout(() => {
-                if (isTransmitting) {
-                    stopTransmission();
-                }
-            }, 1000);
+    // 防止双击缩放
+    let lastTouchEnd = 0;
+    document.addEventListener('touchend', function(event) {
+        const now = (new Date()).getTime();
+        if (now - lastTouchEnd <= 300) {
+            event.preventDefault();
         }
+        lastTouchEnd = now;
+    }, false);
+    
+    // PTT 按钮由 tx_button_optimized.js 完全接管
+    // 不再在这里设置事件监听器，避免冲突
+    console.log('🎯 PTT 按钮由 tx_button_optimized.js 接管');
+}
+
+////////////////////////////////////////////////////////////
+// WebSocket 连接 - 使用 controls.js 的函数
+////////////////////////////////////////////////////////////
+
+function connectWebSocket() {
+    console.log('🔌 连接 WebSocket...');
+    
+    // 使用 controls.js 的连接函数
+    if (typeof AudioRX_start === 'function') {
+        AudioRX_start();
+    }
+    if (typeof AudioTX_start === 'function') {
+        AudioTX_start();
+    }
+    if (typeof ControlTRX_start === 'function') {
+        ControlTRX_start();
+    }
+    
+    mobileState.isConnected = true;
+    
+    // 启动延迟检查
+    if (typeof checklatency === 'function' && typeof poweron !== 'undefined') {
+        // poweron 是 controls.js 的全局变量
+    }
+}
+
+function disconnectWebSocket() {
+    console.log('🔌 断开 WebSocket...');
+    
+    // 使用 controls.js 的断开函数
+    if (typeof AudioRX_stop === 'function') {
+        AudioRX_stop();
+    }
+    if (typeof AudioTX_stop === 'function') {
+        AudioTX_stop();
+    }
+    if (typeof ControlTRX_stop === 'function') {
+        ControlTRX_stop();
+    }
+    
+    mobileState.isConnected = false;
+}
+
+////////////////////////////////////////////////////////////
+// 音频系统 - 使用 controls.js 的函数
+////////////////////////////////////////////////////////////
+
+// 音频初始化（iOS Safari 需要用户交互）
+function initAudioOnFirstTouch() {
+    if (audioContextInitialized) return;
+    
+    try {
+        // controls.js 会在连接时初始化音频
+        // 这里只是确保 AudioContext 可以在用户交互后使用
+        if (typeof AudioRX_context !== 'undefined' && AudioRX_context) {
+            if (AudioRX_context.state === 'suspended') {
+                AudioRX_context.resume().then(() => {
+                    console.log('✅ AudioContext 已恢复');
+                });
+            }
+        }
+        
+        audioContextInitialized = true;
+        console.log('✅ 音频上下文初始化完成');
+    } catch (e) {
+        console.error('❌ 音频上下文初始化失败:', e);
+    }
+}
+
+////////////////////////////////////////////////////////////
+// 电源控制
+////////////////////////////////////////////////////////////
+
+function togglePower() {
+    console.log('🔋 togglePower 被调用, 当前 poweron:', (typeof poweron !== 'undefined') ? poweron : 'undefined');
+    
+    // 直接使用 controls.js 的全局变量和函数
+    // 不能直接调用 powertogle() 因为它依赖全局 event 对象和特定的 DOM 结构
+    
+    if (typeof poweron !== 'undefined' && poweron) {
+        // 断开连接 - 直接调用底层函数
+        console.log('🔴 正在关闭电源...');
+        if (typeof AudioRX_stop === 'function') AudioRX_stop();
+        if (typeof AudioTX_stop === 'function') AudioTX_stop();
+        if (typeof ControlTRX_stop === 'function') ControlTRX_stop();
+        poweron = false;
+        
+        // 更新按钮状态
+        if (domElements.powerButton) {
+            domElements.powerButton.classList.remove('active');
+            const icon = domElements.powerButton.querySelector('.power-icon');
+            if (icon) icon.textContent = '⏻';
+        }
+        console.log('🔴 电源已关闭');
     } else {
-        // Long press - stop transmission
-        stopTransmission();
+        // 连接 - 直接调用底层函数
+        console.log('🟢 正在开启电源...');
+        if (typeof check_connected === 'function') check_connected();
+        if (typeof AudioRX_start === 'function') AudioRX_start();
+        if (typeof AudioTX_start === 'function') AudioTX_start();
+        if (typeof ControlTRX_start === 'function') ControlTRX_start();
+        if (typeof checklatency === 'function') checklatency();
+        poweron = true;
+        
+        // 更新按钮状态
+        if (domElements.powerButton) {
+            domElements.powerButton.classList.add('active');
+            const icon = domElements.powerButton.querySelector('.power-icon');
+            if (icon) icon.textContent = '⏼';
+        }
+        console.log('🟢 电源已开启');
+        
+        // iOS Safari：AudioContext 恢复已在点击事件处理函数内部完成
+        // 这里只是打印状态
+        if (typeof AudioRX_context !== 'undefined' && AudioRX_context) {
+            console.log('🔊 AudioContext 状态:', AudioRX_context.state);
+        }
     }
 }
 
-// Start transmission
-function startTransmission() {
-    if (isTransmitting) return;
-    
-    isTransmitting = true;
-    updateTXStatus(true);
-    sendWebSocketMessage('setPTT:true');
-    
-    // Haptic feedback for transmission start
-    if (navigator.vibrate) {
-        navigator.vibrate([50, 50, 50]);
-    }
-    
-    // 发送预热帧确保后端及时响应
-    setTimeout(() => {
-        sendPTTWarmupFrames();
-    }, 50);
-    
-    console.log('Transmission started');
-}
+////////////////////////////////////////////////////////////
+// PTT 预热帧发送
+////////////////////////////////////////////////////////////
 
-// Stop transmission
-function stopTransmission() {
-    if (!isTransmitting) return;
-    
-    isTransmitting = false;
-    updateTXStatus(false);
-    sendWebSocketMessage('setPTT:false');
-    
-    // Remove visual feedback
-    domElements.pttButton.classList.remove('active');
-    
-    // Haptic feedback for transmission stop
-    if (navigator.vibrate) {
-        navigator.vibrate(25);
-    }
-    
-    console.log('Transmission stopped');
-}
-
-// 发送PTT预热帧
 function sendPTTWarmupFrames() {
-    // 如果WebSocket TX连接可用，发送预热帧
+    // 使用 controls.js 的全局变量
     if (typeof wsAudioTX !== 'undefined' && wsAudioTX && wsAudioTX.readyState === WebSocket.OPEN) {
-        console.log('Sending PTT warmup frames...');
-        // 发送10个预热帧
-        for(let i = 0; i < 10; i++) {
+        console.log('🔥 发送 PTT 预热帧...');
+        for (let i = 0; i < 10; i++) {
             setTimeout(() => {
                 try {
-                    // 创建一个静音帧
-                    const warmup = new Int16Array(160); // 160个样本
-                    if (wsAudioTX && wsAudioTX.readyState === WebSocket.OPEN) {
-                        wsAudioTX.send(warmup);
-                        console.log(`Sent warmup frame ${i+1}/10`);
-                    }
-                } catch(e) {
-                    console.warn(`PTT warmup frame ${i} failed:`, e);
+                    // 发送静音帧
+                    const warmup = new Int16Array(160);
+                    wsAudioTX.send(warmup);
+                } catch (e) {
+                    console.warn('预热帧发送失败:', e);
                 }
-            }, i * 10); // 每10ms发送一帧
+            }, i * 10);
         }
+    }
+}
+
+////////////////////////////////////////////////////////////
+// RX 音频缓冲区清除
+////////////////////////////////////////////////////////////
+
+function flushRXAudioBuffer() {
+    // 使用 controls.js 的全局变量
+    if (typeof AudioRX_source_node !== 'undefined' && AudioRX_source_node && AudioRX_source_node.port) {
+        try {
+            AudioRX_source_node.port.postMessage({ type: 'flush' });
+            console.log('🧹 RX 音频缓冲区已清除');
+        } catch (e) {
+            console.warn('清除 RX 缓冲区失败:', e);
+        }
+    }
+    // 同时清除数组缓冲
+    if (typeof AudioRX_audiobuffer !== 'undefined') {
+        AudioRX_audiobuffer = [];
+    }
+}
+
+////////////////////////////////////////////////////////////
+// 消息发送函数 - 使用 controls.js 的全局 WebSocket
+////////////////////////////////////////////////////////////
+
+function sendWebSocketMessage(message) {
+    if (typeof wsControlTRX !== 'undefined' && wsControlTRX && wsControlTRX.readyState === WebSocket.OPEN) {
+        console.log(`📤 发送消息: ${message}`);
+        wsControlTRX.send(message);
     } else {
-        console.log('WebSocket TX not available for warmup frames');
+        console.warn('⚠️ WebSocket 未连接，无法发送消息:', message);
     }
 }
 
-// Toggle power state
-function togglePower() {
-    if (isConnected) {
-        disconnectWebSocket();
-        domElements.powerButton.querySelector('.power-icon').textContent = '⏻';
-        // Stop audio when disconnecting
-        if (typeof AudioRX_stop === 'function') {
-            AudioRX_stop();
-        }
-    } else {
-        connectWebSocket();
-        domElements.powerButton.querySelector('.power-icon').textContent = '⏼';
-        // Start audio using desktop-compatible implementation
-        // 移除延迟，立即启动音频
-        if (typeof AudioRX_start === 'function') {
-            console.log('Starting desktop-compatible audio immediately...');
-            // 在连接建立后立即初始化音频上下文
-            setTimeout(() => {
-                initAudioOnFirstTouch();
-            }, 100);
-        }
-    }
-}
+////////////////////////////////////////////////////////////
+// UI 更新函数
+////////////////////////////////////////////////////////////
 
-// Switch between tabs
-function switchTab(tabName) {
-    // Update active state for nav buttons
-    domElements.navButtons.forEach(button => {
-        if (button.dataset.tab === tabName) {
-            button.classList.add('active');
-        } else {
-            button.classList.remove('active');
-        }
-    });
-    
-    // In a full implementation, this would show/hide different content sections
-    console.log(`Switching to tab: ${tabName}`);
-}
-
-// Handle quick button actions
-function handleQuickButton(button) {
-    // Remove active state from siblings
-    const siblings = button.parentElement.children;
-    for (let i = 0; i < siblings.length; i++) {
-        siblings[i].classList.remove('active');
-    }
-    
-    // Add active state to clicked button
-    button.classList.add('active');
-    
-    // Handle specific button actions
-    if (button.id === 'vfo-a-btn' || button.id === 'vfo-b-btn') {
-        currentVFO = button.textContent;
-        domElements.vfoIndicator.textContent = currentVFO;
-        sendWebSocketMessage(`VFO_${currentVFO.replace('-', '')}`);
-    } else if (button.id === 'mode-btn') {
-        // Cycle through modes in a full implementation
-        cycleMode();
-    } else if (button.id === 'band-btn') {
-        // Show band selection in a full implementation
-        console.log('Band selection requested');
-    }
-}
-
-// Cycle through radio modes
-function cycleMode() {
-    const modes = ['LSB', 'USB', 'CW', 'FM', 'AM'];
-    const currentIndex = modes.indexOf(currentMode);
-    const nextIndex = (currentIndex + 1) % modes.length;
-    currentMode = modes[nextIndex];
-    domElements.modeIndicator.textContent = currentMode;
-    sendWebSocketMessage(`setMode:${currentMode}`);
-}
-
-// Tune frequency by specified step
-function tuneFrequency(step) {
-    currentFrequency += step;
-    if (currentFrequency < 0) currentFrequency = 0;
-    updateFrequencyDisplay();
-    sendWebSocketMessage(`setFreq:${currentFrequency}`);
-}
-
-// Update frequency display
-function updateFrequencyDisplay() {
-    const freqStr = currentFrequency.toString().padStart(9, '0');
-    
-    // Update each digit element
-    document.getElementById('freq-100mhz').textContent = freqStr[0];
-    document.getElementById('freq-10mhz').textContent = freqStr[1];
-    document.getElementById('freq-1mhz').textContent = freqStr[2];
-    document.getElementById('freq-100khz').textContent = freqStr[3];
-    document.getElementById('freq-10khz').textContent = freqStr[4];
-    document.getElementById('freq-1khz').textContent = freqStr[5];
-    document.getElementById('freq-100hz').textContent = freqStr[6];
-    document.getElementById('freq-10hz').textContent = freqStr[7];
-    document.getElementById('freq-1hz').textContent = freqStr[8];
-    
-    // Log frequency changes for debugging
-    console.log('Frequency updated to:', currentFrequency);
-}
-
-// Update TX status indicator
-function updateTXStatus(isTransmitting) {
-    if (isTransmitting) {
+// 更新 TX 状态显示
+function updateTXStatus(isTX) {
+    if (isTX) {
         domElements.statusTX.classList.add('active');
         domElements.statusRX.classList.remove('active');
     } else {
@@ -436,45 +448,100 @@ function updateTXStatus(isTransmitting) {
     }
 }
 
-// Initialize S-Meter visualization
-function initializeSMeter() {
+// 更新频率显示
+function updateFrequencyDisplay() {
+    // 从 controls.js 的全局变量获取频率
+    if (typeof TRXfrequency !== 'undefined') {
+        mobileState.currentFrequency = TRXfrequency;
+    }
+    
+    const freqStr = mobileState.currentFrequency.toString().padStart(9, '0');
+    
+    const elements = ['freq-100mhz', 'freq-10mhz', 'freq-1mhz', 
+                      'freq-100khz', 'freq-10khz', 'freq-1khz',
+                      'freq-100hz', 'freq-10hz', 'freq-1hz'];
+    
+    elements.forEach((id, index) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = freqStr[index];
+    });
+}
+
+// 调节频率
+function tuneFrequency(step) {
+    // 检查 poweron 状态（来自 controls.js）
+    if (typeof poweron !== 'undefined' && !poweron) return;
+    
+    // 使用 controls.js 的全局频率变量
+    if (typeof TRXfrequency !== 'undefined') {
+        mobileState.currentFrequency = TRXfrequency;
+    }
+    
+    mobileState.currentFrequency += step;
+    if (mobileState.currentFrequency < 0) mobileState.currentFrequency = 0;
+    
+    // 更新全局频率变量
+    if (typeof TRXfrequency !== 'undefined') {
+        TRXfrequency = mobileState.currentFrequency;
+    }
+    
+    updateFrequencyDisplay();
+    
+    // 使用 controls.js 的发送函数
+    if (typeof sendTRXfreq === 'function') {
+        sendTRXfreq(mobileState.currentFrequency);
+    } else {
+        sendWebSocketMessage("setFreq:" + mobileState.currentFrequency);
+    }
+}
+
+// 更新 S 表
+function updateSMeter(level) {
     const canvas = domElements.sMeterCanvas;
     if (!canvas) return;
     
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
     
-    // Draw initial S-Meter
+    const value = parseInt(level) || 0;
+    drawSMeter(ctx, value);
+}
+
+////////////////////////////////////////////////////////////
+// S 表绘制
+////////////////////////////////////////////////////////////
+
+function initializeSMeter() {
+    const canvas = domElements.sMeterCanvas;
+    if (!canvas) return;
+    
+    const ctx = canvas.getContext('2d');
     drawSMeter(ctx, 0);
     
-    // In a full implementation, this would be updated with real S-Meter data
-    // For now, we'll simulate periodic updates
+    // 定期更新（模拟）
     setInterval(() => {
-        if (isConnected && !isTransmitting) {
-            const randomValue = Math.random() * 100;
-            drawSMeter(ctx, randomValue);
+        if (mobileState.isConnected && !mobileState.isTransmitting) {
+            // 实际应该从 WebSocket 获取
         }
     }, 500);
 }
 
-// Draw S-Meter on canvas
 function drawSMeter(ctx, value) {
     const canvas = ctx.canvas;
     const width = canvas.width;
     const height = canvas.height;
     
-    // Clear canvas
+    // 清除画布
     ctx.clearRect(0, 0, width, height);
     
-    // Draw background
+    // 绘制背景
     ctx.fillStyle = '#111';
     ctx.fillRect(0, 0, width, height);
     
-    // Draw grid lines
+    // 绘制网格
     ctx.strokeStyle = '#333';
     ctx.lineWidth = 1;
     
-    // Vertical grid lines
     for (let i = 0; i <= 10; i++) {
         const x = (width / 10) * i;
         ctx.beginPath();
@@ -483,16 +550,7 @@ function drawSMeter(ctx, value) {
         ctx.stroke();
     }
     
-    // Horizontal grid lines
-    for (let i = 0; i <= 5; i++) {
-        const y = (height / 5) * i;
-        ctx.beginPath();
-        ctx.moveTo(0, y);
-        ctx.lineTo(width, y);
-        ctx.stroke();
-    }
-    
-    // Draw S-Meter bars
+    // 绘制条形
     const barWidth = width / 50;
     const maxBars = 50;
     const barsToDraw = Math.min(maxBars, Math.floor((value / 100) * maxBars));
@@ -502,259 +560,465 @@ function drawSMeter(ctx, value) {
         const barHeight = height * (0.2 + (i / maxBars) * 0.8);
         const y = height - barHeight;
         
-        // Color gradient from green to red
+        // 颜色渐变
         if (i < 20) {
-            ctx.fillStyle = '#4CAF50'; // Green
+            ctx.fillStyle = '#4CAF50';
         } else if (i < 35) {
-            ctx.fillStyle = '#FFC107'; // Yellow
+            ctx.fillStyle = '#FFC107';
         } else {
-            ctx.fillStyle = '#F44336'; // Red
+            ctx.fillStyle = '#F44336';
         }
         
         ctx.fillRect(x, y, barWidth - 1, barHeight);
     }
-    
-    // Draw value text
-    ctx.fillStyle = '#fff';
-    ctx.font = '14px Arial';
-    ctx.textAlign = 'right';
-    ctx.fillText(`${Math.round(value)}%`, width - 10, 20);
 }
 
-// WebSocket connection handling
-function connectWebSocket() {
-    console.log('Connecting to UHRR WebSocket server...');
+////////////////////////////////////////////////////////////
+// 菜单和其他 UI 功能
+////////////////////////////////////////////////////////////
+
+function toggleMenu() {
+    domElements.mainMenu.classList.toggle('open');
+    domElements.menuOverlay.classList.toggle('open');
+}
+
+function closeMenu() {
+    domElements.mainMenu.classList.remove('open');
+    domElements.menuOverlay.classList.remove('open');
+}
+
+function switchTab(tabName) {
+    domElements.navButtons.forEach(button => {
+        if (button.dataset.tab === tabName) {
+            button.classList.add('active');
+        } else {
+            button.classList.remove('active');
+        }
+    });
+    console.log(`切换到标签: ${tabName}`);
+}
+
+function handleQuickButton(button) {
+    // 移除兄弟元素的 active 状态
+    const siblings = button.parentElement.children;
+    for (let i = 0; i < siblings.length; i++) {
+        siblings[i].classList.remove('active');
+    }
     
-    // Use the same protocol as the current page
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const baseUrl = `${protocol}//${window.location.host}`;
+    button.classList.add('active');
     
-    try {
-        // Control WebSocket
-        console.log('Establishing control WebSocket connection...');
-        wsControlTRX = new WebSocket(`${baseUrl}/WSCTRX`);
-        
-        wsControlTRX.onopen = function() {
-            console.log('Control WebSocket connected successfully');
-            isConnected = true;
-            domElements.statusCtrl.classList.add('connected');
-            domElements.powerButton.querySelector('.power-icon').textContent = '⏻';
-            
-            // Request initial status from radio
-            console.log('Requesting initial frequency and mode...');
-            wsControlTRX.send('getFreq:');
-            wsControlTRX.send('getMode:');
-        };
-        
-        wsControlTRX.onmessage = function(msg) {
-            console.log('WebSocket message received:', msg.data);
-            handleControlMessage(msg.data);
-        };
-        
-        wsControlTRX.onclose = function() {
-            console.log('Control WebSocket disconnected');
-            isConnected = false;
-            domElements.statusCtrl.classList.remove('connected');
-            domElements.powerButton.querySelector('.power-icon').textContent = '⏻';
-        };
-        
-        wsControlTRX.onerror = function(error) {
-            console.error('Control WebSocket error:', error);
-            isConnected = false;
-            domElements.statusCtrl.classList.remove('connected');
-        };
-        
-        // Audio RX WebSocket
-        console.log('Establishing audio RX WebSocket connection...');
-        wsAudioRX = new WebSocket(`${baseUrl}/WSaudioRX`);
-        wsAudioRX.binaryType = 'arraybuffer';
-        wsAudioRX.onopen = function() {
-            console.log('Audio RX WebSocket connected');
-            // Update status indicator
-            const indwsAudioRX = document.getElementById('indwsAudioRX');
-            if (indwsAudioRX) {
-                indwsAudioRX.innerHTML = '<img src="img/critsgreen.png">wsRX';
-            }
-            // Use desktop-compatible event handlers
-            if (typeof wsAudioRXopen === 'function') {
-                wsAudioRXopen();
-            }
-        };
-        
-        wsAudioRX.onmessage = function(event) {
-            // Use desktop-compatible message handler
-            if (typeof appendwsAudioRX === 'function') {
-                // Create a mock message object to match the desktop interface
-                const mockMsg = { data: event.data };
-                appendwsAudioRX(mockMsg);
-            }
-        };
-        
-        wsAudioRX.onclose = function() {
-            console.log('Audio RX WebSocket disconnected');
-            // Update status indicator
-            const indwsAudioRX = document.getElementById('indwsAudioRX');
-            if (indwsAudioRX) {
-                indwsAudioRX.innerHTML = '<img src="img/critsred.png">wsRX';
-            }
-            if (typeof wsAudioRXclose === 'function') {
-                wsAudioRXclose();
-            }
-        };
-        
-        wsAudioRX.onerror = function(error) {
-            console.error('Audio RX WebSocket error:', error);
-            // Update status indicator
-            const indwsAudioRX = document.getElementById('indwsAudioRX');
-            if (indwsAudioRX) {
-                indwsAudioRX.innerHTML = '<img src="img/critsred.png">wsRX';
-            }
-            if (typeof wsAudioRXerror === 'function') {
-                wsAudioRXerror(error);
-            }
-        };
-        
-        // Audio TX WebSocket
-        console.log('Establishing audio TX WebSocket connection...');
-        wsAudioTX = new WebSocket(`${baseUrl}/WSaudioTX`);
-        wsAudioTX.onopen = function() {
-            console.log('Audio TX WebSocket connected');
-            // Update status indicator
-            const indwsAudioTX = document.getElementById('indwsAudioTX');
-            if (indwsAudioTX) {
-                indwsAudioTX.innerHTML = '<img src="img/critsgreen.png">wsTX';
-            }
-        };
-        
-        wsAudioTX.onclose = function() {
-            console.log('Audio TX WebSocket disconnected');
-            // Update status indicator
-            const indwsAudioTX = document.getElementById('indwsAudioTX');
-            if (indwsAudioTX) {
-                indwsAudioTX.innerHTML = '<img src="img/critsred.png">wsTX';
-            }
-        };
-        
-        wsAudioTX.onerror = function(error) {
-            console.error('Audio TX WebSocket error:', error);
-            // Update status indicator
-            const indwsAudioTX = document.getElementById('indwsAudioTX');
-            if (indwsAudioTX) {
-                indwsAudioTX.innerHTML = '<img src="img/critsred.png">wsTX';
-            }
-        };
-        
-    } catch (error) {
-        console.error('Failed to establish WebSocket connections:', error);
-        isConnected = false;
+    // 处理特定按钮
+    if (button.id === 'vfo-a-btn' || button.id === 'vfo-b-btn') {
+        // VFO 切换 - 目前后端不支持，只更新 UI
+        const vfo = button.id === 'vfo-a-btn' ? 'VFO-A' : 'VFO-B';
+        mobileState.currentVFO = vfo;
+        if (domElements.vfoIndicator) {
+            domElements.vfoIndicator.textContent = vfo;
+        }
+        console.log('VFO 切换:', vfo, '(后端暂不支持)');
+        // TODO: 当后端支持时发送命令
+        // sendWebSocketMessage("setVFO:" + vfo.replace('-', ''));
+    } else if (button.id === 'mode-btn') {
+        cycleMode();
+    } else if (button.id === 'band-btn') {
+        // 波段切换 - 简单实现
+        cycleBand();
+    } else if (button.id === 'filter-btn') {
+        // 滤波器切换
+        cycleFilter();
+    } else if (button.id === 'step-btn') {
+        // 步进切换
+        cycleStep();
     }
 }
 
-function disconnectWebSocket() {
-    console.log('Disconnecting from UHRR WebSocket server...');
+// 波段切换 - 频率参照 index.html 中的设置
+function cycleBand() {
+    const bands = ['160m', '80m', '40m', '30m', '20m', '17m', '15m', '12m', '10m'];
+    const bandFreqs = {
+        '160m': 1845500,   // 1.845500 MHz
+        '80m': 3850000,    // 3.850000 MHz
+        '40m': 7050000,    // 7.050000 MHz
+        '30m': 10140000,   // 10.140000 MHz
+        '20m': 14270000,   // 14.270000 MHz
+        '17m': 18132500,   // 18.132500 MHz
+        '15m': 21400000,   // 21.400000 MHz
+        '12m': 24952500,   // 24.952500 MHz
+        '10m': 28450000,   // 28.450000 MHz
+    };
     
-    if (wsControlTRX) {
-        wsControlTRX.close();
-        wsControlTRX = null;
-    }
-    if (wsAudioRX) {
-        wsAudioRX.close();
-        wsAudioRX = null;
-    }
-    if (wsAudioTX) {
-        wsAudioTX.close();
-        wsAudioTX = null;
-    }
+    const bandBtn = document.getElementById('band-btn');
+    if (!bandBtn) return;
     
-    isConnected = false;
-    domElements.statusCtrl.classList.remove('connected');
-    domElements.powerButton.querySelector('.power-icon').textContent = '⏻';
+    const currentBand = bandBtn.innerHTML;
+    const currentIndex = bands.indexOf(currentBand);
+    const nextIndex = (currentIndex + 1) % bands.length;
+    const nextBand = bands[nextIndex];
+    
+    bandBtn.innerHTML = nextBand;
+    
+    // 设置频率
+    const freq = bandFreqs[nextBand];
+    if (freq && typeof TRXfrequency !== 'undefined') {
+        TRXfrequency = freq;
+        mobileState.currentFrequency = freq;
+        updateFrequencyDisplay();
+        if (typeof sendTRXfreq === 'function') {
+            sendTRXfreq(freq);
+        }
+        console.log('波段切换:', nextBand, '频率:', freq);
+    }
 }
 
-function sendWebSocketMessage(message) {
-    if (wsControlTRX && wsControlTRX.readyState === WebSocket.OPEN) {
-        console.log(`Sending message: ${message}`);
-        wsControlTRX.send(message);
-    } else {
-        console.warn('WebSocket not connected, cannot send message:', message);
+// 滤波器切换 - 使用 controls.js 的 setaudiofilter
+function cycleFilter() {
+    const filters = [
+        { name: 'OFF', ft: 'highshelf', frq: 22000, fg: 0, fq: 0 },
+        { name: 'LP2.7k', ft: 'highshelf', frq: 2700, fg: -20, fq: 0 },
+        { name: 'LP2.1k', ft: 'highshelf', frq: 2100, fg: -20, fq: 0 },
+        { name: 'LP1.0k', ft: 'highshelf', frq: 1000, fg: -20, fq: 0 },
+        { name: 'BP500', ft: 'bandpass', frq: 500, fg: -100, fq: 50 },
+        { name: 'BP300', ft: 'bandpass', frq: 300, fg: -100, fq: 50 }
+    ];
+    
+    const filterBtn = document.getElementById('filter-btn');
+    if (!filterBtn) return;
+    
+    const currentName = filterBtn.innerHTML;
+    const currentIndex = filters.findIndex(f => f.name === currentName);
+    const nextIndex = (currentIndex + 1) % filters.length;
+    const nextFilter = filters[nextIndex];
+    
+    filterBtn.innerHTML = nextFilter.name;
+    
+    // 应用滤波器
+    if (typeof poweron !== 'undefined' && poweron && typeof AudioRX_biquadFilter_node !== 'undefined' && AudioRX_biquadFilter_node) {
+        try {
+            AudioRX_biquadFilter_node.type = nextFilter.ft;
+            AudioRX_biquadFilter_node.frequency.setValueAtTime(nextFilter.frq, AudioRX_context.currentTime);
+            AudioRX_biquadFilter_node.gain.setValueAtTime(nextFilter.fg, AudioRX_context.currentTime);
+            AudioRX_biquadFilter_node.Q.setValueAtTime(nextFilter.fq, AudioRX_context.currentTime);
+            console.log('滤波器切换:', nextFilter.name, nextFilter);
+        } catch (e) {
+            console.error('滤波器设置失败:', e);
+        }
     }
 }
 
-function handleControlMessage(data) {
-    const parts = data.split(':');
-    const command = parts[0];
-    const value = parts[1];
+// 步进切换
+function cycleStep() {
+    const steps = ['10Hz', '100Hz', '1kHz', '10kHz'];
+    const stepValues = [10, 100, 1000, 10000];
+    const stepBtn = document.getElementById('step-btn');
+    if (!stepBtn) return;
     
-    console.log('Received command:', command, 'value:', value);
+    const current = stepBtn.innerHTML;
+    const currentIndex = steps.indexOf(current);
+    const nextIndex = (currentIndex + 1) % steps.length;
+    stepBtn.innerHTML = steps[nextIndex];
     
-    switch (command) {
-        case 'getFreq':
-            // Update frequency display
-            const freq = parseInt(value);
-            if (freq && freq > 0) {
-                currentFrequency = freq;
-                updateFrequencyDisplay();
-            }
+    // 存储当前步进值
+    mobileState.tuneStep = stepValues[nextIndex];
+    console.log('步进切换:', steps[nextIndex]);
+}
+
+////////////////////////////////////////////////////////////
+// 菜单项处理
+////////////////////////////////////////////////////////////
+
+// 菜单项点击处理
+function handleMenuItem(action) {
+    console.log('菜单项点击:', action);
+    closeMenu();
+    
+    switch (action) {
+        case 'bands':
+            showBandSelector();
             break;
-        case 'getMode':
-            if (value) {
-                currentMode = value;
-                domElements.modeIndicator.textContent = currentMode;
-            }
+        case 'modes':
+            showModeSelector();
             break;
-        case 'getSignalLevel':
-            // Update S-meter
-            updateSMeter(value);
+        case 'memory':
+            showMemoryPanel();
             break;
-        case 'getPTT':
-            // Update PTT status
-            const pttStatus = value === 'true';
-            isTransmitting = pttStatus;
-            updateTXStatus(pttStatus);
+        case 'settings':
+            showSettingsPanel();
             break;
-        default:
-            console.log('Unknown command:', command, value);
+        case 'audio':
+            showAudioPanel();
+            break;
+        case 'digital':
+            showDigitalPanel();
+            break;
+        case 'logbook':
+            showLogbookPanel();
+            break;
+        case 'about':
+            showAboutPanel();
             break;
     }
 }
 
-function updateSMeter(level) {
-    // Update S-meter display with signal level
-    console.log('Updating S-meter with level:', level);
-    // In a full implementation, this would update the canvas
+// 波段选择器
+function showBandSelector() {
+    const bands = [
+        { name: '160m', freq: 1845500 },
+        { name: '80m', freq: 3850000 },
+        { name: '40m', freq: 7050000 },
+        { name: '30m', freq: 10140000 },
+        { name: '20m', freq: 14270000 },
+        { name: '17m', freq: 18132500 },
+        { name: '15m', freq: 21400000 },
+        { name: '12m', freq: 24952500 },
+        { name: '10m', freq: 28450000 }
+    ];
+    
+    let html = '<div class="modal-panel"><h3>波段选择</h3><div class="band-grid">';
+    bands.forEach(band => {
+        html += `<button class="band-select-btn" onclick="selectBand(${band.freq}, '${band.name}')">${band.name}</button>`;
+    });
+    html += '</div><button class="close-panel-btn" onclick="closeModalPanel()">关闭</button></div>';
+    
+    showModalPanel(html);
 }
 
-// Handle page visibility changes
+function selectBand(freq, name) {
+    if (typeof TRXfrequency !== 'undefined') {
+        TRXfrequency = freq;
+        mobileState.currentFrequency = freq;
+        updateFrequencyDisplay();
+        
+        // 更新波段按钮
+        const bandBtn = document.getElementById('band-btn');
+        if (bandBtn) bandBtn.innerHTML = name;
+        
+        if (typeof sendTRXfreq === 'function') {
+            sendTRXfreq(freq);
+        }
+        console.log('选择波段:', name, '频率:', freq);
+    }
+    closeModalPanel();
+}
+
+// 模式选择器
+function showModeSelector() {
+    const modes = ['USB', 'LSB', 'AM', 'FM'];
+    
+    let html = '<div class="modal-panel"><h3>模式选择</h3><div class="mode-grid">';
+    modes.forEach(mode => {
+        const active = mobileState.currentMode === mode ? 'active' : '';
+        html += `<button class="mode-select-btn ${active}" onclick="selectMode('${mode}')">${mode}</button>`;
+    });
+    html += '</div><button class="close-panel-btn" onclick="closeModalPanel()">关闭</button></div>';
+    
+    showModalPanel(html);
+}
+
+function selectMode(mode) {
+    mobileState.currentMode = mode;
+    
+    // 更新 UI
+    if (domElements.modeIndicator) {
+        domElements.modeIndicator.textContent = mode;
+    }
+    const modeBtn = document.getElementById('mode-btn');
+    if (modeBtn) modeBtn.innerHTML = mode;
+    
+    // 发送命令
+    sendWebSocketMessage("setMode:" + mode);
+    console.log('选择模式:', mode);
+    
+    closeModalPanel();
+}
+
+// 内存面板（占位）
+function showMemoryPanel() {
+    let html = '<div class="modal-panel"><h3>内存管理</h3>';
+    html += '<p>内存功能开发中...</p>';
+    html += '<button class="close-panel-btn" onclick="closeModalPanel()">关闭</button></div>';
+    showModalPanel(html);
+}
+
+// 设置面板
+function showSettingsPanel() {
+    let html = '<div class="modal-panel"><h3>设置</h3>';
+    html += '<div class="setting-item">';
+    html += '<label>AF 增益</label>';
+    html += '<input type="range" id="mobile-af-gain" min="0" max="100" value="50" onchange="setAFGain(this.value)">';
+    html += '</div>';
+    html += '<div class="setting-item">';
+    html += '<label>MIC 增益</label>';
+    html += '<input type="range" id="mobile-mic-gain" min="0" max="200" value="50" onchange="setMicGain(this.value)">';
+    html += '</div>';
+    html += '<div class="setting-item">';
+    html += '<label>静噪</label>';
+    html += '<input type="range" id="mobile-squelch" min="0" max="100" value="0" onchange="setSquelch(this.value)">';
+    html += '</div>';
+    html += '<button class="close-panel-btn" onclick="closeModalPanel()">关闭</button></div>';
+    showModalPanel(html);
+}
+
+function setAFGain(value) {
+    if (typeof AudioRX_SetGAIN === 'function') {
+        AudioRX_SetGAIN(value / 100);
+    }
+    console.log('AF 增益:', value);
+}
+
+function setMicGain(value) {
+    if (typeof AudioTX_SetGAIN === 'function') {
+        AudioTX_SetGAIN(value / 100);
+    }
+    console.log('MIC 增益:', value);
+}
+
+function setSquelch(value) {
+    var squelchEl = document.getElementById('SQUELCH');
+    if (squelchEl) {
+        squelchEl.value = value;
+        if (typeof drawRXSmeter === 'function') {
+            drawRXSmeter();
+        }
+    }
+    console.log('静噪:', value);
+}
+
+// 音频面板
+function showAudioPanel() {
+    const filters = ['OFF', 'LP2.7k', 'LP2.1k', 'LP1.0k', 'BP500', 'BP300'];
+    
+    let html = '<div class="modal-panel"><h3>音频滤波器</h3><div class="filter-grid">';
+    filters.forEach(f => {
+        html += `<button class="filter-select-btn" onclick="selectFilter('${f}')">${f}</button>`;
+    });
+    html += '</div><button class="close-panel-btn" onclick="closeModalPanel()">关闭</button></div>';
+    showModalPanel(html);
+}
+
+function selectFilter(name) {
+    const filterBtn = document.getElementById('filter-btn');
+    if (filterBtn) filterBtn.innerHTML = name;
+    cycleFilter(); // 应用滤波器
+    closeModalPanel();
+}
+
+// 数字模式面板（占位）
+function showDigitalPanel() {
+    let html = '<div class="modal-panel"><h3>数字模式</h3>';
+    html += '<p>数字模式功能开发中...</p>';
+    html += '<button class="close-panel-btn" onclick="closeModalPanel()">关闭</button></div>';
+    showModalPanel(html);
+}
+
+// 日志面板（占位）
+function showLogbookPanel() {
+    let html = '<div class="modal-panel"><h3>日志</h3>';
+    html += '<p>日志功能开发中...</p>';
+    html += '<button class="close-panel-btn" onclick="closeModalPanel()">关闭</button></div>';
+    showModalPanel(html);
+}
+
+// 关于面板
+function showAboutPanel() {
+    let html = '<div class="modal-panel"><h3>关于</h3>';
+    html += '<p><strong>Universal Ham Radio Remote</strong></p>';
+    html += '<p>版本: 3.2</p>';
+    html += '<p>移动端界面优化版</p>';
+    html += '<hr>';
+    html += '<p>基于 F4HTB 开源项目</p>';
+    html += '<p>GPL-3.0 许可证</p>';
+    html += '<button class="close-panel-btn" onclick="closeModalPanel()">关闭</button></div>';
+    showModalPanel(html);
+}
+
+// 模态面板显示/隐藏
+function showModalPanel(html) {
+    let panel = document.getElementById('modal-panel-container');
+    if (!panel) {
+        panel = document.createElement('div');
+        panel.id = 'modal-panel-container';
+        document.body.appendChild(panel);
+    }
+    panel.innerHTML = html;
+    panel.style.display = 'flex';
+}
+
+function closeModalPanel() {
+    const panel = document.getElementById('modal-panel-container');
+    if (panel) {
+        panel.style.display = 'none';
+    }
+}
+
+function cycleMode() {
+    const modes = ['LSB', 'USB', 'AM', 'FM'];
+    const currentIndex = modes.indexOf(mobileState.currentMode);
+    const nextIndex = (currentIndex + 1) % modes.length;
+    mobileState.currentMode = modes[nextIndex];
+    
+    // 更新显示
+    domElements.modeIndicator.textContent = mobileState.currentMode;
+    var modeBtn = document.getElementById("mode-btn");
+    if (modeBtn) {
+        modeBtn.innerHTML = mobileState.currentMode;
+    }
+    
+    // 发送模式命令
+    sendWebSocketMessage("setMode:" + mobileState.currentMode);
+}
+
+////////////////////////////////////////////////////////////
+// 页面可见性和方向变化处理
+////////////////////////////////////////////////////////////
+
 document.addEventListener('visibilitychange', function() {
     if (document.hidden) {
-        // Page is hidden, optionally reduce activity
-        console.log('Page hidden');
+        console.log('页面隐藏');
     } else {
-        // Page is visible, resume normal activity
-        console.log('Page visible');
+        console.log('页面可见');
     }
 });
 
-// Handle window resize
 window.addEventListener('resize', function() {
-    // Reinitialize S-Meter on resize
     initializeSMeter();
 });
 
-// Prevent zoom on double tap
-let lastTouchEnd = 0;
-document.addEventListener('touchend', function(event) {
-    const now = (new Date()).getTime();
-    if (now - lastTouchEnd <= 300) {
-        event.preventDefault();
-    }
-    lastTouchEnd = now;
-}, false);
-
-// Handle orientation change
 window.addEventListener('orientationchange', function() {
     setTimeout(() => {
-        // Reinitialize elements that might need adjustment
         initializeSMeter();
     }, 100);
 });
+
+////////////////////////////////////////////////////////////
+// 导出全局函数供外部调用
+////////////////////////////////////////////////////////////
+
+// 供 controls.js 调用的接口
+window.mobileModemUpdateFrequency = function(freq) {
+    mobileState.currentFrequency = freq;
+    updateFrequencyDisplay();
+};
+
+window.mobileModemUpdateMode = function(mode) {
+    mobileState.currentMode = mode;
+    domElements.modeIndicator.textContent = mode;
+};
+
+window.mobileModemUpdatePTT = function(state) {
+    mobileState.isTransmitting = state;
+    updateTXStatus(state);
+};
+
+// 监听 controls.js 的状态变化
+if (typeof MutationObserver !== 'undefined') {
+    // 监听频率显示变化
+    const freqObserver = new MutationObserver(function(mutations) {
+        mutations.forEach(function(mutation) {
+            if (mutation.target.id && mutation.target.id.startsWith('freq-')) {
+                // 频率显示已更新
+            }
+        });
+    });
+}
+
+console.log('🎯 Mobile Modern JS 加载完成');

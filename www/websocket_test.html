@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>WebSocket Test</title>
+</head>
+<body>
+    <h1>WebSocket Test</h1>
+    <button id="testControl">Test Control WebSocket</button>
+    <button id="testAudioRX">Test Audio RX WebSocket</button>
+    <button id="testAudioTX">Test Audio TX WebSocket</button>
+    <div id="status"></div>
+    <script>
+        document.getElementById('testControl').addEventListener('click', function() {
+            testWebSocket('/WSCTRX', 'Control');
+        });
+        
+        document.getElementById('testAudioRX').addEventListener('click', function() {
+            testWebSocket('/WSaudioRX', 'Audio RX');
+        });
+        
+        document.getElementById('testAudioTX').addEventListener('click', function() {
+            testWebSocket('/WSaudioTX', 'Audio TX');
+        });
+        
+        function testWebSocket(endpoint, name) {
+            var protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            var ws = new WebSocket(protocol + '//' + window.location.host + endpoint);
+            
+            ws.onopen = function() {
+                document.getElementById('status').innerHTML += '<p>' + name + ' WebSocket connected successfully</p>';
+                ws.close();
+            };
+            
+            ws.onerror = function(error) {
+                document.getElementById('status').innerHTML += '<p style="color: red;">' + name + ' WebSocket error: ' + error + '</p>';
+            };
+            
+            ws.onclose = function() {
+                document.getElementById('status').innerHTML += '<p>' + name + ' WebSocket closed</p>';
+            };
+        }
+    </script>
+</body>
+</html>

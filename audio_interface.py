@@ -96,7 +96,7 @@ class PyAudioCapture(threading.Thread):
                 rate=16000,
                 input=True,
                 input_device_index=device_index,
-                frames_per_buffer=512
+                frames_per_buffer=256  # 优化：从512减至256，降低延迟约16ms
             )
             print(f'PyAudio input stream opened successfully with {device_channels} channel(s) at 16000 Hz')
             self.stereo_mode = (device_channels == 2)
@@ -110,7 +110,7 @@ class PyAudioCapture(threading.Thread):
                     rate=16000,
                     input=True,
                     input_device_index=device_index,
-                    frames_per_buffer=512
+                    frames_per_buffer=256  # 优化：从512减至256，降低延迟约16ms
                 )
                 print('PyAudio input stream opened successfully with MONO (1 channel) at 16000 Hz - fallback')
                 self.stereo_mode = False
@@ -123,7 +123,7 @@ class PyAudioCapture(threading.Thread):
                         channels=1,
                         rate=16000,
                         input=True,
-                        frames_per_buffer=512
+                        frames_per_buffer=256  # 优化：从512减至256，降低延迟约16ms
                     )
                     print('Opened with default input device (mono) at 16000 Hz')
                     self.stereo_mode = False
@@ -157,71 +157,64 @@ class PyAudioCapture(threading.Thread):
         
         print("🎵 PyAudioCapture线程已启动，开始音频捕获...")
         frame_count = 0
+        last_log_time = time.time()
         
         while True:
-            # Always capture audio data regardless of flagWavstart
-            # This ensures continuous audio streaming even when clients reconnect
             try:
+                # 使用非阻塞读取，避免线程被阻塞
                 data = self.stream.read(256, exception_on_overflow=False)
-                # Reduce delay for better responsiveness
-                time.sleep(0.005)
+                
                 if len(data) > 0:
                     frame_count += 1
-                    if frame_count % 100 == 0:
-                        print(f"🎵 音频捕获中... 帧数: {frame_count}, 数据长度: {len(data)}")
+                    
+                    # 每 5 秒打印一次状态
+                    current_time = time.time()
+                    if current_time - last_log_time >= 5.0:
+                        print(f"🎵 音频捕获正常... 帧数: {frame_count}, 数据长度: {len(data)}")
+                        last_log_time = current_time
+                    
                     # Convert stereo to mono if needed
                     if self.stereo_mode:
-                        # Convert stereo data (Float32) to mono by averaging left and right channels
                         stereo_data = np.frombuffer(data, dtype=np.float32)
-                        # Reshape to separate left and right channels
                         stereo_data = stereo_data.reshape(-1, 2)
-                        # Average left and right channels to create mono
                         mono_data = np.mean(stereo_data, axis=1)
-                        # Convert numpy array to bytes for WebSocket transmission
                         data = mono_data.tobytes()
                     
-                    # Send Int16 data to WebSocket clients (50% bandwidth reduction)
+                    # Convert Float32 to Int16 for 50% bandwidth reduction
+                    float32_data = np.frombuffer(data, dtype=np.float32)
+                    int16_data = (float32_data * 32767).astype(np.int16)
+                    compressed_data = int16_data.tobytes()
+                    
+                    # 发送到客户端队列
                     try:
-                        # Convert Float32 to Int16 for 50% bandwidth reduction
-                        float32_data = np.frombuffer(data, dtype=np.float32)
-                        int16_data = (float32_data * 32767).astype(np.int16)
-                        compressed_data = int16_data.tobytes()
-                        
-                        # Access the global AudioRXHandlerClients list from the main module
                         import sys
                         main_module = sys.modules['__main__']
                         if hasattr(main_module, 'AudioRXHandlerClients'):
                             global AudioRXHandlerClients
                             AudioRXHandlerClients = getattr(main_module, 'AudioRXHandlerClients')
                             client_count = len(AudioRXHandlerClients)
-                            # Initialize and increment frame counter
-                            if hasattr(self, '_log_counter'):
-                                self._log_counter += 1
-                            else:
-                                self._log_counter = 1
 
                             if client_count > 0:
                                 for c in AudioRXHandlerClients:
-                                    c.Wavframes.append(compressed_data)
-                                # Print logs only every 1000 frames to reduce log volume
-                                if self._log_counter % 1000 == 0:
-                                    original_size = len(data)
-                                    compressed_size = len(compressed_data)
-                                    bandwidth_saved = (1 - compressed_size / original_size) * 100
-                                    print(f"🎵 Int16优化 - 客户端: {client_count}, 帧: {self._log_counter}")
-                                    print(f"📊 带宽节省: {bandwidth_saved:.1f}% ({original_size} → {compressed_size} 字节)")
-                            else:
-                                # Print logs only every 1000 frames when no clients are connected
-                                if self._log_counter % 1000 == 0:
-                                    print(f"DEBUG: Checking clients - found {client_count} clients")
-                                    print("No audio clients connected")
-                        else:
-                            print("AudioRXHandlerClients not found in main module")
+                                    # 限制每个客户端的队列长度，防止积压
+                                    if len(c.Wavframes) < 20:
+                                        c.Wavframes.append(compressed_data)
+                                    else:
+                                        # 队列满时丢弃最旧的帧
+                                        c.Wavframes.pop(0)
+                                        c.Wavframes.append(compressed_data)
                     except Exception as e:
-                        print(f"Error accessing AudioRXHandlerClients: {e}")
+                        if frame_count % 100 == 0:
+                            print(f"Error accessing AudioRXHandlerClients: {e}")
                 else:
-                    print("no data")
-                    time.sleep(0.01)
+                    # 没有数据时短暂等待
+                    time.sleep(0.005)
+                    
+            except IOError as e:
+                # PyAudio 缓冲区溢出，继续
+                if frame_count % 100 == 0:
+                    print(f"Audio buffer overflow: {e}")
+                continue
             except Exception as e:
                 print(f"Audio read error: {e}")
                 time.sleep(0.01)
@@ -268,7 +261,7 @@ class PyAudioPlayback:
                 rate=itrate,
                 output=True,
                 output_device_index=device_index,
-                frames_per_buffer=512  # 减小缓冲区以降低延迟
+                frames_per_buffer=256  # 优化：从512减至256，降低延迟约16ms
             )
             print(f'PyAudio output stream opened successfully at {itrate}Hz with low latency settings')
         except Exception as e:
@@ -280,7 +273,7 @@ class PyAudioPlayback:
                     channels=1,
                     rate=itrate,
                     output=True,
-                    frames_per_buffer=512  # 减小缓冲区以降低延迟
+                    frames_per_buffer=256  # 优化：从512减至256，降低延迟约16ms
                 )
                 print('Opened with default output device')
             except Exception as e2:

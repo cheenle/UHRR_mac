@@ -16,6 +16,19 @@
     <!-- Safe area insets for iPhone X+ -->
     <div class="safe-area-top"></div>
     
+    <!-- 隐藏的桌面版兼容元素（controls.js 需要） -->
+    <canvas id="canRXsmeter" width="250" height="50" style="display:none;"></canvas>
+    <meter id="RXinstant" style="display:none;"><meter></meter></meter>
+    <meter id="Txinstant" style="display:none;"><meter></meter></meter>
+    <div id="div-filtershortcut" style="display:none;"></div>
+    <div id="div-mode_menu" style="display:none;"></div>
+    <div id="ombre-body" style="display:none;"></div>
+    <div id="pop-upspinner" style="display:none;"></div>
+    <div id="div-latencymeter" style="display:none;"></div>
+    <div id="div-smeterdigitRX" style="display:none;"></div>
+    <div id="div-bitrates" style="display:none;"></div>
+    <span id="callsign" style="display:none;"></span>
+    
     <!-- Main container with bottom navigation -->
     <div class="mobile-modern-container">
         <!-- Header with essential controls -->
@@ -174,8 +187,9 @@
     <!-- Safe area insets for iPhone X+ -->
     <div class="safe-area-bottom"></div>
     
+    <!-- 核心脚本加载顺序重要 -->
+    <script src="controls.js"></script>
     <script src="tx_button_optimized.js"></script>
     <script src="mobile_modern.js"></script>
-    <script src="mobile_audio_direct_copy.js"></script>
 </body>
 </html>

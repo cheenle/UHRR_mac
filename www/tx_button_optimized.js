@@ -1,4 +1,4 @@
-// TX按钮完全重构 - 简单、稳定、可靠的按住功能
+// TX按钮完全重构 - 优化 TX→RX 切换
 // 专门针对PAD触摸屏优化
 
 // 全局TX状态管理 - 简化版本
@@ -10,7 +10,7 @@ let TXState = {
     startTime: 0
 };
 
-// 核心TX控制函数 - 详细日志版本
+// 核心TX控制函数 - 优化 TX→RX 切换
 async function TXControl(action) {
     const timestamp = new Date().toISOString().substr(11, 12);
     console.log(`[${timestamp}] 🎯 TX控制: ${action}, 当前状态: ${TXState.isPressed}, 系统状态: ${poweron}`);
@@ -49,27 +49,25 @@ async function TXControl(action) {
         
         // 执行TX功能 - 优先发送PTT命令
         try {
-            // 0. 立即PTT优先，避免按下阶段无发射
+            // 0. 立即PTT优先
             console.log(`[${timestamp}] 🔧 按下即PTT:true`);
             if (typeof sendTRXptt === 'function') {
                 sendTRXptt(true);
                 console.log(`[${timestamp}] 📡 已发送PTT:true`);
             }
 
-            // 1. 同步开始录音（发送 m:... 的 TX_init），并行让后端就绪
-            console.log(`[${timestamp}] 🔧 同步初始化TX（toggleRecord(true)）`);
+            // 1. 同步开始录音
+            console.log(`[${timestamp}] 🔧 同步初始化TX`);
             toggleRecord(true);
 
-            // 2. 立即发送更多预热帧，确保后端收到足够的音频数据
-            // 在PTT命令发送后立即发送多个预热帧
-            for(let i = 0; i < 10; i++) {
+            // 2. 发送预热帧（减少到3帧，更快完成）
+            for(let i = 0; i < 3; i++) {
                 setTimeout(() => {
                     try {
                         if (wsAudioTX && wsAudioTX.readyState === WebSocket.OPEN && typeof ap === 'object') {
                             const warmup = new Float32Array(160);
-                            // 添加更明显的音频信号
                             for(let j = 0; j < warmup.length; j++) {
-                                warmup[j] = Math.sin(j * 0.2) * 0.05; // 更强的正弦波
+                                warmup[j] = Math.sin(j * 0.2) * 0.05;
                             }
                             if (encode && ap && ap.opusEncoder) {
                                 const packets = ap.opusEncoder.encode_float(warmup);
@@ -83,35 +81,22 @@ async function TXControl(action) {
                     } catch(e) { 
                         console.warn(`TX warmup skip frame ${i}:`, e); 
                     }
-                }, i * 10); // 每10ms发送一帧
+                }, i * 3); // 更快的预热
             }
 
-            // 3. 然后执行其他功能
+            // 3. 执行其他功能
             console.log(`[${timestamp}] 🔧 调用button_pressed()`);
             button_pressed();
-            
-            // toggleRecord(true) 已提前调用
             
             console.log(`[${timestamp}] 🔧 调用toggleaudioRX()`);
             toggleaudioRX();
             
-            // 4. 触发ATU数据更新 - 通过模拟PTT状态变化来确保同步
-            // 确保ATU监控系统知道PTT状态已改变
+            // PTT状态已激活
             if (typeof window.updatePTTStatus === 'function') {
-                window.updatePTTStatus(true); // 明确通知PTT已激活
+                window.updatePTTStatus(true);
             }
             
-            // 确保ATU系统已初始化并连接后再调用
-            if (typeof window.initAtuDisplay !== 'undefined' && typeof window.startAtuSync !== 'undefined' && window.atuIsConnected) {
-                window.startAtuSync();
-            } else {
-                // 如果ATU系统未初始化，尝试初始化它
-                if (typeof window.initAtuDisplay === 'function') {
-                    window.initAtuDisplay();
-                }
-            }
-            
-            console.log(`[${timestamp}] ✅ TX开始成功 - 所有函数调用完成`);
+            console.log(`[${timestamp}] ✅ TX开始成功`);
             return true;
         } catch (error) {
             console.error(`[${timestamp}] ❌ TX开始失败:`, error);
@@ -132,43 +117,59 @@ async function TXControl(action) {
         TXState.element.classList.remove('button_pressed');
         TXState.element.classList.add('button_unpressed');
         
-        // 执行TX停止功能 - 分步执行并记录
+        // 执行TX停止功能 - 优化顺序
         try {
-            console.log(`[${timestamp}] 🔧 调用button_unpressed()`);
-            button_unpressed();
-            
-            console.log(`[${timestamp}] 🔧 调用toggleRecord()`);
-            toggleRecord();
-            
-            console.log(`[${timestamp}] 🔧 调用toggleaudioRX()`);
-            toggleaudioRX();
-            
+            // 1. 首先发送PTT停止命令（最高优先级）
             console.log(`[${timestamp}] 🔧 调用sendTRXptt(false)`);
             if (typeof sendTRXptt === 'function') {
                 sendTRXptt(false);
-                console.log(`[${timestamp}] 📡 PTT停止命令已发送，WebSocket状态:`, wsControlTRX ? wsControlTRX.readyState : 'undefined');
-                
-                // 立即清除RX音频缓冲区以减少TX->RX切换延迟
-                if (typeof AudioRX_source_node !== 'undefined' && AudioRX_source_node && AudioRX_source_node.port) {
+                console.log(`[${timestamp}] 📡 PTT停止命令已发送`);
+            }
+            
+            // 2. 立即清除RX音频缓冲区（关键优化）
+            console.log(`[${timestamp}] 🧹 清除RX音频缓冲区`);
+            
+            // 清除累积缓冲区
+            if (typeof AudioRX_audiobuffer !== 'undefined') {
+                AudioRX_audiobuffer = [];
+                console.log(`[${timestamp}] ✅ AudioRX_audiobuffer 已清空`);
+            }
+            
+            // 清除 AudioWorklet 缓冲区
+            if (typeof AudioRX_source_node !== 'undefined' && AudioRX_source_node) {
+                if (AudioRX_source_node.port) {
                     try {
                         AudioRX_source_node.port.postMessage({type: 'flush'});
-                        console.log(`[${timestamp}] 🔄 RX工作节点缓冲区在PTT释放后立即清除`);
+                        console.log(`[${timestamp}] ✅ AudioWorklet 缓冲区已清除`);
                     } catch(e) {
-                        console.log(`[${timestamp}] ⚠️ 清除RX工作节点缓冲区时出错:`, e);
+                        console.log(`[${timestamp}] ⚠️ 清除AudioWorklet缓冲区时出错:`, e);
                     }
                 }
-            } else {
-                console.error(`[${timestamp}] ❌ sendTRXptt函数未定义！`);
+                // 重置累积缓冲区（如果有）
+                if (typeof window.__rxAccumulatedBuffer !== 'undefined') {
+                    window.__rxAccumulatedBuffer = [];
+                    window.__rxTotalSamples = 0;
+                }
             }
             
-            // 通知ATU系统PTT状态已改变
+            // 3. 停止录音
+            console.log(`[${timestamp}] 🔧 调用toggleRecord()`);
+            toggleRecord();
+            
+            // 4. 恢复RX音频
+            console.log(`[${timestamp}] 🔧 调用toggleaudioRX()`);
+            toggleaudioRX();
+            
+            // 5. 其他清理
+            console.log(`[${timestamp}] 🔧 调用button_unpressed()`);
+            button_unpressed();
+            
+            // PTT状态已释放
             if (typeof window.updatePTTStatus === 'function') {
-                setTimeout(() => {
-                    window.updatePTTStatus(false); // 明确通知PTT已释放
-                }, 50); // 短暂延迟确保PTT状态已设置
+                window.updatePTTStatus(false);
             }
             
-            console.log(`[${timestamp}] ✅ TX停止成功 - 所有函数调用完成`);
+            console.log(`[${timestamp}] ✅ TX停止成功 - RX缓冲区已清除`);
             return true;
         } catch (error) {
             console.error(`[${timestamp}] ❌ TX停止失败:`, error);
@@ -190,91 +191,62 @@ function isTouchInButton(touch, button) {
     return x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom;
 }
 
-// 初始化TX按钮 - 完全重构版本
-function initTXButton() {
-    console.log('🚀 开始初始化TX按钮');
+// 初始化TX按钮
+function initTXButton(button) {
+    if (!button) {
+        button = document.getElementById('TX-record') || document.getElementById('ptt-btn');
+    }
     
-    // 获取TX按钮元素
-    const txButton = document.getElementById('TX-record');
-    if (!txButton) {
+    if (!button) {
         console.error('❌ TX按钮元素未找到');
         return false;
     }
     
-    // 检查是否已经初始化
+    console.log('🚀 开始初始化TX按钮:', button.id);
+    
     if (TXState.isInitialized) {
         console.log('⚠️ TX按钮已经初始化，跳过');
         return true;
     }
     
-    // 保存按钮引用
-    TXState.element = txButton;
+    TXState.element = button;
     
-    // 完全清除现有事件监听器
-    const newButton = txButton.cloneNode(true);
-    txButton.parentNode.replaceChild(newButton, txButton);
+    const newButton = button.cloneNode(true);
+    button.parentNode.replaceChild(newButton, button);
     TXState.element = newButton;
     
     console.log('🧹 清除现有事件监听器');
     
     // 触摸开始事件
     newButton.addEventListener('touchstart', function(e) {
-        const timestamp = new Date().toISOString().substr(11, 12);
-        console.log(`[${timestamp}] 👆 触摸开始事件触发`);
-        
         e.preventDefault();
         e.stopPropagation();
         e.stopImmediatePropagation();
         
-        // 只处理第一个触摸点
-        if (TXState.touchId !== null) {
-            console.log(`[${timestamp}] ⚠️ 已有触摸在进行中，忽略 (touchId: ${TXState.touchId})`);
-            return;
-        }
+        if (TXState.touchId !== null) return;
         
         const touch = e.touches[0];
         TXState.touchId = touch.identifier;
-        console.log(`[${timestamp}] 📍 触摸点ID: ${touch.identifier}, 坐标: (${touch.clientX}, ${touch.clientY})`);
         
-        // 检查是否在按钮区域内
         if (!isTouchInButton(touch, this)) {
-            console.log(`[${timestamp}] ⚠️ 触摸不在按钮区域内，清除touchId`);
             TXState.touchId = null;
             return;
         }
         
-        console.log(`[${timestamp}] ✅ 触摸在按钮区域内，开始TX`);
-        // 开始TX
         TXControl('start');
-        
     }, { passive: false, capture: true });
     
     // 触摸结束事件
     newButton.addEventListener('touchend', function(e) {
-        const timestamp = new Date().toISOString().substr(11, 12);
-        console.log(`[${timestamp}] 👆 触摸结束事件触发`);
-        
         e.preventDefault();
         e.stopPropagation();
         e.stopImmediatePropagation();
         
-        // 检查是否是当前触摸点
         const touch = e.changedTouches[0];
-        console.log(`[${timestamp}] 📍 结束触摸点ID: ${touch.identifier}, 当前跟踪ID: ${TXState.touchId}`);
+        if (touch.identifier !== TXState.touchId) return;
         
-        if (touch.identifier !== TXState.touchId) {
-            console.log(`[${timestamp}] ⚠️ 不是当前触摸点，忽略`);
-            return;
-        }
-        
-        console.log(`[${timestamp}] ✅ 确认是当前触摸点，停止TX`);
-        // 停止TX
         TXControl('stop');
-        
-        // 清除触摸ID
         TXState.touchId = null;
-        console.log(`[${timestamp}] 🧹 清除触摸ID`);
-        
     }, { passive: false, capture: true });
     
     // 触摸取消事件
@@ -283,125 +255,96 @@ function initTXButton() {
         e.stopPropagation();
         e.stopImmediatePropagation();
         
-        console.log('👆 触摸取消');
-        
-        // 强制停止TX
         TXControl('stop');
-        
-        // 清除触摸ID
         TXState.touchId = null;
-        
     }, { passive: false, capture: true });
     
-    // 触摸移动事件 - 检查是否移出按钮
+    // 触摸移动事件
     newButton.addEventListener('touchmove', function(e) {
         e.preventDefault();
         e.stopPropagation();
         e.stopImmediatePropagation();
         
-        // 如果没有活跃的TX，忽略
-        if (!TXState.isPressed || TXState.touchId === null) {
-            return;
-        }
+        if (!TXState.isPressed || TXState.touchId === null) return;
         
-        // 检查当前触摸点是否还在按钮内
         const touch = e.touches[0];
         if (touch.identifier === TXState.touchId) {
             if (!isTouchInButton(touch, this)) {
-                console.log('👆 手指移出按钮区域，停止TX');
                 TXControl('stop');
                 TXState.touchId = null;
             }
         }
-        
     }, { passive: false, capture: true });
     
-    // 鼠标事件（桌面兼容）
+    // 鼠标事件
     newButton.addEventListener('mousedown', function(e) {
         e.preventDefault();
         e.stopPropagation();
-        
-        console.log('🖱️ 鼠标按下');
         TXControl('start');
     });
     
     newButton.addEventListener('mouseup', function(e) {
         e.preventDefault();
         e.stopPropagation();
-        
-        console.log('🖱️ 鼠标释放');
         TXControl('stop');
     });
     
     newButton.addEventListener('mouseleave', function(e) {
-        console.log('🖱️ 鼠标离开');
         TXControl('stop');
     });
     
-    // 防止长按菜单
     newButton.addEventListener('contextmenu', function(e) {
         e.preventDefault();
     });
     
-    // 优化触摸响应
     newButton.style.touchAction = 'manipulation';
     newButton.style.userSelect = 'none';
     newButton.style.webkitTouchCallout = 'none';
     newButton.style.webkitUserSelect = 'none';
     
-    // 标记为已初始化
     TXState.isInitialized = true;
     
     console.log('✅ TX按钮初始化完成');
     return true;
 }
 
-// 确保TX按钮初始化的函数
+// 确保TX按钮初始化
 function ensureTXButtonReady() {
-    if (TXState.isInitialized) {
-        return true;
-    }
+    if (TXState.isInitialized) return true;
     
-    const txButton = document.getElementById('TX-record');
+    let txButton = document.getElementById('TX-record') || document.getElementById('ptt-btn');
+    
     if (!txButton) {
-        console.log('⏳ TX按钮尚未创建，等待100ms后重试');
+        if (document.getElementById('ptt-btn')) {
+            return true;
+        }
         setTimeout(ensureTXButtonReady, 100);
         return false;
     }
     
-    return initTXButton();
+    return initTXButton(txButton);
 }
 
-// 页面加载时初始化
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('📱 DOMContentLoaded - 初始化TX按钮');
     ensureTXButtonReady();
 });
 
-// 如果页面已经加载完成，立即初始化
-if (document.readyState === 'loading') {
-    console.log('📱 页面加载中，等待DOMContentLoaded');
-} else {
-    console.log('📱 页面已加载完成，立即初始化TX按钮');
+if (document.readyState !== 'loading') {
     ensureTXButtonReady();
 }
 
-// 额外的保险措施
 window.addEventListener('load', function() {
-    console.log('📱 window.onload - 确保TX按钮初始化');
     ensureTXButtonReady();
 });
 
-// 兼容性：提供TXtogle函数（向后兼容）
 function TXtogle(state) {
     if (state === "True" || state === true) {
         return TXControl('start');
     } else if (state === "False" || state === false) {
         return TXControl('stop');
     } else {
-        // 切换模式
         return TXControl(TXState.isPressed ? 'stop' : 'start');
     }
 }
 
-console.log('🎯 TX按钮系统加载完成');
+console.log('🎯 TX按钮系统加载完成 (优化版)');

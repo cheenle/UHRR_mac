@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Audio Context Test</title>
+</head>
+<body>
+    <h1>Audio Context Test</h1>
+    <button id="startButton">Start Audio Context</button>
+    <div id="status"></div>
+    <script>
+        let audioContext;
+        
+        document.getElementById('startButton').addEventListener('click', async () => {
+            try {
+                if (!audioContext) {
+                    audioContext = new (window.AudioContext || window.webkitAudioContext)({sampleRate: 8000});
+                    document.getElementById('status').innerHTML += '<p>AudioContext created</p>';
+                }
+                
+                // 尝试恢复音频上下文
+                if (audioContext.state === 'suspended') {
+                    await audioContext.resume();
+                    document.getElementById('status').innerHTML += '<p>AudioContext resumed</p>';
+                }
+                
+                document.getElementById('status').innerHTML += `<p>AudioContext state: ${audioContext.state}</p>`;
+                
+                // 创建一个简单的测试音调
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                
+                oscillator.frequency.value = 440;
+                gainNode.gain.value = 0.1;
+                
+                oscillator.start();
+                oscillator.stop(audioContext.currentTime + 0.5);
+                
+                document.getElementById('status').innerHTML += '<p>Test tone played</p>';
+                
+            } catch (error) {
+                document.getElementById('status').innerHTML += `<p>Error: ${error.message}</p>`;
+                console.error('Audio test error:', error);
+            }
+        });
+    </script>
+</body>
+</html>

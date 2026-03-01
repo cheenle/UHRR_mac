@@ -1,5 +1,5 @@
-/* Modern Mobile Interface CSS for iPhone 15 and modern browsers */
-/* Designed for safe area insets, touch optimization, and responsive layout */
+/* Modern Mobile Interface CSS - 优化版 */
+/* 针对小屏幕和触摸操作优化 */
 
 /* CSS Reset and Base Styles */
 * {
@@ -43,10 +43,10 @@ body {
     background-color: #000;
 }
 
-/* Header Styles */
+/* Header Styles - 紧凑布局 */
 .app-header {
     background-color: #1a1a1a;
-    padding: 10px 15px;
+    padding: 8px 12px;
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
     z-index: 100;
 }
@@ -55,38 +55,56 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 10px;
+    margin-bottom: 8px;
 }
 
 .header-btn {
     background: none;
     border: none;
     color: #fff;
-    font-size: 24px;
+    font-size: 22px;
     cursor: pointer;
     width: 44px;
     height: 44px;
+    min-width: 44px;
+    min-height: 44px;
     display: flex;
     align-items: center;
     justify-content: center;
     border-radius: 50%;
-    transition: background-color 0.2s;
+    transition: background-color 0.15s;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
 }
 
 .header-btn:active {
+    background-color: rgba(255, 255, 255, 0.15);
+    transform: scale(0.95);
+}
+
+/* 电源按钮 */
+.power-btn {
     background-color: rgba(255, 255, 255, 0.1);
+    font-size: 24px;
+}
+
+.power-btn:active {
+    background-color: rgba(0, 255, 0, 0.3);
+}
+
+.power-btn.active {
+    background-color: rgba(0, 255, 0, 0.25);
+    box-shadow: 0 0 10px rgba(0, 255, 0, 0.3);
 }
 
 .menu-btn {
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    width: 40px;
-    height: 40px;
 }
 
 .hamburger {
-    width: 24px;
+    width: 20px;
     height: 2px;
     background-color: #fff;
     position: relative;
@@ -97,148 +115,121 @@ body {
 .hamburger:after {
     content: '';
     position: absolute;
-    width: 24px;
+    width: 20px;
     height: 2px;
     background-color: #fff;
     border-radius: 2px;
-    transition: all 0.3s;
 }
 
-.hamburger:before {
-    top: -8px;
-}
-
-.hamburger:after {
-    bottom: -8px;
-}
+.hamburger:before { top: -6px; }
+.hamburger:after { bottom: -6px; }
 
 .power-icon {
-    font-size: 28px;
+    font-size: 24px;
 }
 
-/* Frequency Display */
+/* Frequency Display - 优化显示 */
 .frequency-display-large {
     text-align: center;
     flex-grow: 1;
-    margin: 0 15px;
+    margin: 0 10px;
 }
 
 .freq-main {
-    font-size: 36px;
+    font-size: 28px;
     font-weight: 600;
-    letter-spacing: 1px;
-    margin-bottom: 5px;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
     font-variant-numeric: tabular-nums;
 }
 
 .freq-digit {
     display: inline-block;
-    min-width: 20px;
+    min-width: 16px;
 }
 
 .freq-separator {
-    margin: 0 2px;
-    color: #aaa;
+    margin: 0 1px;
+    color: #666;
 }
 
 .freq-unit {
-    font-size: 22px;
-    color: #aaa;
-    margin-left: 5px;
+    font-size: 16px;
+    color: #666;
+    margin-left: 4px;
 }
 
-/* 简化频率显示 - 隐藏最后三位 */
+/* 隐藏最后三位小频率 */
 .freq-digit.last-three {
     display: none;
-}
-
-@media (min-width: 428px) {
-    .freq-main {
-        font-size: 40px;
-    }
-    
-    .freq-digit {
-        min-width: 22px;
-    }
-    
-    .freq-unit {
-        font-size: 24px;
-    }
 }
 
 .freq-sub {
     display: flex;
     justify-content: center;
-    gap: 15px;
-    font-size: 14px;
-    color: #aaa;
+    gap: 10px;
+    font-size: 13px;
+    color: #888;
 }
 
 .vfo-indicator,
 .mode-indicator {
     padding: 2px 8px;
-    border-radius: 10px;
+    border-radius: 8px;
     background-color: rgba(255, 255, 255, 0.1);
+    font-weight: 500;
 }
 
-/* Status Bar */
+/* Status Bar - 紧凑 */
 .status-bar {
     display: flex;
-    justify-content: space-between;
+    justify-content: flex-start;
     align-items: center;
-    padding: 5px 0;
+    gap: 6px;
+    padding: 4px 0;
+    flex-wrap: wrap;
 }
 
 .status-item {
-    font-size: 12px;
-    padding: 3px 8px;
-    border-radius: 10px;
+    font-size: 11px;
+    padding: 2px 6px;
+    border-radius: 8px;
     background-color: rgba(255, 255, 255, 0.1);
     display: flex;
     align-items: center;
-    gap: 3px;
+    gap: 2px;
 }
 
 .status-item.connected {
-    background-color: #4CAF50;
+    background-color: #2e7d32;
 }
 
 .status-item#status-tx.active {
-    background-color: #F44336;
+    background-color: #c62828;
     animation: pulse 1s infinite;
 }
 
-/* Audio status indicators */
 #indwsAudioRX, #indwsAudioTX {
-    display: flex;
-    align-items: center;
-    gap: 3px;
-    padding: 3px 6px;
+    padding: 2px 4px;
 }
 
 #indwsAudioRX img, #indwsAudioTX img {
-    width: 12px;
-    height: 12px;
+    width: 10px;
+    height: 10px;
 }
 
-@keyframes pulse {
-    0% { opacity: 1; }
-    50% { opacity: 0.6; }
-    100% { opacity: 1; }
-}
-
-/* Signal Strength */
 .signal-strength {
+    margin-left: auto;
     display: flex;
     align-items: center;
-    gap: 5px;
+    gap: 4px;
 }
 
 .signal-bars {
     display: flex;
-    height: 20px;
+    height: 16px;
     align-items: flex-end;
-    gap: 2px;
+    gap: 1px;
 }
 
 .signal-bar {
@@ -247,126 +238,124 @@ body {
     border-radius: 1px 1px 0 0;
 }
 
-.signal-bar:nth-child(1) { height: 4px; }
-.signal-bar:nth-child(2) { height: 8px; }
-.signal-bar:nth-child(3) { height: 12px; }
-.signal-bar:nth-child(4) { height: 16px; }
-.signal-bar:nth-child(5) { height: 20px; }
+.signal-bar:nth-child(1) { height: 3px; }
+.signal-bar:nth-child(2) { height: 6px; }
+.signal-bar:nth-child(3) { height: 9px; }
+.signal-bar:nth-child(4) { height: 12px; }
+.signal-bar:nth-child(5) { height: 16px; }
 
 .signal-text {
-    font-size: 12px;
-    color: #aaa;
+    font-size: 11px;
+    color: #888;
 }
 
-/* Main Content */
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.6; }
+}
+
+/* Main Content - 优化间距 */
 .main-content {
     flex: 1;
     overflow-y: auto;
-    padding: 15px;
+    padding: 10px;
     display: flex;
     flex-direction: column;
-    gap: 20px;
+    gap: 12px;
+    -webkit-overflow-scrolling: touch;
 }
 
-/* S-Meter Section */
+/* S-Meter Section - 紧凑 */
 .s-meter-section {
     text-align: center;
-    padding: 10px 0;
+    padding: 5px 0;
 }
 
 #s-meter-canvas {
     width: 100%;
-    max-width: 350px;
-    height: 100px;
+    max-width: 320px;
+    height: 60px;
     background-color: #111;
-    border-radius: 10px;
+    border-radius: 8px;
 }
 
 .s-meter-labels {
-    display: flex;
-    justify-content: space-between;
-    margin-top: 5px;
-    font-size: 12px;
-    color: #aaa;
+    display: none; /* 隐藏标签节省空间 */
 }
 
-/* Quick Controls */
+/* Quick Controls - 优化按钮 */
 .quick-controls {
     display: flex;
     flex-direction: column;
-    gap: 15px;
+    gap: 10px;
 }
 
 .control-row {
     display: flex;
-    gap: 10px;
+    gap: 8px;
 }
 
 .quick-btn {
     flex: 1;
-    background-color: #222;
-    border: none;
-    border-radius: 12px;
+    background-color: #1a1a1a;
+    border: 1px solid #333;
+    border-radius: 10px;
     color: #fff;
-    padding: 15px 5px;
-    font-size: 16px;
+    padding: 12px 4px;
+    font-size: 14px;
     font-weight: 500;
     cursor: pointer;
-    transition: all 0.2s;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    transition: all 0.15s;
+    min-height: 44px;
+    touch-action: manipulation;
 }
 
 .quick-btn:active {
-    transform: scale(0.98);
-    background-color: #333;
+    transform: scale(0.97);
+    background-color: #2a2a2a;
+    border-color: #444;
 }
 
 .quick-btn.active {
-    background-color: #1a73e8;
-    color: white;
+    background-color: #1565c0;
+    border-color: #1976d2;
 }
 
-.vfo-btn {
-    font-size: 18px;
-}
-
-/* Frequency Tuning */
+/* Frequency Tuning - 优化布局 */
 .frequency-tuning {
-    margin-top: 10px;
+    margin-top: 5px;
 }
 
 .tuning-controls {
-    display: flex;
-    justify-content: center;
-    gap: 10px;
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
 }
 
 .tune-btn {
-    background-color: #222;
-    border: none;
+    background-color: #1a1a1a;
+    border: 1px solid #333;
     border-radius: 10px;
     color: #fff;
-    padding: 12px 15px;
-    font-size: 16px;
+    padding: 14px 8px;
+    font-size: 15px;
     font-weight: 500;
     cursor: pointer;
-    min-width: 70px;
-    transition: all 0.2s;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    min-height: 50px;
+    transition: all 0.15s;
+    touch-action: manipulation;
 }
 
 .tune-btn:active {
-    transform: scale(0.95);
-    background-color: #333;
+    transform: scale(0.97);
+    background-color: #2a2a2a;
 }
 
-/* PTT Section */
+/* PTT Section - 优化大按钮 */
 .ptt-section {
     background-color: #1a1a1a;
-    padding: 20px 15px;
+    padding: 15px 10px;
     box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.3);
-    /* 调整PTT区域位置，使其更易于触及 */
     position: sticky;
     bottom: 0;
     z-index: 100;
@@ -375,72 +364,69 @@ body {
 .ptt-container {
     display: flex;
     justify-content: center;
-    margin-bottom: 20px;
+    margin-bottom: 12px;
 }
 
 .ptt-button {
-    width: 140px;
-    height: 140px;
+    width: 120px;
+    height: 120px;
     border-radius: 50%;
-    background: radial-gradient(circle, #ff4444, #cc0000);
-    border: 4px solid #fff;
+    background: radial-gradient(circle at 30% 30%, #ff5555, #cc0000);
+    border: 3px solid rgba(255, 255, 255, 0.8);
     color: white;
-    font-size: 24px;
+    font-size: 22px;
     font-weight: bold;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    box-shadow: 0 6px 20px rgba(255, 68, 68, 0.5);
+    box-shadow: 0 4px 15px rgba(255, 68, 68, 0.4);
     transition: all 0.1s;
     touch-action: manipulation;
     -webkit-tap-highlight-color: transparent;
-    /* 增加触摸区域 */
-    padding: 10px;
 }
 
 .ptt-button:active {
     transform: scale(0.95);
-    background: radial-gradient(circle, #ff6666, #dd0000);
-    box-shadow: 0 2px 10px rgba(255, 68, 68, 0.7);
+    background: radial-gradient(circle at 30% 30%, #ff7777, #dd0000);
+    box-shadow: 0 2px 8px rgba(255, 68, 68, 0.6);
 }
 
 .ptt-label {
-    font-size: 28px;
+    font-size: 24px;
     font-weight: bold;
-    margin-bottom: 5px;
 }
 
 .ptt-sublabel {
-    font-size: 14px;
-    opacity: 0.9;
+    font-size: 11px;
+    opacity: 0.8;
 }
 
-/* Bottom Navigation */
+/* Bottom Navigation - 紧凑 */
 .bottom-nav {
     display: flex;
     justify-content: space-around;
     background-color: #222;
-    border-radius: 20px;
-    padding: 8px;
-    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.2);
+    border-radius: 14px;
+    padding: 6px;
 }
 
 .nav-btn {
     background: none;
     border: none;
-    color: #aaa;
-    font-size: 12px;
+    color: #888;
+    font-size: 10px;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 8px 0;
-    border-radius: 12px;
+    padding: 6px 0;
+    border-radius: 10px;
     cursor: pointer;
     flex: 1;
-    transition: all 0.2s;
+    min-height: 44px;
+    transition: all 0.15s;
 }
 
 .nav-btn:active {
@@ -448,30 +434,30 @@ body {
 }
 
 .nav-btn.active {
-    color: #1a73e8;
-    background-color: rgba(26, 115, 232, 0.1);
+    color: #4CAF50;
+    background-color: rgba(76, 175, 80, 0.15);
 }
 
 .nav-icon {
-    font-size: 20px;
-    margin-bottom: 4px;
+    font-size: 18px;
+    margin-bottom: 2px;
 }
 
 .nav-label {
-    font-size: 11px;
+    font-size: 10px;
 }
 
 /* Off-canvas Menu */
 .off-canvas-menu {
     position: fixed;
     top: 0;
-    left: -300px;
-    width: 300px;
+    left: -280px;
+    width: 280px;
     height: 100vh;
     background-color: #1a1a1a;
     z-index: 1001;
-    transition: left 0.3s ease;
-    box-shadow: 2px 0 15px rgba(0, 0, 0, 0.3);
+    transition: left 0.25s ease;
+    box-shadow: 2px 0 15px rgba(0, 0, 0, 0.4);
     padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom) 0;
 }
 
@@ -483,12 +469,12 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 20px 15px;
+    padding: 15px 12px;
     border-bottom: 1px solid #333;
 }
 
 .menu-header h2 {
-    font-size: 20px;
+    font-size: 18px;
     font-weight: 600;
 }
 
@@ -496,7 +482,7 @@ body {
     background: none;
     border: none;
     color: #fff;
-    font-size: 28px;
+    font-size: 26px;
     cursor: pointer;
     width: 44px;
     height: 44px;
@@ -511,7 +497,7 @@ body {
 }
 
 .menu-content {
-    padding: 15px 0;
+    padding: 10px 0;
 }
 
 .menu-list {
@@ -520,12 +506,12 @@ body {
 
 .menu-item {
     display: block;
-    padding: 15px 20px;
+    padding: 14px 16px;
     color: #fff;
     text-decoration: none;
-    font-size: 16px;
-    border-bottom: 1px solid #333;
-    transition: background-color 0.2s;
+    font-size: 15px;
+    border-bottom: 1px solid #2a2a2a;
+    transition: background-color 0.15s;
 }
 
 .menu-item:active {
@@ -539,11 +525,11 @@ body {
     left: 0;
     width: 100%;
     height: 100%;
-    background-color: rgba(0, 0, 0, 0.5);
+    background-color: rgba(0, 0, 0, 0.6);
     z-index: 1000;
     opacity: 0;
     visibility: hidden;
-    transition: all 0.3s ease;
+    transition: all 0.25s ease;
 }
 
 .menu-overlay.open {
@@ -551,11 +537,136 @@ body {
     visibility: visible;
 }
 
-/* Responsive Design for Different Screen Sizes */
-@media (min-width: 428px) {
-    /* iPhone 14 Pro Max and larger screens */
+/* Modal Panel Styles */
+#modal-panel-container {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.85);
+    z-index: 1000;
+    justify-content: center;
+    align-items: center;
+    padding: 15px;
+}
+
+.modal-panel {
+    background-color: #1a1a1a;
+    border-radius: 14px;
+    padding: 16px;
+    max-width: 320px;
+    width: 100%;
+    max-height: 75vh;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.modal-panel h3 {
+    text-align: center;
+    margin-bottom: 14px;
+    font-size: 16px;
+    color: #4CAF50;
+}
+
+.modal-panel p {
+    text-align: center;
+    color: #888;
+    margin-bottom: 8px;
+    font-size: 13px;
+}
+
+.modal-panel hr {
+    border: none;
+    border-top: 1px solid #333;
+    margin: 12px 0;
+}
+
+.band-grid,
+.mode-grid,
+.filter-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin-bottom: 14px;
+}
+
+.band-select-btn,
+.mode-select-btn,
+.filter-select-btn {
+    padding: 12px 6px;
+    background-color: #2a2a2a;
+    border: 1px solid #3a3a3a;
+    border-radius: 8px;
+    color: #fff;
+    font-size: 13px;
+    cursor: pointer;
+    min-height: 44px;
+    transition: all 0.15s;
+}
+
+.band-select-btn:active,
+.mode-select-btn:active,
+.filter-select-btn:active {
+    background-color: #4CAF50;
+    color: #000;
+}
+
+.mode-select-btn.active {
+    background-color: #2e7d32;
+    border-color: #4CAF50;
+}
+
+.close-panel-btn {
+    width: 100%;
+    padding: 14px;
+    background-color: #333;
+    border: 1px solid #444;
+    border-radius: 10px;
+    color: #fff;
+    font-size: 15px;
+    cursor: pointer;
+    min-height: 48px;
+}
+
+.close-panel-btn:active {
+    background-color: #444;
+}
+
+/* Settings Panel */
+.setting-item {
+    margin-bottom: 14px;
+}
+
+.setting-item label {
+    display: block;
+    margin-bottom: 6px;
+    color: #aaa;
+    font-size: 13px;
+}
+
+.setting-item input[type="range"] {
+    width: 100%;
+    height: 36px;
+    -webkit-appearance: none;
+    background-color: #333;
+    border-radius: 18px;
+}
+
+.setting-item input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 24px;
+    height: 24px;
+    background-color: #4CAF50;
+    border-radius: 50%;
+    cursor: pointer;
+}
+
+/* 较大屏幕适配 */
+@media (min-width: 390px) {
     .freq-main {
-        font-size: 36px;
+        font-size: 32px;
     }
     
     .ptt-button {
@@ -564,10 +675,28 @@ body {
     }
 }
 
+@media (min-width: 428px) {
+    .freq-main {
+        font-size: 36px;
+    }
+    
+    .quick-btn {
+        padding: 14px 6px;
+    }
+    
+    .ptt-button {
+        width: 140px;
+        height: 140px;
+    }
+    
+    .ptt-label {
+        font-size: 26px;
+    }
+}
+
 @media (min-width: 768px) {
-    /* Tablets */
     .mobile-modern-container {
-        max-width: 500px;
+        max-width: 450px;
         margin: 0 auto;
         box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
     }
@@ -577,28 +706,87 @@ body {
     }
     
     .ptt-button {
-        width: 140px;
-        height: 140px;
+        width: 150px;
+        height: 150px;
     }
 }
 
-/* Dark Mode Support */
+/* 横屏适配 */
+@media (orientation: landscape) and (max-height: 500px) {
+    .app-header {
+        padding: 4px 12px;
+    }
+    
+    .header-main {
+        margin-bottom: 4px;
+    }
+    
+    .freq-main {
+        font-size: 24px;
+        margin-bottom: 2px;
+    }
+    
+    .freq-sub {
+        font-size: 11px;
+    }
+    
+    .status-bar {
+        padding: 2px 0;
+    }
+    
+    .main-content {
+        padding: 6px;
+        gap: 8px;
+    }
+    
+    #s-meter-canvas {
+        height: 40px;
+    }
+    
+    .quick-controls {
+        flex-direction: row;
+        flex-wrap: wrap;
+    }
+    
+    .control-row {
+        flex: 1;
+        min-width: 200px;
+    }
+    
+    .tuning-controls {
+        grid-template-columns: repeat(6, 1fr);
+    }
+    
+    .ptt-section {
+        padding: 8px 10px;
+    }
+    
+    .ptt-button {
+        width: 80px;
+        height: 80px;
+    }
+    
+    .ptt-label {
+        font-size: 18px;
+    }
+    
+    .ptt-sublabel {
+        display: none;
+    }
+}
+
+/* Dark Mode */
 @media (prefers-color-scheme: dark) {
     body {
         background-color: #000;
         color: #fff;
     }
-    
-    .app-header,
-    .ptt-section {
-        background-color: #1a1a1a;
-    }
 }
 
-/* High Contrast Mode Support */
+/* High Contrast */
 @media (prefers-contrast: high) {
     .ptt-button {
-        border: 6px solid #fff;
+        border: 4px solid #fff;
     }
     
     .quick-btn,
@@ -607,17 +795,12 @@ body {
     }
 }
 
-/* Reduced Motion Support */
+/* Reduced Motion */
 @media (prefers-reduced-motion: reduce) {
     *,
     *::before,
     *::after {
         animation-duration: 0.01ms !important;
-        animation-iteration-count: 1 !important;
         transition-duration: 0.01ms !important;
-    }
-    
-    .ptt-button:active {
-        transform: none;
     }
 }

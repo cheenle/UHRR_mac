@@ -12,11 +12,9 @@ RIGCTL_STOP_BITS="2"
 RIGCTL_HOST="127.0.0.1"
 RIGCTL_PORT="4532"
 UHRR_PORT="8877"
-ATU_SERVER_PORT="8889"
 LOG_DIR="/Users/cheenle/UHRR/UHRR_mac"
 RIGCTLD_LOG="$LOG_DIR/rigctld.log"
 UHRR_LOG="$LOG_DIR/uhrr.log"
-ATU_LOG="$LOG_DIR/atu_server.log"
 
 # Colors for output
 RED='\033[0;31m'

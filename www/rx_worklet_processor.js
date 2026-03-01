@@ -1,13 +1,18 @@
 // 简化且兼容性更好的AudioWorklet处理器
-// 专为iPhone Safari优化
+// 优化版本：减少缓冲延迟，提高播放流畅度
 
 class RxPlayerProcessor extends AudioWorkletProcessor {
   constructor() {
     super();
     this.queue = [];
-    // 针对移动设备优化的缓冲区参数
+    // 优化：降低缓冲区参数
+    // min:2帧(只要有数据就播放), max:20帧(约20ms@16kHz)
     this.targetMinFrames = 2;
-    this.targetMaxFrames = 4;
+    this.targetMaxFrames = 20;
+    
+    // 统计计数器
+    this._processCount = 0;
+    this._underrunCount = 0;
     
     // 处理来自主线程的消息
     this.port.onmessage = (event) => {
@@ -18,8 +23,8 @@ class RxPlayerProcessor extends AudioWorkletProcessor {
         this.queue.push(data.payload);
         
         // 限制队列长度防止内存问题
-        if (this.queue.length > this.targetMaxFrames) {
-          this.queue.splice(0, this.queue.length - this.targetMaxFrames);
+        while (this.queue.length > this.targetMaxFrames) {
+          this.queue.shift();
         }
       } 
       else if (data && data.type === 'flush') {
@@ -34,6 +39,7 @@ class RxPlayerProcessor extends AudioWorkletProcessor {
         if (typeof data.max === 'number') {
           this.targetMaxFrames = Math.max(this.targetMinFrames + 1, data.max | 0);
         }
+        console.log(`AudioWorklet config: min=${this.targetMinFrames}, max=${this.targetMaxFrames}`);
       }
     };
   }
@@ -41,50 +47,47 @@ class RxPlayerProcessor extends AudioWorkletProcessor {
   process(inputs, outputs) {
     const output = outputs[0];
     const out = output[0]; // 单声道输出
+    
+    this._processCount++;
 
-    // 预热阶段：如果队列中的数据不足预热深度，输出静音
-    if (this.queue.length < this.targetMinFrames) {
-      // 输出静音
+    // 如果队列为空，直接输出静音
+    if (this.queue.length === 0) {
       for (let i = 0; i < out.length; i++) {
         out[i] = 0;
+      }
+      this._underrunCount++;
+      // 每 100 次欠载打印一次日志
+      if (this._underrunCount % 100 === 0) {
+        console.log(`AudioWorklet 欠载: ${this._underrunCount} 次`);
       }
       return true;
     }
 
     // 处理音频数据
     let written = 0;
-    while (written < out.length) {
-      // 如果队列为空，填充静音并退出
-      if (this.queue.length === 0) {
-        for (let i = written; i < out.length; i++) {
-          out[i] = 0;
-        }
-        break;
-      }
-      
-      // 获取当前帧数据
+    while (written < out.length && this.queue.length > 0) {
       const cur = this.queue[0];
-      // 计算可以复制的样本数
       const n = Math.min(cur.length, out.length - written);
       
-      // 复制音频数据到输出缓冲区
-      for (let i = 0; i < n; i++) {
-        out[written + i] = cur[i];
-      }
+      // 使用 set 方法复制数据（更高效）
+      out.set(cur.subarray(0, n), written);
       
       written += n;
       
-      // 更新队列
       if (n >= cur.length) {
-        // 当前帧已完全处理，从队列中移除
         this.queue.shift();
       } else {
-        // 当前帧部分处理，更新剩余数据
         this.queue[0] = cur.subarray(n);
       }
     }
 
-    // 继续处理
+    // 如果数据不足，填充静音
+    if (written < out.length) {
+      for (let i = written; i < out.length; i++) {
+        out[i] = 0;
+      }
+    }
+
     return true;
   }
 }

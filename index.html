@@ -83,40 +83,7 @@
 				</ul>
 			</div>
 			
-			<!-- ATU Power and SWR Display -->
-			<div id="ATUmeters">
-				<div class="atu-header">
-					<div class="atu-status atu-disconnected" id="atuStatusIndicator"></div>
-					<span class="atu-title">ATU状态</span>
-				</div>
-				<div class="atu-content">
-					<div id="ATUpower" class="atu-meter">
-						<div class="label">发射功率</div>
-						<div class="meter-container">
-							<meter id="atuPowerMeter" low="10" high="70" max="100" value="0"></meter>
-							<div id="atuPowerValue" class="value">-- W</div>
-						</div>
-					</div>
-					<div id="ATUswr" class="atu-meter">
-						<div class="label">驻波比</div>
-						<div class="meter-container">
-							<meter id="atuSwrMeter" low="1" high="2" max="3" value="1"></meter>
-							<div id="atuSwrValue" class="value">--</div>
-						</div>
-					</div>
-					<div id="ATUmaxPower" class="atu-meter">
-						<div class="label">最大功率</div>
-						<div class="meter-container">
-							<meter id="atuMaxPowerMeter" low="50" high="90" max="100" value="0"></meter>
-							<div id="atuMaxPowerValue" class="value">-- W</div>
-						</div>
-					</div>
-				</div>
-				<div class="atu-controls">
-					<button id="atuConnectBtn" onclick="connectATU()">连接ATU</button>
-					<button id="atuTestBtn" onclick="testATUConnection()">测试连接</button>
-				</div>
-			</div>
+			
 			
 			<div id="div-bandshortcut">
 				<ul id="band_but">
@@ -216,35 +183,14 @@
 			<div id="div-TX">
 				<span class="button_unpressed" id="TX-record">TX</span>	
 				<span onclick="TXtogle();" class="button_unpressed" id="TX-record-lock">TX Lock</span>
+			<span onclick="tuneTone();" class="button_unpressed" id="Tune-button">Tune</span>
 				<div id="ptt-status-indicator" style="display: inline-block; margin-left: 10px; color: #ff4444; font-weight: bold;">PTT: OFF</div>
 				<form id="TX-record_record_opus">
 					<input type="checkbox" id="encode" class=none alt="Encode TX with opus codec">Encode TX</input><br>
 				</form>
 			</div>
 			
-			<!-- Auto Antenna Tuner Status -->
-			<div id="div-antenna-tuner" style="margin-top: 20px; border: 2px solid #444; border-radius: 10px; padding: 10px; background-color: #222;">
-				<h3 style="margin-top: 0; color: #fff;">Antenna Tuner Status</h3>
-				<div style="position: absolute; top: 10px; right: 10px; padding: 2px 8px; border-radius: 10px; font-size: 12px; background-color: #f44336; color: white;" class="atu-status-indicator">
-					离线
-				</div>
-				<div id="atu-status" style="display: flex; justify-content: space-around; align-items: center;">
-					<div id="atu-power" style="text-align: center;">
-						<div style="font-size: 12px; color: #aaa;">POWER</div>
-						<div id="power-value" style="font-size: 24px; font-weight: bold; color: #4CAF50;">--</div>
-						<div style="font-size: 10px; color: #aaa;">Watts</div>
-					</div>
-					<div id="atu-swr" style="text-align: center;">
-						<div style="font-size: 12px; color: #aaa;">SWR</div>
-						<div id="swr-value" style="font-size: 24px; font-weight: bold; color: #2196F3;">--</div>
-						<div style="font-size: 10px; color: #aaa;">Ratio</div>
-					</div>
-				</div>
-				<!-- Connection information -->
-				<div style="margin-top: 10px; font-size: 12px; color: #888; text-align: center;">
-					AtU: 192.168.1.12:81
-				</div>
-			</div>
+
 			
 			<div id="div-scoketscontrols">
 				<p id="indwsAudioTX"><img src="img/critsred.png">wsTX</p>
@@ -255,15 +201,8 @@
 			<div id="div-latencymeter">latency:∞</div>
 			<div id="div-bitrates">bitrate RX: 0.0 kbps | TX: 0.0 kbps</div>
 			
-			<!-- AtU Test Pages -->
-			<div style="margin-top: 20px; text-align: center; font-size: 12px; color: #888;">
-				<a href="atu_test.html" target="_blank" style="color: #4CAF50; text-decoration: none;">AtU Display Test</a> | 
-				<a href="atu_integration_test.html" target="_blank" style="color: #2196F3; text-decoration: none;">AtU Integration Test</a>
-			</div>
-			
 		</div>	
 		<script src="controls.js"></script>
 	<script src="tx_button_optimized.js"></script>
-	<script src="atu_integration.js"></script>
 	</body>
 </html>
