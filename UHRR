@@ -597,8 +597,8 @@ def update_current_frequency_DISABLED(freq):
     current_frequency_DISABLED = freq
     logger.info(f"📡 当前频率更新为: {freq/1000000:.3f} MHz")
 
-# 在程序启动时加载配置
-load_optimized_configs()
+# 在程序启动时加载配置 - ATU功能已禁用
+# load_optimized_configs()
 
 ############ ATU设备WebSocket客户端 ##############
 class AtuWebSocketClient:
