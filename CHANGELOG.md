@@ -5,6 +5,36 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [V4.0.1] - 2026-03-01
+
+### 🎨 Mobile Interface Enhancement
+
+**Theme: S-Meter & Audio Control Improvements**
+
+### Added
+- **Volume Control on Main Screen**: Real-time AF gain slider with visual feedback (0-100%)
+- **S-Meter Signal Text Display**: Shows signal level (S0-S9+60) with dB value
+- **Hidden Audio Elements**: C_af and SQUELCH elements for controls.js compatibility
+
+### Changed
+- **S-Meter Display**: Rewritten to use correct SP mapping table (S0-S9+60dB)
+- **Audio Settings Panel**: Improved slider initialization from Cookie values
+- **Cookie Loading**: Now syncs main screen volume slider on page load
+
+### Fixed
+- **S-Meter Mapping**: Corrected signal level to pixel position mapping
+- **AF Gain Synchronization**: Bidirectional sync between main screen and settings panel
+- **Audio Gain Control**: Properly calls AudioRX_SetGAIN() and AudioTX_SetGAIN()
+
+### Technical Details
+| Feature | Implementation |
+|---------|---------------|
+| S-Meter Range | S0 (0px) to S9+60 (240px) |
+| AF Gain Range | 0-100% (maps to 0-1000 internal) |
+| Cookie Sync | Real-time bidirectional |
+
+---
+
 ## [V4.0.0] - 2026-03-01
 
 ### 🎯 Milestone Release

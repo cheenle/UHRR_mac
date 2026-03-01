@@ -64,6 +64,7 @@ document.addEventListener('DOMContentLoaded', function() {
     initializeSMeter();
     updateFrequencyDisplay();
     setupMenuItems();
+    loadAudioSettingsFromCookies();
     
     // iOS Safari 需要用户交互才能初始化音频
     document.addEventListener('touchstart', initAudioOnFirstTouch, { once: true });
@@ -71,6 +72,78 @@ document.addEventListener('DOMContentLoaded', function() {
     
     console.log('✅ Mobile Modern 界面初始化完成');
 });
+
+// 从Cookie加载音频设置
+function loadAudioSettingsFromCookies() {
+    // 加载AF增益
+    var cAfEl = document.getElementById('C_af');
+    var mainAfSlider = document.getElementById('main-af-gain');
+    var mainAfValue = document.getElementById('main-af-value');
+    
+    if (cAfEl) {
+        var vol = typeof getCookie === 'function' ? getCookie('C_af') : '';
+        if (vol) {
+            cAfEl.value = vol;
+        }
+        
+        // 同步主界面音量滑块
+        var afPercent = Math.round(parseInt(cAfEl.value) / 10);
+        if (mainAfSlider) {
+            mainAfSlider.value = afPercent;
+        }
+        if (mainAfValue) {
+            mainAfValue.textContent = afPercent + '%';
+        }
+    }
+    
+    // 加载静噪
+    var squelchEl = document.getElementById('SQUELCH');
+    if (squelchEl) {
+        var sql = typeof getCookie === 'function' ? getCookie('SQUELCH') : '';
+        if (sql) {
+            squelchEl.value = sql;
+        }
+    }
+    
+    console.log('🔊 音频设置已从Cookie加载');
+}
+
+// 主界面音量控制
+function setMainAFGain(value) {
+    // 更新显示
+    var mainAfValue = document.getElementById('main-af-value');
+    if (mainAfValue) {
+        mainAfValue.textContent = value + '%';
+    }
+    
+    // 更新隐藏的C_af元素（范围0-1000）
+    var cAfEl = document.getElementById('C_af');
+    if (cAfEl) {
+        cAfEl.value = parseInt(value) * 10; // 0-100映射到0-1000
+    }
+    
+    // 调用AudioRX_SetGAIN
+    if (typeof AudioRX_SetGAIN === 'function') {
+        AudioRX_SetGAIN();
+    }
+    
+    // 保存Cookie
+    if (typeof setCookie === 'function') {
+        setCookie('C_af', parseInt(value) * 10, 180);
+    }
+    
+    // 更新设置面板中的显示（如果打开的话）
+    var afDisplay = document.getElementById('af-value-display');
+    if (afDisplay) {
+        afDisplay.textContent = value + '%';
+    }
+    var afSlider = document.getElementById('mobile-af-gain');
+    if (afSlider) {
+        afSlider.value = value;
+    }
+    
+    console.log('🔊 AF 增益:', value + '%');
+}
 
 // 设置菜单项点击事件
 function setupMenuItems() {
@@ -539,6 +612,10 @@ function tuneFrequency(step) {
     }
 }
 
+// S表映射表使用controls.js中定义的全局变量 SP 和 RIG_LEVEL_STRENGTH
+// SP: S表位置映射，键为信号级别(0-9为S单位，10-60为S9+dB)，值为画布X坐标
+// RIG_LEVEL_STRENGTH: 对应的dB值，S9=0dB
+
 // 更新 S 表
 function updateSMeter(level) {
     const canvas = domElements.sMeterCanvas;
@@ -549,6 +626,29 @@ function updateSMeter(level) {
     
     const value = parseInt(level) || 0;
     drawSMeter(ctx, value);
+    
+    // 更新信号强度文字显示
+    updateSignalText(value);
+}
+
+// 更新信号强度文字显示
+function updateSignalText(level) {
+    const signalText = document.querySelector('.signal-text');
+    if (!signalText) return;
+    
+    let res = "S0";
+    if (level > 9) {
+        res = "S9+" + level;
+    } else {
+        res = "S" + level;
+    }
+    
+    // 添加dB显示
+    if (typeof RIG_LEVEL_STRENGTH[level] !== 'undefined') {
+        res += " (" + RIG_LEVEL_STRENGTH[level] + "dB)";
+    }
+    
+    signalText.textContent = res;
 }
 
 ////////////////////////////////////////////////////////////
@@ -561,16 +661,9 @@ function initializeSMeter() {
     
     const ctx = canvas.getContext('2d');
     drawSMeter(ctx, 0);
-    
-    // 定期更新（模拟）
-    setInterval(() => {
-        if (mobileState.isConnected && !mobileState.isTransmitting) {
-            // 实际应该从 WebSocket 获取
-        }
-    }, 500);
 }
 
-function drawSMeter(ctx, value) {
+function drawSMeter(ctx, level) {
     const canvas = ctx.canvas;
     const width = canvas.width;
     const height = canvas.height;
@@ -582,38 +675,73 @@ function drawSMeter(ctx, value) {
     ctx.fillStyle = '#111';
     ctx.fillRect(0, 0, width, height);
     
-    // 绘制网格
-    ctx.strokeStyle = '#333';
-    ctx.lineWidth = 1;
+    // S表刻度区域（0-240像素对应S0-S9+60dB）
+    const meterWidth = 240;
+    const meterStartX = 20;
     
-    for (let i = 0; i <= 10; i++) {
-        const x = (width / 10) * i;
+    // 绘制S单位刻度线（S1-S9）
+    ctx.strokeStyle = '#444';
+    ctx.lineWidth = 1;
+    for (let i = 1; i <= 9; i++) {
+        if (SP[i] !== undefined) {
+            const x = meterStartX + SP[i];
+            ctx.beginPath();
+            ctx.moveTo(x, height * 0.7);
+            ctx.lineTo(x, height);
+            ctx.stroke();
+        }
+    }
+    
+    // 绘制S9+刻度线（+10, +20, +30, +40, +50, +60）
+    ctx.strokeStyle = '#666';
+    for (let i = 10; i <= 60; i += 10) {
+        if (SP[i] !== undefined) {
+            const x = meterStartX + SP[i];
+            ctx.beginPath();
+            ctx.moveTo(x, height * 0.7);
+            ctx.lineTo(x, height);
+            ctx.stroke();
+        }
+    }
+    
+    // 绘制当前信号级别条形
+    if (typeof SP[level] !== 'undefined') {
+        const barX = meterStartX;
+        const barWidth = SP[level];
+        const barHeight = height * 0.5;
+        const barY = height * 0.25;
+        
+        // 创建渐变色
+        const gradient = ctx.createLinearGradient(barX, 0, barX + meterWidth, 0);
+        gradient.addColorStop(0, '#4CAF50');      // S1-S3 绿色
+        gradient.addColorStop(0.35, '#8BC34A');   // S4-S5 浅绿
+        gradient.addColorStop(0.5, '#FFC107');    // S6-S7 黄色
+        gradient.addColorStop(0.65, '#FF9800');   // S8-S9 橙色
+        gradient.addColorStop(0.75, '#F44336');   // S9+10 红色
+        gradient.addColorStop(1, '#D32F2F');      // S9+60 深红
+        
+        ctx.fillStyle = gradient;
+        ctx.fillRect(barX, barY, barWidth, barHeight);
+        
+        // 绘制指示线
+        ctx.strokeStyle = '#fffb16';
+        ctx.lineWidth = 2;
         ctx.beginPath();
-        ctx.moveTo(x, 0);
-        ctx.lineTo(x, height);
+        ctx.moveTo(meterStartX + SP[level], 0);
+        ctx.lineTo(meterStartX + SP[level], height);
         ctx.stroke();
     }
     
-    // 绘制条形
-    const barWidth = width / 50;
-    const maxBars = 50;
-    const barsToDraw = Math.min(maxBars, Math.floor((value / 100) * maxBars));
-    
-    for (let i = 0; i < barsToDraw; i++) {
-        const x = i * barWidth;
-        const barHeight = height * (0.2 + (i / maxBars) * 0.8);
-        const y = height - barHeight;
-        
-        // 颜色渐变
-        if (i < 20) {
-            ctx.fillStyle = '#4CAF50';
-        } else if (i < 35) {
-            ctx.fillStyle = '#FFC107';
-        } else {
-            ctx.fillStyle = '#F44336';
-        }
-        
-        ctx.fillRect(x, y, barWidth - 1, barHeight);
+    // 绘制静噪线（如果有设置）
+    const squelchEl = document.getElementById('SQUELCH');
+    if (squelchEl) {
+        const sqValue = squelchEl.value * 2.5; // 转换为像素位置
+        ctx.strokeStyle = '#deded5';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(meterStartX + sqValue, 0);
+        ctx.lineTo(meterStartX + sqValue, height);
+        ctx.stroke();
     }
 }
 
@@ -874,45 +1002,121 @@ function showMemoryPanel() {
 
 // 设置面板
 function showSettingsPanel() {
-    let html = '<div class="modal-panel"><h3>设置</h3>';
+    // 获取当前增益值
+    var cAfEl = document.getElementById('C_af');
+    var squelchEl = document.getElementById('SQUELCH');
+    
+    // AF增益值（0-1000映射到0-100%显示）
+    var afValue = cAfEl ? parseInt(cAfEl.value) : 500;
+    var afPercent = Math.round(afValue / 10); // 0-100%
+    
+    // 静噪值（0-100）
+    var sqlValue = squelchEl ? parseInt(squelchEl.value) : 0;
+    
+    // MIC增益（从Cookie获取，默认50%）
+    var micValue = 50;
+    var micCookie = getCookie('mobile_mic_gain');
+    if (micCookie) {
+        micValue = parseInt(micCookie);
+    }
+    
+    let html = '<div class="modal-panel"><h3>音频设置</h3>';
+    
+    // AF 增益
     html += '<div class="setting-item">';
-    html += '<label>AF 增益</label>';
-    html += '<input type="range" id="mobile-af-gain" min="0" max="100" value="50" onchange="setAFGain(this.value)">';
+    html += '<label>AF 增益: <span id="af-value-display">' + afPercent + '%</span></label>';
+    html += '<input type="range" id="mobile-af-gain" min="0" max="100" value="' + afPercent + '" oninput="setAFGain(this.value)">';
     html += '</div>';
+    
+    // MIC 增益
     html += '<div class="setting-item">';
-    html += '<label>MIC 增益</label>';
-    html += '<input type="range" id="mobile-mic-gain" min="0" max="200" value="50" onchange="setMicGain(this.value)">';
+    html += '<label>MIC 增益: <span id="mic-value-display">' + micValue + '%</span></label>';
+    html += '<input type="range" id="mobile-mic-gain" min="0" max="200" value="' + micValue + '" oninput="setMicGain(this.value)">';
     html += '</div>';
+    
+    // 静噪
     html += '<div class="setting-item">';
-    html += '<label>静噪</label>';
-    html += '<input type="range" id="mobile-squelch" min="0" max="100" value="0" onchange="setSquelch(this.value)">';
+    html += '<label>静噪: <span id="sql-value-display">' + sqlValue + '</span></label>';
+    html += '<input type="range" id="mobile-squelch" min="0" max="100" value="' + sqlValue + '" oninput="setSquelch(this.value)">';
     html += '</div>';
+    
     html += '<button class="close-panel-btn" onclick="closeModalPanel()">关闭</button></div>';
     showModalPanel(html);
 }
 
 function setAFGain(value) {
-    if (typeof AudioRX_SetGAIN === 'function') {
-        AudioRX_SetGAIN(value / 100);
+    // 更新显示
+    var display = document.getElementById('af-value-display');
+    if (display) display.textContent = value + '%';
+    
+    // 更新隐藏的C_af元素（范围0-1000）
+    var cAfEl = document.getElementById('C_af');
+    if (cAfEl) {
+        cAfEl.value = parseInt(value) * 10; // 0-100映射到0-1000
     }
-    console.log('AF 增益:', value);
+    
+    // 同步主界面音量滑块
+    var mainAfSlider = document.getElementById('main-af-gain');
+    var mainAfValue = document.getElementById('main-af-value');
+    if (mainAfSlider) mainAfSlider.value = value;
+    if (mainAfValue) mainAfValue.textContent = value + '%';
+    
+    // 调用AudioRX_SetGAIN
+    if (typeof AudioRX_SetGAIN === 'function') {
+        AudioRX_SetGAIN();
+    }
+    
+    // 保存Cookie
+    if (typeof setCookie === 'function') {
+        setCookie('C_af', parseInt(value) * 10, 180);
+    }
+    
+    console.log('AF 增益:', value + '%');
 }
 
 function setMicGain(value) {
+    // 更新显示
+    var display = document.getElementById('mic-value-display');
+    if (display) display.textContent = value + '%';
+    
+    // 调用AudioTX_SetGAIN（值范围0-1）
     if (typeof AudioTX_SetGAIN === 'function') {
-        AudioTX_SetGAIN(value / 100);
+        AudioTX_SetGAIN(parseInt(value) / 100);
     }
-    console.log('MIC 增益:', value);
+    
+    // 保存Cookie
+    if (typeof setCookie === 'function') {
+        setCookie('mobile_mic_gain', value, 180);
+    }
+    
+    console.log('MIC 增益:', value + '%');
 }
 
 function setSquelch(value) {
+    // 更新显示
+    var display = document.getElementById('sql-value-display');
+    if (display) display.textContent = value;
+    
+    // 更新隐藏的SQUELCH元素
     var squelchEl = document.getElementById('SQUELCH');
     if (squelchEl) {
         squelchEl.value = value;
-        if (typeof drawRXSmeter === 'function') {
-            drawRXSmeter();
-        }
     }
+    
+    // 更新S表显示（重绘静噪线）
+    if (typeof drawRXSmeter === 'function') {
+        drawRXSmeter();
+    }
+    // 同时更新移动端S表
+    if (typeof updateSMeter === 'function' && typeof SignalLevel !== 'undefined') {
+        updateSMeter(SignalLevel);
+    }
+    
+    // 保存Cookie
+    if (typeof setCookie === 'function') {
+        setCookie('SQUELCH', value, 180);
+    }
+    
     console.log('静噪:', value);
 }
 
