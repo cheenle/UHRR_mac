@@ -20,7 +20,7 @@ A modern web-based remote control system optimized for mobile devices, enabling 
 ### 📱 Mobile Interface / 移动端界面
 
 <p align="center">
-  <img src="screenshots/mobile_interface.svg" alt="Mobile Interface" width="300">
+  <img src="screenshots/mobile_interface.png" alt="Mobile Interface" width="300">
 </p>
 
 > Modern mobile UI optimized for iPhone/Android with touch-friendly controls, large PTT button, and real-time S-meter display.
@@ -30,7 +30,7 @@ A modern web-based remote control system optimized for mobile devices, enabling 
 ### 🖥️ Desktop Interface / 桌面端界面
 
 <p align="center">
-  <img src="screenshots/desktop_interface.svg" alt="Desktop Interface" width="600">
+  <img src="screenshots/desktop_interface.jpg" alt="Desktop Interface" width="600">
 </p>
 
 > Full-featured desktop interface with spectrum display, detailed controls, and comprehensive radio management.
