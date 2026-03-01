@@ -2,26 +2,34 @@
 
 ## 项目概述
 
-Universal HamRadio Remote (UHRR) 是一个面向业余无线电爱好者的远程电台控制与音频流系统。它允许用户通过现代Web浏览器界面远程控制电台设备，进行语音通话和参数调节。
+**Mobile Remote Radio Control (MRRC)** 是一款专为移动端优化的业余电台远程控制系统。它允许业余无线电爱好者通过现代Web浏览器（尤其是移动设备）随时随地远程控制电台设备，进行语音通话和参数调节。
+
+**设计理念**：Mobile First, Radio Anywhere - 随时随地，畅享业余无线电。
 
 主要技术栈：
 - **前端**：HTML5, CSS3, JavaScript (VanillaJS), Web Audio API, AudioWorklet, WebSocket
 - **后端**：Python 3.12+, Tornado Web Framework, PyAudio, Hamlib/rigctld
 - **部署**：macOS/类Unix系统，支持TLS加密和用户认证
 
-### 核心改进
+### 核心特性
+- **📱 移动优先设计**：专为触摸屏优化，支持单手操作，PWA离线访问
+- **⚡ 超低延迟**：TX/RX切换<100ms，PTT可靠性99%+
+- **🌍 随时随地访问**：互联网覆盖处即可操控您的电台
+- **🔒 安全连接**：TLS加密传输，用户认证保护
+- **🎛️ 完整控制**：频率、模式、PTT、天调等完整电台功能
+
+### 历史改进
 - **增强的PTT可靠性机制**：按下即发送PTT命令，并立即发送预热帧确保后端收到音频数据
 - **优化的TX/RX切换**：从2-3秒延迟优化至<100ms切换响应
 - **移动端支持**：专门的移动界面，优化触摸交互和音频处理，支持iPhone 15等现代移动设备
 - **AAC音频编码**：新增ADPCM自适应差分编码，支持50-60%压缩率
 - **音频优化**：采用Int16编码（50%带宽减少），AudioWorklet低抖动播放
-- **延迟优化**：TX到RX切换延迟从2-3秒优化到<100ms
 - **NanoVNA集成**：内置矢量网络分析仪Web界面支持
 
 ## 目录结构要点
 
 ```
-UHRR_mac/
+MRRC/
 ├── UHRR                          # 后端主程序 (Tornado WebSocket服务器)
 ├── UHRR.conf                     # 系统核心配置文件
 ├── audio_interface.py            # PyAudio采集/播放封装与客户端分发
@@ -36,7 +44,7 @@ UHRR_mac/
 │   ├── rx_worklet_processor.js   # AudioWorklet播放器
 │   ├── aac_encoder.js            # AAC/ADPCM音频编码器
 │   ├── atu.js                    # ATU功率和驻波比显示管理
-│   ├── mobile_modern.html        # 现代移动端界面 (iPhone 15优化)
+│   ├── mobile_modern.html        # 现代移动端界面 (iPhone 15优化) ⭐
 │   ├── mobile_modern.js          # 移动端界面逻辑
 │   ├── mobile_audio_direct_copy.js # 移动端音频处理
 │   ├── manifest.json             # PWA应用清单文件
@@ -653,6 +661,24 @@ cat certs/fullchain.pem | openssl x509 -text -noout
 - `www/mobile_modern.html` - 添加音量控制区域和隐藏元素
 - `www/mobile_modern.css` - 音量滑块样式（渐变色背景）
 - `www/mobile_modern.js` - S表绘制、音量控制、双向同步
+
+---
+
+### V4.1.0 项目重命名 (2026-03-01)
+
+**主题：Mobile First - MRRC品牌重塑**
+
+#### 核心改进
+- **项目更名**：从"Universal HamRadio Remote (UHRR)"更名为"Mobile Remote Radio Control (MRRC)"
+- **设计理念**：Mobile First, Radio Anywhere - 随时随地，畅享业余无线电
+- **文档国际化**：README支持中英文切换
+
+#### 文件变更
+- `README.md` - 主入口，语言选择页面
+- `README_CN.md` - 中文文档（从README.md重命名）
+- `README_en.md` - 英文文档
+- `CHANGELOG.md` - 添加V4.1.0版本记录
+- `IFLOW.md` - 更新项目概述
 
 ---
 

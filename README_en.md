@@ -1,121 +1,159 @@
-# Universal HamRadio Remote (UHRR)
+# Mobile Remote Radio Control (MRRC)
 
 [![English](https://img.shields.io/badge/lang-English-blue.svg)](README_en.md) [![中文](https://img.shields.io/badge/lang-中文-red.svg)](README_CN.md)
 
-A web-based remote control and audio streaming system for shortwave radios. The frontend is based on HTML5/JS, and the backend is based on Tornado + PyAudio + rigctld (Hamlib). This version has been fixed and optimized for macOS/mobile and TLS, and significantly improved TX/PTT timing and RX jitter.
+**Amateur Radio, Anytime, Anywhere.**
 
-> ✅ **Important Optimization**: Resolved TX to RX switching latency issue (optimized from 2-3s to <100ms), see [docs/latency_optimization_guide.md](docs/latency_optimization_guide.md) for details
+MRRC is a modern web-based remote control system optimized for mobile devices, enabling flexible operation of your amateur radio station from anywhere. Built with HTML5/JS frontend and Tornado + PyAudio + rigctld (Hamlib) backend.
 
-## Features
-- Browser-based operation: Frequency, mode, PTT (press to transmit immediately, release to stop immediately)
-- Bidirectional audio: TX side Opus encoding, RX side low-jitter playback (AudioWorklet), sample rate 24 kHz
-- TLS/Certificates: Supports own certificate chain (fullchain + private key)
-- Backend: Tornado WebSocket, PyAudio capture/playback, rigctld radio control
-- **Enhanced PTT Reliability Mechanism**: Send PTT command immediately upon press, and send warm-up frames to ensure backend receives audio data
-- **Optimized TX/RX Switching**: Nearly real-time mode switching (<100ms latency)
-- **Mobile Optimization**: UI and interaction optimized for touchscreen devices
+> ✅ **Core Advantage**: Mobile-first design, TX→RX switching latency <100ms, PWA support for offline access, optimized for one-hand operation
 
-## Quick Start (macOS)
-1. Dependencies
-   - Python 3.12+
-   - Hamlib/rigctld installed and available
-   - PyAudio (based on PortAudio)
-2. Start rigctld (example, adjust according to your actual serial port/parameters):
-   ```bash
-   rigctld -m 335 -r /dev/cu.usbserial-230 -s 4800
-   ```
-3. Configure TLS certificates (optional but recommended)
-   - Place your certificates in `certs/`:
-     - `certs/fullchain.pem` (server certificate + intermediate certificate)
-     - `certs/radio.vlsc.net.key` (private key)
-   - Edit `UHRR.conf`:
-     ```ini
-     [SERVER]
-     port = 443
-     certfile = certs/fullchain.pem
-     keyfile = certs/radio.vlsc.net.key
-     ```
-4. Start service
-   ```bash
-   python ./UHRR
-   ```
-   - Console should display `HTTP server started.`
-   - If port is occupied, clean up old processes first
-5. Access
-   - `https://<your_domain_or_IP>/` (if using 443) or `https://<host>:8888/`
+## 🎯 Design Philosophy
 
-## Directory Structure Overview
-- `www/`: Frontend pages and scripts
-  - `controls.js`: Audio and control main logic (including TX Opus encoding, RX Worklet playback, bitrate display, PTT command confirmation and retry, etc.)
-  - `tx_button_optimized.js`: TX button events and timing (including enhanced PTT reliability mechanism and latency optimization)
-  - `rx_worklet_processor.js`: AudioWorklet player (low jitter)
-- `UHRR`: Backend main program (Tornado + WebSocket + SSLContext)
-- `audio_interface.py`: PyAudio capture/playback encapsulation and client distribution
-- `hamlib_wrapper.py`: Auxiliary logic for rigctld communication
-- `certs/`: Certificate related
-  - `fullchain.pem`, `radio.vlsc.net.key` (production use)
-  - `legacy/` stores historical certificates (migrated)
-- `dev_tools/`: Test/debug scripts and pages (non-production)
-- `logs/`: Runtime logs
-- `docs/`: Technical documentation
-  - `System_Architecture_Design.md`: System architecture design document
-  - `PTT_Audio_Postmortem_and_Best_Practices.md`: PTT/audio stability postmortem
-  - `latency_optimization_guide.md`: TX/RX switching latency optimization guide
+**Mobile First, Radio Anywhere**
 
-## Key Configuration
-- `UHRR.conf`
-  - `[SERVER] port`: Listening port (production recommendation: 443)
-  - `[SERVER] certfile/keyfile`: fullchain and private key paths
-  - `[CTRL].interval_smeter_update`: S meter update interval
-  - `[AUDIO] inputdevice/outputdevice`: Audio device names
-  - `[HAMLIB] rig_pathname/rig_rate/rig_model`: Radio serial port and parameters
+- 📱 **Mobile First**: Designed for touchscreens with large PTT buttons and thumb-friendly zones
+- 🌍 **Anytime, Anywhere**: Control your station wherever internet is available
+- ⚡ **Instant Response**: TX/RX switching <100ms, PTT reliability 99%+
+- 🔒 **Secure Connection**: TLS encryption with user authentication
 
-## Audio and Timing Strategy
-- TX:
-  - Frontend `OpusEncoderProcessor`: `opusRate = 24000`, `opusFrameDur = 60ms`
-  - Backend `WS_AudioTXHandler` receives and plays; PTT timeout protection (automatically disconnects after 2s without data)
-  - **Enhanced PTT Reliability Mechanism**: Send PTT command immediately upon press, and send 10 warm-up frames immediately to ensure backend receives audio data
-- RX:
-  - Backend `AudioRXHandler.tailstream` bulk delivery to reduce jitter
-  - Frontend `AudioWorkletNode` playback, set buffer depth (optimized to 16/32 frames, balancing latency and stability)
-  - **Optimized Buffer Management**: Immediately clear RX buffer when TX is released, achieving <100ms switching response
+## ✨ Features
 
-## TLS/Certificate Notes
-- fullchain.pem should only contain "server certificate + intermediate certificate", do not拼root certificate
-- If exported from Windows/certain panels, standardize line breaks (LF), remove trailing backslashes
-- Backend uses `ssl.SSLContext` to load certificate chain and private key
+### Mobile Core Features
+- **Touch-Optimized Interface**: Large buttons, clear frequency display, real-time S-meter
+- **One-Hand Operation**: PTT button positioned for comfortable thumb reach
+- **PWA Support**: Add to home screen, offline access capability
+- **Volume Control**: Direct AF gain adjustment on main screen
 
-## Common Troubleshooting
-- Port occupation:
-  ```bash
-  lsof -iTCP:443 -sTCP:LISTEN -n -P
-  kill -9 <PID>
-  ```
-- Certificate error (bad end line):
-  - Use `sed -e 's/\r$//'` to standardize line breaks
-  - Confirm `-----BEGIN/END CERTIFICATE-----` lines are complete
-- TX press doesn't transmit immediately:
-  - Confirm power button on page is on, WebSocket is connected
-  - Backend uses enhanced PTT reliability mechanism: send PTT command immediately upon press, and send 10 warm-up frames immediately to ensure backend receives audio data
-  - Backend uses count timeout method (10 consecutive times without receiving audio frames to extinguish PTT, each check interval 200ms) instead of time threshold method
-- RX jitter:
-  - Maintain 24k end-to-end consistency
-  - Can adjust Worklet buffer (e.g., 16/32 or 32/64)
-- TX to RX switching latency:
-  - Optimized buffer clearing mechanism and PTT command processing, achieving <100ms switching response
-  - See [Latency Optimization Guide](docs/latency_optimization_guide.md) for details
+### Radio Control
+- **Full Control**: Frequency, mode, PTT (press to transmit, release to stop)
+- **VFO Switching**: Quick VFO A/B toggle
+- **Band Selection**: One-tap switching between amateur bands
+- **Antenna Tuner Support**: Long-press TUNE button to transmit 1kHz tone
 
-## Documentation
-- **[System Architecture Design Document](docs/System_Architecture_Design.md)**: Complete system architecture design, component relationships, interface protocols, deployment solutions, and technical specifications
-- **[PTT/Audio Stability Postmortem](docs/PTT_Audio_Postmortem_and_Best_Practices.md)**: In-depth analysis and best practices for TX/RX stability issues
-- **[TX/RX Switching Latency Optimization Guide](docs/latency_optimization_guide.md)**: Detailed documentation of latency issue analysis and optimization solutions
+### Audio System
+- **Bidirectional Audio**: TX with Int16 encoding, RX with low-jitter AudioWorklet playback, 16kHz sample rate
+- **Real-time S-Meter**: Accurate S0-S9+60dB signal strength display
+- **Audio Filters**: Multiple filter configurations available
 
-## Development and Testing
-- All test/debug scripts are located in `dev_tools/`, not included in production deployment
-- Recommended to make experimental modifications in independent branches
+### Security & Connection
+- **TLS/Certificates**: Support for custom certificate chain (fullchain + private key)
+- **User Authentication**: FILE-based authentication to protect your station
 
-## License and Compliance
-- This project follows the **GNU General Public License v3.0 (GPL-3.0)** license
-- **Project Source**: Based on the [F4HTB/Universal_HamRadio_Remote_HTML5](https://github.com/F4HTB/Universal_HamRadio_Remote_HTML5) open source project for development and improvement
-- **Modification Statement**: Stability optimization, architecture upgrade, and feature enhancement have been made to the original code, see [System Architecture Design Document](docs/System_Architecture_Design.md#142-项目来源声明) for details
-- **Distribution Requirements**: Must provide complete source code and retain license and copyright notices
+## 🚀 Quick Start (macOS)
+
+### 1. Dependencies
+- Python 3.12+
+- Hamlib/rigctld installed and available
+- PyAudio (based on PortAudio)
+
+### 2. Start rigctld
+```bash
+# Example, adjust according to your actual serial port/parameters
+rigctld -m 335 -r /dev/cu.usbserial-230 -s 4800
+```
+
+### 3. Configure TLS Certificates (optional but recommended)
+```bash
+# Place certificates in certs/ directory
+# certs/fullchain.pem (server certificate + intermediate certificate)
+# certs/radio.vlsc.net.key (private key)
+```
+
+Edit `UHRR.conf`:
+```ini
+[SERVER]
+port = 443
+certfile = certs/fullchain.pem
+keyfile = certs/radio.vlsc.net.key
+auth = FILE
+```
+
+### 4. Start Service
+```bash
+python ./UHRR
+```
+
+### 5. Access
+- **Mobile**: `https://<your-domain>/mobile_modern.html` ⭐ Recommended
+- **Desktop**: `https://<your-domain>/`
+
+## 📱 Mobile Interface
+
+| Interface | Purpose | Features |
+|-----------|---------|----------|
+| `mobile_modern.html` | Modern mobile UI | iPhone 15 optimized, PWA support, one-hand operation |
+| `index.html` | Desktop full interface | Full-featured control, suitable for large screens |
+
+## 📁 Directory Structure
+
+```
+MRRC/
+├── www/                        # Frontend pages and scripts
+│   ├── mobile_modern.html      # Mobile main interface ⭐
+│   ├── mobile_modern.js        # Mobile logic
+│   ├── controls.js             # Audio and control main logic
+│   ├── tx_button_optimized.js  # TX button optimization
+│   └── rx_worklet_processor.js # AudioWorklet player
+├── UHRR                        # Backend main program
+├── audio_interface.py          # PyAudio encapsulation
+├── hamlib_wrapper.py           # rigctld communication
+├── certs/                      # TLS certificates
+├── docs/                       # Documentation
+├── dev_tools/                  # Test utilities
+└── nanovna/                    # NanoVNA integration
+```
+
+## ⚙️ Key Configuration
+
+`UHRR.conf` main settings:
+- `[SERVER] port`: Listening port (production recommendation: 443)
+- `[SERVER] auth`: Authentication method (FILE)
+- `[AUDIO] inputdevice/outputdevice`: Audio devices
+- `[HAMLIB] rig_pathname/rig_model`: Radio serial port and model
+
+## 📊 Performance Metrics
+
+| Metric | Value |
+|--------|-------|
+| TX Latency | ~65ms |
+| RX Latency | ~51ms |
+| TX→RX Switch | <100ms |
+| PTT Reliability | 99%+ |
+
+## 📚 Documentation
+
+- **[System Architecture Design](docs/System_Architecture_Design.md)**: Complete system architecture
+- **[PTT/Audio Stability](docs/PTT_Audio_Postmortem_and_Best_Practices.md)**: Stability analysis and best practices
+- **[Latency Optimization Guide](docs/latency_optimization_guide.md)**: TX/RX switching optimization details
+- **[Mobile Interface Documentation](docs/mobile_modern_interface.md)**: Mobile UI design specifications
+
+## 🔧 Troubleshooting
+
+### Port Occupation
+```bash
+lsof -iTCP:443 -sTCP:LISTEN -n -P
+kill -9 <PID>
+```
+
+### Certificate Error
+```bash
+# Standardize line breaks
+sed -e 's/\r$//' input.pem > output.pem
+```
+
+### Mobile PTT Not Responding
+1. Confirm microphone permission is granted
+2. Check WebSocket connection status
+3. Review browser console logs
+
+## 📄 License
+
+[GNU General Public License v3.0](LICENSE)
+
+Based on [F4HTB/Universal_HamRadio_Remote_HTML5](https://github.com/F4HTB/Universal_HamRadio_Remote_HTML5)
+
+---
+
+**MRRC - Mobile Remote Radio Control**  
+*Amateur Radio, Anytime, Anywhere.*

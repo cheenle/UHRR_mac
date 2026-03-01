@@ -1,13 +1,17 @@
-# Universal HamRadio Remote (UHRR)
+# Mobile Remote Radio Control (MRRC)
 
 [![English](https://img.shields.io/badge/lang-English-blue.svg)](README_en.md)
 [![中文](https://img.shields.io/badge/lang-中文-red.svg)](README_CN.md)
 
 ---
 
-A web-based remote control and audio streaming system for shortwave radios.
+**Amateur Radio, Anytime, Anywhere.**
 
-**面向短波电台的 Web 远程控制与音频流系统。**
+**随时随地，畅享业余无线电。**
+
+A modern web-based remote control system optimized for mobile devices, enabling flexible operation of your amateur radio station from anywhere.
+
+基于现代Web技术的远程电台控制系统，专为移动端优化，让您随时随地灵活操控业余电台。
 
 ---
 
@@ -20,15 +24,17 @@ A web-based remote control and audio streaming system for shortwave radios.
 
 ---
 
-## ✨ Highlights / 亮点
+## ✨ Key Features / 核心特性
 
 | Feature | Description |
 |---------|-------------|
-| 🎛️ **Browser Control** | Frequency, mode, PTT control via web browser |
-| 🎤 **Bidirectional Audio** | Real-time TX/RX audio streaming (16kHz) |
-| 📱 **Mobile Optimized** | Modern UI for iPhone/Android devices |
-| 🔒 **TLS Encryption** | Secure HTTPS/WSS connections |
-| ⚡ **Low Latency** | TX→RX switching < 100ms |
+| 📱 **Mobile First** | Optimized for iPhone/Android with touch-friendly UI |
+| 🎛️ **Full Control** | Frequency, mode, PTT - complete station control |
+| 🎤 **Real-time Audio** | Bidirectional TX/RX streaming (16kHz) |
+| 🌍 **Remote Anywhere** | Access your station from anywhere with internet |
+| 🔒 **Secure Connection** | TLS encrypted HTTPS/WSS |
+| ⚡ **Ultra Low Latency** | TX→RX switching < 100ms |
+| 🎯 **One-Hand Operation** | PTT button optimized for mobile thumb reach |
 
 ---
 
@@ -49,20 +55,32 @@ A web-based remote control and audio streaming system for shortwave radios.
 # 1. Start rigctld
 rigctld -m 335 -r /dev/cu.usbserial-230 -s 4800
 
-# 2. Start UHRR
+# 2. Start MRRC Server
 python ./UHRR
 
-# 3. Access via browser
-# https://your-domain/
+# 3. Access from mobile browser
+# https://your-domain/mobile_modern.html
 ```
+
+---
+
+## 📱 Mobile Interface / 移动端界面
+
+| Screen | Description |
+|--------|-------------|
+| `mobile_modern.html` | Modern mobile UI (iPhone 15 optimized) |
+| `index.html` | Desktop full-featured interface |
 
 ---
 
 ## 📁 Project Structure / 项目结构
 
 ```
-UHRR_mac/
+MRRC/
 ├── www/           # Frontend (HTML5/JS/CSS)
+│   ├── mobile_modern.html   # Mobile interface
+│   ├── controls.js          # Audio & control logic
+│   └── tx_button_optimized.js
 ├── UHRR           # Backend (Tornado + WebSocket)
 ├── certs/         # TLS certificates
 ├── docs/          # Documentation

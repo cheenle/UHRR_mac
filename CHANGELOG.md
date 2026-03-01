@@ -5,6 +5,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [V4.1.0] - 2026-03-01
+
+### 🏷️ Project Rebranding
+
+**Theme: Mobile First - MRRC (Mobile Remote Radio Control)**
+
+### Changed
+- **Project Name**: Renamed from "Universal HamRadio Remote (UHRR)" to "Mobile Remote Radio Control (MRRC)"
+- **Design Philosophy**: Mobile-first approach with emphasis on "Amateur Radio, Anytime, Anywhere"
+- **Documentation**: Complete rebranding across all README files
+
+### Added
+- **Bilingual README**: Language-switchable documentation (English/Chinese)
+- **Mobile-First Tagline**: "随时随地，畅享业余无线电" / "Amateur Radio, Anytime, Anywhere"
+
+### Highlights
+| Feature | Description |
+|---------|-------------|
+| 📱 Mobile First | Optimized for touch, one-hand operation |
+| 🌍 Remote Anywhere | Control your station from anywhere |
+| ⚡ Ultra Low Latency | TX→RX switching < 100ms |
+
+---
+
 ## [V4.0.1] - 2026-03-01
 
 ### 🎨 Mobile Interface Enhancement
