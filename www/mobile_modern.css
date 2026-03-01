@@ -339,10 +339,25 @@ body {
     border: 1px solid #444;
 }
 
-/* 加号按钮样式（第二行） */
+/* 加号按钮样式（第二行左侧两个） */
 .tune-btn[id^="tune-up"] {
     background-color: #1a1a1a;
     border: 1px solid #444;
+}
+
+/* TUNE天调按钮样式（第二行右侧） */
+.tune-btn.tune-action-btn {
+    background-color: #FF9800;
+    border: 2px solid #FF9800;
+    font-weight: bold;
+    color: #fff;
+}
+
+.tune-btn.tune-action-btn:active,
+.tune-btn.tune-action-btn.active {
+    background-color: #FF5722;
+    border-color: #FF5722;
+    transform: scale(0.97);
 }
 
 .tune-btn {

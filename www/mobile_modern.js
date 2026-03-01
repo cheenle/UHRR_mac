@@ -233,10 +233,67 @@ function setupEventListeners() {
     
     // 频率调节按钮
     domElements.tuneButtons.forEach(button => {
+        // 跳过TUNE天调按钮
+        if (button.id === 'tune-action-btn') return;
+        
         button.addEventListener('click', function() {
             tuneFrequency(parseInt(this.dataset.step));
         });
     });
+    
+    // TUNE天调按钮 - 长按发射1kHz单音
+    const tuneActionBtn = document.getElementById('tune-action-btn');
+    if (tuneActionBtn) {
+        let tuneTimeout = null;
+        
+        // 触摸开始
+        tuneActionBtn.addEventListener('touchstart', function(e) {
+            e.preventDefault();
+            this.classList.add('active');
+            if (typeof startTune === 'function') {
+                startTune();
+            }
+        });
+        
+        // 触摸结束
+        tuneActionBtn.addEventListener('touchend', function(e) {
+            e.preventDefault();
+            this.classList.remove('active');
+            if (typeof stopTune === 'function') {
+                stopTune();
+            }
+        });
+        
+        // 鼠标按下
+        tuneActionBtn.addEventListener('mousedown', function(e) {
+            e.preventDefault();
+            this.classList.add('active');
+            if (typeof startTune === 'function') {
+                startTune();
+            }
+        });
+        
+        // 鼠标释放
+        tuneActionBtn.addEventListener('mouseup', function(e) {
+            e.preventDefault();
+            this.classList.remove('active');
+            if (typeof stopTune === 'function') {
+                stopTune();
+            }
+        });
+        
+        // 鼠标离开按钮
+        tuneActionBtn.addEventListener('mouseleave', function(e) {
+            if (this.classList.contains('active')) {
+                this.classList.remove('active');
+                if (typeof stopTune === 'function') {
+                    stopTune();
+                }
+            }
+        });
+        
+        console.log('🎵 TUNE天调按钮已初始化');
+    }
     
     // 防止长按菜单
     document.addEventListener('contextmenu', function(e) {
