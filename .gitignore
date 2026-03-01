@@ -11,3 +11,8 @@ server_*.log
 app*.log
 
 *.log
+
+# Logs
+uhrr*.log
+rigctld.log
+*.pid
