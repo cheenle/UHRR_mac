@@ -329,7 +329,20 @@ body {
 .tuning-controls {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(2, 1fr);
     gap: 8px;
+}
+
+/* 减号按钮样式（第一行） */
+.tune-btn[id^="tune-down"] {
+    background-color: #1a1a1a;
+    border: 1px solid #444;
+}
+
+/* 加号按钮样式（第二行） */
+.tune-btn[id^="tune-up"] {
+    background-color: #1a1a1a;
+    border: 1px solid #444;
 }
 
 .tune-btn {
