@@ -233,21 +233,16 @@ function setupEventListeners() {
     
     // 频率调节按钮
     domElements.tuneButtons.forEach(button => {
-        // 跳过TUNE天调按钮
-        if (button.id === 'tune-action-btn') return;
-        
         button.addEventListener('click', function() {
             tuneFrequency(parseInt(this.dataset.step));
         });
     });
     
     // TUNE天调按钮 - 长按发射1kHz单音
-    const tuneActionBtn = document.getElementById('tune-action-btn');
-    if (tuneActionBtn) {
-        let tuneTimeout = null;
-        
+    const tuneHeaderBtn = document.getElementById('tune-header-btn');
+    if (tuneHeaderBtn) {
         // 触摸开始
-        tuneActionBtn.addEventListener('touchstart', function(e) {
+        tuneHeaderBtn.addEventListener('touchstart', function(e) {
             e.preventDefault();
             this.classList.add('active');
             if (typeof startTune === 'function') {
@@ -256,7 +251,7 @@ function setupEventListeners() {
         });
         
         // 触摸结束
-        tuneActionBtn.addEventListener('touchend', function(e) {
+        tuneHeaderBtn.addEventListener('touchend', function(e) {
             e.preventDefault();
             this.classList.remove('active');
             if (typeof stopTune === 'function') {
@@ -265,7 +260,7 @@ function setupEventListeners() {
         });
         
         // 鼠标按下
-        tuneActionBtn.addEventListener('mousedown', function(e) {
+        tuneHeaderBtn.addEventListener('mousedown', function(e) {
             e.preventDefault();
             this.classList.add('active');
             if (typeof startTune === 'function') {
@@ -274,7 +269,7 @@ function setupEventListeners() {
         });
         
         // 鼠标释放
-        tuneActionBtn.addEventListener('mouseup', function(e) {
+        tuneHeaderBtn.addEventListener('mouseup', function(e) {
             e.preventDefault();
             this.classList.remove('active');
             if (typeof stopTune === 'function') {
@@ -283,7 +278,7 @@ function setupEventListeners() {
         });
         
         // 鼠标离开按钮
-        tuneActionBtn.addEventListener('mouseleave', function(e) {
+        tuneHeaderBtn.addEventListener('mouseleave', function(e) {
             if (this.classList.contains('active')) {
                 this.classList.remove('active');
                 if (typeof stopTune === 'function') {

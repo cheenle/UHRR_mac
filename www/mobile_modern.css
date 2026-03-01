@@ -345,19 +345,18 @@ body {
     border: 1px solid #444;
 }
 
-/* TUNE天调按钮样式（第二行右侧） */
-.tune-btn.tune-action-btn {
+/* TUNE天调按钮样式（顶部控制栏） */
+.quick-btn.tune-btn-header {
     background-color: #FF9800;
-    border: 2px solid #FF9800;
+    border: 1px solid #FF9800;
     font-weight: bold;
     color: #fff;
 }
 
-.tune-btn.tune-action-btn:active,
-.tune-btn.tune-action-btn.active {
+.quick-btn.tune-btn-header:active,
+.quick-btn.tune-btn-header.active {
     background-color: #FF5722;
     border-color: #FF5722;
-    transform: scale(0.97);
 }
 
 .tune-btn {
