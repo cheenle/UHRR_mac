@@ -48,7 +48,6 @@ const domElements = {
     statusRX: null,
     statusTX: null,
     sMeterCanvas: null,
-    navButtons: null,
     quickButtons: null,
     tuneButtons: null
 };
@@ -101,7 +100,6 @@ function initializeElements() {
     domElements.statusRX = document.getElementById('status-rx');
     domElements.statusTX = document.getElementById('status-tx');
     domElements.sMeterCanvas = document.getElementById('s-meter-canvas');
-    domElements.navButtons = document.querySelectorAll('.nav-btn');
     domElements.quickButtons = document.querySelectorAll('.quick-btn');
     domElements.tuneButtons = document.querySelectorAll('.tune-btn');
 }
@@ -216,13 +214,6 @@ function setupEventListeners() {
             this.style.transform = '';
         }, { passive: true });
     }
-    
-    // 导航按钮
-    domElements.navButtons.forEach(button => {
-        button.addEventListener('click', function() {
-            switchTab(this.dataset.tab);
-        });
-    });
     
     // 快捷按钮
     domElements.quickButtons.forEach(button => {
@@ -637,17 +628,6 @@ function toggleMenu() {
 function closeMenu() {
     domElements.mainMenu.classList.remove('open');
     domElements.menuOverlay.classList.remove('open');
-}
-
-function switchTab(tabName) {
-    domElements.navButtons.forEach(button => {
-        if (button.dataset.tab === tabName) {
-            button.classList.add('active');
-        } else {
-            button.classList.remove('active');
-        }
-    });
-    console.log(`切换到标签: ${tabName}`);
 }
 
 function handleQuickButton(button) {
