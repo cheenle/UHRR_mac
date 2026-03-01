@@ -55,17 +55,17 @@ config = configparser.ConfigParser()
 config.read('UHRR.conf')
 e="No"
 
-# ATU相关全局变量
-ATU_DEVICE_IP = '192.168.1.63'  # 直接设置ATU设备IP地址
-ATU_DEVICE_PORT = int(os.environ.get('ATU_DEVICE_PORT', '60001'))
-atu_device_connected = False
-atu_ws_client = None
-atu_ws_clients = []
-
-# ATU命令定义
-SCMD_FLAG = 0xFF
-SCMD_SYNC = 1
-SCMD_METER_STATUS = 2
+# # ATU相关全局变量
+# ATU_DEVICE_IP_DISABLED = '192.168.1.63'  # 直接设置ATU设备IP地址
+# ATU_DEVICE_PORT_DISABLED = int(os.environ.get('ATU_DEVICE_PORT_DISABLED', '60001'))
+# atu_device_connected_DISABLED = False
+# atu_ws_client_DISABLED = None
+# atu_ws_client_DISABLEDs = []
+# 
+# # ATU命令定义
+# SCMD_FLAG_DISABLED = 0xFF
+# SCMD_SYNC_DISABLED = 1
+# SCMD_METER_STATUS_DISABLED = 2
 
 ############ Global functions ##################################
 def writte_log(logmsg):
@@ -503,102 +503,102 @@ class WS_AudioTXHandler(tornado.websocket.WebSocketHandler):
 ControlTRXHandlerClients = []
 LastPing = time.time()
 
-# ATU命令定义
-SCMD_FLAG = 0xFF
-SCMD_SYNC = 1
-SCMD_METER_STATUS = 2
-SCMD_TUNE_STATUS = 3
-SCMD_TUNE_MODE = 4
-SCMD_RELAY_STATUS = 5
-
-# 预设频率配置 - 在这些频率附近会自动应用ATU参数
-PRESET_FREQUENCIES = {
-    7.050: {'sw': 0, 'inductor': 10, 'capacitor': 20},  # 7MHz频段
-    14.100: {'sw': 0, 'inductor': 15, 'capacitor': 25},  # 14MHz频段
-    21.100: {'sw': 1, 'inductor': 5, 'capacitor': 15},   # 21MHz频段
-    28.100: {'sw': 1, 'inductor': 0, 'capacitor': 10}    # 28MHz频段
-}
-
-# 定义主要波段的中心频率
-BAND_CENTERS = {
-    '160m': 1.850,
-    '80m': 3.550,
-    '40m': 7.050,  # 您指定的40m波段中心频率
-    '30m': 10.100,
-    '20m': 14.100,  # 您指定的20m波段中心频率
-    '17m': 18.100,
-    '15m': 21.100,  # 您指定的15m波段中心频率
-    '12m': 24.900,
-    '10m': 28.100   # 您指定的10m波段中心频率
-}
-
-# 定义每个波段的默认ATU参数（可以根据实际情况调整）
-DEFAULT_BAND_CONFIGS = {
-    '160m': {'network': 'LC', 'inductor': 60, 'capacitor': 80},
-    '80m': {'network': 'LC', 'inductor': 40, 'capacitor': 60},
-    '40m': {'network': 'LC', 'inductor': 30, 'capacitor': 40},
-    '30m': {'network': 'LC', 'inductor': 25, 'capacitor': 30},
-    '20m': {'network': 'LC', 'inductor': 20, 'capacitor': 25},
-    '17m': {'network': 'LC', 'inductor': 15, 'capacitor': 20},
-    '15m': {'network': 'LC', 'inductor': 12, 'capacitor': 15},
-    '12m': {'network': 'LC', 'inductor': 10, 'capacitor': 12},
-    '10m': {'network': 'LC', 'inductor': 8, 'capacitor': 10}
-}
-
-# 当前频率
-current_frequency = 0
-
-# 存储优化的调谐参数
-optimized_tuning_configs = {}  # 频率 -> 最佳调谐参数的映射
-
-# 存储配置文件路径
-CONFIG_FILE = 'atu_optimized_configs.json'
+# # ATU命令定义
+# SCMD_FLAG_DISABLED = 0xFF
+# SCMD_SYNC_DISABLED = 1
+# SCMD_METER_STATUS_DISABLED = 2
+# SCMD_TUNE_STATUS_DISABLED = 3
+# SCMD_TUNE_MODE_DISABLED = 4
+# SCMD_RELAY_STATUS_DISABLED = 5
+# 
+# # 预设频率配置 - 在这些频率附近会自动应用ATU参数
+# PRESET_FREQUENCIES_DISABLED = {
+#     7.050: {'sw': 0, 'inductor': 10, 'capacitor': 20},  # 7MHz频段
+#     14.100: {'sw': 0, 'inductor': 15, 'capacitor': 25},  # 14MHz频段
+#     21.100: {'sw': 1, 'inductor': 5, 'capacitor': 15},   # 21MHz频段
+#     28.100: {'sw': 1, 'inductor': 0, 'capacitor': 10}    # 28MHz频段
+# }
+# 
+# # 定义主要波段的中心频率
+# BAND_CENTERS_DISABLED = {
+#     '160m': 1.850,
+#     '80m': 3.550,
+#     '40m': 7.050,  # 您指定的40m波段中心频率
+#     '30m': 10.100,
+#     '20m': 14.100,  # 您指定的20m波段中心频率
+#     '17m': 18.100,
+#     '15m': 21.100,  # 您指定的15m波段中心频率
+#     '12m': 24.900,
+#     '10m': 28.100   # 您指定的10m波段中心频率
+# }
+# 
+# # 定义每个波段的默认ATU参数（可以根据实际情况调整）
+# DEFAULT_BAND_CONFIGS_DISABLED = {
+#     '160m': {'network': 'LC', 'inductor': 60, 'capacitor': 80},
+#     '80m': {'network': 'LC', 'inductor': 40, 'capacitor': 60},
+#     '40m': {'network': 'LC', 'inductor': 30, 'capacitor': 40},
+#     '30m': {'network': 'LC', 'inductor': 25, 'capacitor': 30},
+#     '20m': {'network': 'LC', 'inductor': 20, 'capacitor': 25},
+#     '17m': {'network': 'LC', 'inductor': 15, 'capacitor': 20},
+#     '15m': {'network': 'LC', 'inductor': 12, 'capacitor': 15},
+#     '12m': {'network': 'LC', 'inductor': 10, 'capacitor': 12},
+#     '10m': {'network': 'LC', 'inductor': 8, 'capacitor': 10}
+# }
+# 
+# # 当前频率
+# current_frequency_DISABLED = 0
+# 
+# # 存储优化的调谐参数
+# optimized_tuning_configs_DISABLED = {}  # 频率 -> 最佳调谐参数的映射
+# 
+# # 存储配置文件路径
+# CONFIG_FILE_DISABLED = 'atu_optimized_configs.json'
 
 # 存储最近的电表数据和继电器状态数据，用于关联保存配置
-latest_meter_data = None
-latest_relay_data = None
+latest_meter_data_DISABLED = None
+latest_relay_data_DISABLED = None
 
 # 加载存储的调谐配置
 def load_optimized_configs():
     """从文件加载存储的调谐配置"""
-    global optimized_tuning_configs
+    global optimized_tuning_configs_DISABLED
     try:
-        if os.path.exists(CONFIG_FILE):
-            with open(CONFIG_FILE, 'r') as f:
-                optimized_tuning_configs = json.load(f)
-            logger.info(f"✅ 已加载 {len(optimized_tuning_configs)} 个存储的调谐配置")
+        if os.path.exists(CONFIG_FILE_DISABLED):
+            with open(CONFIG_FILE_DISABLED, 'r') as f:
+                optimized_tuning_configs_DISABLED = json.load(f)
+            logger.info(f"✅ 已加载 {len(optimized_tuning_configs_DISABLED)} 个存储的调谐配置")
         else:
             logger.info("📝 调谐配置文件不存在，将创建新文件")
     except Exception as e:
         logger.error(f"❌ 加载调谐配置失败: {e}")
-        optimized_tuning_configs = {}
+        optimized_tuning_configs_DISABLED = {}
 
 # 保存调谐配置到文件
 def save_optimized_configs():
     """保存调谐配置到文件"""
-    global optimized_tuning_configs
+    global optimized_tuning_configs_DISABLED
     try:
-        with open(CONFIG_FILE, 'w') as f:
-            json.dump(optimized_tuning_configs, f, indent=2)
-        logger.info(f"✅ 已保存 {len(optimized_tuning_configs)} 个调谐配置到文件")
+        with open(CONFIG_FILE_DISABLED, 'w') as f:
+            json.dump(optimized_tuning_configs_DISABLED, f, indent=2)
+        logger.info(f"✅ 已保存 {len(optimized_tuning_configs_DISABLED)} 个调谐配置到文件")
     except Exception as e:
         logger.error(f"❌ 保存调谐配置失败: {e}")
 
 # 获取当前频率
-def get_current_frequency():
+def get_current_frequency_DISABLED():
     """获取当前频率"""
-    global current_frequency
-    return current_frequency
+    global current_frequency_DISABLED
+    return current_frequency_DISABLED
 
 # 更新当前频率
-def update_current_frequency(freq):
+def update_current_frequency_DISABLED(freq):
     """更新当前频率"""
-    global current_frequency
-    current_frequency = freq
+    global current_frequency_DISABLED
+    current_frequency_DISABLED = freq
     logger.info(f"📡 当前频率更新为: {freq/1000000:.3f} MHz")
 
-# 在程序启动时加载配置
-load_optimized_configs()
+# 在程序启动时加载配置 - ATU功能已禁用
+# load_optimized_configs()
 
 ############ ATU设备WebSocket客户端 ##############
 class AtuWebSocketClient:
@@ -611,9 +611,9 @@ class AtuWebSocketClient:
         
     def connect(self):
         """连接到ATU设备WebSocket"""
-        global atu_device_connected
+        global atu_device_connected_DISABLED
         
-        ws_url = f"ws://{ATU_DEVICE_IP}:{ATU_DEVICE_PORT}/"
+        ws_url = f"ws://{ATU_DEVICE_IP_DISABLED}:{ATU_DEVICE_PORT_DISABLED}/"
         logger.info(f"尝试连接ATU设备WebSocket: {ws_url}")
         
         try:
@@ -637,11 +637,11 @@ class AtuWebSocketClient:
     
     def on_open(self, ws):
         """WebSocket连接打开"""
-        global atu_device_connected
+        global atu_device_connected_DISABLED
         
         logger.info("✓ ATU设备WebSocket连接成功")
         self.connected = True
-        atu_device_connected = True
+        atu_device_connected_DISABLED = True
         
         # 发送连接成功通知
         self.broadcast_to_clients({
@@ -685,11 +685,11 @@ class AtuWebSocketClient:
     
     def on_close(self, ws, close_status_code, close_msg):
         """WebSocket连接关闭"""
-        global atu_device_connected
+        global atu_device_connected_DISABLED
         
         logger.warning("ATU设备WebSocket连接关闭")
         self.connected = False
-        atu_device_connected = False
+        atu_device_connected_DISABLED = False
         
         # 发送连接断开通知
         self.broadcast_to_clients({
@@ -707,7 +707,7 @@ class AtuWebSocketClient:
     def parse_atu_data(self, data):
         """解析ATU设备数据"""
         # 声明所有需要的全局变量
-        global latest_meter_data, current_frequency, latest_relay_data
+        global latest_meter_data_DISABLED, current_frequency_DISABLED, latest_relay_data_DISABLED
         
         try:
             if len(data) < 10:
@@ -719,8 +719,8 @@ class AtuWebSocketClient:
             cmd = data[1]
             data_len = data[2]
             
-            # 检查是否为电表数据 (SCMD_METER_STATUS = 2)
-            if cmd == SCMD_METER_STATUS and data_len >= 6:
+            # 检查是否为电表数据 (SCMD_METER_STATUS_DISABLED = 2)
+            if cmd == SCMD_METER_STATUS_DISABLED and data_len >= 6:
                 # 解析功率和SWR数据
                 # 正确偏移：SWR(4-5), 功率(6-7), 最大功率(8-9)
                 swr = struct.unpack('<H', bytes(data[4:6]))[0]
@@ -748,7 +748,7 @@ class AtuWebSocketClient:
                 logger.info(f"📡 ATU电表数据: 功率={fwd_power}W, SWR={display_swr}, 最大功率={max_power}W, 效率={efficiency}%")
                 
                 # 存储最新的电表数据
-                latest_meter_data = {
+                latest_meter_data_DISABLED = {
                     'power': fwd_power,
                     'swr': display_swr,
                     'max_power': max_power,
@@ -762,8 +762,8 @@ class AtuWebSocketClient:
                 }
                 
                 # 如果有功率输出且SWR较低，尝试保存为优化配置
-                if fwd_power > 0 and current_frequency > 0:
-                    freq_mhz = current_frequency / 1000000.0  # 转换为MHz
+                if fwd_power > 0 and current_frequency_DISABLED > 0:
+                    freq_mhz = current_frequency_DISABLED / 1000000.0  # 转换为MHz
                     # 只有当SWR小于2.0时才考虑保存配置
                     if display_swr < 2.0:
                         # 检查是否已经有存储的配置
@@ -783,14 +783,14 @@ class AtuWebSocketClient:
                         
                         if should_save:
                             # 查找最近的继电器状态数据
-                            if latest_relay_data:
-                                logger.info(f"💾 保存频率 {freq_mhz:.3f}MHz 的优化配置: SWR={display_swr}, 网络={latest_relay_data['network']}, 电感={latest_relay_data['inductor']}, 电容={latest_relay_data['capacitor']}")
-                                self.update_optimized_config(freq_mhz, display_swr, latest_relay_data)
+                            if latest_relay_data_DISABLED:
+                                logger.info(f"💾 保存频率 {freq_mhz:.3f}MHz 的优化配置: SWR={display_swr}, 网络={latest_relay_data_DISABLED['network']}, 电感={latest_relay_data_DISABLED['inductor']}, 电容={latest_relay_data_DISABLED['capacitor']}")
+                                self.update_optimized_config(freq_mhz, display_swr, latest_relay_data_DISABLED)
                 
                 return parsed_data
             
-            # 检查是否为继电器状态数据 (SCMD_RELAY_STATUS = 5)
-            elif cmd == SCMD_RELAY_STATUS and data_len >= 7:
+            # 检查是否为继电器状态数据 (SCMD_RELAY_STATUS_DISABLED = 5)
+            elif cmd == SCMD_RELAY_STATUS_DISABLED and data_len >= 7:
                 # 解析继电器状态数据
                 sw = data[3]  # 网络开关
                 ind = data[4]  # 电感继电器
@@ -814,7 +814,7 @@ class AtuWebSocketClient:
                 logger.info(f"🔧 ATU继电器状态: 网络={parsed_data['relay']['network']}, 电感={L}μH, 电容={C}pF")
                 
                 # 存储最新的继电器数据
-                latest_relay_data = parsed_data['relay']
+                latest_relay_data_DISABLED = parsed_data['relay']
                 
                 return parsed_data
             
@@ -829,7 +829,7 @@ class AtuWebSocketClient:
         if self.connected and self.ws:
             try:
                 # ATU同步命令: [0xFF, 0x01, 0x00]
-                sync_command = bytearray([SCMD_FLAG, SCMD_SYNC, 0x00])
+                sync_command = bytearray([SCMD_FLAG_DISABLED, SCMD_SYNC_DISABLED, 0x00])
                 import websocket
                 self.ws.send(sync_command, opcode=websocket.ABNF.OPCODE_BINARY)
             except Exception as e:
@@ -840,7 +840,7 @@ class AtuWebSocketClient:
         if self.connected and self.ws:
             try:
                 # ATU调谐状态命令: [0xFF, 0x03, 0x01, status]
-                tune_command = bytearray([SCMD_FLAG, SCMD_TUNE_STATUS, 0x01, status])
+                tune_command = bytearray([SCMD_FLAG_DISABLED, SCMD_TUNE_STATUS_DISABLED, 0x01, status])
                 import websocket
                 self.ws.send(tune_command, opcode=websocket.ABNF.OPCODE_BINARY)
                 logger.info(f"📤 发送调谐状态命令: {status}")
@@ -852,7 +852,7 @@ class AtuWebSocketClient:
         if self.connected and self.ws:
             try:
                 # ATU调谐模式命令: [0xFF, 0x04, 0x01, mode]
-                tune_command = bytearray([SCMD_FLAG, SCMD_TUNE_MODE, 0x01, mode])
+                tune_command = bytearray([SCMD_FLAG_DISABLED, SCMD_TUNE_MODE_DISABLED, 0x01, mode])
                 import websocket
                 self.ws.send(tune_command, opcode=websocket.ABNF.OPCODE_BINARY)
                 logger.info(f"📤 发送调谐模式命令: {mode}")
@@ -864,7 +864,7 @@ class AtuWebSocketClient:
         if self.connected and self.ws:
             try:
                 # ATU继电器状态命令: [0xFF, 0x05, 0x03, sw, ind, cap]
-                relay_command = bytearray([SCMD_FLAG, SCMD_RELAY_STATUS, 0x03, sw, ind, cap])
+                relay_command = bytearray([SCMD_FLAG_DISABLED, SCMD_RELAY_STATUS_DISABLED, 0x03, sw, ind, cap])
                 import websocket
                 self.ws.send(relay_command, opcode=websocket.ABNF.OPCODE_BINARY)
                 logger.info(f"📤 发送继电器状态命令: 网络={sw}, 电感={ind}, 电容={cap}")
@@ -888,9 +888,9 @@ class AtuWebSocketClient:
     
     def broadcast_to_clients(self, message):
         """广播消息给所有WebSocket客户端"""
-        global atu_ws_clients
+        global atu_ws_client_DISABLEDs
         
-        logger.info(f"准备向 {len(atu_ws_clients)} 个客户端广播消息")
+        logger.info(f"准备向 {len(atu_ws_client_DISABLEDs)} 个客户端广播消息")
         
         # 使用Tornado的spawn_callback确保在主线程中执行WebSocket写操作
         def _broadcast_in_main_thread():
@@ -898,7 +898,7 @@ class AtuWebSocketClient:
             failed_clients = []
             
             # 创建客户端列表副本以避免在迭代时修改列表
-            clients_copy = atu_ws_clients[:]
+            clients_copy = atu_ws_client_DISABLEDs[:]
             
             logger.info(f"开始向 {len(clients_copy)} 个客户端广播消息: {json.dumps(message)}")
             
@@ -920,9 +920,9 @@ class AtuWebSocketClient:
             
             # 移除失效的客户端
             for client in failed_clients:
-                if client in atu_ws_clients:
-                    atu_ws_clients.remove(client)
-                    logger.info(f"已移除失效客户端，剩余客户端数: {len(atu_ws_clients)}")
+                if client in atu_ws_client_DISABLEDs:
+                    atu_ws_client_DISABLEDs.remove(client)
+                    logger.info(f"已移除失效客户端，剩余客户端数: {len(atu_ws_client_DISABLEDs)}")
             
             logger.info(f"已向 {sent_count} 个客户端发送消息，失败 {len(failed_clients)} 个")
             return sent_count
@@ -933,20 +933,20 @@ class AtuWebSocketClient:
     
     def update_optimized_config(self, frequency, swr, relay_data):
         """更新指定频率的优化调谐配置"""
-        global optimized_tuning_configs
+        global optimized_tuning_configs_DISABLED
         
         # 格式化频率为3位小数的字符串作为键
         freq_key = f"{frequency:.3f}"
         
         # 如果当前SWR比存储的SWR更好，则更新配置
-        if freq_key in optimized_tuning_configs:
-            stored_swr = optimized_tuning_configs[freq_key]['swr']
+        if freq_key in optimized_tuning_configs_DISABLED:
+            stored_swr = optimized_tuning_configs_DISABLED[freq_key]['swr']
             if swr >= stored_swr:
                 logger.info(f"🔄 频率 {freq_key}MHz 的SWR ({swr}) 不优于存储的SWR ({stored_swr})，跳过更新")
                 return
         
         # 更新配置
-        optimized_tuning_configs[freq_key] = {
+        optimized_tuning_configs_DISABLED[freq_key] = {
             'frequency': frequency,
             'swr': swr,
             'relay': relay_data,
@@ -960,7 +960,7 @@ class AtuWebSocketClient:
     def get_optimized_config(self, frequency):
         """获取指定频率的优化调谐配置"""
         freq_key = f"{frequency:.3f}"
-        config = optimized_tuning_configs.get(freq_key)
+        config = optimized_tuning_configs_DISABLED.get(freq_key)
         
         if config:
             # 精确匹配
@@ -970,7 +970,7 @@ class AtuWebSocketClient:
         # 找到最接近的波段中心
         closest_band = None
         min_diff = float('inf')
-        for band, center in BAND_CENTERS.items():
+        for band, center in BAND_CENTERS_DISABLED.items():
             diff = abs(frequency - center)
             if diff < min_diff:
                 min_diff = diff
@@ -978,12 +978,12 @@ class AtuWebSocketClient:
         
         # 如果频率在波段范围内（±100kHz），查找该波段的配置
         if min_diff <= 0.1:  # 100kHz范围内
-            for stored_freq_str, stored_config in optimized_tuning_configs.items():
+            for stored_freq_str, stored_config in optimized_tuning_configs_DISABLED.items():
                 stored_freq = float(stored_freq_str)
                 stored_band = None
                 
                 # 确定存储配置的波段
-                for band, center in BAND_CENTERS.items():
+                for band, center in BAND_CENTERS_DISABLED.items():
                     if abs(stored_freq - center) <= 0.1:
                         stored_band = band
                         break
@@ -1014,7 +1014,7 @@ class AtuWebSocketClient:
                 return True
         
         # 如果没有存储的配置，检查是否在预设频率范围内
-        for preset_freq, preset_config in PRESET_FREQUENCIES.items():
+        for preset_freq, preset_config in PRESET_FREQUENCIES_DISABLED.items():
             if abs(frequency - preset_freq) <= 0.05:  # 50kHz范围内
                 logger.info(f"⚙️ 应用预设频率 {preset_freq}MHz 的配置: 网络={'CL' if preset_config['sw'] else 'LC'}, 电感={preset_config['inductor']}, 电容={preset_config['capacitor']}")
                 self.send_relay_status(preset_config['sw'], preset_config['inductor'], preset_config['capacitor'])
@@ -1023,15 +1023,15 @@ class AtuWebSocketClient:
         # 如果不在预设频率范围内，查找最近的波段并应用默认配置
         closest_band = None
         min_diff = float('inf')
-        for band, center in BAND_CENTERS.items():
+        for band, center in BAND_CENTERS_DISABLED.items():
             diff = abs(frequency - center)
             if diff < min_diff:
                 min_diff = diff
                 closest_band = band
         
         # 如果频率在波段范围内（±100kHz），应用该波段的默认配置
-        if min_diff <= 0.1 and closest_band in DEFAULT_BAND_CONFIGS:  # 100kHz范围内
-            band_config = DEFAULT_BAND_CONFIGS[closest_band]
+        if min_diff <= 0.1 and closest_band in DEFAULT_BAND_CONFIGS_DISABLED:  # 100kHz范围内
+            band_config = DEFAULT_BAND_CONFIGS_DISABLED[closest_band]
             sw = 1 if band_config['network'] == 'CL' else 0
             logger.info(f"⚙️ 应用{closest_band}波段的默认配置: 网络={band_config['network']}, 电感={band_config['inductor']}, 电容={band_config['capacitor']}")
             self.send_relay_status(sw, band_config['inductor'], band_config['capacitor'])
@@ -1061,19 +1061,19 @@ class AtuWebSocketHandler(tornado.websocket.WebSocketHandler):
         return True
     
     def open(self):
-        global atu_ws_clients
+        global atu_ws_client_DISABLEDs
         
-        if self not in atu_ws_clients:
-            atu_ws_clients.append(self)
+        if self not in atu_ws_client_DISABLEDs:
+            atu_ws_client_DISABLEDs.append(self)
         
-        logger.info(f"新的ATU监控客户端连接，当前客户端数: {len(atu_ws_clients)}")
+        logger.info(f"新的ATU监控客户端连接，当前客户端数: {len(atu_ws_client_DISABLEDs)}")
         logger.info(f"客户端信息: {self.request.remote_ip}, {self.request.headers}")
         
         # 发送当前状态
         self.write_message(json.dumps({
             'type': 'status',
             'message': '连接成功',
-            'connected': atu_device_connected
+            'connected': atu_device_connected_DISABLED
         }))
     
     def on_message(self, message):
@@ -1092,30 +1092,30 @@ class AtuWebSocketHandler(tornado.websocket.WebSocketHandler):
                 command = data.get('command')
                 if command == 'sync':
                     # 发送同步命令到ATU设备
-                    if atu_ws_client and atu_ws_client.connected:
-                        atu_ws_client.send_sync()
+                    if atu_ws_client_DISABLED and atu_ws_client_DISABLED.connected:
+                        atu_ws_client_DISABLED.send_sync()
                 elif command == 'status':
                     # 返回当前状态
                     self.write_message(json.dumps({
                         'type': 'status',
                         'message': '状态查询',
-                        'connected': atu_device_connected
+                        'connected': atu_device_connected_DISABLED
                     }))
                 elif command == 'tune_status' and 'value' in data:
                     # 发送调谐状态命令
-                    if atu_ws_client and atu_ws_client.connected:
-                        atu_ws_client.send_tune_status(data['value'])
+                    if atu_ws_client_DISABLED and atu_ws_client_DISABLED.connected:
+                        atu_ws_client_DISABLED.send_tune_status(data['value'])
                 elif command == 'tune_mode' and 'value' in data:
                     # 发送调谐模式命令
-                    if atu_ws_client and atu_ws_client.connected:
-                        atu_ws_client.send_tune_mode(data['value'])
+                    if atu_ws_client_DISABLED and atu_ws_client_DISABLED.connected:
+                        atu_ws_client_DISABLED.send_tune_mode(data['value'])
                 elif command == 'relay_status' and 'sw' in data and 'ind' in data and 'cap' in data:
                     # 发送继电器状态命令
-                    if atu_ws_client and atu_ws_client.connected:
-                        atu_ws_client.send_relay_status(data['sw'], data['ind'], data['cap'])
+                    if atu_ws_client_DISABLED and atu_ws_client_DISABLED.connected:
+                        atu_ws_client_DISABLED.send_relay_status(data['sw'], data['ind'], data['cap'])
                 elif command == 'get_optimized_config' and 'frequency' in data:
                     # 获取优化配置
-                    config = atu_ws_client.get_optimized_config(data['frequency'])
+                    config = atu_ws_client_DISABLED.get_optimized_config(data['frequency'])
                     self.write_message(json.dumps({
                         'type': 'optimized_config',
                         'frequency': data['frequency'],
@@ -1123,7 +1123,7 @@ class AtuWebSocketHandler(tornado.websocket.WebSocketHandler):
                     }))
                 elif command == 'apply_optimized_config' and 'frequency' in data:
                     # 应用优化配置
-                    success = atu_ws_client.apply_optimized_config(data['frequency'])
+                    success = atu_ws_client_DISABLED.apply_optimized_config(data['frequency'])
                     self.write_message(json.dumps({
                         'type': 'apply_config_result',
                         'frequency': data['frequency'],
@@ -1131,21 +1131,21 @@ class AtuWebSocketHandler(tornado.websocket.WebSocketHandler):
                     }))
                 elif command == 'save_optimized_config' and 'frequency' in data and 'swr' in data and 'relay' in data:
                     # 保存优化配置
-                    atu_ws_client.update_optimized_config(data['frequency'], data['swr'], data['relay'])
+                    atu_ws_client_DISABLED.update_optimized_config(data['frequency'], data['swr'], data['relay'])
                     self.write_message(json.dumps({
                         'type': 'config_saved',
                         'frequency': data['frequency']
                     }))
                 elif command == 'update_frequency' and 'frequency' in data:
                     # 更新当前频率
-                    update_current_frequency(data['frequency'])
+                    update_current_frequency_DISABLED(data['frequency'])
                     self.write_message(json.dumps({
                         'type': 'frequency_updated',
                         'frequency': data['frequency']
                     }))
                 elif command == 'get_optimized_config' and 'frequency' in data:
                     # 获取优化配置
-                    config = atu_ws_client.get_optimized_config(data['frequency'])
+                    config = atu_ws_client_DISABLED.get_optimized_config(data['frequency'])
                     self.write_message(json.dumps({
                         'type': 'optimized_config',
                         'frequency': data['frequency'],
@@ -1153,7 +1153,7 @@ class AtuWebSocketHandler(tornado.websocket.WebSocketHandler):
                     }))
                 elif command == 'apply_optimized_config' and 'frequency' in data:
                     # 应用优化配置
-                    success = atu_ws_client.apply_optimized_config(data['frequency'])
+                    success = atu_ws_client_DISABLED.apply_optimized_config(data['frequency'])
                     self.write_message(json.dumps({
                         'type': 'apply_config_result',
                         'frequency': data['frequency'],
@@ -1161,7 +1161,7 @@ class AtuWebSocketHandler(tornado.websocket.WebSocketHandler):
                     }))
                 elif command == 'save_optimized_config' and 'frequency' in data and 'swr' in data and 'relay' in data:
                     # 保存优化配置
-                    atu_ws_client.update_optimized_config(data['frequency'], data['swr'], data['relay'])
+                    atu_ws_client_DISABLED.update_optimized_config(data['frequency'], data['swr'], data['relay'])
                     self.write_message(json.dumps({
                         'type': 'config_saved',
                         'frequency': data['frequency']
@@ -1171,15 +1171,15 @@ class AtuWebSocketHandler(tornado.websocket.WebSocketHandler):
             logger.error(f"处理客户端消息错误: {e}")
     
     def on_close(self):
-        global atu_ws_clients
+        global atu_ws_client_DISABLEDs
         
         # 记录客户端断开连接的详细信息
-        logger.info(f"ATU监控客户端断开连接，客户端ID: {id(self)}, 剩余客户端数: {len(atu_ws_clients)}")
+        logger.info(f"ATU监控客户端断开连接，客户端ID: {id(self)}, 剩余客户端数: {len(atu_ws_client_DISABLEDs)}")
         
-        if self in atu_ws_clients:
-            atu_ws_clients.remove(self)
+        if self in atu_ws_client_DISABLEDs:
+            atu_ws_client_DISABLEDs.remove(self)
         
-        logger.info(f"ATU监控客户端清理完成，剩余客户端数: {len(atu_ws_clients)}")
+        logger.info(f"ATU监控客户端清理完成，剩余客户端数: {len(atu_ws_client_DISABLEDs)}")
 
 ############ ATU监控页面处理器 ##############
 class AtuMonitorHandler(tornado.web.RequestHandler):
@@ -1200,13 +1200,13 @@ class AtuStatusHandler(tornado.web.RequestHandler):
     """ATU状态API处理器"""
     
     def get(self):
-        global atu_device_connected
+        global atu_device_connected_DISABLED
         
         status = {
-            'atu_device_connected': atu_device_connected,
-            'atu_device_ip': ATU_DEVICE_IP,
-            'atu_device_port': ATU_DEVICE_PORT,
-            'websocket_clients': len(atu_ws_clients),
+            'atu_device_connected_DISABLED': atu_device_connected_DISABLED,
+            'atu_device_ip': ATU_DEVICE_IP_DISABLED,
+            'atu_device_port': ATU_DEVICE_PORT_DISABLED,
+            'websocket_clients': len(atu_ws_client_DISABLEDs),
             'server_time': datetime.datetime.now().isoformat()
         }
         
@@ -1812,13 +1812,13 @@ class WS_ControlTRX(tornado.websocket.WebSocketHandler):
 		elif(action == "getFreq"):
 			freq = CTRX.getFreq()
 			yield self.send_to_all_clients("getFreq:"+str(freq))
-			# 同时发送频率到ATU服务器
-			self.send_frequency_to_atu(freq)
-		elif(action == "setFreq"):
-			freq = CTRX.setFreq(datato)
-			yield self.send_to_all_clients("getFreq:"+str(freq))
-			# 同时发送频率到ATU服务器
-			self.send_frequency_to_atu(freq)
+# 			# 同时发送频率到ATU服务器
+# 			self.send_frequency_to_atu(freq)
+# 		elif(action == "setFreq"):
+# 			freq = CTRX.setFreq(datato)
+# 			yield self.send_to_all_clients("getFreq:"+str(freq))
+# 			# 同时发送频率到ATU服务器
+# 			self.send_frequency_to_atu(freq)
 		elif(action == "getMode"):
 			yield self.send_to_all_clients("getMode:"+str(CTRX.getMode()))	
 		elif(action == "setMode"):
@@ -1832,15 +1832,15 @@ class WS_ControlTRX(tornado.websocket.WebSocketHandler):
 		"""发送频率信息到ATU服务器"""
 		try:
 			# 发送到ATU服务器
-			global atu_ws_client
-			if atu_ws_client and atu_ws_client.connected:
+			global atu_ws_client_DISABLED
+			if atu_ws_client_DISABLED and atu_ws_client_DISABLED.connected:
 				# 首先发送频率更新
 				message = {
 					'type': 'command',
 					'command': 'update_frequency',
 					'frequency': frequency
 				}
-				atu_ws_client.broadcast_to_clients(message)
+				atu_ws_client_DISABLED.broadcast_to_clients(message)
 				
 				# 然后尝试应用该频率的优化配置
 				message = {
@@ -1848,7 +1848,7 @@ class WS_ControlTRX(tornado.websocket.WebSocketHandler):
 					'command': 'apply_optimized_config',
 					'frequency': frequency / 1000000.0  # 转换为MHz
 				}
-				atu_ws_client.broadcast_to_clients(message)
+				atu_ws_client_DISABLED.broadcast_to_clients(message)
 		except Exception as e:
 			logger.error(f"发送频率到ATU服务器失败: {e}")
 			
@@ -2239,9 +2239,9 @@ if __name__ == "__main__":
 			threadsurveilTRX = threadtimeoutTRXshutdown()
 			threadsurveilTRX.start()
 		
-		# 启动ATU设备WebSocket客户端
-		atu_ws_client = AtuWebSocketClient()
-		atu_ws_client.connect()
+# 		# 启动ATU设备WebSocket客户端
+# 		atu_ws_client_DISABLED = AtuWebSocketClient()
+# 		atu_ws_client_DISABLED.connect()
 		
 		
 		app = tornado.web.Application([
@@ -2251,9 +2251,9 @@ if __name__ == "__main__":
 			(r'/WSaudioTX', WS_AudioTXHandler),
 			(r'/WSCTRX', WS_ControlTRX),
 			(r'/WSpanFFT', WS_panFFTHandler),
-			(r'/atu/ws', AtuWebSocketHandler),
-			(r'/atu/monitor', AtuMonitorHandler),
-			(r'/atu/status', AtuStatusHandler),
+# 			(r'/atu/ws', AtuWebSocketHandler),
+# 			(r'/atu/monitor', AtuMonitorHandler),
+# 			(r'/atu/status', AtuStatusHandler),
 			(r'/(panfft.*)', tornado.web.StaticFileHandler, { 'path' : './www/panadapter' }),
 			(r'/CONFIG', ConfigHandler),
 			(r'/test', TestRadioHandler),
