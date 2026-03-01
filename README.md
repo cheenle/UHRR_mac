@@ -15,6 +15,30 @@ A modern web-based remote control system optimized for mobile devices, enabling 
 
 ---
 
+## 📸 Screenshots / 界面展示
+
+### 📱 Mobile Interface / 移动端界面
+
+<p align="center">
+  <img src="screenshots/mobile_interface.svg" alt="Mobile Interface" width="300">
+</p>
+
+> Modern mobile UI optimized for iPhone/Android with touch-friendly controls, large PTT button, and real-time S-meter display.
+
+> 现代移动界面，专为iPhone/Android优化，触摸友好控制，大尺寸PTT按钮，实时S表显示。
+
+### 🖥️ Desktop Interface / 桌面端界面
+
+<p align="center">
+  <img src="screenshots/desktop_interface.svg" alt="Desktop Interface" width="600">
+</p>
+
+> Full-featured desktop interface with spectrum display, detailed controls, and comprehensive radio management.
+
+> 全功能桌面界面，支持频谱显示、详细控制和全面的电台管理。
+
+---
+
 ## 🌐 Select Language / 选择语言
 
 | Language | Description |
@@ -61,15 +85,6 @@ python ./UHRR
 # 3. Access from mobile browser
 # https://your-domain/mobile_modern.html
 ```
-
----
-
-## 📱 Mobile Interface / 移动端界面
-
-| Screen | Description |
-|--------|-------------|
-| `mobile_modern.html` | Modern mobile UI (iPhone 15 optimized) |
-| `index.html` | Desktop full-featured interface |
 
 ---
 
