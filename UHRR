@@ -484,8 +484,8 @@ class WS_AudioTXHandler(tornado.websocket.WebSocketHandler):
 		if str(data).startswith('m:') :
 			self.TX_init(str(data[2:]))
 		elif str(data).startswith('s:') :
-			# 立即停止音频播放，清除缓冲区
-			print("🛑 立即停止音频播放")
+			# 立即停止音频播放，清除缓冲区，并关闭PTT
+			print("🛑 立即停止音频播放并关闭PTT")
 			if PYAUDIO_AVAILABLE:
 				if hasattr(self, 'audio_playback') and self.audio_playback:
 					self.audio_playback.close()
@@ -496,6 +496,16 @@ class WS_AudioTXHandler(tornado.websocket.WebSocketHandler):
 					self.inp = None
 			# 清除任何待播放的音频数据
 			print("🧹 清除音频缓冲区")
+			# 关键修复：立即关闭PTT
+			if CTRX and CTRX.infos.get("PTT") == True:
+				CTRX.setPTT("false")
+				print("🔴 PTT已关闭（收到s:命令）")
+				# 广播PTT状态变化
+				try:
+					for client in ControlTRXHandlerClients:
+						client.write_message("getPTT:false")
+				except Exception as e:
+					logger.error(f"Error broadcasting PTT status: {e}")
 		else :
 			if PYAUDIO_AVAILABLE:
 				# Use PyAudio

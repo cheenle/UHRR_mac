@@ -172,8 +172,8 @@ function sendTRXptt(stat){
 	if (wsControlTRX.readyState === WebSocket.OPEN) {
 		PTT_COMMAND_SENT = true;
 		lastPTTTime = currentTime;
-		wsControlTRX.send("ptt:"+stat);
-		console.log('发送PTT命令:', stat);
+		wsControlTRX.send("setPTT:"+stat);
+		console.log('发送PTT命令: setPTT:'+stat);
 	}
 }
 
