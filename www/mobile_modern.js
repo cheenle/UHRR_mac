@@ -498,9 +498,10 @@ function updateFrequencyDisplay() {
         mobileState.currentFrequency = TRXfrequency;
     }
     
-    const freqStr = mobileState.currentFrequency.toString().padStart(9, '0');
+    const freqStr = mobileState.currentFrequency.toString().padStart(8, '0');
     
-    const elements = ['freq-100mhz', 'freq-10mhz', 'freq-1mhz', 
+    // HF频段：两位MHz + 三位kHz + 三位Hz
+    const elements = ['freq-10mhz', 'freq-1mhz', 
                       'freq-100khz', 'freq-10khz', 'freq-1khz',
                       'freq-100hz', 'freq-10hz', 'freq-1hz'];
     
