@@ -669,6 +669,39 @@ body {
     border-color: #4CAF50;
 }
 
+/* TX EQ 选择按钮 */
+.txeq-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.txeq-select-btn {
+    padding: 15px 10px;
+    background-color: #2a2a2a;
+    border: 2px solid #3a3a3a;
+    border-radius: 10px;
+    color: #fff;
+    font-size: 14px;
+    cursor: pointer;
+    min-height: 80px;
+    transition: all 0.15s;
+    text-align: center;
+    line-height: 1.3;
+}
+
+.txeq-select-btn:active {
+    background-color: #4CAF50;
+    border-color: #4CAF50;
+    color: #000;
+}
+
+.txeq-btn-active {
+    background-color: #2e7d32;
+    border-color: #4CAF50;
+}
+
 .close-panel-btn {
     width: 100%;
     padding: 14px;

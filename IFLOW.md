@@ -642,6 +642,37 @@ cat certs/fullchain.pem | openssl x509 -text -noout
 
 ## 版本历史
 
+### V4.2.0 TX发射均衡器 (2026-03-02)
+
+**主题：短波通信语音优化**
+
+#### 核心改进
+- **TX EQ系统**：三段均衡器优化发射音频
+  - 低频增强 (lowshelf @ 200Hz)
+  - 中频增强 (peaking @ 1000Hz)
+  - 高频衰减 (highshelf @ 2500Hz)
+
+#### 四种预设
+| 预设 | 低频 | 中频 | 高频 | 适用场景 |
+|------|------|------|------|----------|
+| 默认 | 0dB | 0dB | 0dB | 无处理 |
+| 短波语音 | +4dB | +6dB | -3dB | 常规短波通信 |
+| 弱信号 | +6dB | +8dB | -6dB | DX弱信号通信 |
+| 比赛模式 | +2dB | +4dB | -2dB | 快速通联 |
+
+#### 技术细节
+- 音频链：micSource → eqLow → eqMid → eqHigh → gain_node → processor
+- 使用Web Audio API BiquadFilter节点
+- 预设自动保存到Cookie
+
+#### 文件变更
+- `www/controls.js` - TX EQ核心逻辑
+- `www/mobile_modern.js` - showTXEQPanel函数
+- `www/mobile_modern.html` - 菜单项
+- `www/mobile_modern.css` - EQ面板样式
+
+---
+
 ### V4.0.1 移动端界面增强 (2026-03-01)
 
 **主题：S表显示与音量控制改进**

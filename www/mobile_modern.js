@@ -908,6 +908,9 @@ function handleMenuItem(action) {
         case 'audio':
             showAudioPanel();
             break;
+        case 'txeq':
+            showTXEQPanel();
+            break;
         case 'digital':
             showDigitalPanel();
             break;
@@ -1137,6 +1140,57 @@ function selectFilter(name) {
     if (filterBtn) filterBtn.innerHTML = name;
     cycleFilter(); // 应用滤波器
     closeModalPanel();
+}
+
+////////////////////////////////////////////////////////////
+// TX EQ 均衡器面板 - 短波通信优化
+////////////////////////////////////////////////////////////
+
+function showTXEQPanel() {
+    // 获取当前预设
+    const currentPreset = typeof getTX_EQ_Preset === 'function' ? getTX_EQ_Preset() : 'DEFAULT';
+    const presets = typeof getTX_EQ_Presets === 'function' ? getTX_EQ_Presets() : {
+        'DEFAULT': { name: '默认', low: 0, mid: 0, high: 0, desc: '无EQ处理' },
+        'HF_VOICE': { name: '短波语音', low: 4, mid: 6, high: -3, desc: '增强中低频' },
+        'DX_WEAK': { name: '弱信号', low: 6, mid: 8, high: -6, desc: '强调中低频' },
+        'CONTEST': { name: '比赛模式', low: 2, mid: 4, high: -2, desc: '均衡处理' }
+    };
+    
+    let html = '<div class="modal-panel"><h3>🎙️ 发射均衡器</h3>';
+    html += '<p style="font-size:12px;color:#888;margin-bottom:15px;">短波通信语音优化</p>';
+    html += '<div class="txeq-grid">';
+    
+    Object.keys(presets).forEach(key => {
+        const preset = presets[key];
+        const isActive = currentPreset === key;
+        const activeClass = isActive ? 'txeq-btn-active' : '';
+        html += `<button class="txeq-select-btn ${activeClass}" onclick="selectTX_EQ('${key}')">`;
+        html += `<strong>${preset.name}</strong>`;
+        html += `<br><span style="font-size:11px;color:#aaa;">${preset.desc}</span>`;
+        if (key !== 'DEFAULT') {
+            html += `<br><span style="font-size:10px;color:#666;">低+${preset.low} 中+${preset.mid} 高${preset.high}</span>`;
+        }
+        html += '</button>';
+    });
+    
+    html += '</div>';
+    html += '<div style="margin-top:15px;padding:10px;background:#222;border-radius:8px;">';
+    html += '<p style="font-size:12px;color:#aaa;margin:0;">';
+    html += '<strong>说明：</strong>短波通信中，高频信号容易过强导致声音刺耳。';
+    html += '选择合适的预设可以增强中低频，提高语音清晰度和舒适度。';
+    html += '</p></div>';
+    html += '<button class="close-panel-btn" onclick="closeModalPanel()">关闭</button></div>';
+    showModalPanel(html);
+}
+
+function selectTX_EQ(presetName) {
+    if (typeof setTX_EQ_Preset === 'function') {
+        setTX_EQ_Preset(presetName);
+        // 刷新面板显示
+        showTXEQPanel();
+    } else {
+        console.error('setTX_EQ_Preset function not found');
+    }
 }
 
 // 数字模式面板（占位）

@@ -1674,6 +1674,115 @@ var MediaHandler = function( audioProcessor )
 
 var AudioTX_analyser = "";
 
+////////////////////////////////////////////////////////////
+// TX EQ 均衡器 - 短波通信优化
+// 针对短波语音通信，增强中低频，补偿高频过强问题
+////////////////////////////////////////////////////////////
+
+// TX EQ 节点
+var AudioTX_eqLow = null;      // 低频增益 (100-300Hz)
+var AudioTX_eqMid = null;      // 中频增益 (500-2000Hz)
+var AudioTX_eqHigh = null;     // 高频衰减 (3000Hz以上)
+
+// TX EQ 预设 - 针对短波通信优化
+var TX_EQ_PRESETS = {
+    'DEFAULT': { name: '默认', low: 0, mid: 0, high: 0, desc: '无EQ处理' },
+    'HF_VOICE': { 
+        name: '短波语音', 
+        low: 4,      // 增强低频 100-300Hz，增加声音厚度
+        mid: 6,      // 增强中频 500-2000Hz，提高语音清晰度
+        high: -3,    // 衰减高频 3000Hz+，减少刺耳感
+        desc: '增强中低频，适合短波语音通信'
+    },
+    'DX_WEAK': { 
+        name: '弱信号', 
+        low: 6,      // 更强低频增强
+        mid: 8,      // 强调中频（语音主频段）
+        high: -6,    // 更多衰减高频，减少噪音
+        desc: '强调中低频，适合弱信号通信'
+    },
+    'CONTEST': { 
+        name: '比赛模式', 
+        low: 2,      // 轻微低频增强
+        mid: 4,      // 中等中频增强
+        high: -2,    // 轻微高频衰减
+        desc: '均衡处理，适合快速通联'
+    }
+};
+
+var currentTX_EQ_Preset = 'DEFAULT';
+
+// 初始化 TX EQ
+function initTX_EQ(context) {
+    if (!context) return;
+    
+    // 创建三个BiquadFilter节点
+    AudioTX_eqLow = context.createBiquadFilter();
+    AudioTX_eqMid = context.createBiquadFilter();
+    AudioTX_eqHigh = context.createBiquadFilter();
+    
+    // 低频增强 - lowshelf (100Hz以下)
+    AudioTX_eqLow.type = 'lowshelf';
+    AudioTX_eqLow.frequency.setValueAtTime(200, context.currentTime);
+    AudioTX_eqLow.gain.setValueAtTime(0, context.currentTime);
+    
+    // 中频增强 - peaking (300-3000Hz，语音主频段)
+    AudioTX_eqMid.type = 'peaking';
+    AudioTX_eqMid.frequency.setValueAtTime(1000, context.currentTime);
+    AudioTX_eqMid.Q.setValueAtTime(1.0, context.currentTime);
+    AudioTX_eqMid.gain.setValueAtTime(0, context.currentTime);
+    
+    // 高频衰减 - highshelf (3000Hz以上)
+    AudioTX_eqHigh.type = 'highshelf';
+    AudioTX_eqHigh.frequency.setValueAtTime(2500, context.currentTime);
+    AudioTX_eqHigh.gain.setValueAtTime(0, context.currentTime);
+    
+    console.log('✅ TX EQ 初始化完成');
+}
+
+// 应用 TX EQ 预设
+function setTX_EQ_Preset(presetName) {
+    var preset = TX_EQ_PRESETS[presetName];
+    if (!preset) {
+        console.warn('TX EQ 预设不存在:', presetName);
+        return;
+    }
+    
+    currentTX_EQ_Preset = presetName;
+    
+    // 检查EQ节点是否存在
+    if (!AudioTX_eqLow || !AudioTX_eqMid || !AudioTX_eqHigh) {
+        console.warn('TX EQ 节点未初始化');
+        return;
+    }
+    
+    // 获取AudioContext
+    var ctx = AudioTX_eqLow.context;
+    if (!ctx) return;
+    
+    // 应用EQ设置
+    AudioTX_eqLow.gain.setValueAtTime(preset.low, ctx.currentTime);
+    AudioTX_eqMid.gain.setValueAtTime(preset.mid, ctx.currentTime);
+    AudioTX_eqHigh.gain.setValueAtTime(preset.high, ctx.currentTime);
+    
+    // 保存到Cookie
+    if (typeof setCookie === 'function') {
+        setCookie('TX_EQ_Preset', presetName, 180);
+    }
+    
+    console.log('🎛️ TX EQ 预设:', preset.name, '- 低频:', preset.low, 'dB, 中频:', preset.mid, 'dB, 高频:', preset.high, 'dB');
+}
+
+// 获取当前TX EQ预设
+function getTX_EQ_Preset() {
+    return currentTX_EQ_Preset;
+}
+
+// 获取所有TX EQ预设
+function getTX_EQ_Presets() {
+    return TX_EQ_PRESETS;
+}
+
 MediaHandler.prototype.callback = function( stream )
 {
     console.log( '🎤 MediaHandler.callback: 开始设置麦克风...' );
@@ -1693,11 +1802,26 @@ MediaHandler.prototype.callback = function( stream )
     this.micSource = this.context.createMediaStreamSource( stream );
     this.processor = this.context.createScriptProcessor( this.audioProcessor.bufferSize, 1, 1 );
     this.processor.onaudioprocess = this.audioProcessor.onAudioProcess.bind( this.audioProcessor );
-    this.micSource.connect( this.gain_node );
+    
+    // 初始化 TX EQ
+    initTX_EQ(this.context);
+    
+    // 音频链: micSource → eqLow → eqMid → eqHigh → gain_node → processor
+    this.micSource.connect(AudioTX_eqLow);
+    AudioTX_eqLow.connect(AudioTX_eqMid);
+    AudioTX_eqMid.connect(AudioTX_eqHigh);
+    AudioTX_eqHigh.connect(this.gain_node);
 	this.gain_node.connect( this.processor );
     this.processor.connect( this.context.destination );
 	this.gain_node.connect( AudioTX_analyser );
-    console.log( '✅ MediaHandler.callback: 麦克风设置完成' );
+    
+    // 从Cookie恢复EQ预设
+    var savedPreset = typeof getCookie === 'function' ? getCookie('TX_EQ_Preset') : '';
+    if (savedPreset && TX_EQ_PRESETS[savedPreset]) {
+        setTX_EQ_Preset(savedPreset);
+    }
+    
+    console.log( '✅ MediaHandler.callback: 麦克风设置完成 (含TX EQ)' );
 }
 
 

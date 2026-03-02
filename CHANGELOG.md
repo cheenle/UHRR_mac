@@ -5,6 +5,36 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [V4.2.0] - 2026-03-02
+
+### 🎙️ TX Audio Equalizer
+
+**Theme: Shortwave Communication Voice Optimization**
+
+### Added
+- **TX EQ System**: Three-band equalizer for transmit audio optimization
+  - Low frequency boost (lowshelf @ 200Hz)
+  - Mid frequency enhancement (peaking @ 1000Hz)
+  - High frequency attenuation (highshelf @ 2500Hz)
+
+- **Four Presets for Shortwave Communication**:
+  | Preset | Low | Mid | High | Description |
+  |--------|-----|-----|------|-------------|
+  | Default | 0dB | 0dB | 0dB | No processing |
+  | HF Voice | +4dB | +6dB | -3dB | Enhanced mid/low for SW voice |
+  | DX Weak | +6dB | +8dB | -6dB | Strong mid/low for weak signals |
+  | Contest | +2dB | +4dB | -2dB | Balanced for quick QSOs |
+
+- **Mobile UI**: TX Equalizer panel in menu with preset selection
+- **Persistence**: EQ preset saved to Cookie
+
+### Technical Details
+- Audio chain: micSource → eqLow → eqMid → eqHigh → gain_node → processor
+- Uses Web Audio API BiquadFilter nodes
+- Real-time parameter adjustment support
+
+---
+
 ## [V4.1.0] - 2026-03-01
 
 ### 🏷️ Project Rebranding
