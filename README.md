@@ -21,13 +21,13 @@ A modern web-based remote control system optimized for mobile devices, enabling 
   <tr>
     <td align="center" width="50%">
       <h3>📱 Mobile Interface</h3>
-      <img src="https://github.com/cheenle/UHRR_mac/raw/main/screenshots/mobile_interface.png" alt="Mobile Interface" width="280">
+      <img src="screenshots/mobile_interface.png" alt="Mobile Interface" width="280">
       <br>
       <sub>iPhone 15 Optimized</sub>
     </td>
     <td align="center" width="50%">
       <h3>🖥️ Desktop Interface</h3>
-      <img src="https://github.com/cheenle/UHRR_mac/raw/main/screenshots/desktop_interface.jpg" alt="Desktop Interface" width="400">
+      <img src="screenshots/desktop_interface.jpg" alt="Desktop Interface" width="400">
       <br>
       <sub>Full-featured Control Panel</sub>
     </td>
