@@ -17,25 +17,26 @@ A modern web-based remote control system optimized for mobile devices, enabling 
 
 ## 📸 Screenshots / 界面展示
 
-### 📱 Mobile Interface / 移动端界面
+<table>
+  <tr>
+    <td align="center" width="50%">
+      <h3>📱 Mobile Interface</h3>
+      <img src="https://github.com/cheenle/UHRR_mac/raw/main/screenshots/mobile_interface.png" alt="Mobile Interface" width="280">
+      <br>
+      <sub>iPhone 15 Optimized</sub>
+    </td>
+    <td align="center" width="50%">
+      <h3>🖥️ Desktop Interface</h3>
+      <img src="https://github.com/cheenle/UHRR_mac/raw/main/screenshots/desktop_interface.jpg" alt="Desktop Interface" width="400">
+      <br>
+      <sub>Full-featured Control Panel</sub>
+    </td>
+  </tr>
+</table>
 
-<p align="center">
-  <img src="screenshots/mobile_interface.png" alt="Mobile Interface" width="300">
-</p>
-
-> Modern mobile UI optimized for iPhone/Android with touch-friendly controls, large PTT button, and real-time S-meter display.
-
-> 现代移动界面，专为iPhone/Android优化，触摸友好控制，大尺寸PTT按钮，实时S表显示。
-
-### 🖥️ Desktop Interface / 桌面端界面
-
-<p align="center">
-  <img src="screenshots/desktop_interface.jpg" alt="Desktop Interface" width="600">
-</p>
-
-> Full-featured desktop interface with spectrum display, detailed controls, and comprehensive radio management.
-
-> 全功能桌面界面，支持频谱显示、详细控制和全面的电台管理。
+> **Mobile**: Modern mobile UI optimized for iPhone/Android with touch-friendly controls, large PTT button, and real-time S-meter display.
+>
+> **Desktop**: Full-featured desktop interface with spectrum display, detailed controls, and comprehensive radio management.
 
 ---
 
