@@ -5,6 +5,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [V4.3.5] - 2026-03-04
+### 📚 System Architecture Documentation Update
+
+**Theme: Complete Architecture Refactoring for V4.3**
+
+### Updated
+- **System_Architecture_Design.md**: Complete architecture refactoring
+  - Added ATR-1000 integration module
+  - Added TX EQ (3-band equalizer) component
+  - Updated architecture diagrams with new components
+  - Added ATR-1000 WebSocket protocol documentation
+  - Updated data flow diagrams
+  - Added tuner storage module description
+  - Updated version history to V4.3.4
+
+### New Components Documented
+- ATR-1000 Bridge (UHRR)
+- ATR-1000 Independent Proxy (atr1000_proxy.py)
+- Tuner Storage Module (atr1000_tuner.py)
+- TX Equalizer (3-band audio EQ)
+- ATR-1000 Client Module (mobile_modern.js)
+
+---
+
 ## [V4.3.4] - 2026-03-04
 ### 📚 ATR-1000 Integration Documentation
 
