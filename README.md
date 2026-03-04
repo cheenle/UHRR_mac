@@ -15,9 +15,9 @@ A modern web-based remote control system optimized for mobile devices, enabling 
 
 ---
 
-## 📸 Screenshots / 界面展示
+## 📸 Screenshots
 
-### 📱 Mobile Interface / 移动端界面
+### 📱 Mobile Interface
 
 <img src="screenshots/mobile_interface.png" alt="Mobile Interface" width="320">
 
@@ -25,7 +25,7 @@ A modern web-based remote control system optimized for mobile devices, enabling 
 
 ---
 
-### 🖥️ Desktop Interface / 桌面端界面
+### 🖥️ Desktop Interface
 
 <img src="screenshots/desktop_interface.jpg" alt="Desktop Interface" width="600">
 
