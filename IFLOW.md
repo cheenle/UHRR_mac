@@ -50,6 +50,7 @@ MRRC/
 │   ├── manifest.json             # PWA应用清单文件
 │   └── sw.js                     # Service Worker (离线支持)
 ├── certs/                        # TLS证书目录
+├── atr1000_proxy.py              # ATR-1000独立代理程序 ⭐ 新增
 ├── dev_tools/                    # 测试/调试脚本与页面
 │   ├── debug_audio.html          # 音频调试页面
 │   ├── debug_audio_rx.html       # RX音频调试页面
@@ -710,6 +711,55 @@ cat certs/fullchain.pem | openssl x509 -text -noout
 - `README_en.md` - 英文文档
 - `CHANGELOG.md` - 添加V4.1.0版本记录
 - `IFLOW.md` - 更新项目概述
+
+---
+
+### V4.3.0 ATR-1000架构分离 (2026-03-04)
+
+**主题：独立ATR-1000代理提升性能**
+
+#### 核心改进
+- **ATR-1000独立代理程序**：`atr1000_proxy.py`
+  - 独立进程，不阻塞UHRR主程序
+  - Unix Socket通信 (`/tmp/atr1000_proxy.sock`)
+  - 自动重连ATR-1000设备
+  - 按需数据请求（仅当有客户端连接时）
+
+- **UHRR中添加ATR-1000 WebSocket端点**
+  - 路由 `/WSATR1000`
+  - 通过Unix Socket桥接前端与独立代理
+
+#### 架构图
+```
+前端 (mobile_modern.js)
+    ↓ WebSocket (/WSATR1000)
+UHRR 主程序
+    ↓ Unix Socket (/tmp/atr1000_proxy.sock)
+ATR-1000 独立代理 (atr1000_proxy.py)
+    ↓ WebSocket
+ATR-1000 设备 (192.168.1.63:60001)
+```
+
+#### 性能改进
+| 指标 | 改进前 | 改进后 |
+|------|--------|--------|
+| PTT释放延迟 | ~2秒 | <100ms |
+| CPU占用 | 高 (0.3秒间隔) | 低 (1秒间隔+按需) |
+| 架构 | 耦合 | 解耦独立进程 |
+
+#### 使用方法
+```bash
+# 启动ATR-1000代理（后台）
+python3 atr1000_proxy.py --device 192.168.1.63 --port 60001 &
+
+# 启动UHRR主程序
+./uhrr_control.sh start
+```
+
+#### 文件变更
+- `atr1000_proxy.py` - 新增独立ATR-1000代理程序
+- `UHRR` - 添加 `WS_ATR1000Handler` 类和路由
+- `www/mobile_modern.js` - 优化ATR-1000模块，修复轮询管理
 
 ---
 

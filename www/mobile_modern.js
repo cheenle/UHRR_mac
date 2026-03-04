@@ -59,12 +59,43 @@ const domElements = {
 document.addEventListener('DOMContentLoaded', function() {
     console.log('🚀 Mobile Modern 界面初始化...');
     
-    initializeElements();
-    setupEventListeners();
-    initializeSMeter();
-    updateFrequencyDisplay();
-    setupMenuItems();
-    loadAudioSettingsFromCookies();
+    try {
+        initializeElements();
+        console.log('✅ DOM元素初始化完成');
+    } catch (e) {
+        console.error('❌ initializeElements 失败:', e);
+    }
+    
+    try {
+        setupEventListeners();
+        console.log('✅ 事件监听器设置完成');
+    } catch (e) {
+        console.error('❌ setupEventListeners 失败:', e);
+    }
+    
+    try {
+        initializeSMeter();
+    } catch (e) {
+        console.error('❌ initializeSMeter 失败:', e);
+    }
+    
+    try {
+        updateFrequencyDisplay();
+    } catch (e) {
+        console.error('❌ updateFrequencyDisplay 失败:', e);
+    }
+    
+    try {
+        setupMenuItems();
+    } catch (e) {
+        console.error('❌ setupMenuItems 失败:', e);
+    }
+    
+    try {
+        loadAudioSettingsFromCookies();
+    } catch (e) {
+        console.error('❌ loadAudioSettingsFromCookies 失败:', e);
+    }
     
     // iOS Safari 需要用户交互才能初始化音频
     document.addEventListener('touchstart', initAudioOnFirstTouch, { once: true });
@@ -73,15 +104,36 @@ document.addEventListener('DOMContentLoaded', function() {
     console.log('✅ Mobile Modern 界面初始化完成');
 });
 
-// 从Cookie加载音频设置
+// 从Cookie加载音频设置（用户专属）
 function loadAudioSettingsFromCookies() {
+    // 获取当前用户
+    var currentUser = '';
+    try {
+        if (typeof getCurrentUserCallsign === 'function') {
+            currentUser = getCurrentUserCallsign();
+        }
+    } catch (e) {
+        console.warn('获取用户呼号失败:', e);
+    }
+    console.log('🔊 加载用户设置, 当前用户:', currentUser || '默认');
+    
     // 加载AF增益
     var cAfEl = document.getElementById('C_af');
     var mainAfSlider = document.getElementById('main-af-gain');
     var mainAfValue = document.getElementById('main-af-value');
     
     if (cAfEl) {
-        var vol = typeof getCookie === 'function' ? getCookie('C_af') : '';
+        // 优先加载用户设置，回退到默认设置
+        var vol = '';
+        try {
+            if (typeof loadUserAudioSetting === 'function') {
+                vol = loadUserAudioSetting('C_af', '');
+            } else if (typeof getCookie === 'function') {
+                vol = getCookie('C_af');
+            }
+        } catch (e) {
+            console.warn('加载C_af设置失败:', e);
+        }
         if (vol) {
             cAfEl.value = vol;
         }
@@ -99,16 +151,44 @@ function loadAudioSettingsFromCookies() {
     // 加载静噪
     var squelchEl = document.getElementById('SQUELCH');
     if (squelchEl) {
-        var sql = typeof getCookie === 'function' ? getCookie('SQUELCH') : '';
+        var sql = '';
+        try {
+            if (typeof loadUserAudioSetting === 'function') {
+                sql = loadUserAudioSetting('SQUELCH', '');
+            } else if (typeof getCookie === 'function') {
+                sql = getCookie('SQUELCH');
+            }
+        } catch (e) {
+            console.warn('加载SQUELCH设置失败:', e);
+        }
         if (sql) {
             squelchEl.value = sql;
         }
     }
     
-    console.log('🔊 音频设置已从Cookie加载');
+    // 加载MIC增益
+    var micSlider = document.getElementById('mobile-mic-gain');
+    var micValue = document.getElementById('mobile-mic-value');
+    if (micSlider) {
+        var micCookie = '50'; // 默认值
+        try {
+            if (typeof loadUserAudioSetting === 'function') {
+                micCookie = loadUserAudioSetting('mobile_mic_gain', '50');
+            } else if (typeof getCookie === 'function') {
+                var c = getCookie('mobile_mic_gain');
+                if (c) micCookie = c;
+            }
+        } catch (e) {
+            console.warn('加载MIC增益设置失败:', e);
+        }
+        micSlider.value = parseInt(micCookie);
+        if (micValue) micValue.textContent = micCookie + '%';
+    }
+    
+    console.log('🔊 用户音频设置已加载');
 }
 
-// 主界面音量控制
+// 主界面音量控制（用户专属设置）
 function setMainAFGain(value) {
     // 更新显示
     var mainAfValue = document.getElementById('main-af-value');
@@ -127,8 +207,10 @@ function setMainAFGain(value) {
         AudioRX_SetGAIN();
     }
     
-    // 保存Cookie
-    if (typeof setCookie === 'function') {
+    // 保存用户专属Cookie
+    if (typeof saveUserAudioSetting === 'function') {
+        saveUserAudioSetting('C_af', parseInt(value) * 10, 180);
+    } else if (typeof setCookie === 'function') {
         setCookie('C_af', parseInt(value) * 10, 180);
     }
     
@@ -456,9 +538,22 @@ function togglePower() {
     if (typeof poweron !== 'undefined' && poweron) {
         // 断开连接 - 直接调用底层函数
         console.log('🔴 正在关闭电源...');
-        if (typeof AudioRX_stop === 'function') AudioRX_stop();
-        if (typeof AudioTX_stop === 'function') AudioTX_stop();
-        if (typeof ControlTRX_stop === 'function') ControlTRX_stop();
+        try {
+            if (typeof AudioRX_stop === 'function') {
+                console.log('  调用 AudioRX_stop...');
+                AudioRX_stop();
+            }
+            if (typeof AudioTX_stop === 'function') {
+                console.log('  调用 AudioTX_stop...');
+                AudioTX_stop();
+            }
+            if (typeof ControlTRX_stop === 'function') {
+                console.log('  调用 ControlTRX_stop...');
+                ControlTRX_stop();
+            }
+        } catch (e) {
+            console.error('关闭电源时出错:', e);
+        }
         poweron = false;
         
         // 更新按钮状态
@@ -468,14 +563,42 @@ function togglePower() {
             if (icon) icon.textContent = '⏻';
         }
         console.log('🔴 电源已关闭');
+        
+        // 断开 ATR-1000 代理
+        if (typeof ATR1000 !== 'undefined' && ATR1000.onPowerOff) {
+            ATR1000.onPowerOff();
+        }
     } else {
         // 连接 - 直接调用底层函数
         console.log('🟢 正在开启电源...');
-        if (typeof check_connected === 'function') check_connected();
-        if (typeof AudioRX_start === 'function') AudioRX_start();
-        if (typeof AudioTX_start === 'function') AudioTX_start();
-        if (typeof ControlTRX_start === 'function') ControlTRX_start();
-        if (typeof checklatency === 'function') checklatency();
+        
+        try {
+            if (typeof check_connected === 'function') {
+                console.log('  调用 check_connected...');
+                check_connected();
+            }
+            if (typeof AudioRX_start === 'function') {
+                console.log('  调用 AudioRX_start...');
+                AudioRX_start();
+                console.log('  AudioRX_start 完成, wsAudioRX:', typeof wsAudioRX !== 'undefined' ? '已创建' : '未创建');
+            }
+            if (typeof AudioTX_start === 'function') {
+                console.log('  调用 AudioTX_start...');
+                AudioTX_start();
+                console.log('  AudioTX_start 完成, wsAudioTX:', typeof wsAudioTX !== 'undefined' ? '已创建' : '未创建');
+            }
+            if (typeof ControlTRX_start === 'function') {
+                console.log('  调用 ControlTRX_start...');
+                ControlTRX_start();
+                console.log('  ControlTRX_start 完成, wsControlTRX:', typeof wsControlTRX !== 'undefined' ? '已创建' : '未创建');
+            }
+            if (typeof checklatency === 'function') {
+                console.log('  调用 checklatency...');
+                checklatency();
+            }
+        } catch (e) {
+            console.error('开启电源时出错:', e);
+        }
         poweron = true;
         
         // 更新按钮状态
@@ -485,6 +608,11 @@ function togglePower() {
             if (icon) icon.textContent = '⏼';
         }
         console.log('🟢 电源已开启');
+        
+        // 预连接 ATR-1000 代理
+        if (typeof ATR1000 !== 'undefined' && ATR1000.onPowerOn) {
+            ATR1000.onPowerOn();
+        }
         
         // iOS Safari：AudioContext 恢复已在点击事件处理函数内部完成
         // 这里只是打印状态
@@ -657,7 +785,17 @@ function updateSignalText(level) {
 
 function initializeSMeter() {
     const canvas = domElements.sMeterCanvas;
-    if (!canvas) return;
+    if (!canvas) {
+        console.warn('S-Meter canvas 未找到');
+        return;
+    }
+    
+    // 确保 SP 变量存在（来自 controls.js）
+    if (typeof SP === 'undefined') {
+        console.warn('SP 变量未定义，使用默认值');
+        // 定义默认 SP 映射表
+        window.SP = {0:0,1:25,2:37,3:50,4:62,5:73,6:84,7:98,8:110,9:123,10:144,20:164,30:180,40:202,50:221,60:240};
+    }
     
     const ctx = canvas.getContext('2d');
     drawSMeter(ctx, 0);
@@ -1018,9 +1156,18 @@ function showSettingsPanel() {
     
     // MIC增益（从Cookie获取，默认50%）
     var micValue = 50;
-    var micCookie = getCookie('mobile_mic_gain');
-    if (micCookie) {
-        micValue = parseInt(micCookie);
+    try {
+        var micCookie = '';
+        if (typeof loadUserAudioSetting === 'function') {
+            micCookie = loadUserAudioSetting('mobile_mic_gain', '');
+        } else if (typeof getCookie === 'function') {
+            micCookie = getCookie('mobile_mic_gain');
+        }
+        if (micCookie) {
+            micValue = parseInt(micCookie);
+        }
+    } catch (e) {
+        console.warn('加载MIC增益失败:', e);
     }
     
     let html = '<div class="modal-panel"><h3>音频设置</h3>';
@@ -1087,8 +1234,10 @@ function setMicGain(value) {
         AudioTX_SetGAIN(parseInt(value) / 100);
     }
     
-    // 保存Cookie
-    if (typeof setCookie === 'function') {
+    // 保存用户专属Cookie
+    if (typeof saveUserAudioSetting === 'function') {
+        saveUserAudioSetting('mobile_mic_gain', value, 180);
+    } else if (typeof setCookie === 'function') {
         setCookie('mobile_mic_gain', value, 180);
     }
     
@@ -1115,8 +1264,10 @@ function setSquelch(value) {
         updateSMeter(SignalLevel);
     }
     
-    // 保存Cookie
-    if (typeof setCookie === 'function') {
+    // 保存用户专属Cookie
+    if (typeof saveUserAudioSetting === 'function') {
+        saveUserAudioSetting('SQUELCH', value, 180);
+    } else if (typeof setCookie === 'function') {
         setCookie('SQUELCH', value, 180);
     }
     
@@ -1313,3 +1464,319 @@ if (typeof MutationObserver !== 'undefined') {
 }
 
 console.log('🎯 Mobile Modern JS 加载完成');
+
+////////////////////////////////////////////////////////////
+// ATR-1000 天调功率/驻波显示模块
+// 仅在 TX 发射期间获取并显示数据，3秒更新一次
+// 通过后端 UHRR 代理获取数据，解决 HTTPS 混合内容问题
+////////////////////////////////////////////////////////////
+
+const ATR1000 = {
+    ws: null,
+    isConnected: false,
+    lastPower: 0,
+    lastSWR: 0,
+    maxPower: 100,  // 默认最大功率100W
+    _txActive: false,  // TX状态标志（防抖）
+    _pollInterval: null,  // 数据轮询定时器引用
+    
+    // 初始化
+    init: function() {
+        console.log('📻 ATR-1000 代理模式初始化...');
+        // 不立即连接，等待 TX 开始时再连接
+    },
+    
+    // 连接后端 ATR-1000 代理
+    connect: function() {
+        // 检查是否已有连接（OPEN 或 CONNECTING 状态）
+        if (this.ws && (this.ws.readyState === WebSocket.OPEN || this.ws.readyState === WebSocket.CONNECTING)) {
+            console.log('📻 ATR-1000 代理已连接或正在连接，跳过');
+            return;
+        }
+        
+        // 清理旧连接
+        if (this.ws) {
+            this.ws.onopen = null;
+            this.ws.onclose = null;
+            this.ws.onerror = null;
+            this.ws.onmessage = null;
+            this.ws = null;
+        }
+        
+        try {
+            // 使用当前页面的主机和协议，连接后端代理 WebSocket
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const host = window.location.host;
+            const url = `${protocol}//${host}/WSATR1000`;
+            
+            console.log('📻 连接 ATR-1000 后端代理:', url);
+            this.ws = new WebSocket(url);
+            
+            this.ws.onopen = () => {
+                this.isConnected = true;
+                console.log('✅ ATR-1000 后端代理已连接');
+                this.updateStatus('已连接');
+                // 不自动发送 start，等 TX 开始时再发送
+            };
+            
+            this.ws.onclose = () => {
+                this.isConnected = false;
+                console.log('🔴 ATR-1000 后端代理断开');
+                this.updateStatus('断开');
+            };
+            
+            this.ws.onerror = (err) => {
+                console.error('❌ ATR-1000 后端代理错误:', err);
+                this.updateStatus('连接失败');
+            };
+            
+            this.ws.onmessage = (event) => {
+                this.handleMessage(event.data);
+            };
+        } catch (e) {
+            console.error('❌ ATR-1000 后端代理连接异常:', e);
+        }
+    },
+    
+    // 断开连接
+    disconnect: function() {
+        if (this.ws) {
+            // 只有在 OPEN 状态时才发送 stop 消息
+            if (this.ws.readyState === WebSocket.OPEN) {
+                try {
+                    this.ws.send(JSON.stringify({action: 'stop'}));
+                } catch (e) {
+                    console.log('📻 ATR-1000 发送停止消息失败:', e);
+                }
+            }
+            // 无论什么状态都关闭连接
+            try {
+                this.ws.close();
+            } catch (e) {
+                // 忽略关闭错误
+            }
+            this.ws = null;
+        }
+        this.isConnected = false;
+    },
+    
+    // 处理接收的消息 (JSON 格式)
+    handleMessage: function(data) {
+        try {
+            const msg = JSON.parse(data);
+            
+            if (msg.type === 'atr1000_meter') {
+                this.lastPower = msg.power || 0;
+                this.lastSWR = msg.swr || 0;
+                
+                // 更新连接状态
+                if (!msg.connected) {
+                    this.updateStatus('设备离线');
+                }
+                
+                this.updateDisplay();
+                console.log(`📊 ATR-1000: 功率=${this.lastPower}W, SWR=${this.lastSWR}`);
+            }
+        } catch (e) {
+            console.error('解析 ATR-1000 数据错误:', e);
+        }
+    },
+    
+    // 更新显示
+    updateDisplay: function() {
+        const powerEl = document.getElementById('atr-power');
+        const swrEl = document.getElementById('atr-swr');
+        const powerBar = document.getElementById('atr-power-bar');
+        const swrBar = document.getElementById('atr-swr-bar');
+        
+        if (powerEl) {
+            powerEl.textContent = this.lastPower;
+            // 根据功率设置颜色
+            if (this.lastPower > this.maxPower * 0.8) {
+                powerEl.style.color = '#f44336';  // 红色 - 高功率
+            } else if (this.lastPower > this.maxPower * 0.5) {
+                powerEl.style.color = '#ff9800';  // 橙色 - 中功率
+            } else {
+                powerEl.style.color = '#4CAF50';  // 绿色 - 低功率
+            }
+        }
+        
+        if (swrEl) {
+            swrEl.textContent = this.lastSWR;
+            // 根据 SWR 设置颜色
+            if (this.lastSWR >= 3) {
+                swrEl.style.color = '#f44336';  // 红色 - 危险
+            } else if (this.lastSWR >= 2) {
+                swrEl.style.color = '#ff9800';  // 橙色 - 警告
+            } else {
+                swrEl.style.color = '#4CAF50';  // 绿色 - 正常
+            }
+        }
+        
+        // 更新功率条
+        if (powerBar) {
+            const powerPercent = Math.min(100, (this.lastPower / this.maxPower) * 100);
+            powerBar.style.width = powerPercent + '%';
+            
+            // 功率条颜色
+            if (powerPercent > 80) {
+                powerBar.style.background = 'linear-gradient(90deg, #4CAF50, #ff9800, #f44336)';
+            } else if (powerPercent > 50) {
+                powerBar.style.background = 'linear-gradient(90deg, #4CAF50, #ff9800)';
+            } else {
+                powerBar.style.background = '#4CAF50';
+            }
+        }
+        
+        // 更新 SWR 条
+        if (swrBar) {
+            // SWR 1.0-3.0 映射到 0-100%
+            let swrPercent = 0;
+            if (this.lastSWR >= 3) {
+                swrPercent = 100;
+            } else if (this.lastSWR >= 1) {
+                swrPercent = ((this.lastSWR - 1) / 2) * 100;
+            }
+            swrBar.style.width = swrPercent + '%';
+            
+            // SWR 条颜色
+            if (this.lastSWR >= 3) {
+                swrBar.style.background = '#f44336';
+            } else if (this.lastSWR >= 2) {
+                swrBar.style.background = '#ff9800';
+            } else {
+                swrBar.style.background = '#4CAF50';
+            }
+        }
+    },
+    
+    // 更新连接状态
+    updateStatus: function(status) {
+        const statusEl = document.getElementById('atr-status');
+        if (statusEl) {
+            statusEl.textContent = status;
+            statusEl.className = 'atr-meter-status';
+            if (status === '已连接') {
+                statusEl.classList.add('connected');
+            } else if (status === '断开' || status === '连接失败' || status === '设备离线') {
+                statusEl.classList.add('disconnected');
+            }
+        }
+    },
+    
+    // Power 开启时预连接 WebSocket（不连接 ATR-1000 设备）
+    onPowerOn: function() {
+        console.log('📻 Power 开启，预连接 ATR-1000 代理 WebSocket');
+        if (!this.isConnected) {
+            this.connect();
+        }
+    },
+    
+    // Power 关闭时断开
+    onPowerOff: function() {
+        console.log('📻 Power 关闭，断开 ATR-1000 代理');
+        this.disconnect();
+        
+        // 隐藏面板
+        const section = document.getElementById('atr-meter-section');
+        if (section) {
+            section.style.display = 'none';
+        }
+    },
+    
+    // 定期请求数据（仅在 TX 期间）
+    startDataPolling: function() {
+        if (!this._txActive || !this.isConnected) {
+            console.log('⚠️ 数据轮询未启动（非 TX 状态或未连接）');
+            return;
+        }
+        
+        // 清除已有的定时器
+        if (this._pollInterval) {
+            clearInterval(this._pollInterval);
+        }
+        
+        // 每秒请求一次数据
+        this._pollInterval = setInterval(() => {
+            if (this._txActive && this.isConnected && this.ws && this.ws.readyState === WebSocket.OPEN) {
+                this.ws.send(JSON.stringify({action: 'get_data'}));
+            }
+        }, 1000);  // 1秒间隔
+        
+        console.log('📊 ATR-1000 数据轮询已启动（1秒间隔）');
+    },
+    
+    // 停止数据轮询
+    stopDataPolling: function() {
+        if (this._pollInterval) {
+            clearInterval(this._pollInterval);
+            this._pollInterval = null;
+            console.log('🛑 ATR-1000 数据轮询已停止');
+        }
+    },
+    
+    // TX 开始时调用 - 连接 ATR-1000 设备
+    onTXStart: function() {
+        // 防抖：如果已经启动则跳过
+        if (this._txActive) {
+            console.log('📻 ATR-1000 已在 TX 模式，跳过重复启动');
+            return;
+        }
+        this._txActive = true;
+        
+        console.log('📻 TX 开始，连接 ATR-1000 设备并显示面板');
+        
+        // 显示面板
+        const section = document.getElementById('atr-meter-section');
+        if (section) {
+            section.style.display = 'block';
+        }
+        
+        // 确保连接（如果 Power 开启时没连上）
+        if (!this.isConnected) {
+            this.connect();
+        }
+        
+        // 发送 start 命令让后端连接 ATR-1000 设备
+        if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+            this.ws.send(JSON.stringify({action: 'start'}));
+            console.log('📤 发送 ATR-1000 start 命令');
+        }
+        
+        // 启动数据轮询
+        this.startDataPolling();
+    },
+    
+    // TX 结束时调用 - 断开 ATR-1000 设备
+    onTXStop: function() {
+        // 防抖：如果已经停止则跳过
+        if (!this._txActive) {
+            console.log('📻 ATR-1000 已在 RX 模式，跳过重复停止');
+            return;
+        }
+        this._txActive = false;
+        
+        console.log('📻 TX 结束，断开 ATR-1000 设备并隐藏面板');
+        
+        // 停止数据轮询
+        this.stopDataPolling();
+        
+        // 发送 stop 命令让后端断开 ATR-1000 设备
+        if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+            this.ws.send(JSON.stringify({action: 'stop'}));
+            console.log('📤 发送 ATR-1000 stop 命令');
+        }
+        
+        // 清理状态
+        this.isConnected = false;
+    }
+};
+
+// 初始化 ATR-1000 模块
+document.addEventListener('DOMContentLoaded', function() {
+    ATR1000.init();
+    console.log('📻 ATR-1000 后端代理模块已加载（通过 Unix Socket 连接独立代理）');
+});
+
+// 导出 ATR-1000 控制函数
+window.ATR1000 = ATR1000;

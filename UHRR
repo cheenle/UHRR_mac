@@ -1091,6 +1091,87 @@ class AtuStatusHandler(tornado.web.RequestHandler):
             'websocket_clients': 0,
         }))
 
+############ ATR-1000 天调 WebSocket 处理器 ##############
+ATR1000HandlerClients = []
+
+class WS_ATR1000Handler(tornado.websocket.WebSocketHandler):
+    """
+    ATR-1000 天调 WebSocket 处理器
+    
+    这个处理器作为前端和独立 ATR-1000 代理程序之间的桥梁。
+    通过 Unix Socket 与 atr1000_proxy.py 通信。
+    """
+    
+    def check_origin(self, origin):
+        return True
+    
+    def open(self):
+        global ATR1000HandlerClients
+        if self not in ATR1000HandlerClients:
+            ATR1000HandlerClients.append(self)
+        logger.info(f"🔌 ATR-1000 客户端连接，当前 {len(ATR1000HandlerClients)} 个")
+        
+        # 连接到 Unix Socket
+        self.unix_socket = None
+        self.connect_to_proxy()
+    
+    def connect_to_proxy(self):
+        """连接到 ATR-1000 代理的 Unix Socket"""
+        try:
+            self.unix_socket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+            self.unix_socket.settimeout(1.0)
+            self.unix_socket.connect("/tmp/atr1000_proxy.sock")
+            self.unix_socket.setblocking(False)
+            logger.info("✅ 已连接到 ATR-1000 代理 Unix Socket")
+            
+            # 启动读取线程
+            threading.Thread(target=self._read_from_proxy, daemon=True).start()
+        except Exception as e:
+            logger.warning(f"⚠️ 无法连接到 ATR-1000 代理: {e}")
+            self.unix_socket = None
+    
+    def _read_from_proxy(self):
+        """从代理读取数据并转发到 WebSocket 客户端"""
+        while self.unix_socket and self.ws_connection:
+            try:
+                import select
+                ready, _, _ = select.select([self.unix_socket], [], [], 0.1)
+                if ready:
+                    data = self.unix_socket.recv(4096)
+                    if data and self.ws_connection:
+                        # 转发数据到前端
+                        self.write_message(data.decode(), binary=False)
+            except Exception as e:
+                if self.ws_connection:
+                    logger.debug(f"读取代理数据错误: {e}")
+                break
+    
+    def on_message(self, message):
+        """接收前端消息并转发到代理"""
+        if self.unix_socket:
+            try:
+                self.unix_socket.send(message.encode())
+                logger.debug(f"转发消息到 ATR-1000 代理: {message}")
+            except Exception as e:
+                logger.error(f"发送消息到代理失败: {e}")
+        else:
+            # 尝试重新连接
+            self.connect_to_proxy()
+    
+    def on_close(self):
+        global ATR1000HandlerClients
+        if self in ATR1000HandlerClients:
+            ATR1000HandlerClients.remove(self)
+        
+        # 关闭 Unix Socket 连接
+        if self.unix_socket:
+            try:
+                self.unix_socket.close()
+            except:
+                pass
+        
+        logger.info(f"🔌 ATR-1000 客户端断开，剩余 {len(ATR1000HandlerClients)} 个")
+
 class TRXRIG:
 	def __init__(self):
 		global HAMLIB_AVAILABLE
@@ -2140,6 +2221,7 @@ if __name__ == "__main__":
 			(r'/WSaudioTX', WS_AudioTXHandler),
 			(r'/WSCTRX', WS_ControlTRX),
 			(r'/WSpanFFT', WS_panFFTHandler),
+			(r'/WSATR1000', WS_ATR1000Handler),  # ATR-1000 天调 WebSocket
 			
 			(r'/(panfft.*)', tornado.web.StaticFileHandler, { 'path' : './www/panadapter' }),
 			(r'/CONFIG', ConfigHandler),

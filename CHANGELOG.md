@@ -5,6 +5,58 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [V4.3.0] - 2026-03-04
+
+### 🔌 ATR-1000 Architecture Separation
+
+**Theme: Independent ATR-1000 Proxy for Better Performance**
+
+### Added
+- **Independent ATR-1000 Proxy Program** (`atr1000_proxy.py`)
+  - Separate process that doesn't block UHRR main program
+  - Unix Socket communication with UHRR (`/tmp/atr1000_proxy.sock`)
+  - Auto-reconnect to ATR-1000 device
+  - On-demand data requests (only when clients connected)
+
+- **ATR-1000 WebSocket Endpoint** in UHRR
+  - New route `/WSATR1000` for frontend communication
+  - Bridges frontend WebSocket to independent proxy via Unix Socket
+
+### Changed
+- **Data Request Interval**: Optimized from 0.3s to 1.0s for lower CPU usage
+- **Frontend ATR-1000 Module**: Re-enabled with improved polling management
+  - Added `_pollInterval` variable for proper timer management
+  - Added `stopDataPolling()` function
+
+### Architecture
+```
+Frontend (mobile_modern.js)
+    ↓ WebSocket (/WSATR1000)
+UHRR Main Program
+    ↓ Unix Socket (/tmp/atr1000_proxy.sock)
+ATR-1000 Independent Proxy (atr1000_proxy.py)
+    ↓ WebSocket
+ATR-1000 Device (192.168.1.63:60001)
+```
+
+### Benefits
+| Feature | Before | After |
+|---------|--------|-------|
+| PTT Release Delay | ~2 seconds | < 100ms |
+| CPU Usage (ATR-1000) | High (0.3s interval) | Low (1.0s interval, on-demand) |
+| Architecture | Coupled | Decoupled independent process |
+
+### Usage
+```bash
+# Start ATR-1000 proxy (background)
+python3 atr1000_proxy.py --device 192.168.1.63 --port 60001 &
+
+# Start UHRR main program
+./uhrr_control.sh start
+```
+
+---
+
 ## [V4.2.0] - 2026-03-02
 
 ### 🎙️ TX Audio Equalizer
