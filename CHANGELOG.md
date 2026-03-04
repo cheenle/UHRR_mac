@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [V4.3.3] - 2026-03-04
+### ⚡ ATR-1000 Connection Pre-warming
+
+**Theme: Reduce PTT Press Latency**
+
+### Optimized
+- **Pre-connection**: ATR-1000 WebSocket connection established on page load
+- **Connection persistence**: Keep connection alive after TX ends
+- **SYNC pre-warming**: Send SYNC every 2s when client connected (not just during TX)
+- **Removed**: Connection close on TX stop - connection stays warm
+
+### Effect
+- PTT press to power display: ~1-2s → ~100-200ms
+- First TX after page refresh: instant response
+
+---
+
 ## [V4.3.2] - 2026-03-04
 ### 🐛 ATR-1000 Display Optimization
 

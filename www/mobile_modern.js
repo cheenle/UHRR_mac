@@ -1500,7 +1500,11 @@ const ATR1000 = {
     // 初始化
     init: function() {
         console.log('📻 ATR-1000 代理模式初始化...');
-        // 不立即连接，等待 TX 开始时再连接
+        // 预先连接 ATR-1000 代理，减少 PTT 按下时的延迟
+        // 延迟 1 秒连接，避免页面加载时同时建立多个连接
+        setTimeout(() => {
+            this.connect();
+        }, 1000);
     },
     
     // 连接后端 ATR-1000 代理
@@ -1926,7 +1930,7 @@ const ATR1000 = {
         }
     },
     
-    // TX 开始时调用 - 连接 ATR-1000 设备
+    // TX 开始时调用 - 发送 start 命令
     onTXStart: function() {
         // 防抖：如果已经启动则跳过
         if (this._txActive) {
@@ -1935,7 +1939,7 @@ const ATR1000 = {
         }
         this._txActive = true;
         
-        console.log('📻 TX 开始，连接 ATR-1000 设备并显示面板');
+        console.log('📻 TX 开始，显示 ATR-1000 面板');
         
         // 显示面板
         const section = document.getElementById('atr-meter-section');
@@ -1943,20 +1947,20 @@ const ATR1000 = {
             section.style.display = 'block';
         }
         
-        // 如果已连接，直接发送 start
+        // 发送 start 命令启动数据流（连接已预先建立）
         if (this.ws && this.ws.readyState === WebSocket.OPEN) {
             this.ws.send(JSON.stringify({action: 'start'}));
             console.log('📤 发送 ATR-1000 start 命令');
             this.startDataPolling();
         } else {
-            // 未连接，先建立连接，连接成功后自动发送 start
-            console.log('📻 ATR-1000 未连接，正在建立连接...');
-            this._pendingStart = true;  // 标记需要发送 start
+            // 连接断开，重新连接
+            console.log('📻 ATR-1000 连接断开，正在重新连接...');
+            this._pendingStart = true;
             this.connect();
         }
     },
     
-    // TX 结束时调用 - 断开 ATR-1000 设备
+    // TX 结束时调用 - 发送 stop 命令（保持连接）
     onTXStop: function() {
         // 防抖：如果已经停止则跳过
         if (!this._txActive) {
@@ -1965,19 +1969,16 @@ const ATR1000 = {
         }
         this._txActive = false;
         
-        console.log('📻 TX 结束，断开 ATR-1000 设备并隐藏面板');
+        console.log('📻 TX 结束，隐藏面板（保持连接）');
         
         // 停止数据轮询
         this.stopDataPolling();
         
-        // 发送 stop 命令让后端断开 ATR-1000 设备
+        // 发送 stop 命令（不再断开连接，保持预热状态）
         if (this.ws && this.ws.readyState === WebSocket.OPEN) {
             this.ws.send(JSON.stringify({action: 'stop'}));
             console.log('📤 发送 ATR-1000 stop 命令');
         }
-        
-        // 清理状态
-        this.isConnected = false;
         
         // 隐藏面板
         const section = document.getElementById('atr-meter-section');

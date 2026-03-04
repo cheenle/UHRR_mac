@@ -178,8 +178,13 @@ class ATR1000Client:
                     if now - last_sync_time >= 0.5:  # TX 期间每 500ms 一次
                         self._send_sync()
                         last_sync_time = now
+                elif len(clients) > 0:
+                    # 有客户端连接但非 TX 期间：每 2 秒发送一次 SYNC 预热
+                    if now - last_sync_time >= 2.0:
+                        self._send_sync()
+                        last_sync_time = now
                 else:
-                    # 非 TX 期间：每 5 秒发送一次 SYNC 保持连接
+                    # 无客户端：每 5 秒发送一次 SYNC 保持连接
                     if now - last_sync_time >= 5.0:
                         self._send_sync()
                         last_sync_time = last_data_time = now
