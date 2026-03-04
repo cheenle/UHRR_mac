@@ -15,6 +15,12 @@ UHRR_PORT="8877"
 LOG_DIR="/Users/cheenle/UHRR/UHRR_mac"
 RIGCTLD_LOG="$LOG_DIR/rigctld.log"
 UHRR_LOG="$LOG_DIR/uhrr.log"
+ATR1000_LOG="$LOG_DIR/atr1000_proxy.log"
+
+# ATR-1000 Configuration
+ATR1000_DEVICE="192.168.1.63"
+ATR1000_PORT="60001"
+ATR1000_INTERVAL="1.0"  # 数据请求间隔（秒）
 
 # Colors for output
 RED='\033[0;31m'
@@ -153,6 +159,48 @@ stop_uhrr() {
     rm -f "$LOG_DIR/uhrr.pid"
 }
 
+# Function to start ATR-1000 proxy
+start_atr1000() {
+    if is_running "atr1000_proxy.py"; then
+        print_warning "ATR-1000 proxy is already running"
+        return 1
+    fi
+    
+    print_status "Starting ATR-1000 proxy..."
+    
+    # Clear log files
+    > "$ATR1000_LOG"
+    
+    # Start ATR-1000 proxy
+    python3 "$LOG_DIR/atr1000_proxy.py" \
+        --device "$ATR1000_DEVICE" \
+        --port "$ATR1000_PORT" \
+        --interval "$ATR1000_INTERVAL" \
+        > "$ATR1000_LOG" 2>&1 &
+    
+    local pid=$!
+    sleep 2
+    
+    if is_running "atr1000_proxy.py"; then
+        print_success "ATR-1000 proxy started successfully (PID: $pid)"
+        echo "ATR-1000 proxy PID: $pid" > "$LOG_DIR/atr1000.pid"
+        print_success "ATR-1000 device: $ATR1000_DEVICE:$ATR1000_PORT"
+        return 0
+    else
+        print_error "Failed to start ATR-1000 proxy"
+        print_error "Check $ATR1000_LOG for details"
+        return 1
+    fi
+}
+
+# Function to stop ATR-1000 proxy
+stop_atr1000() {
+    kill_process "atr1000_proxy.py"
+    rm -f "$LOG_DIR/atr1000.pid"
+    # Clean up Unix Socket
+    rm -f /tmp/atr1000_proxy.sock
+}
+
 # Function to start ATU server
 start_atu_server() {
     if is_running "ATU_SERVER_WEBSOCKET"; then
@@ -208,10 +256,18 @@ show_status() {
         print_error "UHRR is not running"
     fi
     
+    if is_running "atr1000_proxy.py"; then
+        local pid=$(get_pid "atr1000_proxy.py")
+        print_success "ATR-1000 proxy is running (PID: $pid)"
+    else
+        print_warning "ATR-1000 proxy is not running"
+    fi
+    
     echo ""
     echo "=== Log File Sizes ==="
     echo "rigctld log: $(ls -lh "$RIGCTLD_LOG" 2>/dev/null | awk '{print $5}' || echo '0 bytes')"
     echo "UHRR log: $(ls -lh "$UHRR_LOG" 2>/dev/null | awk '{print $5}' || echo '0 bytes')"
+    echo "ATR-1000 log: $(ls -lh "$ATR1000_LOG" 2>/dev/null | awk '{print $5}' || echo '0 bytes')"
 }
 
 # Function to show logs
@@ -227,12 +283,19 @@ show_logs() {
             echo "=== Last $lines lines from UHRR log ==="
             tail -n "$lines" "$UHRR_LOG"
             ;;
+        atr1000)
+            echo "=== Last $lines lines from ATR-1000 log ==="
+            tail -n "$lines" "$ATR1000_LOG"
+            ;;
         *)
             echo "=== Last $lines lines from rigctld log ==="
             tail -n "$lines" "$RIGCTLD_LOG"
             echo ""
             echo "=== Last $lines lines from UHRR log ==="
             tail -n "$lines" "$UHRR_LOG"
+            echo ""
+            echo "=== Last $lines lines from ATR-1000 log ==="
+            tail -n "$lines" "$ATR1000_LOG"
             ;;
     esac
 }
@@ -254,9 +317,11 @@ start() {
         print_warning "Radio device $RIGCTL_DEVICE not found, starting anyway..."
     fi
     
-        start_rigctld
+    start_rigctld
     sleep 2
     start_uhrr
+    sleep 1
+    start_atr1000
     
     if is_running "rigctld" && is_running "UHRR"; then
         print_success "UHRR system started successfully!"
@@ -269,6 +334,7 @@ start() {
 # Function to stop all services
 stop() {
     print_status "Stopping UHRR system..."
+    stop_atr1000
     stop_uhrr
     stop_rigctld
     print_success "UHRR system stopped"
@@ -303,6 +369,12 @@ case "$1" in
     stop-uhrr)
         stop_uhrr
         ;;
+    start-atr1000)
+        start_atr1000
+        ;;
+    stop-atr1000)
+        stop_atr1000
+        ;;
     start-atu)
         start_atu_server
         ;;
@@ -311,26 +383,27 @@ case "$1" in
         ;;
     *)
         echo "UHRR System Control Script"
-        echo "Usage: $0 {start|stop|restart|status|logs [lines] [service]|start-rigctld|stop-rigctld|start-uhrr|stop-uhrr|start-atu|stop-atu}"
+        echo "Usage: $0 {start|stop|restart|status|logs [lines] [service]|start-rigctld|stop-rigctld|start-uhrr|stop-uhrr|start-atr1000|stop-atr1000}"
         echo ""
         echo "Commands:"
-        echo "  start          - Start rigctld and UHRR services"
-        echo "  stop           - Stop rigctld and UHRR services"
-        echo "  restart        - Restart the entire system"
-        echo "  status         - Show current status of services"
+        echo "  start           - Start rigctld, UHRR and ATR-1000 proxy services"
+        echo "  stop            - Stop all services"
+        echo "  restart         - Restart the entire system"
+        echo "  status          - Show current status of services"
         echo "  logs [n] [service] - Show last n lines of logs (default 20)"
-        echo "                   service can be 'rigctld', 'uhrr' or 'atu'"
-        echo "  start-rigctld  - Start only rigctld service"
-        echo "  stop-rigctld   - Stop only rigctld service"
-        echo "  start-uhrr     - Start only UHRR service"
-        echo "  stop-uhrr      - Stop only UHRR service"
-        
+        echo "                    service can be 'rigctld', 'uhrr', 'atr1000' or 'all'"
+        echo "  start-rigctld   - Start only rigctld service"
+        echo "  stop-rigctld    - Stop only rigctld service"
+        echo "  start-uhrr      - Start only UHRR service"
+        echo "  stop-uhrr       - Stop only UHRR service"
+        echo "  start-atr1000   - Start only ATR-1000 proxy service"
+        echo "  stop-atr1000    - Stop only ATR-1000 proxy service"
         echo ""
         echo "Examples:"
         echo "  $0 start"
-        echo "  $0 logs 50 rigctld"
+        echo "  $0 logs 50 atr1000"
         echo "  $0 status"
-        echo "  $0 start-atu"
+        echo "  $0 start-atr1000"
         exit 1
         ;;
 esac
