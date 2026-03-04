@@ -17,26 +17,19 @@ A modern web-based remote control system optimized for mobile devices, enabling 
 
 ## 📸 Screenshots / 界面展示
 
-<table>
-  <tr>
-    <td align="center" width="50%">
-      <h3>📱 Mobile Interface</h3>
-      <img src="screenshots/mobile_interface.png" alt="Mobile Interface" width="280">
-      <br>
-      <sub>iPhone 15 Optimized</sub>
-    </td>
-    <td align="center" width="50%">
-      <h3>🖥️ Desktop Interface</h3>
-      <img src="screenshots/desktop_interface.jpg" alt="Desktop Interface" width="400">
-      <br>
-      <sub>Full-featured Control Panel</sub>
-    </td>
-  </tr>
-</table>
+### 📱 Mobile Interface / 移动端界面
 
-> **Mobile**: Modern mobile UI optimized for iPhone/Android with touch-friendly controls, large PTT button, and real-time S-meter display.
->
-> **Desktop**: Full-featured desktop interface with spectrum display, detailed controls, and comprehensive radio management.
+<img src="screenshots/mobile_interface.png" alt="Mobile Interface" width="320">
+
+> Modern mobile UI optimized for iPhone/Android with touch-friendly controls, large PTT button, and real-time S-meter display.
+
+---
+
+### 🖥️ Desktop Interface / 桌面端界面
+
+<img src="screenshots/desktop_interface.jpg" alt="Desktop Interface" width="600">
+
+> Full-featured desktop interface with spectrum display, detailed controls, and comprehensive radio management.
 
 ---
 
