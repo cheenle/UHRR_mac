@@ -888,3 +888,211 @@ body {
         transition-duration: 0.01ms !important;
     }
 }
+
+////////////////////////////////////////////////////////////
+// ATR-1000 功率/驻波显示样式
+////////////////////////////////////////////////////////////
+
+.atr-meter-section {
+    background: linear-gradient(180deg, #1a2a1a 0%, #0d1a0d 100%);
+    border-radius: 12px;
+    padding: 12px;
+    margin: 8px 0;
+    border: 1px solid #2a4a2a;
+}
+
+.atr-meter-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #2a4a2a;
+}
+
+.atr-meter-title {
+    font-size: 14px;
+    font-weight: bold;
+    color: #4CAF50;
+}
+
+.atr-meter-status {
+    font-size: 12px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    background-color: #333;
+    color: #888;
+}
+
+.atr-meter-status.connected {
+    background-color: #2e7d32;
+    color: #fff;
+}
+
+.atr-meter-status.disconnected {
+    background-color: #c62828;
+    color: #fff;
+}
+
+.atr-meter-cards {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.atr-card {
+    flex: 1;
+    background-color: #111;
+    border-radius: 10px;
+    padding: 12px 8px;
+    text-align: center;
+    border: 1px solid #333;
+}
+
+.atr-label {
+    display: block;
+    font-size: 12px;
+    color: #888;
+    margin-bottom: 4px;
+}
+
+.atr-value {
+    font-size: 32px;
+    font-weight: bold;
+    color: #4CAF50;
+    line-height: 1.1;
+}
+
+.atr-unit {
+    font-size: 12px;
+    color: #666;
+}
+
+/* 功率条形图 */
+.atr-power-bar-container {
+    margin-bottom: 8px;
+}
+
+.atr-power-bar {
+    height: 8px;
+    background-color: #4CAF50;
+    border-radius: 4px;
+    width: 0%;
+    transition: width 0.3s ease, background 0.3s ease;
+}
+
+.atr-power-scale {
+    display: flex;
+    justify-content: space-between;
+    font-size: 10px;
+    color: #666;
+    margin-top: 2px;
+}
+
+/* SWR 驻波条 */
+.atr-swr-bar-container {
+    margin-top: 4px;
+}
+
+.atr-swr-bar {
+    height: 6px;
+    background-color: #4CAF50;
+    border-radius: 3px;
+    width: 0%;
+    transition: width 0.3s ease, background 0.3s ease;
+}
+
+.atr-swr-scale {
+    display: flex;
+    justify-content: space-between;
+    font-size: 10px;
+    color: #666;
+    margin-top: 2px;
+}
+
+/* 继电器状态 */
+.atr-relay-status {
+    margin-top: 8px;
+    padding: 6px 10px;
+    background: rgba(0,0,0,0.1);
+    border-radius: 6px;
+    text-align: center;
+}
+
+.atr-relay-info {
+    font-size: 12px;
+    color: #555;
+    font-family: 'Monaco', 'Consolas', monospace;
+}
+
+/* 操作按钮 */
+.atr-action-buttons {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+    justify-content: center;
+}
+
+.atr-btn {
+    flex: 1;
+    max-width: 80px;
+    padding: 8px 4px;
+    border: none;
+    border-radius: 8px;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.atr-btn-tune {
+    background: linear-gradient(135deg, #2196F3, #1976D2);
+    color: white;
+}
+
+.atr-btn-tune:active {
+    background: linear-gradient(135deg, #1976D2, #1565C0);
+    transform: scale(0.95);
+}
+
+.atr-btn-save {
+    background: linear-gradient(135deg, #4CAF50, #388E3C);
+    color: white;
+}
+
+.atr-btn-save:active {
+    background: linear-gradient(135deg, #388E3C, #2E7D32);
+    transform: scale(0.95);
+}
+
+.atr-btn-load {
+    background: linear-gradient(135deg, #FF9800, #F57C00);
+    color: white;
+}
+
+.atr-btn-load:active {
+    background: linear-gradient(135deg, #F57C00, #EF6C00);
+    transform: scale(0.95);
+}
+
+/* 隐藏桌面版遮罩层 - 移动端不使用 */
+#ombre-body,
+#pop-upspinner {
+    display: none !important;
+    z-index: -1 !important;
+    pointer-events: none !important;
+}
+
+/* indwsControlTRX 样式 */
+#indwsControlTRX {
+    padding: 2px 4px;
+}
+#indwsControlTRX img {
+    width: 10px;
+    height: 10px;
+}
+
+/* 隐藏 indwsControlTRX - 移动端不显示 */
+#indwsControlTRX {
+    display: none !important;
+}

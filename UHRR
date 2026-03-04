@@ -1125,6 +1125,10 @@ class WS_ATR1000Handler(tornado.websocket.WebSocketHandler):
             self.unix_socket.setblocking(False)
             logger.info("✅ 已连接到 ATR-1000 代理 Unix Socket")
             
+            # 保存主线程的 IOLoop 引用
+            from tornado.ioloop import IOLoop
+            self.main_ioloop = IOLoop.current()
+            
             # 启动读取线程
             threading.Thread(target=self._read_from_proxy, daemon=True).start()
         except Exception as e:
@@ -1133,19 +1137,52 @@ class WS_ATR1000Handler(tornado.websocket.WebSocketHandler):
     
     def _read_from_proxy(self):
         """从代理读取数据并转发到 WebSocket 客户端"""
+        import select
+        import time
+        
+        last_log_time = 0
+        logger.info("🔄 ATR-1000 代理读取线程已启动")
+        
         while self.unix_socket and self.ws_connection:
             try:
-                import select
                 ready, _, _ = select.select([self.unix_socket], [], [], 0.1)
                 if ready:
-                    data = self.unix_socket.recv(4096)
-                    if data and self.ws_connection:
-                        # 转发数据到前端
-                        self.write_message(data.decode(), binary=False)
+                    try:
+                        data = self.unix_socket.recv(4096)
+                        if data:
+                            decoded = data.decode()
+                            # 每 2 秒记录一次日志，避免刷屏
+                            now = time.time()
+                            if now - last_log_time > 2:
+                                logger.info(f"📥 从代理收到并转发: {decoded[:80]}...")
+                                last_log_time = now
+                            
+                            # 使用保存的主线程 IOLoop 引用
+                            if self.ws_connection and hasattr(self, 'main_ioloop') and self.main_ioloop:
+                                try:
+                                    self.main_ioloop.add_callback(
+                                        lambda d=decoded: self._safe_write_message(d)
+                                    )
+                                except Exception as e:
+                                    logger.error(f"调度写入失败: {e}")
+                    except BlockingIOError:
+                        pass
+                    except Exception as e:
+                        logger.debug(f"接收数据错误: {e}")
             except Exception as e:
                 if self.ws_connection:
                     logger.debug(f"读取代理数据错误: {e}")
                 break
+        
+        logger.info("🔄 ATR-1000 代理读取线程已退出")
+    
+    def _safe_write_message(self, data):
+        """在主线程中安全地写入 WebSocket 消息"""
+        try:
+            if self.ws_connection:
+                self.write_message(data, binary=False)
+        except Exception as e:
+            logger.debug(f"写入 WebSocket 失败: {e}")
     
     def on_message(self, message):
         """接收前端消息并转发到代理"""

@@ -31,6 +31,8 @@
     <!-- 音频增益和静噪隐藏元素 -->
     <input type="range" id="C_af" min="0" max="1000" value="500" style="display:none;">
     <input type="range" id="SQUELCH" min="0" max="100" value="0" style="display:none;">
+    <!-- Opus编码开关（移动端默认启用） -->
+    <input type="checkbox" id="encode" class="none" alt="Encode TX with opus codec" checked style="display:none;">
     
     <!-- Main container with bottom navigation -->
     <div class="mobile-modern-container">
@@ -72,6 +74,7 @@
                 <div class="status-item" id="status-rx">RX</div>
                 <div class="status-item" id="status-tx">TX</div>
                 <!-- Audio connection status indicators -->
+                <div class="status-item" id="indwsControlTRX" style="display:none;"><img src="img/critsred.png">wsCtrl</div>
                 <div class="status-item" id="indwsAudioRX"><img src="img/critsred.png">wsRX</div>
                 <div class="status-item" id="indwsAudioTX"><img src="img/critsred.png">wsTX</div>
                 <div class="signal-strength">
@@ -116,6 +119,63 @@
                     <button class="quick-btn band-btn" id="band-btn">20m</button>
                     <button class="quick-btn filter-btn" id="filter-btn">MID</button>
                     <button class="quick-btn tune-btn-header" id="tune-header-btn">TUNE</button>
+                </div>
+            </section>
+            
+            <!-- ATR-1000 Power/SWR Display (TX期间显示) -->
+            <section class="atr-meter-section" id="atr-meter-section" style="display: none;">
+                <div class="atr-meter-header">
+                    <span class="atr-meter-title">📡 ATR-1000 天调</span>
+                    <span class="atr-meter-status" id="atr-status">已连接</span>
+                </div>
+                <div class="atr-meter-cards">
+                    <div class="atr-card">
+                        <span class="atr-label">功率</span>
+                        <div class="atr-value" id="atr-power">--</div>
+                        <span class="atr-unit">W</span>
+                    </div>
+                    <div class="atr-card">
+                        <span class="atr-label">驻波</span>
+                        <div class="atr-value" id="atr-swr">--</div>
+                        <span class="atr-unit">SWR</span>
+                    </div>
+                </div>
+                <!-- 功率条形图 -->
+                <div class="atr-power-bar-container">
+                    <div class="atr-power-bar" id="atr-power-bar"></div>
+                    <div class="atr-power-scale">
+                        <span>0</span>
+                        <span>25</span>
+                        <span>50</span>
+                        <span>75</span>
+                        <span>100W</span>
+                    </div>
+                </div>
+                <!-- 驻波指示条 -->
+                <div class="atr-swr-bar-container">
+                    <div class="atr-swr-bar" id="atr-swr-bar"></div>
+                    <div class="atr-swr-scale">
+                        <span>1.0</span>
+                        <span>1.5</span>
+                        <span>2.0</span>
+                        <span>2.5</span>
+                        <span>3.0+</span>
+                    </div>
+                </div>
+                <!-- 继电器状态和操作按钮 -->
+                <div class="atr-relay-status" id="atr-relay-status">
+                    <span class="atr-relay-info" id="atr-relay-info">LC | L: -- | C: --</span>
+                </div>
+                <div class="atr-action-buttons">
+                    <button class="atr-btn atr-btn-tune" onclick="ATR1000.startTune(2)" title="完整调谐">
+                        🔧 调谐
+                    </button>
+                    <button class="atr-btn atr-btn-save" onclick="ATR1000.saveCurrentTuner()" title="保存当前参数">
+                        💾 保存
+                    </button>
+                    <button class="atr-btn atr-btn-load" onclick="ATR1000.showTunerRecords()" title="查看存储记录">
+                        📋 记录
+                    </button>
                 </div>
             </section>
             
@@ -181,6 +241,7 @@
     <div class="safe-area-bottom"></div>
     
     <!-- 核心脚本加载顺序重要 -->
+    <script src="ui_utils.js"></script>
     <script src="controls.js"></script>
     <script src="tx_button_optimized.js"></script>
     <script src="mobile_modern.js"></script>

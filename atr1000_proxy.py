@@ -35,14 +35,30 @@ logger = logging.getLogger('ATR1000-Proxy')
 # ATR-1000 命令常量
 SCMD_FLAG = 0xFF
 SCMD_SYNC = 1
-SCMD_METER_STATUS = 2
+SCMD_METER_STATUS = 2      # 电表状态（功率、SWR）
+SCMD_TUNE_STATUS = 3       # 调谐状态
+SCMD_TUNE_MODE = 4         # 调谐模式
+SCMD_RELAY_STATUS = 5      # 继电器状态（LC/CL、电感、电容）
+SCMD_MEMORY_STATUS = 6     # 存储状态
+SCMD_MEMORY_INFO = 7       # 存储信息
 
 # 全局状态
 running = True
 connected = False
-meter_data = {"power": 0, "swr": 0, "connected": False, "temperature": 0}
+meter_data = {
+    "power": 0, 
+    "swr": 0, 
+    "connected": False, 
+    "temperature": 0,
+    "sw": 0,        # 网络类型: 0=LC, 1=CL
+    "ind": 0,       # 电感索引
+    "cap": 0,       # 电容索引
+    "ind_uh": 0.0,  # 电感值 (uH)
+    "cap_pf": 0     # 电容值 (pF)
+}
 clients = []  # Unix Socket 客户端列表
 data_lock = threading.Lock()
+last_broadcast_time = 0  # 上次广播时间（用于节流）
 
 # Unix Socket 路径
 UNIX_SOCKET_PATH = "/tmp/atr1000_proxy.sock"
@@ -147,25 +163,20 @@ class ATR1000Client:
                 logger.error(f"发送同步命令失败: {e}")
     
     def _request_loop(self):
-        """数据请求循环 - 只在有客户端时请求"""
+        """数据请求循环 - ATR-1000 设备主动推送数据，TX 期间定期发送 SYNC"""
         global running
         
-        last_request_time = 0
+        last_sync_time = 0
         
         while running and connected:
             try:
-                # 只有在有活跃客户端时才请求
+                # TX 活跃期间：每秒发送一次 SYNC 确保数据流
                 if self.active and len(clients) > 0:
                     now = time.time()
-                    if now - last_request_time >= self.request_interval:
+                    if now - last_sync_time >= 1.0:  # TX 期间每秒一次
                         self._send_sync()
-                        last_request_time = now
-                else:
-                    # 没有客户端时，每 10 秒发一次心跳
-                    now = time.time()
-                    if now - last_request_time >= 10:
-                        self._send_sync()
-                        last_request_time = now
+                        last_sync_time = now
+                # 非 TX 期间：不发送 SYNC，减少设备压力
                 
                 time.sleep(0.1)  # 100ms 检查间隔
                 
@@ -173,45 +184,79 @@ class ATR1000Client:
                 logger.error(f"请求循环错误: {e}")
     
     def _parse_meter_data(self, data):
-        """解析电表数据"""
+        """解析 ATR-1000 数据 - 支持电表状态和继电器状态"""
         global meter_data
         
         try:
-            # 调试：输出原始数据
-            logger.debug(f"收到数据: len={len(data)}, hex={data.hex() if len(data) < 30 else data[:30].hex()+'...'}")
+            # 数据长度检查
+            if len(data) < 3:
+                return  # 忽略极短帧
             
-            if len(data) < 9:
-                logger.debug(f"数据长度不足: {len(data)}")
-                return
+            # 检查帧头
+            if data[0] != SCMD_FLAG:
+                return  # 忽略非标准帧
             
             cmd = data[1]
-            logger.debug(f"命令类型: {cmd} (METER_STATUS={SCMD_METER_STATUS})")
             
+            # 根据命令类型解析
             if cmd == SCMD_METER_STATUS:
-                # 解析 SWR 和功率
-                swr = struct.unpack("<H", data[4:6])[0]
-                fwd = struct.unpack("<H", data[6:8])[0]
+                # 电表状态（功率、SWR）
+                if len(data) < 10:
+                    return
                 
-                logger.info(f"📊 原始数据: SWR={swr}, FWD={fwd}")
+                swr_raw = struct.unpack("<H", data[4:6])[0]
+                fwd = struct.unpack("<H", data[6:8])[0]
+                maxfwd = struct.unpack("<H", data[8:10])[0]
                 
                 # SWR 处理
-                if swr >= 100:
-                    swr_value = swr / 100.0
+                if swr_raw >= 100:
+                    swr_value = swr_raw / 100.0
+                elif swr_raw == 0:
+                    swr_value = 1.0
                 else:
-                    swr_value = float(swr)
+                    swr_value = float(swr_raw)
                 
-                logger.info(f"📊 解析结果: 功率={fwd}W, SWR={swr_value}")
+                logger.info(f"📊 功率={fwd}W, SWR={swr_value:.2f}, 最大功率={maxfwd}W")
                 
-                # 更新数据
                 with data_lock:
                     meter_data["power"] = fwd
                     meter_data["swr"] = swr_value
                     meter_data["connected"] = True
                 
-                # 广播到所有客户端
                 broadcast_to_clients()
-            else:
-                logger.debug(f"非 METER_STATUS 命令: {cmd}")
+                
+            elif cmd == SCMD_RELAY_STATUS:
+                # 继电器状态（LC/CL、电感、电容）
+                if len(data) < 10:
+                    return
+                
+                # 官方 JS 代码:
+                # const relayData = {
+                #     sw: dataView.getUint8(3),
+                #     ind: dataView.getUint8(4),
+                #     cap: dataView.getUint8(5),
+                #     L: dataView.getUint16(6, true) / 100,  // 电感值 uH
+                #     C: dataView.getUint16(8, true)         // 电容值 pF
+                # };
+                sw = data[3]           # 网络类型: 0=LC, 1=CL
+                ind = data[4]          # 电感索引
+                cap = data[5]          # 电容索引
+                ind_uh = struct.unpack("<H", data[6:8])[0] / 100.0  # 电感值 uH
+                cap_pf = struct.unpack("<H", data[8:10])[0]          # 电容值 pF
+                
+                sw_text = "LC" if sw == 0 else "CL"
+                logger.info(f"🎛️ 继电器: {sw_text}, 电感={ind_uh:.2f}uH (索引{ind}), 电容={cap_pf}pF (索引{cap})")
+                
+                with data_lock:
+                    meter_data["sw"] = sw
+                    meter_data["ind"] = ind
+                    meter_data["cap"] = cap
+                    meter_data["ind_uh"] = ind_uh
+                    meter_data["cap_pf"] = cap_pf
+                
+                broadcast_to_clients()
+                
+            # 其他命令类型静默忽略
                 
         except Exception as e:
             logger.error(f"解析数据错误: {e}")
@@ -228,29 +273,103 @@ class ATR1000Client:
                 self.ws.close()
             except:
                 pass
+    
+    def set_relay(self, sw: int, ind: int, cap: int):
+        """
+        设置继电器参数
+        
+        Args:
+            sw: 网络类型 (0=LC, 1=CL)
+            ind: 电感索引 (0-127)
+            cap: 电容索引 (0-127)
+        """
+        if self.ws and connected:
+            try:
+                # 根据官方 JS: setRelayStatus(sw, ind, cap)
+                # buffer: [FLAG, SCMD_RELAY_STATUS, len, sw, ind, cap]
+                cmd = bytes([SCMD_FLAG, SCMD_RELAY_STATUS, 3, sw, ind, cap])
+                self.ws.send(cmd, opcode=0x02)
+                logger.info(f"发送继电器命令: SW={sw}, IND={ind}, CAP={cap}")
+            except Exception as e:
+                logger.error(f"发送继电器命令失败: {e}")
+    
+    def start_tune(self, mode: int = 2):
+        """
+        启动自动调谐
+        
+        Args:
+            mode: 调谐模式
+                0 = 重置状态
+                1 = 内存调谐
+                2 = 完整调谐
+                3 = 微调调谐
+        """
+        if self.ws and connected:
+            try:
+                # 根据官方 JS: setTuneMode(mode)
+                # buffer: [FLAG, SCMD_TUNE_MODE, len, mode]
+                cmd = bytes([SCMD_FLAG, SCMD_TUNE_MODE, 1, mode])
+                self.ws.send(cmd, opcode=0x02)
+                logger.info(f"发送调谐命令: mode={mode}")
+            except Exception as e:
+                logger.error(f"发送调谐命令失败: {e}")
+    
+    def set_tune_status(self, is_tune: bool):
+        """
+        设置调谐状态（信号直通/调谐状态）
+        
+        Args:
+            is_tune: True=调谐状态, False=信号直通
+        """
+        if self.ws and connected:
+            try:
+                cmd = bytes([SCMD_FLAG, SCMD_TUNE_STATUS, 1, 1 if is_tune else 0])
+                self.ws.send(cmd, opcode=0x02)
+                logger.info(f"设置调谐状态: {is_tune}")
+            except Exception as e:
+                logger.error(f"设置调谐状态失败: {e}")
 
 
 def broadcast_to_clients():
     """广播数据到所有 Unix Socket 客户端"""
-    global meter_data, clients
+    global meter_data, clients, last_broadcast_time
     
-    if not clients:
+    client_count = len(clients)
+    if client_count == 0:
+        logger.debug("无客户端连接，跳过广播")
         return
+    
+    # 节流：最多每 300ms 广播一次
+    now = time.time()
+    if now - last_broadcast_time < 0.3:
+        return
+    last_broadcast_time = now
     
     with data_lock:
         data = json.dumps({
             "type": "atr1000_meter",
             "power": meter_data["power"],
             "swr": meter_data["swr"],
-            "connected": meter_data["connected"]
+            "connected": meter_data["connected"],
+            # 继电器状态
+            "sw": meter_data.get("sw", 0),
+            "ind": meter_data.get("ind", 0),
+            "cap": meter_data.get("cap", 0),
+            "ind_uh": meter_data.get("ind_uh", 0.0),
+            "cap_pf": meter_data.get("cap_pf", 0)
         })
     
-    for client in clients[:]:
+    logger.info(f"📤 广播到 {client_count} 个客户端: {data}")
+    
+    # 复制客户端列表以避免在迭代时修改
+    clients_copy = clients[:]
+    
+    for client in clients_copy:
         try:
             client.send(data.encode())
         except Exception as e:
-            logger.debug(f"发送到客户端失败: {e}")
-            clients.remove(client)
+            logger.warning(f"发送到客户端失败: {e}")
+            # 不要在这里移除客户端，让 handle_unix_client 处理
 
 
 def handle_unix_client(conn, addr, atr1000):
@@ -290,10 +409,29 @@ def handle_unix_client(conn, addr, atr1000):
                                 "type": "atr1000_meter",
                                 "power": meter_data["power"],
                                 "swr": meter_data["swr"],
-                                "connected": meter_data["connected"]
+                                "connected": meter_data["connected"],
+                                "sw": meter_data.get("sw", 0),
+                                "ind": meter_data.get("ind", 0),
+                                "cap": meter_data.get("cap", 0),
+                                "ind_uh": meter_data.get("ind_uh", 0.0),
+                                "cap_pf": meter_data.get("cap_pf", 0)
                             })
                         conn.send(response.encode())
                     
+                    elif action == "set_relay":
+                        # 设置继电器参数
+                        sw = msg.get("sw", 0)
+                        ind = msg.get("ind", 0)
+                        cap = msg.get("cap", 0)
+                        atr1000.set_relay(sw, ind, cap)
+                        logger.info(f"设置继电器: SW={sw}, IND={ind}, CAP={cap}")
+                    
+                    elif action == "tune":
+                        # 启动自动调谐
+                        mode = msg.get("mode", 2)  # 默认完整调谐
+                        atr1000.start_tune(mode)
+                        logger.info(f"启动自动调谐: mode={mode}")
+                        
                 except json.JSONDecodeError:
                     pass
                 

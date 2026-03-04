@@ -738,6 +738,14 @@ function tuneFrequency(step) {
     } else {
         sendWebSocketMessage("setFreq:" + mobileState.currentFrequency);
     }
+    
+    // 自动加载天调参数（如果存在）
+    if (typeof ATR1000 !== 'undefined' && ATR1000.isConnected) {
+        const tunerRecord = ATR1000.loadTunerForFreq(mobileState.currentFrequency);
+        if (tunerRecord) {
+            console.log(`🎵 自动加载天调: ${(mobileState.currentFrequency/1000).toFixed(1)}kHz`);
+        }
+    }
 }
 
 // S表映射表使用controls.js中定义的全局变量 SP 和 RIG_LEVEL_STRENGTH
@@ -1479,6 +1487,15 @@ const ATR1000 = {
     maxPower: 100,  // 默认最大功率100W
     _txActive: false,  // TX状态标志（防抖）
     _pollInterval: null,  // 数据轮询定时器引用
+    _pendingStart: false,  // 待发送的 start 命令标志
+    // 继电器状态
+    relayStatus: {
+        sw: 0,        // 网络类型: 0=LC, 1=CL
+        ind: 0,       // 电感索引
+        cap: 0,       // 电容索引
+        ind_uh: 0.0,  // 电感值 (uH)
+        cap_pf: 0     // 电容值 (pF)
+    },
     
     // 初始化
     init: function() {
@@ -1516,7 +1533,14 @@ const ATR1000 = {
                 this.isConnected = true;
                 console.log('✅ ATR-1000 后端代理已连接');
                 this.updateStatus('已连接');
-                // 不自动发送 start，等 TX 开始时再发送
+                
+                // 如果有待发送的 start 命令，现在发送
+                if (this._pendingStart) {
+                    this._pendingStart = false;
+                    this.ws.send(JSON.stringify({action: 'start'}));
+                    console.log('📤 发送 ATR-1000 start 命令（延迟）');
+                    this.startDataPolling();
+                }
             };
             
             this.ws.onclose = () => {
@@ -1562,6 +1586,7 @@ const ATR1000 = {
     
     // 处理接收的消息 (JSON 格式)
     handleMessage: function(data) {
+        console.log('📨 ATR-1000 收到原始数据:', data.substring(0, 100));
         try {
             const msg = JSON.parse(data);
             
@@ -1569,17 +1594,140 @@ const ATR1000 = {
                 this.lastPower = msg.power || 0;
                 this.lastSWR = msg.swr || 0;
                 
+                // 更新继电器状态
+                if (msg.sw !== undefined) {
+                    this.relayStatus.sw = msg.sw;
+                    this.relayStatus.ind = msg.ind || 0;
+                    this.relayStatus.cap = msg.cap || 0;
+                    this.relayStatus.ind_uh = msg.ind_uh || 0;
+                    this.relayStatus.cap_pf = msg.cap_pf || 0;
+                }
+                
                 // 更新连接状态
                 if (!msg.connected) {
                     this.updateStatus('设备离线');
                 }
                 
                 this.updateDisplay();
-                console.log(`📊 ATR-1000: 功率=${this.lastPower}W, SWR=${this.lastSWR}`);
+                console.log(`📊 ATR-1000 更新显示: 功率=${this.lastPower}W, SWR=${this.lastSWR}`);
+                
+                // 强制更新 DOM
+                this._forceUpdateDisplay();
+            } else {
+                console.log('📨 ATR-1000 收到非电表消息:', msg.type);
             }
         } catch (e) {
-            console.error('解析 ATR-1000 数据错误:', e);
+            console.error('解析 ATR-1000 数据错误:', e, '原始数据:', data);
         }
+    },
+    
+    // 强制更新显示（确保 DOM 更新）
+    _forceUpdateDisplay: function() {
+        const powerEl = document.getElementById('atr-power');
+        const swrEl = document.getElementById('atr-swr');
+        
+        if (powerEl) {
+            powerEl.textContent = this.lastPower;
+            powerEl.innerHTML = this.lastPower;
+        }
+        if (swrEl) {
+            swrEl.textContent = this.lastSWR;
+            swrEl.innerHTML = this.lastSWR.toFixed(2);
+        }
+        
+        console.log(`🔄 强制更新 DOM: 功率=${this.lastPower}W, SWR=${this.lastSWR}`);
+    },
+    
+    // 设置继电器参数
+    setRelay: function(sw, ind, cap) {
+        if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+            this.ws.send(JSON.stringify({
+                action: 'set_relay',
+                sw: sw,
+                ind: ind,
+                cap: cap
+            }));
+            console.log(`🎛️ 设置继电器: SW=${sw}, IND=${ind}, CAP=${cap}`);
+        }
+    },
+    
+    // 启动自动调谐
+    startTune: function(mode = 2) {
+        if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+            this.ws.send(JSON.stringify({
+                action: 'tune',
+                mode: mode
+            }));
+            console.log(`🔧 启动调谐: mode=${mode}`);
+        }
+    },
+    
+    // 保存当前天调参数
+    saveCurrentTuner: function() {
+        // 获取当前频率
+        const freqInput = document.getElementById('freq_disp');
+        const freq = freqInput ? parseInt(freqInput.textContent.replace(/\D/g, '')) : 0;
+        
+        if (freq === 0) {
+            alert('无法获取当前频率');
+            return;
+        }
+        
+        // 保存到本地存储
+        const tunerData = {
+            freq: freq,
+            sw: this.relayStatus.sw,
+            ind: this.relayStatus.ind,
+            cap: this.relayStatus.cap,
+            ind_uh: this.relayStatus.ind_uh,
+            cap_pf: this.relayStatus.cap_pf,
+            swr: this.lastSWR,
+            power: this.lastPower,
+            timestamp: new Date().toISOString()
+        };
+        
+        // 获取现有记录
+        let records = JSON.parse(localStorage.getItem('atr1000_tuner_records') || '[]');
+        
+        // 检查是否有相同频率的记录
+        const existingIndex = records.findIndex(r => Math.abs(r.freq - freq) < 10000);
+        if (existingIndex >= 0) {
+            // 更新现有记录
+            records[existingIndex] = tunerData;
+        } else {
+            // 添加新记录
+            records.push(tunerData);
+        }
+        
+        localStorage.setItem('atr1000_tuner_records', JSON.stringify(records));
+        console.log('💾 保存天调参数:', tunerData);
+        alert(`已保存天调参数: ${(freq/1000).toFixed(1)}kHz, SWR=${this.lastSWR}`);
+    },
+    
+    // 加载天调参数
+    loadTunerForFreq: function(freq) {
+        const records = JSON.parse(localStorage.getItem('atr1000_tuner_records') || '[]');
+        
+        // 查找最接近的频率记录
+        let bestMatch = null;
+        let minDiff = Infinity;
+        
+        for (const record of records) {
+            const diff = Math.abs(record.freq - freq);
+            if (diff < minDiff && diff < 50000) {  // 50kHz 范围内
+                minDiff = diff;
+                bestMatch = record;
+            }
+        }
+        
+        if (bestMatch) {
+            // 设置继电器参数
+            this.setRelay(bestMatch.sw, bestMatch.ind, bestMatch.cap);
+            console.log(`📥 加载天调参数: ${(freq/1000).toFixed(1)}kHz -> ${(bestMatch.freq/1000).toFixed(1)}kHz`);
+            return bestMatch;
+        }
+        
+        return null;
     },
     
     // 更新显示
@@ -1648,6 +1796,98 @@ const ATR1000 = {
                 swrBar.style.background = '#4CAF50';
             }
         }
+        
+        // 更新继电器状态显示
+        const relayInfo = document.getElementById('atr-relay-info');
+        if (relayInfo) {
+            const swText = this.relayStatus.sw === 0 ? 'LC' : 'CL';
+            relayInfo.textContent = `${swText} | L: ${this.relayStatus.ind_uh.toFixed(2)}µH (${this.relayStatus.ind}) | C: ${this.relayStatus.cap_pf}pF (${this.relayStatus.cap})`;
+        }
+    },
+    
+    // 显示天调记录列表
+    showTunerRecords: function() {
+        const records = JSON.parse(localStorage.getItem('atr1000_tuner_records') || '[]');
+        
+        if (records.length === 0) {
+            alert('暂无天调记录\n\n在发射时点击"保存"按钮可保存当前天调参数');
+            return;
+        }
+        
+        // 按频率排序
+        records.sort((a, b) => a.freq - b.freq);
+        
+        // 创建列表 HTML
+        let html = '<div style="max-height: 300px; overflow-y: auto;">';
+        html += '<table style="width: 100%; font-size: 12px; border-collapse: collapse;">';
+        html += '<tr style="background: #f0f0f0;"><th style="padding: 8px; text-align: left;">频率</th><th style="padding: 8px;">SWR</th><th style="padding: 8px;">类型</th><th style="padding: 8px;">操作</th></tr>';
+        
+        for (const record of records) {
+            const swText = record.sw === 0 ? 'LC' : 'CL';
+            const freqStr = (record.freq / 1000).toFixed(1) + 'kHz';
+            html += `<tr style="border-bottom: 1px solid #eee;">
+                <td style="padding: 8px;">${freqStr}</td>
+                <td style="padding: 8px; text-align: center; color: ${record.swr < 1.5 ? '#4CAF50' : record.swr < 2 ? '#ff9800' : '#f44336'}">${record.swr.toFixed(2)}</td>
+                <td style="padding: 8px; text-align: center;">${swText}</td>
+                <td style="padding: 8px; text-align: center;">
+                    <button onclick="ATR1000.applyTunerRecord(${record.freq})" style="padding: 4px 8px; font-size: 11px; background: #2196F3; color: white; border: none; border-radius: 4px; cursor: pointer;">应用</button>
+                </td>
+            </tr>`;
+        }
+        
+        html += '</table></div>';
+        html += '<div style="margin-top: 10px; text-align: center;">';
+        html += '<button onclick="ATR1000.clearTunerRecords()" style="padding: 8px 16px; background: #f44336; color: white; border: none; border-radius: 4px; cursor: pointer;">清空所有</button>';
+        html += '</div>';
+        
+        // 使用简单的模态框显示
+        const modal = document.createElement('div');
+        modal.id = 'tuner-records-modal';
+        modal.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 10000;';
+        modal.innerHTML = `
+            <div style="background: white; border-radius: 12px; padding: 20px; max-width: 90%; width: 360px; max-height: 80%; overflow-y: auto;">
+                <h3 style="margin: 0 0 15px 0; color: #333;">📋 天调记录 (${records.length}条)</h3>
+                ${html}
+                <button onclick="document.getElementById('tuner-records-modal').remove()" style="width: 100%; margin-top: 15px; padding: 10px; background: #666; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 14px;">关闭</button>
+            </div>
+        `;
+        document.body.appendChild(modal);
+        
+        // 点击背景关闭
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                modal.remove();
+            }
+        });
+    },
+    
+    // 应用天调记录
+    applyTunerRecord: function(freq) {
+        const records = JSON.parse(localStorage.getItem('atr1000_tuner_records') || '[]');
+        const record = records.find(r => r.freq === freq);
+        
+        if (record) {
+            this.setRelay(record.sw, record.ind, record.cap);
+            
+            // 关闭模态框
+            const modal = document.getElementById('tuner-records-modal');
+            if (modal) modal.remove();
+            
+            console.log(`✅ 应用天调参数: ${(freq/1000).toFixed(1)}kHz`);
+        }
+    },
+    
+    // 清空所有记录
+    clearTunerRecords: function() {
+        if (confirm('确定要清空所有天调记录吗？')) {
+            localStorage.removeItem('atr1000_tuner_records');
+            
+            // 关闭模态框
+            const modal = document.getElementById('tuner-records-modal');
+            if (modal) modal.remove();
+            
+            console.log('🗑️ 已清空所有天调记录');
+        }
     },
     
     // 更新连接状态
@@ -1684,26 +1924,10 @@ const ATR1000 = {
         }
     },
     
-    // 定期请求数据（仅在 TX 期间）
+    // 定期请求数据（已禁用 - 使用推送模式）
     startDataPolling: function() {
-        if (!this._txActive || !this.isConnected) {
-            console.log('⚠️ 数据轮询未启动（非 TX 状态或未连接）');
-            return;
-        }
-        
-        // 清除已有的定时器
-        if (this._pollInterval) {
-            clearInterval(this._pollInterval);
-        }
-        
-        // 每秒请求一次数据
-        this._pollInterval = setInterval(() => {
-            if (this._txActive && this.isConnected && this.ws && this.ws.readyState === WebSocket.OPEN) {
-                this.ws.send(JSON.stringify({action: 'get_data'}));
-            }
-        }, 1000);  // 1秒间隔
-        
-        console.log('📊 ATR-1000 数据轮询已启动（1秒间隔）');
+        // 推送模式：后端主动推送数据，无需轮询
+        console.log('📊 ATR-1000 使用推送模式（无需轮询）');
     },
     
     // 停止数据轮询
@@ -1732,19 +1956,17 @@ const ATR1000 = {
             section.style.display = 'block';
         }
         
-        // 确保连接（如果 Power 开启时没连上）
-        if (!this.isConnected) {
-            this.connect();
-        }
-        
-        // 发送 start 命令让后端连接 ATR-1000 设备
+        // 如果已连接，直接发送 start
         if (this.ws && this.ws.readyState === WebSocket.OPEN) {
             this.ws.send(JSON.stringify({action: 'start'}));
             console.log('📤 发送 ATR-1000 start 命令');
+            this.startDataPolling();
+        } else {
+            // 未连接，先建立连接，连接成功后自动发送 start
+            console.log('📻 ATR-1000 未连接，正在建立连接...');
+            this._pendingStart = true;  // 标记需要发送 start
+            this.connect();
         }
-        
-        // 启动数据轮询
-        this.startDataPolling();
     },
     
     // TX 结束时调用 - 断开 ATR-1000 设备

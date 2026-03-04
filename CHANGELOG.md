@@ -5,8 +5,40 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [V4.3.0] - 2026-03-04
+## [V4.3.1] - 2026-03-04
+### 🐛 ATR-1000 Display Fix & Tuner Storage Module
 
+**Theme: Real-time Power/SWR Display and Tuner Parameter Storage**
+
+### Added
+- **ATR-1000 Tuner Storage Module** (`atr1000_tuner.py`)
+  - Store tuner parameters (LC/CL, inductance, capacitance) by frequency
+  - Auto-load matching parameters when frequency changes
+  - JSON file persistence (`atr1000_tuner.json`)
+
+- **Relay Status Parsing** in ATR-1000 proxy
+  - Parse SCMD_RELAY_STATUS (command 5)
+  - Extract SW (LC/CL), inductance index, capacitance index
+  - Display in frontend UI
+
+- **Frontend UI**: Tuner operation buttons
+  - "Tune" button: Start auto-tuning
+  - "Save" button: Save current parameters
+  - "Records" button: View saved parameters
+
+### Fixed
+- **ATR-1000 WebSocket Data Forwarding** in UHRR
+  - Use `IOLoop.add_callback()` for thread-safe WebSocket writes
+  - Fixed display lag on mobile devices
+
+### Technical Details
+- **Data Flow**: Proxy → Unix Socket → UHRR → WebSocket (IOLoop) → Frontend
+- **Tuner Storage**: Frequency-based parameter lookup with ±50kHz tolerance
+- **Commands**: `set_relay`, `tune`, `save_tuner` actions
+
+---
+
+## [V4.3.0] - 2026-03-04
 ### 🔌 ATR-1000 Architecture Separation
 
 **Theme: Independent ATR-1000 Proxy for Better Performance**
