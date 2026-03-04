@@ -1497,6 +1497,7 @@ const ATR1000 = {
     _txActive: false,  // TX状态标志（防抖）
     _pollInterval: null,  // 数据轮询定时器引用
     _pendingStart: false,  // 待发送的 start 命令标志
+    _msgCount: 0,  // 收到的消息计数
     // 继电器状态
     relayStatus: {
         sw: 0,        // 网络类型: 0=LC, 1=CL
@@ -1512,11 +1513,8 @@ const ATR1000 = {
         this._reconnectTimer = null;
         this._reconnectAttempts = 0;
         this._maxReconnectAttempts = 10;
-        // 预先连接 ATR-1000 代理，减少 PTT 按下时的延迟
-        // 延迟 1 秒连接，避免页面加载时同时建立多个连接
-        setTimeout(() => {
-            this.connect();
-        }, 1000);
+        // 立即连接 ATR-1000 代理
+        this.connect();
     },
     
     // 连接后端 ATR-1000 代理
@@ -1624,6 +1622,9 @@ const ATR1000 = {
             const msg = JSON.parse(data);
             
             if (msg.type === 'atr1000_meter') {
+                // 消息计数
+                this._msgCount++;
+                
                 // 保存旧值
                 const oldPower = this.lastPower;
                 const oldSWR = this.lastSWR;
@@ -1644,6 +1645,9 @@ const ATR1000 = {
                 // 更新连接状态
                 if (!msg.connected) {
                     this.updateStatus('设备离线');
+                } else {
+                    // 显示消息计数
+                    this.updateStatus(`已连接 #${this._msgCount}`);
                 }
                 
                 // 始终更新显示
