@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [V4.3.6] - 2026-03-05
+### ⚡ ATR-1000 Real-time Display Optimization
+
+**Theme: End-to-End Latency Analysis and Optimization**
+
+### Analysis Results
+- **Data push frequency**: ATR-1000 device pushes data at irregular intervals (100-900ms)
+- **SYNC timing**: Previous 500ms interval was too slow for real-time updates
+- **Log overhead**: Excessive logging causing performance impact
+
+### Optimized
+- **SYNC interval**: Changed from 500ms to 300ms for faster data triggering
+- **UHRR broadcast**: Immediate broadcast without waiting, reduced log frequency
+- **Frontend logging**: Only log when power/SWR changes significantly
+- **Removed**: Unnecessary debug logs in updateDisplay()
+
+### Expected Effect
+- Display update latency: ~500-900ms → ~300-400ms
+- Reduced CPU usage from logging overhead
+
+---
+
 ## [V4.3.5] - 2026-03-04
 ### 📚 System Architecture Documentation Update
 

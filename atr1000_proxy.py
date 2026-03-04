@@ -163,33 +163,28 @@ class ATR1000Client:
                 logger.error(f"发送同步命令失败: {e}")
     
     def _request_loop(self):
-        """数据请求循环 - ATR-1000 设备主动推送数据，TX 期间定期发送 SYNC"""
+        """数据请求循环 - ATR-1000 设备主动推送数据，定期发送 SYNC 触发数据"""
         global running
         
         last_sync_time = 0
-        last_data_time = 0  # 上次收到数据的时间
         
         while running and connected:
             try:
                 now = time.time()
                 
-                # TX 活跃期间：每 500ms 发送一次 SYNC 确保数据流
-                if self.active and len(clients) > 0:
-                    if now - last_sync_time >= 0.5:  # TX 期间每 500ms 一次
-                        self._send_sync()
-                        last_sync_time = now
-                elif len(clients) > 0:
-                    # 有客户端连接但非 TX 期间：每 2 秒发送一次 SYNC 预热
-                    if now - last_sync_time >= 2.0:
+                # 有客户端连接时：每 300ms 发送一次 SYNC 确保数据流
+                # ATR-1000 设备在收到 SYNC 后会主动推送数据
+                if len(clients) > 0:
+                    if now - last_sync_time >= 0.3:  # 每 300ms 一次
                         self._send_sync()
                         last_sync_time = now
                 else:
                     # 无客户端：每 5 秒发送一次 SYNC 保持连接
                     if now - last_sync_time >= 5.0:
                         self._send_sync()
-                        last_sync_time = last_data_time = now
+                        last_sync_time = now
                 
-                time.sleep(0.05)  # 50ms 检查间隔，更快响应
+                time.sleep(0.05)  # 50ms 检查间隔
                 
             except Exception as e:
                 logger.error(f"请求循环错误: {e}")
@@ -227,7 +222,9 @@ class ATR1000Client:
                 else:
                     swr_value = float(swr_raw)
                 
-                logger.info(f"📊 功率={fwd}W, SWR={swr_value:.2f}, 最大功率={maxfwd}W")
+                # 只在功率 > 0 时打印日志
+                if fwd > 0:
+                    logger.info(f"📊 功率={fwd}W, SWR={swr_value:.2f}")
                 
                 with data_lock:
                     meter_data["power"] = fwd
@@ -241,22 +238,11 @@ class ATR1000Client:
                 if len(data) < 10:
                     return
                 
-                # 官方 JS 代码:
-                # const relayData = {
-                #     sw: dataView.getUint8(3),
-                #     ind: dataView.getUint8(4),
-                #     cap: dataView.getUint8(5),
-                #     L: dataView.getUint16(6, true) / 100,  // 电感值 uH
-                #     C: dataView.getUint16(8, true)         // 电容值 pF
-                # };
                 sw = data[3]           # 网络类型: 0=LC, 1=CL
                 ind = data[4]          # 电感索引
                 cap = data[5]          # 电容索引
                 ind_uh = struct.unpack("<H", data[6:8])[0] / 100.0  # 电感值 uH
                 cap_pf = struct.unpack("<H", data[8:10])[0]          # 电容值 pF
-                
-                sw_text = "LC" if sw == 0 else "CL"
-                logger.info(f"🎛️ 继电器: {sw_text}, 电感={ind_uh:.2f}uH (索引{ind}), 电容={cap_pf}pF (索引{cap})")
                 
                 with data_lock:
                     meter_data["sw"] = sw
@@ -349,11 +335,9 @@ def broadcast_to_clients():
     if client_count == 0:
         return
     
-    # 节流：最多每 200ms 广播一次（提高响应速度）
-    now = time.time()
-    if now - last_broadcast_time < 0.2:
-        return
-    last_broadcast_time = now
+    # 移除节流限制，每次收到数据都广播
+    # ATR-1000 设备发送间隔约 2 秒，不需要节流
+    last_broadcast_time = time.time()
     
     with data_lock:
         data = json.dumps({

@@ -529,6 +529,23 @@ function initAudioOnFirstTouch() {
 // 电源控制
 ////////////////////////////////////////////////////////////
 
+// 更新 Opus 编码状态指示器
+function updateOpusStatus() {
+    const opusIndicator = document.getElementById('status-opus');
+    const encodeCheckbox = document.getElementById('encode');
+    
+    if (opusIndicator) {
+        const isOpusEnabled = encodeCheckbox ? encodeCheckbox.checked : false;
+        if (isOpusEnabled) {
+            opusIndicator.classList.add('active');
+            opusIndicator.title = 'Opus 编码已启用 (高质量/低带宽)';
+        } else {
+            opusIndicator.classList.remove('active');
+            opusIndicator.title = 'Opus 编码未启用 (PCM 模式)';
+        }
+    }
+}
+
 function togglePower() {
     console.log('🔋 togglePower 被调用, 当前 poweron:', (typeof poweron !== 'undefined') ? poweron : 'undefined');
     
@@ -609,16 +626,8 @@ function togglePower() {
         }
         console.log('🟢 电源已开启');
         
-        // 预连接 ATR-1000 代理
-        if (typeof ATR1000 !== 'undefined' && ATR1000.onPowerOn) {
-            ATR1000.onPowerOn();
-        }
-        
-        // iOS Safari：AudioContext 恢复已在点击事件处理函数内部完成
-        // 这里只是打印状态
-        if (typeof AudioRX_context !== 'undefined' && AudioRX_context) {
-            console.log('🔊 AudioContext 状态:', AudioRX_context.state);
-        }
+        // 更新 Opus 编码状态指示器
+        updateOpusStatus();
     }
 }
 
@@ -1500,6 +1509,9 @@ const ATR1000 = {
     // 初始化
     init: function() {
         console.log('📻 ATR-1000 代理模式初始化...');
+        this._reconnectTimer = null;
+        this._reconnectAttempts = 0;
+        this._maxReconnectAttempts = 10;
         // 预先连接 ATR-1000 代理，减少 PTT 按下时的延迟
         // 延迟 1 秒连接，避免页面加载时同时建立多个连接
         setTimeout(() => {
@@ -1535,6 +1547,7 @@ const ATR1000 = {
             
             this.ws.onopen = () => {
                 this.isConnected = true;
+                this._reconnectAttempts = 0;  // 重置重连计数
                 console.log('✅ ATR-1000 后端代理已连接');
                 this.updateStatus('已连接');
                 
@@ -1544,6 +1557,9 @@ const ATR1000 = {
                     this.ws.send(JSON.stringify({action: 'start'}));
                     console.log('📤 发送 ATR-1000 start 命令（延迟）');
                     this.startDataPolling();
+                    
+                    // 启动心跳保活
+                    this._startHeartbeat();
                 }
             };
             
@@ -1551,6 +1567,20 @@ const ATR1000 = {
                 this.isConnected = false;
                 console.log('🔴 ATR-1000 后端代理断开');
                 this.updateStatus('断开');
+                
+                // 停止心跳
+                this._stopHeartbeat();
+                
+                // 自动重连（最多尝试 10 次，每次间隔 3 秒）
+                if (this._reconnectAttempts < this._maxReconnectAttempts) {
+                    this._reconnectAttempts++;
+                    console.log(`🔄 ATR-1000 尝试重连 (${this._reconnectAttempts}/${this._maxReconnectAttempts})...`);
+                    this._reconnectTimer = setTimeout(() => {
+                        this.connect();
+                    }, 3000);
+                } else {
+                    console.log('❌ ATR-1000 重连失败次数过多，停止重连');
+                }
             };
             
             this.ws.onerror = (err) => {
@@ -1616,12 +1646,12 @@ const ATR1000 = {
                     this.updateStatus('设备离线');
                 }
                 
-                // 始终更新显示（确保响应）
+                // 始终更新显示
                 this.updateDisplay();
                 
-                // 调试：只在功率或 SWR 变化时打印
-                if (oldPower !== this.lastPower || Math.abs(oldSWR - this.lastSWR) > 0.01) {
-                    console.log(`📊 ATR-1000: ${oldPower}W→${this.lastPower}W, SWR ${oldSWR}→${this.lastSWR}`);
+                // 只在功率或 SWR 变化时打印日志
+                if (oldPower !== this.lastPower || Math.abs(oldSWR - this.lastSWR) > 0.05) {
+                    console.log(`📊 ATR-1000: ${oldPower}W→${this.lastPower}W, SWR ${oldSWR.toFixed(2)}→${this.lastSWR.toFixed(2)}`);
                 }
             }
         } catch (e) {
@@ -1741,7 +1771,7 @@ const ATR1000 = {
         }
         
         if (swrEl) {
-            swrEl.textContent = this.lastSWR;
+            swrEl.textContent = this.lastSWR.toFixed(2);
             // 根据 SWR 设置颜色
             if (this.lastSWR >= 3) {
                 swrEl.style.color = '#f44336';  // 红色 - 危险
@@ -1912,6 +1942,31 @@ const ATR1000 = {
         const section = document.getElementById('atr-meter-section');
         if (section) {
             section.style.display = 'none';
+        }
+    },
+    
+    // 启动心跳保活
+    _startHeartbeat: function() {
+        this._stopHeartbeat();  // 先停止旧的心跳
+        this._heartbeatInterval = setInterval(() => {
+            if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+                try {
+                    this.ws.send(JSON.stringify({action: 'ping'}));
+                    // console.log('💓 ATR-1000 心跳发送');
+                } catch (e) {
+                    console.log('💓 ATR-1000 心跳发送失败:', e);
+                }
+            }
+        }, 30000);  // 每30秒发送一次心跳
+        console.log('💓 ATR-1000 心跳已启动');
+    },
+    
+    // 停止心跳
+    _stopHeartbeat: function() {
+        if (this._heartbeatInterval) {
+            clearInterval(this._heartbeatInterval);
+            this._heartbeatInterval = null;
+            console.log('💓 ATR-1000 心跳已停止');
         }
     },
     

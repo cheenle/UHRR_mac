@@ -73,6 +73,8 @@
                 <div class="status-item connected" id="status-ctrl">CTRL</div>
                 <div class="status-item" id="status-rx">RX</div>
                 <div class="status-item" id="status-tx">TX</div>
+                <!-- Opus 编码状态指示 -->
+                <div class="status-item opus-indicator" id="status-opus" title="Opus 编码已启用">🎤</div>
                 <!-- Audio connection status indicators -->
                 <div class="status-item" id="indwsControlTRX" style="display:none;"><img src="img/critsred.png">wsCtrl</div>
                 <div class="status-item" id="indwsAudioRX"><img src="img/critsred.png">wsRX</div>
@@ -123,7 +125,7 @@
             </section>
             
             <!-- ATR-1000 Power/SWR Display (TX期间显示) -->
-            <section class="atr-meter-section" id="atr-meter-section" style="display: none;">
+            <section class="atr-meter-section" id="atr-meter-section" style="display: block;">
                 <div class="atr-meter-header">
                     <span class="atr-meter-title">📡 ATR-1000 天调</span>
                     <span class="atr-meter-status" id="atr-status">已连接</span>

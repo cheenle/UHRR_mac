@@ -381,6 +381,26 @@ class WS_AudioRXHandler(tornado.websocket.WebSocketHandler):
 				print(f"Error in tailstream: {e}")
 				break 
 			
+	def on_message(self, message):
+		"""处理客户端消息，包括 Opus 编码请求"""
+		try:
+			import json
+			data = json.loads(message)
+			if data.get('action') == 'set_opus_encode':
+				from audio_interface import PyAudioCapture
+				enabled = data.get('enabled', False)
+				rate = data.get('rate', 16000)
+				frame_dur = data.get('frame_dur', 40)
+				
+				PyAudioCapture.rx_opus_encode = enabled
+				PyAudioCapture.rx_opus_rate = rate
+				PyAudioCapture.rx_opus_frame_dur = frame_dur
+				
+				logger.info(f'🎵 RX Opus 编码已{"启用" if enabled else "禁用"}: rate={rate}, frame_dur={frame_dur}ms')
+				
+		except Exception as e:
+			logger.warning(f'AudioRXHandler on_message error: {e}')
+			
 	def on_close(self):
 		if self in AudioRXHandlerClients:
 			AudioRXHandlerClients.remove(self)
@@ -1095,12 +1115,183 @@ class AtuStatusHandler(tornado.web.RequestHandler):
 ############ ATR-1000 天调 WebSocket 处理器 ##############
 ATR1000HandlerClients = []
 
+# 全局 ATR-1000 代理连接管理器
+class ATR1000ProxyManager:
+    """
+    全局 ATR-1000 代理连接管理器
+    
+    独立于前端 WebSocket 连接，保持与 ATR-1000 代理的持久连接。
+    当有前端客户端连接时，自动转发数据。
+    """
+    _instance = None
+    _lock = threading.Lock()
+    
+    def __new__(cls):
+        if cls._instance is None:
+            with cls._lock:
+                if cls._instance is None:
+                    cls._instance = super().__new__(cls)
+                    cls._instance._initialized = False
+        return cls._instance
+    
+    def __init__(self):
+        if self._initialized:
+            return
+        self._initialized = True
+        
+        self.unix_socket = None
+        self.read_thread = None
+        self.running = False
+        self.message_count = 0
+        self.main_ioloop = None
+        self.last_data = None  # 缓存最新数据
+        
+        logger.info("📡 ATR-1000 代理管理器已初始化")
+    
+    def start(self):
+        """启动代理连接"""
+        if self.running:
+            return
+        
+        self.running = True
+        self._connect()
+    
+    def _connect(self):
+        """连接到 ATR-1000 代理"""
+        try:
+            self.unix_socket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+            self.unix_socket.settimeout(1.0)
+            self.unix_socket.connect("/tmp/atr1000_proxy.sock")
+            self.unix_socket.setblocking(False)
+            logger.info("✅ ATR-1000 代理管理器已连接 Unix Socket")
+            
+            # 保存主线程的 IOLoop 引用
+            from tornado.ioloop import IOLoop
+            self.main_ioloop = IOLoop.current()
+            
+            # 启动读取线程
+            self.read_thread = threading.Thread(target=self._read_loop, daemon=True)
+            self.read_thread.start()
+        except Exception as e:
+            logger.warning(f"⚠️ ATR-1000 代理连接失败: {e}")
+            self.unix_socket = None
+            # 5秒后重试
+            if self.running:
+                threading.Timer(5.0, self._connect).start()
+    
+    def _read_loop(self):
+        """读取代理数据并广播到所有客户端"""
+        import select
+        import time
+        
+        last_log_time = 0
+        last_power = 0
+        logger.info("🔄 ATR-1000 代理读取线程已启动")
+        
+        while self.running and self.unix_socket:
+            try:
+                ready, _, _ = select.select([self.unix_socket], [], [], 0.1)
+                if ready:
+                    try:
+                        data = self.unix_socket.recv(4096)
+                        if data:
+                            decoded = data.decode()
+                            self.message_count += 1
+                            self.last_data = decoded  # 缓存最新数据
+                            
+                            # 立即广播到所有客户端（不等待）
+                            self._broadcast_to_clients(decoded)
+                            
+                            # 只在功率变化时记录日志
+                            power = self._extract_power(decoded)
+                            if power != last_power and power != '?':
+                                last_power = power
+                                now = time.time()
+                                if now - last_log_time > 0.5:  # 最少间隔 0.5 秒
+                                    logger.info(f"📥 ATR-1000: power={power}W, 客户端={len(ATR1000HandlerClients)}")
+                                    last_log_time = now
+                    except BlockingIOError:
+                        pass
+                    except Exception as e:
+                        logger.debug(f"接收数据错误: {e}")
+            except Exception as e:
+                logger.debug(f"读取循环错误: {e}")
+                break
+        
+        logger.info(f"🔄 ATR-1000 代理读取线程已退出，共处理 {self.message_count} 条消息")
+        
+        # 如果还在运行，尝试重连
+        if self.running:
+            logger.info("🔄 尝试重新连接 ATR-1000 代理...")
+            threading.Timer(2.0, self._connect).start()
+    
+    def _broadcast_to_clients(self, data):
+        """广播数据到所有前端客户端"""
+        global ATR1000HandlerClients
+        
+        if not ATR1000HandlerClients:
+            return
+        
+        # 使用 IOLoop 在主线程中发送
+        if self.main_ioloop:
+            try:
+                self.main_ioloop.add_callback(
+                    lambda: self._do_broadcast(data)
+                )
+            except Exception as e:
+                logger.error(f"调度广播失败: {e}")
+    
+    def _do_broadcast(self, data):
+        """实际执行广播（在主线程中）"""
+        global ATR1000HandlerClients
+        
+        if not ATR1000HandlerClients:
+            return
+        
+        for client in ATR1000HandlerClients[:]:  # 使用切片避免迭代时修改
+            try:
+                client.write_message(data, binary=False)
+            except Exception as e:
+                logger.debug(f"发送到客户端失败: {e}")
+    
+    def send_to_proxy(self, message):
+        """发送消息到代理"""
+        if self.unix_socket:
+            try:
+                self.unix_socket.send(message.encode())
+                return True
+            except Exception as e:
+                logger.error(f"发送到代理失败: {e}")
+        return False
+    
+    def stop(self):
+        """停止代理连接"""
+        self.running = False
+        if self.unix_socket:
+            try:
+                self.unix_socket.close()
+            except:
+                pass
+        logger.info("📡 ATR-1000 代理管理器已停止")
+    
+    def _extract_power(self, json_str):
+        """从 JSON 字符串中提取功率值"""
+        try:
+            import json
+            data = json.loads(json_str)
+            return data.get('power', '?')
+        except:
+            return '?'
+
+# 全局代理管理器实例
+atr1000_proxy_manager = ATR1000ProxyManager()
+
 class WS_ATR1000Handler(tornado.websocket.WebSocketHandler):
     """
     ATR-1000 天调 WebSocket 处理器
     
-    这个处理器作为前端和独立 ATR-1000 代理程序之间的桥梁。
-    通过 Unix Socket 与 atr1000_proxy.py 通信。
+    这个处理器作为前端和全局代理管理器之间的桥梁。
+    使用全局单例的 ATR1000ProxyManager 管理连接。
     """
     
     def check_origin(self, origin):
@@ -1112,102 +1303,24 @@ class WS_ATR1000Handler(tornado.websocket.WebSocketHandler):
             ATR1000HandlerClients.append(self)
         logger.info(f"🔌 ATR-1000 客户端连接，当前 {len(ATR1000HandlerClients)} 个")
         
-        # 连接到 Unix Socket
-        self.unix_socket = None
-        self.connect_to_proxy()
-    
-    def connect_to_proxy(self):
-        """连接到 ATR-1000 代理的 Unix Socket"""
-        try:
-            self.unix_socket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-            self.unix_socket.settimeout(1.0)
-            self.unix_socket.connect("/tmp/atr1000_proxy.sock")
-            self.unix_socket.setblocking(False)
-            logger.info("✅ 已连接到 ATR-1000 代理 Unix Socket")
-            
-            # 保存主线程的 IOLoop 引用
-            from tornado.ioloop import IOLoop
-            self.main_ioloop = IOLoop.current()
-            
-            # 启动读取线程
-            threading.Thread(target=self._read_from_proxy, daemon=True).start()
-        except Exception as e:
-            logger.warning(f"⚠️ 无法连接到 ATR-1000 代理: {e}")
-            self.unix_socket = None
-    
-    def _read_from_proxy(self):
-        """从代理读取数据并转发到 WebSocket 客户端"""
-        import select
-        import time
+        # 确保代理管理器已启动
+        atr1000_proxy_manager.start()
         
-        last_log_time = 0
-        logger.info("🔄 ATR-1000 代理读取线程已启动")
-        
-        while self.unix_socket and self.ws_connection:
+        # 如果有缓存的数据，立即发送
+        if atr1000_proxy_manager.last_data:
             try:
-                ready, _, _ = select.select([self.unix_socket], [], [], 0.1)
-                if ready:
-                    try:
-                        data = self.unix_socket.recv(4096)
-                        if data:
-                            decoded = data.decode()
-                            # 每 2 秒记录一次日志，避免刷屏
-                            now = time.time()
-                            if now - last_log_time > 2:
-                                logger.info(f"📥 从代理收到并转发: {decoded[:80]}...")
-                                last_log_time = now
-                            
-                            # 使用保存的主线程 IOLoop 引用
-                            if self.ws_connection and hasattr(self, 'main_ioloop') and self.main_ioloop:
-                                try:
-                                    self.main_ioloop.add_callback(
-                                        lambda d=decoded: self._safe_write_message(d)
-                                    )
-                                except Exception as e:
-                                    logger.error(f"调度写入失败: {e}")
-                    except BlockingIOError:
-                        pass
-                    except Exception as e:
-                        logger.debug(f"接收数据错误: {e}")
-            except Exception as e:
-                if self.ws_connection:
-                    logger.debug(f"读取代理数据错误: {e}")
-                break
-        
-        logger.info("🔄 ATR-1000 代理读取线程已退出")
-    
-    def _safe_write_message(self, data):
-        """在主线程中安全地写入 WebSocket 消息"""
-        try:
-            if self.ws_connection:
-                self.write_message(data, binary=False)
-        except Exception as e:
-            logger.debug(f"写入 WebSocket 失败: {e}")
+                self.write_message(atr1000_proxy_manager.last_data, binary=False)
+            except:
+                pass
     
     def on_message(self, message):
         """接收前端消息并转发到代理"""
-        if self.unix_socket:
-            try:
-                self.unix_socket.send(message.encode())
-                logger.debug(f"转发消息到 ATR-1000 代理: {message}")
-            except Exception as e:
-                logger.error(f"发送消息到代理失败: {e}")
-        else:
-            # 尝试重新连接
-            self.connect_to_proxy()
+        atr1000_proxy_manager.send_to_proxy(message)
     
     def on_close(self):
         global ATR1000HandlerClients
         if self in ATR1000HandlerClients:
             ATR1000HandlerClients.remove(self)
-        
-        # 关闭 Unix Socket 连接
-        if self.unix_socket:
-            try:
-                self.unix_socket.close()
-            except:
-                pass
-        
         logger.info(f"🔌 ATR-1000 客户端断开，剩余 {len(ATR1000HandlerClients)} 个")
 
 class TRXRIG:
