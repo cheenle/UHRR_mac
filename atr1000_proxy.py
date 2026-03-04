@@ -117,8 +117,11 @@ class ATR1000Client:
     
     def _on_message(self, ws, data):
         """收到消息"""
+        logger.debug(f"_on_message 被调用, 数据类型: {type(data)}")
         if isinstance(data, bytes):
             self._parse_meter_data(data)
+        else:
+            logger.debug(f"收到非二进制数据: {data[:50] if len(str(data)) > 50 else data}")
     
     def _on_error(self, ws, error):
         """WebSocket 错误"""
@@ -174,21 +177,30 @@ class ATR1000Client:
         global meter_data
         
         try:
+            # 调试：输出原始数据
+            logger.debug(f"收到数据: len={len(data)}, hex={data.hex() if len(data) < 30 else data[:30].hex()+'...'}")
+            
             if len(data) < 9:
+                logger.debug(f"数据长度不足: {len(data)}")
                 return
             
             cmd = data[1]
+            logger.debug(f"命令类型: {cmd} (METER_STATUS={SCMD_METER_STATUS})")
             
             if cmd == SCMD_METER_STATUS:
                 # 解析 SWR 和功率
                 swr = struct.unpack("<H", data[4:6])[0]
                 fwd = struct.unpack("<H", data[6:8])[0]
                 
+                logger.info(f"📊 原始数据: SWR={swr}, FWD={fwd}")
+                
                 # SWR 处理
                 if swr >= 100:
                     swr_value = swr / 100.0
                 else:
                     swr_value = float(swr)
+                
+                logger.info(f"📊 解析结果: 功率={fwd}W, SWR={swr_value}")
                 
                 # 更新数据
                 with data_lock:
@@ -198,6 +210,8 @@ class ATR1000Client:
                 
                 # 广播到所有客户端
                 broadcast_to_clients()
+            else:
+                logger.debug(f"非 METER_STATUS 命令: {cmd}")
                 
         except Exception as e:
             logger.error(f"解析数据错误: {e}")

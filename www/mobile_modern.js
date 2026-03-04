@@ -1769,6 +1769,20 @@ const ATR1000 = {
         
         // 清理状态
         this.isConnected = false;
+        
+        // 隐藏面板
+        const section = document.getElementById('atr-meter-section');
+        if (section) {
+            section.style.display = 'none';
+        }
+        
+        // 清零显示
+        this.lastPower = 0;
+        this.lastSWR = 0;
+        const powerEl = document.getElementById('atr-power');
+        const swrEl = document.getElementById('atr-swr');
+        if (powerEl) powerEl.textContent = '--';
+        if (swrEl) swrEl.textContent = '--';
     }
 };
 
