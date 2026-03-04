@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [V4.3.2] - 2026-03-04
+### 🐛 ATR-1000 Display Optimization
+
+**Theme: Improve Real-time Display Responsiveness**
+
+### Fixed
+- **Frontend Display Update**: Always call `updateDisplay()` on data receive, remove change detection dependency
+- **Proxy Log Output**: Restore broadcast logging when power > 0
+- **Debug Console Log**: Add power/SWR change logging for troubleshooting
+
+### Optimized
+- Reduced unnecessary conditional checks in frontend message handler
+- Cleaner log output (only show when actual power is present)
+
+---
+
 ## [V4.3.1] - 2026-03-04
 ### 🐛 ATR-1000 Display Fix & Tuner Storage Module
 

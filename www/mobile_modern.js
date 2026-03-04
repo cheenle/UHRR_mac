@@ -1586,11 +1586,15 @@ const ATR1000 = {
     
     // 处理接收的消息 (JSON 格式)
     handleMessage: function(data) {
-        console.log('📨 ATR-1000 收到原始数据:', data.substring(0, 100));
         try {
             const msg = JSON.parse(data);
             
             if (msg.type === 'atr1000_meter') {
+                // 保存旧值
+                const oldPower = this.lastPower;
+                const oldSWR = this.lastSWR;
+                
+                // 更新值
                 this.lastPower = msg.power || 0;
                 this.lastSWR = msg.swr || 0;
                 
@@ -1608,34 +1612,17 @@ const ATR1000 = {
                     this.updateStatus('设备离线');
                 }
                 
+                // 始终更新显示（确保响应）
                 this.updateDisplay();
-                console.log(`📊 ATR-1000 更新显示: 功率=${this.lastPower}W, SWR=${this.lastSWR}`);
                 
-                // 强制更新 DOM
-                this._forceUpdateDisplay();
-            } else {
-                console.log('📨 ATR-1000 收到非电表消息:', msg.type);
+                // 调试：只在功率或 SWR 变化时打印
+                if (oldPower !== this.lastPower || Math.abs(oldSWR - this.lastSWR) > 0.01) {
+                    console.log(`📊 ATR-1000: ${oldPower}W→${this.lastPower}W, SWR ${oldSWR}→${this.lastSWR}`);
+                }
             }
         } catch (e) {
-            console.error('解析 ATR-1000 数据错误:', e, '原始数据:', data);
+            console.error('解析 ATR-1000 数据错误:', e);
         }
-    },
-    
-    // 强制更新显示（确保 DOM 更新）
-    _forceUpdateDisplay: function() {
-        const powerEl = document.getElementById('atr-power');
-        const swrEl = document.getElementById('atr-swr');
-        
-        if (powerEl) {
-            powerEl.textContent = this.lastPower;
-            powerEl.innerHTML = this.lastPower;
-        }
-        if (swrEl) {
-            swrEl.textContent = this.lastSWR;
-            swrEl.innerHTML = this.lastSWR.toFixed(2);
-        }
-        
-        console.log(`🔄 强制更新 DOM: 功率=${this.lastPower}W, SWR=${this.lastSWR}`);
     },
     
     // 设置继电器参数

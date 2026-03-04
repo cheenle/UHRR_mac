@@ -182,6 +182,28 @@ class PyAudioCapture(threading.Thread):
                     
                     # Convert Float32 to Int16 for 50% bandwidth reduction
                     float32_data = np.frombuffer(data, dtype=np.float32)
+                    
+                    # 音频优化：提升语音质量
+                    # 1. 去除直流偏移
+                    dc_offset = np.mean(float32_data)
+                    if abs(dc_offset) > 0.001:
+                        float32_data = float32_data - dc_offset
+                    
+                    # 2. 自动增益控制 (AGC) - 提升弱信号
+                    max_val = np.max(np.abs(float32_data))
+                    if max_val > 0.001:
+                        target_level = 0.6  # 目标电平 -4dB
+                        if max_val < target_level * 0.3:
+                            # 弱信号：提升增益（最大4倍）
+                            gain = min(target_level / max_val, 4.0)
+                            float32_data = float32_data * gain
+                        elif max_val > 0.9:
+                            # 强信号：略微衰减，防止削波
+                            float32_data = float32_data * 0.85
+                    
+                    # 3. 软削波保护
+                    float32_data = np.clip(float32_data, -0.95, 0.95)
+                    
                     int16_data = (float32_data * 32767).astype(np.int16)
                     compressed_data = int16_data.tobytes()
                     

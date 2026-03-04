@@ -199,15 +199,23 @@ function AudioRX_start(){
 		}, 1000);
 	}
 
-	// 统一的 Int16 解码函数
+	// 统一的 Int16 解码函数（带音质优化）
 	function decodeInt16Audio(data) {
 		try {
 			const int16Data = new Int16Array(data);
 			const float32Data = new Float32Array(int16Data.length);
-			// 优化：使用乘法替代除法
 			const scale = 1.0 / 32767.0;
+			
+			// 音质优化：使用三角抖动减少量化噪声
+			// 只在低电平时添加抖动，避免影响大信号
 			for (let i = 0; i < int16Data.length; i++) {
-				float32Data[i] = int16Data[i] * scale;
+				let sample = int16Data[i] * scale;
+				// 添加微小的三角抖动（约-72dB）改善低电平音质
+				if (Math.abs(sample) < 0.1) {
+					const dither = (Math.random() - Math.random()) * 0.00025;
+					sample += dither;
+				}
+				float32Data[i] = sample;
 			}
 			return float32Data;
 		} catch (e) {

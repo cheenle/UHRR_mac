@@ -167,18 +167,24 @@ class ATR1000Client:
         global running
         
         last_sync_time = 0
+        last_data_time = 0  # 上次收到数据的时间
         
         while running and connected:
             try:
-                # TX 活跃期间：每秒发送一次 SYNC 确保数据流
+                now = time.time()
+                
+                # TX 活跃期间：每 500ms 发送一次 SYNC 确保数据流
                 if self.active and len(clients) > 0:
-                    now = time.time()
-                    if now - last_sync_time >= 1.0:  # TX 期间每秒一次
+                    if now - last_sync_time >= 0.5:  # TX 期间每 500ms 一次
                         self._send_sync()
                         last_sync_time = now
-                # 非 TX 期间：不发送 SYNC，减少设备压力
+                else:
+                    # 非 TX 期间：每 5 秒发送一次 SYNC 保持连接
+                    if now - last_sync_time >= 5.0:
+                        self._send_sync()
+                        last_sync_time = last_data_time = now
                 
-                time.sleep(0.1)  # 100ms 检查间隔
+                time.sleep(0.05)  # 50ms 检查间隔，更快响应
                 
             except Exception as e:
                 logger.error(f"请求循环错误: {e}")
@@ -336,12 +342,11 @@ def broadcast_to_clients():
     
     client_count = len(clients)
     if client_count == 0:
-        logger.debug("无客户端连接，跳过广播")
         return
     
-    # 节流：最多每 300ms 广播一次
+    # 节流：最多每 200ms 广播一次（提高响应速度）
     now = time.time()
-    if now - last_broadcast_time < 0.3:
+    if now - last_broadcast_time < 0.2:
         return
     last_broadcast_time = now
     
@@ -359,7 +364,9 @@ def broadcast_to_clients():
             "cap_pf": meter_data.get("cap_pf", 0)
         })
     
-    logger.info(f"📤 广播到 {client_count} 个客户端: {data}")
+    # 打印广播日志（只在有实际功率时）
+    if meter_data["power"] > 0:
+        logger.info(f"📤 广播: 功率={meter_data['power']}W, SWR={meter_data['swr']:.2f}")
     
     # 复制客户端列表以避免在迭代时修改
     clients_copy = clients[:]
@@ -369,7 +376,6 @@ def broadcast_to_clients():
             client.send(data.encode())
         except Exception as e:
             logger.warning(f"发送到客户端失败: {e}")
-            # 不要在这里移除客户端，让 handle_unix_client 处理
 
 
 def handle_unix_client(conn, addr, atr1000):

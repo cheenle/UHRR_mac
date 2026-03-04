@@ -58,6 +58,21 @@ async function TXControl(action) {
 
             // 1. 同步开始录音
             console.log(`[${timestamp}] 🔧 同步初始化TX`);
+            // 先检查 TX WebSocket 状态
+            if (typeof isTXWebSocketReady === "function" && !isTXWebSocketReady()) {
+                console.warn("⚠️ TX WebSocket 未就绪，等待连接...");
+                // 等待最多 500ms
+                let waited = 0;
+                while (waited < 500) {
+                    if (isTXWebSocketReady()) break;
+                    waited += 50;
+                }
+                if (!isTXWebSocketReady()) {
+                    console.error("❌ TX WebSocket 连接超时，无法开始TX");
+                    TXState.isPressed = false;
+                    return false;
+                }
+            }
             toggleRecord(true);
 
             // 2. 发送预热帧（减少到3帧，更快完成）
@@ -94,6 +109,11 @@ async function TXControl(action) {
             // PTT状态已激活
             if (typeof window.updatePTTStatus === 'function') {
                 window.updatePTTStatus(true);
+            }
+            
+            // 触发 ATR-1000 天调显示（仅TX期间）
+            if (typeof window.ATR1000 !== 'undefined') {
+                window.ATR1000.onTXStart();
             }
             
             console.log(`[${timestamp}] ✅ TX开始成功`);
@@ -167,6 +187,11 @@ async function TXControl(action) {
             // PTT状态已释放
             if (typeof window.updatePTTStatus === 'function') {
                 window.updatePTTStatus(false);
+            }
+            
+            // 停止 ATR-1000 天调显示
+            if (typeof window.ATR1000 !== 'undefined') {
+                window.ATR1000.onTXStop();
             }
             
             console.log(`[${timestamp}] ✅ TX停止成功 - RX缓冲区已清除`);

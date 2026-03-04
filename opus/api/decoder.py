@@ -147,7 +147,7 @@ def decode(decoder, data, length, frame_size, decode_fec, channels=2):
     if result < 0:
         raise OpusError(result)
 
-    return array.array('h', pcm[ :result * channels ]).tostring()
+    return array.array('h', pcm[ :result * channels ]).tobytes()
 
 
 _decode_float = libopus.opus_decode_float
@@ -167,7 +167,7 @@ def decode_float(decoder, data, length, frame_size, decode_fec, channels=2):
     if result < 0:
         raise OpusError(result)
 
-    return array.array('f', pcm[ : result * channels ]).tostring()
+    return array.array('f', pcm[ : result * channels ]).tobytes()
 
 
 _ctl = libopus.opus_decoder_ctl
