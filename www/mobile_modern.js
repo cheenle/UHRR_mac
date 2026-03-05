@@ -8,23 +8,37 @@
 // Wake Lock - 防止屏幕休眠
 ////////////////////////////////////////////////////////////
 let wakeLock = null;
+let wakeLockSupported = null; // null = 未检测, true = 支持, false = 不支持
 
-// 请求 Wake Lock
+// 请求 Wake Lock（带缓存，避免重复请求）
 async function requestWakeLock() {
+    // 已经有 Wake Lock，不需要重复请求
+    if (wakeLock) {
+        return;
+    }
+    
+    // 检测支持性（只检测一次）
+    if (wakeLockSupported === null) {
+        wakeLockSupported = 'wakeLock' in navigator;
+    }
+    
+    if (!wakeLockSupported) {
+        return; // 不支持，静默跳过
+    }
+    
     try {
-        if ('wakeLock' in navigator) {
-            wakeLock = await navigator.wakeLock.request('screen');
-            console.log('🔒 Wake Lock 已启用 - 屏幕将保持常亮');
-            
-            // 监听 Wake Lock 释放事件
-            wakeLock.addEventListener('release', () => {
-                console.log('🔓 Wake Lock 已释放');
-            });
-        } else {
-            console.log('⚠️ 浏览器不支持 Wake Lock API');
-        }
+        wakeLock = await navigator.wakeLock.request('screen');
+        console.log('🔒 Wake Lock 已启用');
+        
+        // 监听 Wake Lock 释放事件（只记录一次）
+        wakeLock.addEventListener('release', () => {
+            wakeLock = null;
+        });
     } catch (err) {
-        console.log('⚠️ Wake Lock 请求失败:', err.name, err.message);
+        // 常见错误不记录日志
+        if (err.name !== 'NotAllowedError') {
+            console.log('⚠️ Wake Lock 请求失败:', err.name);
+        }
     }
 }
 
@@ -34,20 +48,12 @@ async function releaseWakeLock() {
         try {
             await wakeLock.release();
             wakeLock = null;
-            console.log('🔓 Wake Lock 已主动释放');
+            console.log('🔓 Wake Lock 已释放');
         } catch (err) {
-            console.log('⚠️ Wake Lock 释放失败:', err);
+            wakeLock = null;
         }
     }
 }
-
-// 页面可见性变化时重新请求 Wake Lock
-document.addEventListener('visibilitychange', async () => {
-    if (document.visibilityState === 'visible' && mobileState.isConnected) {
-        console.log('📱 页面重新可见，重新请求 Wake Lock');
-        await requestWakeLock();
-    }
-});
 
 ////////////////////////////////////////////////////////////
 // 移动端检测 - 使用 controls.js 的 IS_MOBILE 变量
@@ -147,6 +153,13 @@ document.addEventListener('DOMContentLoaded', function() {
     // iOS Safari 需要用户交互才能初始化音频
     document.addEventListener('touchstart', initAudioOnFirstTouch, { once: true });
     document.addEventListener('mousedown', initAudioOnFirstTouch, { once: true });
+    
+    // 页面可见性变化时重新请求 Wake Lock
+    document.addEventListener('visibilitychange', async () => {
+        if (document.visibilityState === 'visible' && mobileState.isConnected) {
+            await requestWakeLock();
+        }
+    });
     
     console.log('✅ Mobile Modern 界面初始化完成');
 });
