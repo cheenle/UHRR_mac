@@ -929,7 +929,7 @@ function sendTRXfreq(freq=0){
 // 全局PTT状态跟踪变量，用于防止重复命令
 var lastPTTState = null;
 var lastPTTTime = 0;
-var PTT_DEBOUNCE_DELAY = 100; // 防抖延迟改回100ms
+var PTT_DEBOUNCE_DELAY = 50; // 优化：防抖延迟从100ms减至50ms，加快PTT响应
 var PTT_COMMAND_SENT = false; // 跟踪是否已发送PTT命令
 var PTT_DEVICE_STATE = false; // 设备确认的PTT状态（优先使用）
 var PTT_PREDICTED_STATE = false; // 本地预测的PTT状态（仅用于临时显示）
@@ -1346,7 +1346,14 @@ function button_pressed(item)
 
 function button_unpressed(item)
 {
-	if(!item){item=event.srcElement;}
+	// 安全检查：如果没有item且event也不存在，直接返回
+	if(!item){
+		if(typeof event !== 'undefined' && event && event.srcElement){
+			item = event.srcElement;
+		} else {
+			return; // 没有有效的item，直接返回
+		}
+	}
 	item.classList.remove('button_green');
 	item.classList.remove('button_pressed');
 	item.classList.add('button_unpressed');
@@ -1664,17 +1671,24 @@ var OpusEncoderProcessor = function( wsh )
 {
     this.wsh = wsh;
     this.bufferSize = 2048; // 优化：从4096减至2048，降低延迟约42ms
-    this.downSample = 2;
+    // ========== 关键修复：降采样系数 ==========
+    // AudioContext 通常是 48kHz，Opus 编码器使用 16kHz
+    // 降采样系数 = 输入采样率 / 目标采样率 = 48000 / 16000 = 3
+    this.downSample = 3;  // 修复：从2改为3，正确降采样 48kHz → 16kHz
     // Opus 编码参数优化 - 针对短波语音通信
     // 帧时长: 40ms（与后端 RX 编码器一致）
-    // 采样率: 48kHz（声卡原始采样率）
+    // 采样率: 16kHz（优化移动端性能）
     // 应用类型: 2048 = OPUS_APPLICATION_VOIP（优化语音质量）
     // 默认比特率: ~24kbps（Opus 自动根据语音内容调整）
     this.opusFrameDur = 40; // msec - 与后端一致
     this.opusRate = 16000;  // Hz - 16kHz 优化移动端性能
-    this.i16arr = new Int16Array( this.bufferSize / this.downSample );
-    this.f32arr = new Float32Array( this.bufferSize / this.downSample );
+    // 计算正确的缓冲区大小：bufferSize / downSample = 2048 / 3 ≈ 682 samples
+    // Opus 帧大小 = 16000 * 40 / 1000 = 640 samples
+    // 682 > 640，足够一个完整帧，多余数据会在下一帧处理
+    this.i16arr = new Int16Array( Math.floor(this.bufferSize / this.downSample) );
+    this.f32arr = new Float32Array( Math.floor(this.bufferSize / this.downSample) );
     this.opusEncoder = new OpusEncoder( this.opusRate, 1, 2048, this.opusFrameDur );
+    console.log('🎵 TX Opus 编码器初始化: downSample=' + this.downSample + ', buffer=' + this.f32arr.length + ', frame=' + (this.opusRate * this.opusFrameDur / 1000));
 }
 
 
@@ -1686,32 +1700,74 @@ OpusEncoderProcessor.prototype.onAudioProcess = function( e )
 	    if( isRecording )
     {
 	var data = e.inputBuffer.getChannelData( 0 )
-	var i = 0, ds = this.downSample;
+	var ds = this.downSample;
+	
+	// ========== 降采样：48kHz → 16kHz ==========
+	// 计算降采样后的样本数
+	var downsampledCount = Math.floor(data.length / ds);
+	var downsampledBuffer = new Float32Array(downsampledCount);
+	
+	for( var i = 0; i < downsampledCount; i++ )
+	{
+		// 简单降采样：取每第ds个样本
+		downsampledBuffer[i] = data[i * ds];
+	}
+	
+	// ========== 帧累积逻辑 ==========
+	// Opus 帧大小 = 16000Hz * 40ms / 1000 = 640 samples
+	var opusFrameSize = 640;
+	
+	// 初始化累积缓冲区（如果不存在）
+	if (!this.frameAccumulator) {
+		this.frameAccumulator = new Float32Array(0);
+	}
+	
+	// 将新数据追加到累积缓冲区
+	var newAccumulator = new Float32Array(this.frameAccumulator.length + downsampledBuffer.length);
+	newAccumulator.set(this.frameAccumulator);
+	newAccumulator.set(downsampledBuffer, this.frameAccumulator.length);
+	this.frameAccumulator = newAccumulator;
 	
 	if( encode )
 	{
-		    for( var idx = 0; idx < data.length; idx += ds )
-			this.f32arr[ i++ ] = data[ idx ];
-
-	    var res = this.opusEncoder.encode_float( this.f32arr );
-
-	    for( var idx = 0; idx < res.length; ++idx )
+		// 处理累积缓冲区中的完整帧
+		while (this.frameAccumulator.length >= opusFrameSize)
 		{
-			// 码率统计：TX（编码后）
-			if (!window.__txBytes) { window.__txBytes = 0; }
-			if (res[idx] && res[idx].byteLength) { window.__txBytes += res[idx].byteLength; }
-			this.wsh.send( res[ idx ] );
+			// 取出一个完整帧
+			var frame = this.frameAccumulator.slice(0, opusFrameSize);
+			this.frameAccumulator = this.frameAccumulator.slice(opusFrameSize);
+			
+			// 编码并发送
+		    var res = this.opusEncoder.encode_float(frame);
+
+		    for( var idx = 0; idx < res.length; ++idx )
+			{
+				// 码率统计：TX（编码后）
+				if (!window.__txBytes) { window.__txBytes = 0; }
+				if (res[idx] && res[idx].byteLength) { window.__txBytes += res[idx].byteLength; }
+				this.wsh.send( res[ idx ] );
+			}
 		}
 	}
 		else
 	{
-		    for( var idx = 0; idx < data.length; idx += ds )
-			this.i16arr[ i++ ] = (data[ idx ]) * 0xFFFF; // int16
-
-	    // 码率统计：TX（PCM直发）
-	    if (!window.__txBytes) { window.__txBytes = 0; }
-	    window.__txBytes += this.i16arr.byteLength;
-	    this.wsh.send( this.i16arr );
+		// PCM模式：同样使用帧累积确保数据对齐
+		while (this.frameAccumulator.length >= opusFrameSize)
+		{
+			var frame = this.frameAccumulator.slice(0, opusFrameSize);
+			this.frameAccumulator = this.frameAccumulator.slice(opusFrameSize);
+			
+			// 转换为 Int16
+			var int16Frame = new Int16Array(opusFrameSize);
+			for (var j = 0; j < opusFrameSize; j++) {
+				int16Frame[j] = frame[j] * 0x7FFF; // 使用0x7FFF避免溢出
+			}
+			
+		    // 码率统计：TX（PCM直发）
+		    if (!window.__txBytes) { window.__txBytes = 0; }
+		    window.__txBytes += int16Frame.byteLength;
+		    this.wsh.send( int16Frame );
+		}
 	}
 	
 	let u;

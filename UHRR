@@ -333,9 +333,10 @@ class WS_AudioRXHandler(tornado.websocket.WebSocketHandler):
 		
 	@tornado.gen.coroutine
 	def tailstream(self):
-		"""音频流发送协程 - 优化版本，减少延迟抖动"""
+		"""音频流发送协程 - 优化版本，支持弱网环境"""
 		last_send_time = time.time()
-		target_interval = 0.016  # 目标发送间隔 16ms（与后端采集匹配）
+		consecutive_errors = 0
+		max_consecutive_errors = 5
 		
 		while flagWavstart and self.ws_connection:
 			try:
@@ -344,41 +345,57 @@ class WS_AudioRXHandler(tornado.websocket.WebSocketHandler):
 					yield tornado.gen.sleep(0.002)
 					continue
 				
-				if not self.ws_connection:
+				# 检查连接状态
+				if not self.ws_connection or self.close_code:
+					logger.info("音频客户端已断开，停止发送")
 					return
 				
-				# 计算时间差，实现稳定的发送节奏
-				current_time = time.time()
-				elapsed = current_time - last_send_time
+				# 弱网优化：动态调整发送批次
+				# 网络好时多发送，网络差时减少批次
+				queue_len = len(self.Wavframes)
+				if consecutive_errors > 0:
+					# 有错误时降低批次大小
+					max_batch = 1
+				else:
+					# 正常时根据队列深度调整
+					max_batch = min(4, queue_len)
 				
-				# 发送所有积压的数据（最多 4 帧，约 64ms）
-				# 这确保即使有延迟累积，也能快速追赶
+				# 发送数据
 				batch = 0
-				max_batch = min(4, len(self.Wavframes))
-				
-				while batch < max_batch and self.ws_connection:
+				while batch < max_batch and self.ws_connection and not self.close_code:
 					try:
 						self.write_message(self.Wavframes[0], binary=True)
 						del self.Wavframes[0]
 						batch += 1
+						consecutive_errors = 0  # 重置错误计数
+					except tornado.websocket.WebSocketClosedError:
+						logger.info("音频发送时客户端已断开")
+						return
 					except Exception as e:
-						print(f"发送音频帧错误: {e}")
+						consecutive_errors += 1
+						logger.warning(f"发送音频帧错误 ({consecutive_errors}/{max_consecutive_errors}): {type(e).__name__}: {e}")
+						if consecutive_errors >= max_consecutive_errors:
+							logger.error("连续发送错误过多，断开连接")
+							return
 						break
 				
 				if batch > 0:
 					last_send_time = time.time()
 				
-				# 稳定的发送节奏控制
-				# 如果刚发送了数据，稍微等待以匹配采集速率
-				if batch >= 2:
-					# 有积压时少等待
+				# 动态等待时间：队列长时少等待，队列短时多等待
+				if queue_len > 10:
+					# 队列积压，快速发送
+					yield tornado.gen.sleep(0.002)
+				elif queue_len > 5:
 					yield tornado.gen.sleep(0.005)
 				else:
-					# 正常节奏
 					yield tornado.gen.sleep(0.010)
 					
+			except tornado.websocket.WebSocketClosedError:
+				logger.info("音频流发送时客户端已断开")
+				break
 			except Exception as e:
-				print(f"Error in tailstream: {e}")
+				logger.error(f"音频流发送异常: {type(e).__name__}: {e}")
 				break 
 			
 	def on_message(self, message):
@@ -466,8 +483,16 @@ class WS_AudioTXHandler(tornado.websocket.WebSocketHandler):
 					# 广播PTT状态变化
 					try:
 						global ControlTRXHandlerClients
+						clients_to_remove = []
 						for client in ControlTRXHandlerClients:
-							client.write_message(f"getPTT:true")
+							try:
+								if client.ws_connection and not client.close_code:
+									client.write_message("getPTT:true")
+							except Exception:
+								clients_to_remove.append(client)
+						for client in clients_to_remove:
+							if client in ControlTRXHandlerClients:
+								ControlTRXHandlerClients.remove(client)
 					except Exception as e:
 						logger.error(f"Error broadcasting PTT status: {e}")
 					
@@ -523,8 +548,16 @@ class WS_AudioTXHandler(tornado.websocket.WebSocketHandler):
 				print("🔴 PTT已关闭（收到s:命令）")
 				# 广播PTT状态变化
 				try:
+					clients_to_remove = []
 					for client in ControlTRXHandlerClients:
-						client.write_message("getPTT:false")
+						try:
+							if client.ws_connection and not client.close_code:
+								client.write_message("getPTT:false")
+						except Exception:
+							clients_to_remove.append(client)
+					for client in clients_to_remove:
+						if client in ControlTRXHandlerClients:
+							ControlTRXHandlerClients.remove(client)
 				except Exception as e:
 					logger.error(f"Error broadcasting PTT status: {e}")
 		else :
@@ -1160,99 +1193,244 @@ class ATR1000ProxyManager:
         """连接到 ATR-1000 代理"""
         try:
             self.unix_socket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-            self.unix_socket.settimeout(1.0)
+            self.unix_socket.settimeout(2.0)
             self.unix_socket.connect("/tmp/atr1000_proxy.sock")
             self.unix_socket.setblocking(False)
             logger.info("✅ ATR-1000 代理管理器已连接 Unix Socket")
+            
+            # 清除重连状态
+            if hasattr(self, '_reconnecting'):
+                self._reconnecting = False
+            if hasattr(self, '_need_reconnect'):
+                self._need_reconnect = False
             
             # 保存主线程的 IOLoop 引用
             from tornado.ioloop import IOLoop
             self.main_ioloop = IOLoop.current()
             
             # 启动读取线程
-            self.read_thread = threading.Thread(target=self._read_loop, daemon=True)
-            self.read_thread.start()
+            if not self.read_thread or not self.read_thread.is_alive():
+                self.read_thread = threading.Thread(target=self._read_loop, daemon=True)
+                self.read_thread.start()
         except Exception as e:
             logger.warning(f"⚠️ ATR-1000 代理连接失败: {e}")
             self.unix_socket = None
+            # 清除重连状态
+            if hasattr(self, '_reconnecting'):
+                self._reconnecting = False
             # 5秒后重试
             if self.running:
                 threading.Timer(5.0, self._connect).start()
     
     def _read_loop(self):
-        """读取代理数据并广播到所有客户端"""
+        """读取代理数据并广播到所有客户端 - 优化版"""
         import select
         import time
+        import json
         
         last_log_time = 0
         last_power = 0
+        last_swr = 0
+        data_buffer = ""  # 数据缓冲区，处理粘包
+        message_batch = []  # 消息批次，用于批量广播
+        last_batch_time = time.time()
         logger.info("🔄 ATR-1000 代理读取线程已启动")
         
         while self.running and self.unix_socket:
             try:
-                ready, _, _ = select.select([self.unix_socket], [], [], 0.1)
+                ready, _, _ = select.select([self.unix_socket], [], [], 0.01)  # 10ms超时，快速响应
                 if ready:
                     try:
                         data = self.unix_socket.recv(4096)
                         if data:
-                            decoded = data.decode()
-                            self.message_count += 1
-                            self.last_data = decoded  # 缓存最新数据
+                            # 添加到缓冲区
+                            data_buffer += data.decode('utf-8')
                             
-                            # 立即广播到所有客户端（不等待）
-                            self._broadcast_to_clients(decoded)
-                            
-                            # 只在功率变化时记录日志
-                            power = self._extract_power(decoded)
-                            if power != last_power and power != '?':
-                                last_power = power
-                                now = time.time()
-                                if now - last_log_time > 0.5:  # 最少间隔 0.5 秒
-                                    logger.info(f"📥 ATR-1000: power={power}W, 客户端={len(ATR1000HandlerClients)}")
-                                    last_log_time = now
+                            # 处理可能的多条消息（按换行分割）
+                            while '\n' in data_buffer:
+                                line, data_buffer = data_buffer.split('\n', 1)
+                                line = line.strip()
+                                if not line:
+                                    continue
+                                
+                                try:
+                                    # 验证JSON格式
+                                    msg = json.loads(line)
+                                    if msg.get('type') == 'atr1000_meter':
+                                        self.message_count += 1
+                                        self.last_data = line
+                                        
+                                        # 提取功率和SWR用于日志
+                                        power = msg.get('power', 0)
+                                        swr = msg.get('swr', 0)
+                                        
+                                        # 只在功率/SWR变化时记录日志
+                                        now = time.time()
+                                        if (power != last_power or abs(swr - last_swr) > 0.01) and power > 0:
+                                            if now - last_log_time > 0.3:  # 最少间隔 0.3 秒
+                                                logger.info(f"📥 ATR-1000: power={power}W, SWR={swr:.2f}, 客户端={len(ATR1000HandlerClients)}")
+                                                last_log_time = now
+                                                last_power = power
+                                                last_swr = swr
+                                        
+                                        # 添加到批次
+                                        message_batch.append(line)
+                                except json.JSONDecodeError:
+                                    logger.debug(f"无效的JSON数据: {line[:100]}")
+                                except Exception as e:
+                                    logger.debug(f"处理消息错误: {e}")
+                                    
                     except BlockingIOError:
                         pass
                     except Exception as e:
                         logger.debug(f"接收数据错误: {e}")
+                
+                # 批量广播：每 50ms 或累积 10 条消息时广播一次
+                now = time.time()
+                if message_batch and (now - last_batch_time >= 0.05 or len(message_batch) >= 10):
+                    self._broadcast_batch(message_batch)
+                    message_batch = []
+                    last_batch_time = now
+                        
             except Exception as e:
                 logger.debug(f"读取循环错误: {e}")
                 break
+        
+        # 退出前广播剩余消息
+        if message_batch:
+            self._broadcast_batch(message_batch)
         
         logger.info(f"🔄 ATR-1000 代理读取线程已退出，共处理 {self.message_count} 条消息")
         
         # 如果还在运行，尝试重连
         if self.running:
             logger.info("🔄 尝试重新连接 ATR-1000 代理...")
-            threading.Timer(2.0, self._connect).start()
+            threading.Timer(1.0, self._connect).start()
     
-    def _broadcast_to_clients(self, data):
-        """广播数据到所有前端客户端"""
+    def _broadcast_batch(self, message_batch):
+        """批量广播消息到所有前端客户端"""
         global ATR1000HandlerClients
         
-        if not ATR1000HandlerClients:
+        client_count = len(ATR1000HandlerClients)
+        if client_count == 0:
             return
         
-        # 使用 IOLoop 在主线程中发送
-        if self.main_ioloop:
-            try:
-                self.main_ioloop.add_callback(
-                    lambda: self._do_broadcast(data)
-                )
-            except Exception as e:
-                logger.error(f"调度广播失败: {e}")
+        # 使用 add_callback 调度到主线程执行批量广播
+        try:
+            if self.main_ioloop:
+                from functools import partial
+                self.main_ioloop.add_callback(partial(self._do_broadcast_batch, message_batch))
+        except Exception as e:
+            logger.error(f"批量广播调度失败: {e}")
     
-    def _do_broadcast(self, data):
+    def _do_broadcast_batch(self, message_batch):
+        """实际执行批量广播（在主线程中）"""
+        global ATR1000HandlerClients
+        
+        current_client_count = len(ATR1000HandlerClients)
+        if current_client_count == 0 or not message_batch:
+            return
+        
+        # 只广播最后一条消息（最新的数据）
+        latest_data = message_batch[-1]
+        
+        # 解析最新数据用于日志
+        try:
+            import json
+            msg = json.loads(latest_data)
+            power = msg.get('power', 0)
+            swr = msg.get('swr', 0)
+        except:
+            power = 0
+            swr = 0
+        
+        # 发送到所有客户端
+        sent_count = 0
+        failed_clients = []
+        
+        for client in ATR1000HandlerClients[:]:
+            try:
+                client.write_message(latest_data, binary=False)
+                sent_count += 1
+            except tornado.websocket.WebSocketClosedError:
+                failed_clients.append(client)
+            except Exception as e:
+                failed_clients.append(client)
+        
+        # 记录发送结果
+        if power > 0 and sent_count > 0:
+            logger.info(f"📤 ATR-1000 广播到前端: power={power}W, SWR={swr:.2f}, 发送={sent_count}/{current_client_count}, 批次={len(message_batch)}")
+        
+        # 清理失败的客户端
+        for client in failed_clients:
+            if client in ATR1000HandlerClients:
+                ATR1000HandlerClients.remove(client)
+                logger.info(f"🔌 移除断开连接的 ATR-1000 前端客户端")
+    
+    def _broadcast_to_clients(self, data):
+        """广播单条数据到所有前端客户端（兼容旧代码）"""
+        self._broadcast_batch([data])
+    
+    def _do_broadcast(self, data, power=0, swr=0):
         """实际执行广播（在主线程中）"""
         global ATR1000HandlerClients
         
-        if not ATR1000HandlerClients:
+        current_client_count = len(ATR1000HandlerClients)
+        
+        if current_client_count == 0:
             return
+        
+        # 发送到所有客户端
+        sent_count = 0
+        failed_clients = []
         
         for client in ATR1000HandlerClients[:]:  # 使用切片避免迭代时修改
             try:
                 client.write_message(data, binary=False)
+                sent_count += 1
+            except tornado.websocket.WebSocketClosedError:
+                failed_clients.append(client)
             except Exception as e:
-                logger.debug(f"发送到客户端失败: {e}")
+                failed_clients.append(client)
+        
+        # 记录发送结果
+        if power > 0 and sent_count > 0:
+            logger.info(f"📤 ATR-1000 广播到前端: power={power}W, SWR={swr:.2f}, 发送={sent_count}/{current_client_count}")
+        
+        # 清理失败的客户端
+        for client in failed_clients:
+            if client in ATR1000HandlerClients:
+                ATR1000HandlerClients.remove(client)
+                logger.info(f"🔌 移除断开连接的 ATR-1000 前端客户端")
+    
+    def _do_broadcast_immediate(self, data, power=0, swr=0):
+        """立即执行广播（在子线程中）- 最小延迟版本"""
+        global ATR1000HandlerClients
+        
+        current_client_count = len(ATR1000HandlerClients)
+        
+        logger.debug(f"📤 _do_broadcast_immediate 被调用: 客户端={current_client_count}, power={power}")
+        
+        if current_client_count == 0:
+            logger.debug("📤 广播: 无客户端连接")
+            return
+        
+        # 发送到所有客户端
+        sent_count = 0
+        
+        for client in ATR1000HandlerClients[:]:  # 使用切片避免迭代时修改
+            try:
+                # 直接尝试发送
+                client.write_message(data, binary=False)
+                sent_count += 1
+                logger.debug(f"📤 发送到客户端成功")
+            except Exception as e:
+                # 只记录错误，不移除客户端（避免误删）
+                logger.warning(f"⚠️ 发送到客户端失败: {type(e).__name__}: {e}")
+        
+        # 记录发送结果
+        if power > 0:
+            logger.info(f"📤 ATR-1000 广播到前端: power={power}W, SWR={swr:.2f}, 发送={sent_count}/{current_client_count}")
     
     def send_to_proxy(self, message):
         """发送消息到代理"""
@@ -1260,8 +1438,22 @@ class ATR1000ProxyManager:
             try:
                 self.unix_socket.send(message.encode())
                 return True
+            except (BrokenPipeError, ConnectionError, OSError) as e:
+                logger.warning(f"⚠️ Unix Socket 断开: {e}，尝试重连...")
+                self.unix_socket = None
+                # 标记需要重连
+                self._need_reconnect = True
+                # 异步重连
+                if self.running:
+                    threading.Timer(0.5, self._connect).start()
             except Exception as e:
                 logger.error(f"发送到代理失败: {e}")
+                self.unix_socket = None
+        else:
+            # Socket 不存在，尝试重连
+            if self.running and not hasattr(self, '_reconnecting'):
+                self._reconnecting = True
+                threading.Timer(0.5, self._connect).start()
         return False
     
     def stop(self):
@@ -1315,7 +1507,9 @@ class WS_ATR1000Handler(tornado.websocket.WebSocketHandler):
     
     def on_message(self, message):
         """接收前端消息并转发到代理"""
-        atr1000_proxy_manager.send_to_proxy(message)
+        logger.info(f"📨 ATR-1000 收到前端消息: {message}")
+        result = atr1000_proxy_manager.send_to_proxy(message)
+        logger.info(f"📤 ATR-1000 转发到代理: {'成功' if result else '失败'}")
     
     def on_close(self):
         global ATR1000HandlerClients
@@ -1735,8 +1929,16 @@ class TRXRIG:
 			# 广播PTT状态变化
 			try:
 				global ControlTRXHandlerClients
+				clients_to_remove = []
 				for client in ControlTRXHandlerClients:
-					client.write_message(f"getPTT:{str(new_ptt_state).lower()}")
+					try:
+						if client.ws_connection and not client.close_code:
+							client.write_message(f"getPTT:{str(new_ptt_state).lower()}")
+					except Exception:
+						clients_to_remove.append(client)
+				for client in clients_to_remove:
+					if client in ControlTRXHandlerClients:
+						ControlTRXHandlerClients.remove(client)
 			except Exception as e:
 				logger.error(f"Error broadcasting PTT status: {e}")
 		
@@ -1835,11 +2037,16 @@ class TRXRIG:
 						
 						# Broadcast the corrected state
 						global ControlTRXHandlerClients
+						clients_to_remove = []
 						for client in ControlTRXHandlerClients:
 							try:
-								client.write_message(f"getPTT:{str(actual_ptt).lower()}")
-							except Exception as e:
-								logger.error(f"Error broadcasting PTT state: {e}")
+								if client.ws_connection and not client.close_code:
+									client.write_message(f"getPTT:{str(actual_ptt).lower()}")
+							except Exception:
+								clients_to_remove.append(client)
+						for client in clients_to_remove:
+							if client in ControlTRXHandlerClients:
+								ControlTRXHandlerClients.remove(client)
 				
 				time.sleep(5)  # Check every 5 seconds
 			except Exception as e:
@@ -1861,10 +2068,26 @@ class WS_ControlTRX(tornado.websocket.WebSocketHandler):
 
 	def send_to_all_clients(self,msg):
 		print ("Send to all: "+msg)
+		# 复制列表避免遍历时修改
+		clients_to_remove = []
 		for client in ControlTRXHandlerClients:
-			client.write_message(msg)
+			try:
+				if client.ws_connection and not client.close_code:
+					client.write_message(msg)
+			except Exception as e:
+				logger.warning(f"发送消息失败，标记客户端待移除: {e}")
+				clients_to_remove.append(client)
+		# 移除已断开的客户端
+		for client in clients_to_remove:
+			if client in ControlTRXHandlerClients:
+				ControlTRXHandlerClients.remove(client)
+				logger.info(f"已移除断开的控制客户端，剩余 {len(ControlTRXHandlerClients)} 个")
 
 	def sendPTINFOS(self):
+		# 首先检查连接是否仍然活跃
+		if self not in ControlTRXHandlerClients or not self.ws_connection or self.close_code:
+			logger.info("控制客户端已断开，停止发送状态更新")
+			return None
 		try:
 			if self.StrgLVL != CTRX.infos["StrgLVL"]:
 				self.write_message("getSignalLevel:"+str(CTRX.infos["StrgLVL"]))
@@ -1873,8 +2096,11 @@ class WS_ControlTRX(tornado.websocket.WebSocketHandler):
 			self.write_message("getPTT:"+str(CTRX.infos["PTT"]).lower())
 			
 			
+		except tornado.websocket.WebSocketClosedError:
+			logger.warning("发送PTT状态时客户端已断开")
+			return None
 		except Exception as e:
-			logger.error(f"error TXMETER: {e}")
+			logger.error(f"发送PTT/S表状态错误: {e}")
 			return None
 		tornado.ioloop.IOLoop.instance().add_timeout(datetime.timedelta(seconds=float(config['CTRL']['interval_smeter_update'])), self.sendPTINFOS)
 

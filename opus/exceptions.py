@@ -7,4 +7,8 @@ class OpusError(Exception):
         self.code = code
 
     def __str__(self):
-        return strerror(self.code)
+        err_msg = strerror(self.code)
+        # 确保返回str类型（兼容Python 3）
+        if isinstance(err_msg, bytes):
+            return err_msg.decode('utf-8')
+        return err_msg

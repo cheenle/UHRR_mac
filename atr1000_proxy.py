@@ -59,6 +59,7 @@ meter_data = {
 clients = []  # Unix Socket 客户端列表
 data_lock = threading.Lock()
 last_broadcast_time = 0  # 上次广播时间（用于节流）
+last_data_time = 0  # 上次收到数据的时间
 
 # Unix Socket 路径
 UNIX_SOCKET_PATH = "/tmp/atr1000_proxy.sock"
@@ -133,6 +134,8 @@ class ATR1000Client:
     
     def _on_message(self, ws, data):
         """收到消息"""
+        global last_data_time
+        last_data_time = time.time()  # 记录收到数据的时间
         logger.debug(f"_on_message 被调用, 数据类型: {type(data)}")
         if isinstance(data, bytes):
             self._parse_meter_data(data)
@@ -163,46 +166,73 @@ class ATR1000Client:
                 logger.error(f"发送同步命令失败: {e}")
     
     def _request_loop(self):
-        """数据请求循环 - ATR-1000 设备主动推送数据，定期发送 SYNC 触发数据"""
-        global running
+        """数据请求循环 - 优化版，智能 SYNC 发送策略"""
+        global running, last_data_time
         
         last_sync_time = 0
+        sync_interval = 1.0
+        no_data_count = 0
+        last_power = 0  # 用于检测功率变化
         
         while running and connected:
             try:
                 now = time.time()
                 
-                # 有客户端连接时：每 300ms 发送一次 SYNC 确保数据流
-                # ATR-1000 设备在收到 SYNC 后会主动推送数据
-                if len(clients) > 0:
-                    if now - last_sync_time >= 0.3:  # 每 300ms 一次
-                        self._send_sync()
-                        last_sync_time = now
+                # 动态计算 SYNC 间隔 - 根据活跃度和数据变化
+                if self.active and len(clients) > 0:
+                    # TX 活跃期间：检查功率是否变化
+                    current_power = meter_data.get("power", 0)
+                    if current_power != last_power:
+                        # 功率变化时，更频繁地请求数据
+                        sync_interval = 0.2  # 200ms
+                    else:
+                        sync_interval = 0.5  # 500ms
+                    last_power = current_power
+                elif len(clients) > 0:
+                    # 有客户端但非 TX：每 2 秒发送 SYNC
+                    sync_interval = 2.0
                 else:
-                    # 无客户端：每 5 秒发送一次 SYNC 保持连接
-                    if now - last_sync_time >= 5.0:
-                        self._send_sync()
-                        last_sync_time = now
+                    # 无客户端：每 30 秒发送 SYNC 保持连接
+                    sync_interval = 30.0
                 
-                time.sleep(0.05)  # 50ms 检查间隔
+                # 检查是否需要发送 SYNC
+                if now - last_sync_time >= sync_interval:
+                    # 检测设备响应状态
+                    if last_data_time > 0 and now - last_data_time > 3.0:
+                        no_data_count += 1
+                        if no_data_count >= 3:
+                            logger.warning(f"⚠️ 设备无响应 {no_data_count} 次，最后数据: {(now - last_data_time):.1f}秒前")
+                            no_data_count = 0
+                    else:
+                        no_data_count = 0
+                    
+                    self._send_sync()
+                    last_sync_time = now
+                
+                # 更精细的睡眠间隔，减少CPU占用同时保持响应性
+                if self.active:
+                    time.sleep(0.05)  # TX期间50ms检查
+                else:
+                    time.sleep(0.2)   # 非TX期间200ms检查
                 
             except Exception as e:
                 logger.error(f"请求循环错误: {e}")
     
     def _parse_meter_data(self, data):
-        """解析 ATR-1000 数据 - 支持电表状态和继电器状态"""
-        global meter_data
+        """解析 ATR-1000 数据 - 优化版，带数据变化检测"""
+        global meter_data, last_data_time
         
         try:
             # 数据长度检查
             if len(data) < 3:
-                return  # 忽略极短帧
+                return
             
             # 检查帧头
             if data[0] != SCMD_FLAG:
-                return  # 忽略非标准帧
+                return
             
             cmd = data[1]
+            data_changed = False
             
             # 根据命令类型解析
             if cmd == SCMD_METER_STATUS:
@@ -222,38 +252,54 @@ class ATR1000Client:
                 else:
                     swr_value = float(swr_raw)
                 
-                # 只在功率 > 0 时打印日志
-                if fwd > 0:
-                    logger.info(f"📊 功率={fwd}W, SWR={swr_value:.2f}")
-                
                 with data_lock:
-                    meter_data["power"] = fwd
-                    meter_data["swr"] = swr_value
+                    # 检查数据是否变化
+                    if meter_data["power"] != fwd or abs(meter_data["swr"] - swr_value) > 0.01:
+                        data_changed = True
+                        meter_data["power"] = fwd
+                        meter_data["swr"] = swr_value
                     meter_data["connected"] = True
                 
-                broadcast_to_clients()
+                # 只在功率 > 0 且数据变化时打印日志
+                if fwd > 0 and data_changed:
+                    logger.info(f"📊 功率={fwd}W, SWR={swr_value:.2f}")
+                
+                # 更新最后数据时间
+                last_data_time = time.time()
+                
+                # 只在数据变化时广播
+                if data_changed:
+                    broadcast_to_clients()
                 
             elif cmd == SCMD_RELAY_STATUS:
                 # 继电器状态（LC/CL、电感、电容）
                 if len(data) < 10:
                     return
                 
-                sw = data[3]           # 网络类型: 0=LC, 1=CL
-                ind = data[4]          # 电感索引
-                cap = data[5]          # 电容索引
-                ind_uh = struct.unpack("<H", data[6:8])[0] / 100.0  # 电感值 uH
-                cap_pf = struct.unpack("<H", data[8:10])[0]          # 电容值 pF
+                sw = data[3]
+                ind = data[4]
+                cap = data[5]
+                ind_uh = struct.unpack("<H", data[6:8])[0] / 100.0
+                cap_pf = struct.unpack("<H", data[8:10])[0]
                 
                 with data_lock:
-                    meter_data["sw"] = sw
-                    meter_data["ind"] = ind
-                    meter_data["cap"] = cap
-                    meter_data["ind_uh"] = ind_uh
-                    meter_data["cap_pf"] = cap_pf
+                    # 检查继电器状态是否变化
+                    if (meter_data.get("sw") != sw or 
+                        meter_data.get("ind") != ind or 
+                        meter_data.get("cap") != cap):
+                        data_changed = True
+                        meter_data["sw"] = sw
+                        meter_data["ind"] = ind
+                        meter_data["cap"] = cap
+                        meter_data["ind_uh"] = ind_uh
+                        meter_data["cap_pf"] = cap_pf
                 
-                broadcast_to_clients()
+                # 更新最后数据时间
+                last_data_time = time.time()
                 
-            # 其他命令类型静默忽略
+                # 只在状态变化时广播
+                if data_changed:
+                    broadcast_to_clients()
                 
         except Exception as e:
             logger.error(f"解析数据错误: {e}")
@@ -327,17 +373,35 @@ class ATR1000Client:
                 logger.error(f"设置调谐状态失败: {e}")
 
 
+# 全局变量用于数据去重
+_last_broadcast_data = None
+_last_broadcast_time = 0
+
 def broadcast_to_clients():
-    """广播数据到所有 Unix Socket 客户端"""
-    global meter_data, clients, last_broadcast_time
+    """广播数据到所有 Unix Socket 客户端 - 优化版，带数据去重"""
+    global meter_data, clients, _last_broadcast_data, _last_broadcast_time
     
     client_count = len(clients)
     if client_count == 0:
         return
     
-    # 移除节流限制，每次收到数据都广播
-    # ATR-1000 设备发送间隔约 2 秒，不需要节流
-    last_broadcast_time = time.time()
+    # 数据去重：检查是否与上次广播的数据相同
+    with data_lock:
+        current_data_tuple = (
+            meter_data["power"],
+            meter_data["swr"],
+            meter_data.get("sw", 0),
+            meter_data.get("ind", 0),
+            meter_data.get("cap", 0)
+        )
+    
+    # 如果数据与上次相同，跳过广播（但每500ms至少广播一次以保持连接活跃）
+    now = time.time()
+    if _last_broadcast_data == current_data_tuple and (now - _last_broadcast_time) < 0.5:
+        return
+    
+    _last_broadcast_data = current_data_tuple
+    _last_broadcast_time = now
     
     with data_lock:
         data = json.dumps({
@@ -351,20 +415,33 @@ def broadcast_to_clients():
             "cap": meter_data.get("cap", 0),
             "ind_uh": meter_data.get("ind_uh", 0.0),
             "cap_pf": meter_data.get("cap_pf", 0)
-        })
+        }) + "\n"  # 添加换行符，以便UHRR按行解析
     
-    # 打印广播日志（只在有实际功率时）
+    # 打印广播日志（只在有实际功率且数据变化时）
     if meter_data["power"] > 0:
-        logger.info(f"📤 广播: 功率={meter_data['power']}W, SWR={meter_data['swr']:.2f}")
+        logger.info(f"📤 广播: 功率={meter_data['power']}W, SWR={meter_data['swr']:.2f}, 客户端={client_count}")
     
     # 复制客户端列表以避免在迭代时修改
     clients_copy = clients[:]
+    failed_clients = []
     
     for client in clients_copy:
         try:
             client.send(data.encode())
+            # 发送成功，记录调试信息
+            # logger.debug(f"发送到 Unix Socket 客户端成功: {len(data)} 字节")
         except Exception as e:
-            logger.warning(f"发送到客户端失败: {e}")
+            logger.warning(f"⚠️ 发送到 Unix Socket 客户端失败: {e}")
+            failed_clients.append(client)
+    
+    # 清理失败的客户端
+    for client in failed_clients:
+        if client in clients:
+            clients.remove(client)
+            try:
+                client.close()
+            except:
+                pass
 
 
 def handle_unix_client(conn, addr, atr1000):
@@ -382,6 +459,7 @@ def handle_unix_client(conn, addr, atr1000):
             try:
                 data = conn.recv(1024)
                 if not data:
+                    logger.info("客户端连接关闭（收到空数据）")
                     break
                 
                 # 解析命令
@@ -396,6 +474,10 @@ def handle_unix_client(conn, addr, atr1000):
                     elif action == "stop":
                         atr1000.set_active(False)
                         logger.info("客户端请求停止数据流")
+                    
+                    elif action == "sync":
+                        # 立即发送 SYNC 到 ATR-1000 设备请求最新数据
+                        atr1000._send_sync()
                     
                     elif action == "get_data":
                         # 立即发送当前数据
@@ -432,6 +514,9 @@ def handle_unix_client(conn, addr, atr1000):
                 
             except socket.timeout:
                 continue
+            except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError) as e:
+                logger.info(f"客户端连接断开: {type(e).__name__}")
+                break
             except Exception as e:
                 logger.debug(f"客户端处理错误: {e}")
                 break

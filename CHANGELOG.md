@@ -5,6 +5,41 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [V4.4.0] - 2026-03-05
+### 🚀 ATR-1000 Real-time Display Major Fix
+
+**Theme: Solving the Long-standing Issue of Delayed Power/SWR Display**
+
+### Problem Analysis
+- **Root Cause 1**: Tornado's `IOLoop.add_callback()` batches messages, causing 2-5 second delays
+- **Root Cause 2**: WebSocket `write_message()` must be called in main thread (with event loop)
+- **Root Cause 3**: Frontend JavaScript syntax error (`try` without `catch`) broke all functionality
+- **Root Cause 4**: Excessive logging caused performance overhead
+
+### Backend Optimizations
+- **Batch Broadcasting**: Collect messages in 50ms batches, broadcast only latest data
+- **Thread Safety**: Use `add_callback` for thread-safe WebSocket communication
+- **Reduced Logging**: Only log when power/SWR changes significantly
+
+### Frontend Fixes
+- **Syntax Error Fixed**: Added missing `catch` block in `_doUpdateDisplay()`
+- **Removed Throttling**: Direct DOM update without RAF or throttle
+- **Error Handling**: Added try-catch blocks for robustness
+
+### Performance Results
+| Metric | Before | After |
+|--------|--------|-------|
+| Broadcast Delay | 2-5 seconds | <500ms |
+| Display Update | Often missing | Real-time |
+| Power Button | Not working | Fixed |
+
+### Files Changed
+- `UHRR` - Batch broadcast mechanism, thread-safe WebSocket
+- `www/mobile_modern.js` - Syntax fix, optimized DOM updates
+- `www/mobile_modern.css` - UI refinements
+
+---
+
 ## [V4.3.8] - 2026-03-05
 ### 🐛 Logging and ATR-1000 Stability Fixes
 

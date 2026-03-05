@@ -915,6 +915,15 @@ body {
     border: 1px solid #2a4a2a;
 }
 
+/* ATR面板隐藏状态 - 使用!important确保优先级 */
+.atr-meter-section.hidden {
+    display: none !important;
+}
+
+.atr-meter-section.visible {
+    display: block !important;
+}
+
 .atr-meter-header {
     display: flex;
     justify-content: space-between;

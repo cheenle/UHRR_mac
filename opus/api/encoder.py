@@ -51,10 +51,31 @@ def create(fs, channels, application):
 
 _ctl = libopus.opus_encoder_ctl
 _ctl.restype = ctypes.c_int
+# 注意：opus_encoder_ctl是可变参数函数，不能简单设置argtypes
+# 需要使用ctypes的CFUNCTYPE来处理可变参数
 
 
 def ctl(encoder, request, value=None):
+    """调用opus_encoder_ctl函数
+    
+    对于可变参数函数，需要手动指定参数类型
+    """
     if value is not None:
+        # 设置参数：encoder, request, value
+        # 根据value类型决定如何传递
+        if isinstance(value, ctypes.c_int):
+            _ctl.argtypes = [EncoderPointer, ctypes.c_int, ctypes.c_int]
+            result = _ctl(encoder, request, value.value)
+        elif isinstance(value, int):
+            _ctl.argtypes = [EncoderPointer, ctypes.c_int, ctypes.c_int]
+            result = _ctl(encoder, request, value)
+        elif hasattr(value, 'value'):  # ctypes byref对象
+            _ctl.argtypes = [EncoderPointer, ctypes.c_int, ctypes.POINTER(ctypes.c_int)]
+            result = _ctl(encoder, request, value)
+        else:
+            # 默认当作int处理
+            _ctl.argtypes = [EncoderPointer, ctypes.c_int, ctypes.c_int]
+            result = _ctl(encoder, request, value)
         return request(_ctl, encoder, value)
 
     return request(_ctl, encoder)
@@ -78,7 +99,8 @@ def encode(encoder, pcm, frame_size, max_data_bytes):
     if result < 0:
         raise OpusError(result)
 
-    return array.array('c', data[:result]).tostring()
+    # Python 3 兼容：使用bytes()直接转换
+    return bytes(data[:result])
 
 
 _encode_float = libopus.opus_encode_float
@@ -96,7 +118,8 @@ def encode_float(encoder, pcm, frame_size, max_data_bytes):
     if result < 0:
         raise OpusError(result)
 
-    return array.array('c', data[:result]).tostring()
+    # Python 3 兼容：使用bytes()直接转换
+    return bytes(data[:result])
 
 
 destroy = libopus.opus_encoder_destroy

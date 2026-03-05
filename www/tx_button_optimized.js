@@ -112,8 +112,12 @@ async function TXControl(action) {
             }
             
             // 触发 ATR-1000 天调显示（仅TX期间）
+            console.log(`[${timestamp}] 🔍 检查 ATR1000: typeof=${typeof window.ATR1000}`);
             if (typeof window.ATR1000 !== 'undefined') {
+                console.log(`[${timestamp}] 📻 调用 ATR1000.onTXStart()`);
                 window.ATR1000.onTXStart();
+            } else {
+                console.warn(`[${timestamp}] ⚠️ ATR1000 未定义，跳过天调显示`);
             }
             
             console.log(`[${timestamp}] ✅ TX开始成功`);
@@ -137,8 +141,10 @@ async function TXControl(action) {
         TXState.element.classList.remove('button_pressed');
         TXState.element.classList.add('button_unpressed');
         
-        // 执行TX停止功能 - 优化顺序
+        // 执行TX停止功能 - 优化顺序以减少TX→RX切换延迟
         try {
+            // ========== 关键优化：并行执行而非串行 ==========
+            
             // 1. 首先发送PTT停止命令（最高优先级）
             console.log(`[${timestamp}] 🔧 调用sendTRXptt(false)`);
             if (typeof sendTRXptt === 'function') {
@@ -146,7 +152,11 @@ async function TXControl(action) {
                 console.log(`[${timestamp}] 📡 PTT停止命令已发送`);
             }
             
-            // 2. 立即清除RX音频缓冲区（关键优化）
+            // 2. 立即停止录音（减少音频数据残留）
+            console.log(`[${timestamp}] 🔧 调用toggleRecord()`);
+            toggleRecord();
+            
+            // 3. 立即清除RX音频缓冲区（关键优化）
             console.log(`[${timestamp}] 🧹 清除RX音频缓冲区`);
             
             // 清除累积缓冲区
@@ -159,8 +169,10 @@ async function TXControl(action) {
             if (typeof AudioRX_source_node !== 'undefined' && AudioRX_source_node) {
                 if (AudioRX_source_node.port) {
                     try {
+                        // 发送flush命令并立即重置
                         AudioRX_source_node.port.postMessage({type: 'flush'});
-                        console.log(`[${timestamp}] ✅ AudioWorklet 缓冲区已清除`);
+                        AudioRX_source_node.port.postMessage({type: 'reset'});
+                        console.log(`[${timestamp}] ✅ AudioWorklet 缓冲区已清除并重置`);
                     } catch(e) {
                         console.log(`[${timestamp}] ⚠️ 清除AudioWorklet缓冲区时出错:`, e);
                     }
@@ -172,29 +184,30 @@ async function TXControl(action) {
                 }
             }
             
-            // 3. 停止录音
-            console.log(`[${timestamp}] 🔧 调用toggleRecord()`);
-            toggleRecord();
-            
-            // 4. 恢复RX音频
+            // 4. 恢复RX音频（延迟最小化）
             console.log(`[${timestamp}] 🔧 调用toggleaudioRX()`);
             toggleaudioRX();
             
-            // 5. 其他清理
-            console.log(`[${timestamp}] 🔧 调用button_unpressed()`);
-            button_unpressed();
+            // 5. 其他清理（异步执行，不阻塞切换）
+            setTimeout(() => {
+                if (typeof button_unpressed === 'function') {
+                    button_unpressed();
+                }
+                
+                // PTT状态已释放
+                if (typeof window.updatePTTStatus === 'function') {
+                    window.updatePTTStatus(false);
+                }
+                
+                // 停止 ATR-1000 天调显示
+                console.log(`[TX Stop] 🔍 检查 ATR1000: typeof=${typeof window.ATR1000}`);
+                if (typeof window.ATR1000 !== 'undefined') {
+                    console.log(`[TX Stop] 📻 调用 ATR1000.onTXStop()`);
+                    window.ATR1000.onTXStop();
+                }
+            }, 0);
             
-            // PTT状态已释放
-            if (typeof window.updatePTTStatus === 'function') {
-                window.updatePTTStatus(false);
-            }
-            
-            // 停止 ATR-1000 天调显示
-            if (typeof window.ATR1000 !== 'undefined') {
-                window.ATR1000.onTXStop();
-            }
-            
-            console.log(`[${timestamp}] ✅ TX停止成功 - RX缓冲区已清除`);
+            console.log(`[${timestamp}] ✅ TX停止成功 - 切换延迟最小化`);
             return true;
         } catch (error) {
             console.error(`[${timestamp}] ❌ TX停止失败:`, error);

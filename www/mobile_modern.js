@@ -1483,6 +1483,81 @@ if (typeof MutationObserver !== 'undefined') {
 console.log('🎯 Mobile Modern JS 加载完成');
 
 ////////////////////////////////////////////////////////////
+// ATR-1000 性能监控工具
+////////////////////////////////////////////////////////////
+const ATR1000Monitor = {
+    messageCount: 0,
+    updateCount: 0,
+    droppedCount: 0,  // 被节流丢弃的消息数
+    lastReportTime: Date.now(),
+    latencySum: 0,
+    latencyCount: 0,
+    
+    recordMessage: function() {
+        this.messageCount++;
+    },
+    
+    recordUpdate: function() {
+        this.updateCount++;
+    },
+    
+    recordDropped: function() {
+        this.droppedCount++;
+    },
+    
+    recordLatency: function(ms) {
+        this.latencySum += ms;
+        this.latencyCount++;
+    },
+    
+    report: function() {
+        const now = Date.now();
+        const elapsed = now - this.lastReportTime;
+        if (elapsed >= 5000) {  // 每5秒报告
+            const msgRate = (this.messageCount / elapsed * 1000).toFixed(1);
+            const updateRate = (this.updateCount / elapsed * 1000).toFixed(1);
+            const ratio = this.messageCount > 0 ? (this.updateCount / this.messageCount * 100).toFixed(1) : 0;
+            const avgLatency = this.latencyCount > 0 ? (this.latencySum / this.latencyCount).toFixed(1) : 0;
+            
+            console.log(
+                `%c[ATR-1000监控] 消息:${this.messageCount}(${msgRate}/s) 更新:${this.updateCount}(${updateRate}/s) ` +
+                `比例:${ratio}% 丢弃:${this.droppedCount} 延迟:${avgLatency}ms`,
+                'color: #2196F3; font-weight: bold'
+            );
+            
+            // 重置计数器
+            this.messageCount = 0;
+            this.updateCount = 0;
+            this.droppedCount = 0;
+            this.latencySum = 0;
+            this.latencyCount = 0;
+            this.lastReportTime = now;
+        }
+    },
+    
+    // 显示实时统计（在页面上）
+    showStats: function() {
+        let statsEl = document.getElementById('atr1000-stats');
+        if (!statsEl) {
+            statsEl = document.createElement('div');
+            statsEl.id = 'atr1000-stats';
+            statsEl.style.cssText = 'position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,0.8);color:#0f0;padding:8px 12px;border-radius:4px;font-size:11px;font-family:monospace;z-index:9999;pointer-events:none;';
+            document.body.appendChild(statsEl);
+        }
+        
+        const updateStats = () => {
+            const avgLatency = this.latencyCount > 0 ? (this.latencySum / this.latencyCount).toFixed(0) : 0;
+            statsEl.innerHTML = `ATR-1000: msg=${this.messageCount} upd=${this.updateCount} drop=${this.droppedCount} ${avgLatency}ms`;
+            requestAnimationFrame(updateStats);
+        };
+        updateStats();
+    }
+};
+
+// 启动监控（开发调试时取消注释）
+// ATR1000Monitor.showStats();
+
+////////////////////////////////////////////////////////////
 // ATR-1000 天调功率/驻波显示模块
 // 仅在 TX 发射期间获取并显示数据，3秒更新一次
 // 通过后端 UHRR 代理获取数据，解决 HTTPS 混合内容问题
@@ -1507,13 +1582,22 @@ const ATR1000 = {
         cap_pf: 0     // 电容值 (pF)
     },
     
-    // 初始化
+    // 初始化 - 只建立WebSocket连接，不显示面板（面板在TX时显示）
     init: function() {
         console.log('📻 ATR-1000 代理模式初始化...');
         this._reconnectTimer = null;
         this._reconnectAttempts = 0;
         this._maxReconnectAttempts = 10;
-        // 立即连接 ATR-1000 代理
+        
+        // 确保面板初始隐藏（使用CSS类）
+        const section = document.getElementById('atr-meter-section');
+        if (section) {
+            section.classList.add('hidden');
+            section.classList.remove('visible');
+        }
+        
+        // 预连接WebSocket（不显示面板，不发送start命令）
+        // 面板只在 onTXStart 被调用时显示
         this.connect();
     },
     
@@ -1549,15 +1633,25 @@ const ATR1000 = {
                 console.log('✅ ATR-1000 后端代理已连接');
                 this.updateStatus('已连接');
                 
-                // 如果有待发送的 start 命令，现在发送
-                if (this._pendingStart) {
+                // 启动心跳保活（连接成功就启动，不只是在 TX 期间）
+                this._startHeartbeat();
+                
+                // 如果在TX期间（_txActive=true 或 _pendingStart=true），发送start命令
+                if (this._txActive || this._pendingStart) {
                     this._pendingStart = false;
-                    this.ws.send(JSON.stringify({action: 'start'}));
-                    console.log('📤 发送 ATR-1000 start 命令（延迟）');
-                    this.startDataPolling();
+                    try {
+                        this.ws.send(JSON.stringify({action: 'start'}));
+                        console.log('📤 发送 ATR-1000 start 命令（重连后恢复）');
+                    } catch (e) {
+                        console.error('发送 start 命令失败:', e);
+                    }
                     
-                    // 启动心跳保活
-                    this._startHeartbeat();
+                    // 显示面板（使用CSS类）
+                    const section = document.getElementById('atr-meter-section');
+                    if (section) {
+                        section.classList.remove('hidden');
+                        section.classList.add('visible');
+                    }
                 }
             };
             
@@ -1587,6 +1681,7 @@ const ATR1000 = {
             };
             
             this.ws.onmessage = (event) => {
+                console.log('📨 ATR-1000 收到消息:', event.data.substring(0, 100));
                 this.handleMessage(event.data);
             };
         } catch (e) {
@@ -1616,51 +1711,48 @@ const ATR1000 = {
         this.isConnected = false;
     },
     
-    // 处理接收的消息 (JSON 格式)
+    // 处理接收的消息 (JSON 格式) - 简化版，无节流
     handleMessage: function(data) {
         try {
-            const msg = JSON.parse(data);
+            // 去除末尾的换行符/空白字符（代理发送的消息末尾有\n）
+            const cleanData = data.trim();
+            const msg = JSON.parse(cleanData);
             
             if (msg.type === 'atr1000_meter') {
                 // 消息计数
                 this._msgCount++;
                 
-                // 保存旧值
-                const oldPower = this.lastPower;
-                const oldSWR = this.lastSWR;
+                // 直接处理所有消息（不节流）
+                this._lastUpdateTime = Date.now();
+                this._processMessage(msg);
                 
-                // 更新值
-                this.lastPower = msg.power || 0;
-                this.lastSWR = msg.swr || 0;
-                
-                // 更新继电器状态
-                if (msg.sw !== undefined) {
-                    this.relayStatus.sw = msg.sw;
-                    this.relayStatus.ind = msg.ind || 0;
-                    this.relayStatus.cap = msg.cap || 0;
-                    this.relayStatus.ind_uh = msg.ind_uh || 0;
-                    this.relayStatus.cap_pf = msg.cap_pf || 0;
-                }
-                
-                // 更新连接状态
-                if (!msg.connected) {
-                    this.updateStatus('设备离线');
-                } else {
-                    // 显示消息计数
-                    this.updateStatus(`已连接 #${this._msgCount}`);
-                }
-                
-                // 始终更新显示
-                this.updateDisplay();
-                
-                // 只在功率或 SWR 变化时打印日志
-                if (oldPower !== this.lastPower || Math.abs(oldSWR - this.lastSWR) > 0.05) {
-                    console.log(`📊 ATR-1000: ${oldPower}W→${this.lastPower}W, SWR ${oldSWR.toFixed(2)}→${this.lastSWR.toFixed(2)}`);
+                // 每10次消息输出一次确认日志
+                if (this._msgCount % 10 === 0) {
+                    console.log(`✅ ATR-1000 已处理 ${this._msgCount} 条消息`);
                 }
             }
         } catch (e) {
-            console.error('解析 ATR-1000 数据错误:', e);
+            console.error('❌ 解析 ATR-1000 数据错误:', e, '数据:', data.substring(0, 100));
         }
+    },
+    
+    // 实际处理消息数据 - 简化版，专注于快速 DOM 更新
+    _processMessage: function(msg) {
+        // 更新值
+        this.lastPower = msg.power || 0;
+        this.lastSWR = msg.swr || 0;
+        
+        // 更新继电器状态
+        if (msg.sw !== undefined) {
+            this.relayStatus.sw = msg.sw;
+            this.relayStatus.ind = msg.ind || 0;
+            this.relayStatus.cap = msg.cap || 0;
+            this.relayStatus.ind_uh = msg.ind_uh || 0;
+            this.relayStatus.cap_pf = msg.cap_pf || 0;
+        }
+        
+        // 直接更新 DOM（不经过其他逻辑）
+        this._doUpdateDisplay();
     },
     
     // 设置继电器参数
@@ -1755,78 +1847,97 @@ const ATR1000 = {
         return null;
     },
     
-    // 更新显示
+    // 更新显示 - 使用 RAF 优化
     updateDisplay: function() {
-        const powerEl = document.getElementById('atr-power');
-        const swrEl = document.getElementById('atr-swr');
-        const powerBar = document.getElementById('atr-power-bar');
-        const swrBar = document.getElementById('atr-swr-bar');
-        
-        if (powerEl) {
-            powerEl.textContent = this.lastPower;
-            // 根据功率设置颜色
-            if (this.lastPower > this.maxPower * 0.8) {
-                powerEl.style.color = '#f44336';  // 红色 - 高功率
-            } else if (this.lastPower > this.maxPower * 0.5) {
-                powerEl.style.color = '#ff9800';  // 橙色 - 中功率
-            } else {
-                powerEl.style.color = '#4CAF50';  // 绿色 - 低功率
-            }
-        }
-        
-        if (swrEl) {
-            swrEl.textContent = this.lastSWR.toFixed(2);
-            // 根据 SWR 设置颜色
-            if (this.lastSWR >= 3) {
-                swrEl.style.color = '#f44336';  // 红色 - 危险
-            } else if (this.lastSWR >= 2) {
-                swrEl.style.color = '#ff9800';  // 橙色 - 警告
-            } else {
-                swrEl.style.color = '#4CAF50';  // 绿色 - 正常
-            }
-        }
-        
-        // 更新功率条
-        if (powerBar) {
-            const powerPercent = Math.min(100, (this.lastPower / this.maxPower) * 100);
-            powerBar.style.width = powerPercent + '%';
+        // 使用 requestAnimationFrame 批量处理 DOM 更新
+        // 直接执行 DOM 更新（不使用 RAF 批处理，避免消息丢失）
+        this._doUpdateDisplay();
+    },
+    
+    // 实际执行 DOM 更新 - 优化版，减少日志输出
+    _doUpdateDisplay: function() {
+        try {
+            const powerEl = document.getElementById('atr-power');
+            const swrEl = document.getElementById('atr-swr');
+            const powerBar = document.getElementById('atr-power-bar');
+            const swrBar = document.getElementById('atr-swr-bar');
             
-            // 功率条颜色
-            if (powerPercent > 80) {
-                powerBar.style.background = 'linear-gradient(90deg, #4CAF50, #ff9800, #f44336)';
-            } else if (powerPercent > 50) {
-                powerBar.style.background = 'linear-gradient(90deg, #4CAF50, #ff9800)';
-            } else {
-                powerBar.style.background = '#4CAF50';
-            }
-        }
-        
-        // 更新 SWR 条
-        if (swrBar) {
-            // SWR 1.0-3.0 映射到 0-100%
-            let swrPercent = 0;
-            if (this.lastSWR >= 3) {
-                swrPercent = 100;
-            } else if (this.lastSWR >= 1) {
-                swrPercent = ((this.lastSWR - 1) / 2) * 100;
-            }
-            swrBar.style.width = swrPercent + '%';
+            // 缓存值避免重复计算
+            const power = this.lastPower;
+            const swr = this.lastSWR;
+            const maxPower = this.maxPower;
             
-            // SWR 条颜色
-            if (this.lastSWR >= 3) {
-                swrBar.style.background = '#f44336';
-            } else if (this.lastSWR >= 2) {
-                swrBar.style.background = '#ff9800';
-            } else {
-                swrBar.style.background = '#4CAF50';
+            // 每10次更新输出一次日志（减少性能开销）
+            this._updateCount = (this._updateCount || 0) + 1;
+            if (this._updateCount % 10 === 0) {
+                console.log(`🖥️ ATR-1000 DOM更新 #${this._updateCount}: power=${power}W, swr=${swr.toFixed(2)}`);
             }
-        }
-        
-        // 更新继电器状态显示
+            
+            if (powerEl) {
+                // 直接更新文本
+                powerEl.textContent = power;
+                
+                // 根据功率设置颜色
+                const colorClass = power > maxPower * 0.8 ? 'high' : power > maxPower * 0.5 ? 'medium' : 'low';
+                powerEl.dataset.powerLevel = colorClass;
+                powerEl.style.color = colorClass === 'high' ? '#f44336' : colorClass === 'medium' ? '#ff9800' : '#4CAF50';
+            }
+            
+            if (swrEl) {
+                // 直接更新文本
+                swrEl.textContent = swr.toFixed(2);
+                
+                // 根据 SWR 设置颜色
+                const swrClass = swr >= 3 ? 'danger' : swr >= 2 ? 'warning' : 'normal';
+                swrEl.dataset.swrLevel = swrClass;
+                swrEl.style.color = swrClass === 'danger' ? '#f44336' : swrClass === 'warning' ? '#ff9800' : '#4CAF50';
+            }
+            
+            // 更新功率条
+            if (powerBar) {
+                const powerPercent = Math.min(100, (power / maxPower) * 100);
+                powerBar.style.width = powerPercent + '%';
+                
+                // 功率条颜色
+                const barClass = powerPercent > 80 ? 'high' : powerPercent > 50 ? 'medium' : 'low';
+                powerBar.dataset.barLevel = barClass;
+                if (barClass === 'high') {
+                    powerBar.style.background = 'linear-gradient(90deg, #4CAF50, #ff9800, #f44336)';
+                } else if (barClass === 'medium') {
+                    powerBar.style.background = 'linear-gradient(90deg, #4CAF50, #ff9800)';
+                } else {
+                    powerBar.style.background = '#4CAF50';
+                }
+            }
+            
+            // 更新 SWR 条
+            if (swrBar) {
+                // SWR 1.0-3.0 映射到 0-100%
+                let swrPercent = 0;
+                if (swr >= 3) {
+                    swrPercent = 100;
+                } else if (swr >= 1) {
+                    swrPercent = ((swr - 1) / 2) * 100;
+                }
+                swrBar.style.width = swrPercent + '%';
+                
+                // SWR 条颜色
+                const swrBarClass = swr >= 3 ? 'danger' : swr >= 2 ? 'warning' : 'normal';
+                swrBar.dataset.swrLevel = swrBarClass;
+                swrBar.style.background = swrBarClass === 'danger' ? '#f44336' : swrBarClass === 'warning' ? '#ff9800' : '#4CAF50';
+            }
+            
+            // 更新继电器状态显示
         const relayInfo = document.getElementById('atr-relay-info');
         if (relayInfo) {
             const swText = this.relayStatus.sw === 0 ? 'LC' : 'CL';
-            relayInfo.textContent = `${swText} | L: ${this.relayStatus.ind_uh.toFixed(2)}µH (${this.relayStatus.ind}) | C: ${this.relayStatus.cap_pf}pF (${this.relayStatus.cap})`;
+            const newText = `${swText} | L: ${this.relayStatus.ind_uh.toFixed(2)}µH (${this.relayStatus.ind}) | C: ${this.relayStatus.cap_pf}pF (${this.relayStatus.cap})`;
+            if (relayInfo.textContent !== newText) {
+                relayInfo.textContent = newText;
+            }
+        }
+        } catch (e) {
+            console.error('❌ _doUpdateDisplay 错误:', e);
         }
     },
     
@@ -1929,9 +2040,18 @@ const ATR1000 = {
         }
     },
     
-    // Power 开启时预连接 WebSocket（不连接 ATR-1000 设备）
+    // Power 开启时预连接 WebSocket（只连接，不显示面板）
     onPowerOn: function() {
         console.log('📻 Power 开启，预连接 ATR-1000 代理 WebSocket');
+        
+        // 确保面板隐藏（只在TX时显示）
+        const section = document.getElementById('atr-meter-section');
+        if (section) {
+            section.classList.add('hidden');
+            section.classList.remove('visible');
+        }
+        
+        // 建立连接但不发送start命令
         if (!this.isConnected) {
             this.connect();
         }
@@ -1945,7 +2065,8 @@ const ATR1000 = {
         // 隐藏面板
         const section = document.getElementById('atr-meter-section');
         if (section) {
-            section.style.display = 'none';
+            section.classList.add('hidden');
+            section.classList.remove('visible');
         }
     },
     
@@ -1961,8 +2082,8 @@ const ATR1000 = {
                     console.log('💓 ATR-1000 心跳发送失败:', e);
                 }
             }
-        }, 30000);  // 每30秒发送一次心跳
-        console.log('💓 ATR-1000 心跳已启动');
+        }, 10000);  // 每10秒发送一次心跳（iPhone Safari 需要更频繁）
+        console.log('💓 ATR-1000 心跳已启动 (10s interval)');
     },
     
     // 停止心跳
@@ -1989,7 +2110,7 @@ const ATR1000 = {
         }
     },
     
-    // TX 开始时调用 - 发送 start 命令
+    // TX 开始时调用 - 优化版，确保可靠连接和命令发送
     onTXStart: function() {
         // 防抖：如果已经启动则跳过
         if (this._txActive) {
@@ -2000,58 +2121,138 @@ const ATR1000 = {
         
         console.log('📻 TX 开始，显示 ATR-1000 面板');
         
-        // 显示面板
+        // 显示面板并添加加载状态（使用CSS类）
         const section = document.getElementById('atr-meter-section');
         if (section) {
-            section.style.display = 'block';
+            section.classList.remove('hidden');
+            section.classList.add('visible');
+            section.classList.add('loading');
+            console.log('✅ ATR-1000面板已显示 (CSS类: hidden→visible)');
+        } else {
+            console.warn('⚠️ 找不到ATR-1000面板元素');
         }
         
-        // 发送 start 命令启动数据流（连接已预先建立）
-        if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-            this.ws.send(JSON.stringify({action: 'start'}));
-            console.log('📤 发送 ATR-1000 start 命令');
-            this.startDataPolling();
+        // 定义发送 start 命令的函数
+        const sendStartCommand = () => {
+            const wsState = this.ws ? this.ws.readyState : 'null';
+            console.log(`📻 sendStartCommand: ws=${this.ws ? 'exists' : 'null'}, readyState=${wsState}, _txActive=${this._txActive}`);
+            
+            if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+                try {
+                    this.ws.send(JSON.stringify({action: 'start'}));
+                    console.log('📤 发送 ATR-1000 start 命令');
+                    if (section) section.classList.remove('loading');
+                    // 重置消息计数
+                    this._msgCount = 0;
+                    // 连接成功，重置重连计数
+                    this._reconnectAttempts = 0;
+                } catch (e) {
+                    console.error('发送 start 命令失败:', e);
+                }
+            } else if (this.ws && this.ws.readyState === WebSocket.CONNECTING) {
+                // 正在连接中，等待连接完成后发送（onopen 会处理）
+                console.log('📻 WebSocket 正在连接中，等待 onopen...');
+                this._pendingStart = true;
+            } else {
+                console.log('📻 WebSocket 未就绪或已断开，尝试重新连接...');
+                // 尝试重新连接
+                this._pendingStart = true;
+                this.connect();
+                
+                // 延迟重试
+                if (this._txActive && !this._startRetryTimer) {
+                    this._startRetryTimer = setTimeout(() => {
+                        this._startRetryTimer = null;
+                        if (this._txActive) sendStartCommand();
+                    }, 200);  // 增加到 200ms
+                }
+            }
+        };
+        
+        // 检查连接状态
+        if (this.isConnected && this.ws && this.ws.readyState === WebSocket.OPEN) {
+            // 已连接，直接发送
+            sendStartCommand();
         } else {
-            // 连接断开，重新连接
-            console.log('📻 ATR-1000 连接断开，正在重新连接...');
+            // 未连接，先连接再发送
+            console.log('📻 ATR-1000 未连接，正在建立连接...');
             this._pendingStart = true;
+            
+            // 等待连接成功后发送 start
+            const checkAndSend = () => {
+                if (this.isConnected && this.ws && this.ws.readyState === WebSocket.OPEN) {
+                    this._pendingStart = false;
+                    sendStartCommand();
+                } else if (this._txActive) {
+                    // 继续等待
+                    setTimeout(checkAndSend, 100);
+                }
+            };
+            
+            // 启动连接
             this.connect();
+            // 开始检查
+            setTimeout(checkAndSend, 100);
         }
     },
     
-    // TX 结束时调用 - 发送 stop 命令（保持连接）
+    // TX 结束时调用 - 优化版，清理状态但保持连接
     onTXStop: function() {
+        console.log('🛑 ATR-1000 onTXStop 被调用, _txActive=', this._txActive);
+        
         // 防抖：如果已经停止则跳过
         if (!this._txActive) {
             console.log('📻 ATR-1000 已在 RX 模式，跳过重复停止');
+            // 即使跳过，也确保面板隐藏
+            const section = document.getElementById('atr-meter-section');
+            if (section && section.classList.contains('visible')) {
+                section.classList.add('hidden');
+                section.classList.remove('visible');
+                console.log('✅ 强制隐藏ATR-1000面板');
+            }
             return;
         }
         this._txActive = false;
         
-        console.log('📻 TX 结束，隐藏面板（保持连接）');
+        console.log('📻 TX 结束，准备隐藏ATR-1000面板');
         
-        // 停止数据轮询
-        this.stopDataPolling();
-        
-        // 发送 stop 命令（不再断开连接，保持预热状态）
-        if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-            this.ws.send(JSON.stringify({action: 'stop'}));
-            console.log('📤 发送 ATR-1000 stop 命令');
+        // 清理重试定时器
+        if (this._startRetryTimer) {
+            clearTimeout(this._startRetryTimer);
+            this._startRetryTimer = null;
         }
         
-        // 隐藏面板
+        // 清理待更新数据
+        if (this._updateTimer) {
+            clearTimeout(this._updateTimer);
+            this._updateTimer = null;
+        }
+        this._pendingUpdate = null;
+        
+        // 发送 stop 命令（保持连接预热）
+        if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+            try {
+                this.ws.send(JSON.stringify({action: 'stop'}));
+                console.log('📤 发送 ATR-1000 stop 命令');
+            } catch (e) {
+                console.log('发送 stop 命令失败:', e);
+            }
+        }
+        
+        // 立即隐藏面板，让频率调整区域显示出来（使用CSS类）
         const section = document.getElementById('atr-meter-section');
         if (section) {
-            section.style.display = 'none';
+            section.classList.add('hidden');
+            section.classList.remove('visible');
+            section.classList.remove('loading');
+            console.log('✅ ATR-1000面板已隐藏 (CSS类: visible→hidden)');
+        } else {
+            console.warn('⚠️ 找不到ATR-1000面板元素');
         }
         
-        // 清零显示
+        // 清零显示（下次TX时重新显示）
         this.lastPower = 0;
         this.lastSWR = 0;
-        const powerEl = document.getElementById('atr-power');
-        const swrEl = document.getElementById('atr-swr');
-        if (powerEl) powerEl.textContent = '--';
-        if (swrEl) swrEl.textContent = '--';
     }
 };
 

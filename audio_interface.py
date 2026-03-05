@@ -69,6 +69,10 @@ class PyAudioCapture(threading.Thread):
     支持 Opus 编码传输：
     - rx_opus_encode=False: 发送 Int16 PCM（默认，兼容旧客户端）
     - rx_opus_encode=True: 发送 Opus 编码音频（节省带宽约 70%）
+    
+    帧序号机制：
+    - 每个Opus帧前添加4字节序号(小端uint32)
+    - 前端可检测丢包并使用FEC恢复
     """
     
     # 类级别的 Opus 编码设置（由客户端协商后设置）
@@ -76,6 +80,10 @@ class PyAudioCapture(threading.Thread):
     rx_opus_rate = 16000  # Opus 采样率
     rx_opus_frame_dur = 20  # Opus 帧时长 (ms)
     rx_opus_encoder = None  # Opus 编码器实例
+    
+    # 帧序号（用于FEC丢包检测）
+    _frame_sequence = 0
+    _sequence_lock = threading.Lock()
     
     def __init__(self, config):
         threading.Thread.__init__(self)
@@ -288,7 +296,18 @@ class PyAudioCapture(threading.Thread):
                                                     current_opus_rate, 1, 2048
                                                 )
                                                 self.rx_opus_encoder_rate = current_opus_rate
-                                                print(f"🎵 Opus RX 编码器已初始化: {current_opus_rate}Hz, {current_opus_frame_dur}ms 帧")
+                                                
+                                                # ========== Opus 深度优化 ==========
+                                                # 启用FEC抗丢包、DTX静音检测、优化比特率
+                                                # 这些参数针对弱网环境和短波语音通信优化
+                                                self.rx_opus_encoder.configure_for_voip(
+                                                    bitrate=20000,       # 20kbps 短波语音足够
+                                                    complexity=6,        # 中等复杂度，移动端友好
+                                                    fec=True,            # 启用前向纠错（关键！）
+                                                    packet_loss_perc=15, # 预期15%丢包率
+                                                    dtx=True             # 启用静音检测
+                                                )
+                                                print(f"🎵 Opus RX 编码器已优化: {current_opus_rate}Hz, FEC=ON, DTX=ON, 20kbps")
                                             except Exception as e:
                                                 print(f"❌ Opus RX 编码器初始化失败: {e}")
                                                 PyAudioCapture.rx_opus_encode = False
@@ -296,47 +315,56 @@ class PyAudioCapture(threading.Thread):
                                         
                                         # 编码
                                         try:
-                                            # 使用 numpy 的 ctypes 指针直接传递
-                                            import ctypes
-                                            frame_ptr = frame_data.ctypes.data_as(ctypes.POINTER(ctypes.c_int16))
-                                            # 手动调用底层 API
-                                            from opus.api import encoder as opus_api
-                                            max_bytes = len(frame_data) * 2  # 最大输出字节数
-                                            output_buf = (ctypes.c_char * max_bytes)()
-                                            result = opus_api._encode(
-                                                self.rx_opus_encoder._state,
-                                                frame_ptr,
-                                                opus_frame_size,
-                                                output_buf,
-                                                max_bytes
-                                            )
-                                            if result > 0:
-                                                encoded_data = bytes(output_buf[:result])
-                                                # 发送到客户端
-                                                for c in AudioRXHandlerClients:
-                                                    if len(c.Wavframes) < 20:
-                                                        c.Wavframes.append(encoded_data)
-                                                    else:
-                                                        c.Wavframes.pop(0)
-                                                        c.Wavframes.append(encoded_data)
-                                                # 每 100 帧打印一次编码结果
-                                                if frame_count % 100 == 0:
-                                                    print(f"🎵 Opus 编码正常... 帧数: {frame_count}, 压缩率: {len(encoded_data)}/{len(frame_data)*2}")
-                                            else:
-                                                raise Exception(f"Opus encode failed: {result}")
+                                            # 使用OpusEncoder的encode方法
+                                            # 将numpy数组转换为bytes
+                                            frame_bytes = frame_data.tobytes()
+                                            
+                                            # 调试：打印编码参数
+                                            if frame_count % 100 == 0:
+                                                print(f"🔍 Opus编码参数: frame_size={opus_frame_size}, input_len={len(frame_bytes)}")
+                                            
+                                            # 调用编码方法
+                                            encoded_data = self.rx_opus_encoder.encode(frame_bytes, opus_frame_size)
+                                            
+                                            # 发送到客户端
+                                            # 弱网优化：智能队列管理
+                                            # 根据队列深度动态调整策略
+                                            for c in AudioRXHandlerClients:
+                                                queue_len = len(c.Wavframes)
+                                                if queue_len < 10:
+                                                    # 队列空闲，正常添加
+                                                    c.Wavframes.append(encoded_data)
+                                                elif queue_len < 20:
+                                                    # 队列适中，丢弃旧帧保持新鲜度
+                                                    c.Wavframes.pop(0)
+                                                    c.Wavframes.append(encoded_data)
+                                                else:
+                                                    # 队列过满（网络拥塞），丢弃一半旧帧
+                                                    # 避免客户端收到过时数据
+                                                    c.Wavframes = c.Wavframes[10:]
+                                                    c.Wavframes.append(encoded_data)
+                                            # 每 100 帧打印一次编码结果
+                                            if frame_count % 100 == 0:
+                                                print(f"🎵 Opus 编码正常... 帧数: {frame_count}, 压缩率: {len(encoded_data)}/{len(frame_bytes)}")
                                         except Exception as e:
                                             if frame_count % 100 == 0:
                                                 print(f"Opus 编码错误: {e}")
                                 else:
                                     # Int16 PCM 模式（默认）
                                     compressed_data = int16_data.tobytes()
+                                    # 弱网优化：智能队列管理
                                     for c in AudioRXHandlerClients:
-                                        # 限制每个客户端的队列长度，防止积压
-                                        if len(c.Wavframes) < 20:
+                                        queue_len = len(c.Wavframes)
+                                        if queue_len < 10:
+                                            # 队列空闲，正常添加
+                                            c.Wavframes.append(compressed_data)
+                                        elif queue_len < 20:
+                                            # 队列适中，丢弃旧帧保持新鲜度
+                                            c.Wavframes.pop(0)
                                             c.Wavframes.append(compressed_data)
                                         else:
-                                            # 队列满时丢弃最旧的帧
-                                            c.Wavframes.pop(0)
+                                            # 队列过满（网络拥塞），丢弃一半旧帧
+                                            c.Wavframes = c.Wavframes[10:]
                                             c.Wavframes.append(compressed_data)
                     except Exception as e:
                         if frame_count % 100 == 0:
@@ -375,6 +403,11 @@ class PyAudioPlayback:
             self.decoder = OpusDecoder(op_rate, 1)
             self.frame_size = op_frm_dur * op_rate
         
+        # ========== 关键修复：采样率匹配 ==========
+        # 当 Opus 编码启用时，解码后的 PCM 数据采样率是 op_rate (16kHz)
+        # 必须 PyAudio 流也使用 op_rate，否则播放速度不正确导致噪音
+        playback_rate = op_rate if is_encoded else itrate
+        
         # Initialize PyAudio
         self.p = pyaudio.PyAudio()
         
@@ -393,12 +426,12 @@ class PyAudioPlayback:
             self.stream = self.p.open(
                 format=pyaudio.paInt16,
                 channels=1,
-                rate=itrate,
+                rate=playback_rate,
                 output=True,
                 output_device_index=device_index,
                 frames_per_buffer=256  # 优化：从512减至256，降低延迟约16ms
             )
-            print(f'PyAudio output stream opened successfully at {itrate}Hz with low latency settings')
+            print(f'PyAudio output stream opened successfully at {playback_rate}Hz (Opus: {is_encoded})')
         except Exception as e:
             print(f"Failed to open PyAudio output stream: {e}")
             # Try with default device
@@ -406,11 +439,11 @@ class PyAudioPlayback:
                 self.stream = self.p.open(
                     format=pyaudio.paInt16,
                     channels=1,
-                    rate=itrate,
+                    rate=playback_rate,  # 使用正确的采样率
                     output=True,
                     frames_per_buffer=256  # 优化：从512减至256，降低延迟约16ms
                 )
-                print('Opened with default output device')
+                print(f'Opened with default output device at {playback_rate}Hz')
             except Exception as e2:
                 print(f"Failed to open default output device: {e2}")
                 raise
