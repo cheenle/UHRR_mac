@@ -5,6 +5,51 @@
 // 所有核心功能由 controls.js 提供，此文件仅处理移动端特定的 UI 逻辑
 
 ////////////////////////////////////////////////////////////
+// Wake Lock - 防止屏幕休眠
+////////////////////////////////////////////////////////////
+let wakeLock = null;
+
+// 请求 Wake Lock
+async function requestWakeLock() {
+    try {
+        if ('wakeLock' in navigator) {
+            wakeLock = await navigator.wakeLock.request('screen');
+            console.log('🔒 Wake Lock 已启用 - 屏幕将保持常亮');
+            
+            // 监听 Wake Lock 释放事件
+            wakeLock.addEventListener('release', () => {
+                console.log('🔓 Wake Lock 已释放');
+            });
+        } else {
+            console.log('⚠️ 浏览器不支持 Wake Lock API');
+        }
+    } catch (err) {
+        console.log('⚠️ Wake Lock 请求失败:', err.name, err.message);
+    }
+}
+
+// 释放 Wake Lock
+async function releaseWakeLock() {
+    if (wakeLock) {
+        try {
+            await wakeLock.release();
+            wakeLock = null;
+            console.log('🔓 Wake Lock 已主动释放');
+        } catch (err) {
+            console.log('⚠️ Wake Lock 释放失败:', err);
+        }
+    }
+}
+
+// 页面可见性变化时重新请求 Wake Lock
+document.addEventListener('visibilitychange', async () => {
+    if (document.visibilityState === 'visible' && mobileState.isConnected) {
+        console.log('📱 页面重新可见，重新请求 Wake Lock');
+        await requestWakeLock();
+    }
+});
+
+////////////////////////////////////////////////////////////
 // 移动端检测 - 使用 controls.js 的 IS_MOBILE 变量
 ////////////////////////////////////////////////////////////
 
@@ -668,6 +713,12 @@ function togglePower() {
         if (typeof ATR1000 !== 'undefined' && ATR1000.onPowerOff) {
             ATR1000.onPowerOff();
         }
+        
+        // 释放 Wake Lock
+        releaseWakeLock();
+        
+        // 更新连接状态
+        mobileState.isConnected = false;
     } else {
         // 连接 - 直接调用底层函数
         console.log('🟢 正在开启电源...');
@@ -711,6 +762,12 @@ function togglePower() {
         
         // 更新 Opus 编码状态指示器
         updateOpusStatus();
+        
+        // 启用 Wake Lock 防止屏幕休眠
+        requestWakeLock();
+        
+        // 更新连接状态
+        mobileState.isConnected = true;
     }
 }
 
