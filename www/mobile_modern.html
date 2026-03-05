@@ -109,110 +109,73 @@
                 </div>
             </section>
             
-            <!-- Quick controls -->
+            <!-- Quick controls - 精简版 -->
             <section class="quick-controls">
                 <div class="control-row">
-                    <button class="quick-btn vfo-btn active" id="vfo-a-btn">VFO A</button>
-                    <button class="quick-btn vfo-btn" id="vfo-b-btn">VFO B</button>
                     <button class="quick-btn mode-btn" id="mode-btn">USB</button>
-                </div>
-                
-                <div class="control-row">
                     <button class="quick-btn band-btn" id="band-btn">20m</button>
                     <button class="quick-btn filter-btn" id="filter-btn">MID</button>
-                    <button class="quick-btn tune-btn-header" id="tune-header-btn">TUNE</button>
                 </div>
             </section>
             
-            <!-- ATR-1000 Power/SWR Display (TX期间显示) -->
-            <section class="atr-meter-section hidden" id="atr-meter-section">
-                <div class="atr-meter-header">
-                    <span class="atr-meter-title">📡 ATR-1000 天调</span>
-                    <span class="atr-meter-status" id="atr-status">已连接</span>
-                </div>
-                <div class="atr-meter-cards">
-                    <div class="atr-card">
-                        <span class="atr-label">功率</span>
-                        <div class="atr-value" id="atr-power">--</div>
-                        <span class="atr-unit">W</span>
+            <!-- ATR-1000 Power/SWR Display (精简版，始终显示) -->
+            <section class="atr-meter-section-compact" id="atr-meter-section">
+                <div class="atr-compact-row">
+                    <div class="atr-compact-item">
+                        <span class="atr-compact-label">功率</span>
+                        <div class="atr-compact-value-row">
+                            <span class="atr-compact-value" id="atr-power">--</span>
+                            <span class="atr-compact-unit">W</span>
+                        </div>
+                        <div class="atr-bar-compact">
+                            <div class="atr-power-bar-compact" id="atr-power-bar"></div>
+                        </div>
                     </div>
-                    <div class="atr-card">
-                        <span class="atr-label">驻波</span>
-                        <div class="atr-value" id="atr-swr">--</div>
-                        <span class="atr-unit">SWR</span>
+                    <div class="atr-compact-item">
+                        <span class="atr-compact-label">驻波</span>
+                        <div class="atr-compact-value-row">
+                            <span class="atr-compact-value" id="atr-swr">--</span>
+                        </div>
+                        <div class="atr-bar-compact">
+                            <div class="atr-swr-bar-compact" id="atr-swr-bar"></div>
+                        </div>
                     </div>
-                </div>
-                <!-- 功率条形图 -->
-                <div class="atr-power-bar-container">
-                    <div class="atr-power-bar" id="atr-power-bar"></div>
-                    <div class="atr-power-scale">
-                        <span>0</span>
-                        <span>25</span>
-                        <span>50</span>
-                        <span>75</span>
-                        <span>100W</span>
-                    </div>
-                </div>
-                <!-- 驻波指示条 -->
-                <div class="atr-swr-bar-container">
-                    <div class="atr-swr-bar" id="atr-swr-bar"></div>
-                    <div class="atr-swr-scale">
-                        <span>1.0</span>
-                        <span>1.5</span>
-                        <span>2.0</span>
-                        <span>2.5</span>
-                        <span>3.0+</span>
-                    </div>
-                </div>
-                <!-- 继电器状态和操作按钮 -->
-                <div class="atr-relay-status" id="atr-relay-status">
-                    <span class="atr-relay-info" id="atr-relay-info">LC | L: -- | C: --</span>
-                </div>
-                <div class="atr-action-buttons">
-                    <button class="atr-btn atr-btn-tune" onclick="ATR1000.startTune(2)" title="完整调谐">
-                        🔧 调谐
-                    </button>
-                    <button class="atr-btn atr-btn-save" onclick="ATR1000.saveCurrentTuner()" title="保存当前参数">
-                        💾 保存
-                    </button>
-                    <button class="atr-btn atr-btn-load" onclick="ATR1000.showTunerRecords()" title="查看存储记录">
-                        📋 记录
-                    </button>
                 </div>
             </section>
             
-            <!-- Volume Control -->
-            <section class="volume-control">
-                <div class="volume-row">
-                    <span class="volume-icon">🔊</span>
-                    <input type="range" id="main-af-gain" class="volume-slider" min="0" max="100" value="50" oninput="setMainAFGain(this.value)">
-                    <span class="volume-value" id="main-af-value">50%</span>
+            <!-- Volume Control - 精简版 -->
+            <section class="volume-control-compact">
+                <div class="volume-row-compact">
+                    <span class="volume-icon-small">🔊</span>
+                    <input type="range" id="main-af-gain" class="volume-slider-compact" min="0" max="100" value="50" oninput="setMainAFGain(this.value)">
+                    <span class="volume-value-small" id="main-af-value">50%</span>
                 </div>
             </section>
             
-            <!-- Frequency tuning -->
-            <section class="frequency-tuning">
-                <div class="tuning-controls">
-                    <button class="tune-btn" id="tune-down-10k" data-step="-10000">-10k</button>
-                    <button class="tune-btn" id="tune-down-5k" data-step="-5000">-5k</button>
-                    <button class="tune-btn" id="tune-down-1k" data-step="-1000">-1k</button>
-                    <button class="tune-btn" id="tune-up-10k" data-step="10000">+10k</button>
-                    <button class="tune-btn" id="tune-up-5k" data-step="5000">+5k</button>
-                    <button class="tune-btn" id="tune-up-1k" data-step="1000">+1k</button>
+            <!-- Frequency tuning - 精简版 -->
+            <section class="frequency-tuning-compact">
+                <div class="tuning-controls-compact">
+                    <button class="tune-btn-compact" id="tune-down-10k" data-step="-10000">-10k</button>
+                    <button class="tune-btn-compact" id="tune-down-1k" data-step="-1000">-1k</button>
+                    <button class="tune-btn-compact" id="tune-up-1k" data-step="1000">+1k</button>
+                    <button class="tune-btn-compact" id="tune-up-10k" data-step="10000">+10k</button>
                 </div>
             </section>
         </main>
         
-        <!-- PTT Section - Bottom of screen for easy access -->
+        <!-- PTT Section - 底部PTT/TUNE按钮区域 -->
         <footer class="ptt-section">
             <div class="ptt-container">
+                <!-- TUNE 按钮 -->
+                <button id="tune-btn" class="tune-button-footer" aria-label="Tune">
+                    <span class="tune-label">TUNE</span>
+                </button>
+                <!-- PTT 按钮 -->
                 <button id="ptt-btn" class="ptt-button" aria-label="Push to Talk">
                     <span class="ptt-label">PTT</span>
-                    <span class="ptt-sublabel">TAP & HOLD</span>
                 </button>
             </div>
-            
-            </footer>
+        </footer>
     </div>
     
     <!-- Off-canvas menu -->

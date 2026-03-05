@@ -40,6 +40,7 @@ const domElements = {
     menuOverlay: null,
     mainMenu: null,
     pttButton: null,
+    tuneButton: null,
     powerButton: null,
     freqDisplay: null,
     modeIndicator: null,
@@ -247,6 +248,7 @@ function initializeElements() {
     domElements.menuOverlay = document.getElementById('menu-overlay');
     domElements.mainMenu = document.getElementById('main-menu');
     domElements.pttButton = document.getElementById('ptt-btn');
+    domElements.tuneButton = document.getElementById('tune-btn');
     domElements.powerButton = document.getElementById('power-btn');
     domElements.freqDisplay = document.getElementById('freq-main-display');
     domElements.modeIndicator = document.getElementById('mode-indicator');
@@ -256,7 +258,7 @@ function initializeElements() {
     domElements.statusTX = document.getElementById('status-tx');
     domElements.sMeterCanvas = document.getElementById('s-meter-canvas');
     domElements.quickButtons = document.querySelectorAll('.quick-btn');
-    domElements.tuneButtons = document.querySelectorAll('.tune-btn');
+    domElements.tuneButtons = document.querySelectorAll('.tune-btn, .tune-btn-compact');
 }
 
 // 在用户首次交互时初始化音频上下文
@@ -434,6 +436,57 @@ function setupEventListeners() {
         });
         
         console.log('🎵 TUNE天调按钮已初始化');
+    }
+    
+    // 底部 TUNE 按钮 - 长按发射1kHz单音
+    if (domElements.tuneButton) {
+        // 触摸开始
+        domElements.tuneButton.addEventListener('touchstart', function(e) {
+            e.preventDefault();
+            this.classList.add('active');
+            if (typeof startTune === 'function') {
+                startTune();
+            }
+        });
+        
+        // 触摸结束
+        domElements.tuneButton.addEventListener('touchend', function(e) {
+            e.preventDefault();
+            this.classList.remove('active');
+            if (typeof stopTune === 'function') {
+                stopTune();
+            }
+        });
+        
+        // 鼠标按下
+        domElements.tuneButton.addEventListener('mousedown', function(e) {
+            e.preventDefault();
+            this.classList.add('active');
+            if (typeof startTune === 'function') {
+                startTune();
+            }
+        });
+        
+        // 鼠标释放
+        domElements.tuneButton.addEventListener('mouseup', function(e) {
+            e.preventDefault();
+            this.classList.remove('active');
+            if (typeof stopTune === 'function') {
+                stopTune();
+            }
+        });
+        
+        // 鼠标离开按钮
+        domElements.tuneButton.addEventListener('mouseleave', function(e) {
+            if (this.classList.contains('active')) {
+                this.classList.remove('active');
+                if (typeof stopTune === 'function') {
+                    stopTune();
+                }
+            }
+        });
+        
+        console.log('🎵 底部 TUNE 按钮已初始化');
     }
     
     // 防止长按菜单
@@ -2110,7 +2163,7 @@ const ATR1000 = {
         }
     },
     
-    // TX 开始时调用 - 优化版，确保可靠连接和命令发送
+    // TX 开始时调用 - 精简版，面板始终显示
     onTXStart: function() {
         // 防抖：如果已经启动则跳过
         if (this._txActive) {
@@ -2119,18 +2172,7 @@ const ATR1000 = {
         }
         this._txActive = true;
         
-        console.log('📻 TX 开始，显示 ATR-1000 面板');
-        
-        // 显示面板并添加加载状态（使用CSS类）
-        const section = document.getElementById('atr-meter-section');
-        if (section) {
-            section.classList.remove('hidden');
-            section.classList.add('visible');
-            section.classList.add('loading');
-            console.log('✅ ATR-1000面板已显示 (CSS类: hidden→visible)');
-        } else {
-            console.warn('⚠️ 找不到ATR-1000面板元素');
-        }
+        console.log('📻 TX 开始，发送 ATR-1000 start 命令');
         
         // 定义发送 start 命令的函数
         const sendStartCommand = () => {
@@ -2141,7 +2183,6 @@ const ATR1000 = {
                 try {
                     this.ws.send(JSON.stringify({action: 'start'}));
                     console.log('📤 发送 ATR-1000 start 命令');
-                    if (section) section.classList.remove('loading');
                     // 重置消息计数
                     this._msgCount = 0;
                     // 连接成功，重置重连计数
@@ -2196,25 +2237,18 @@ const ATR1000 = {
         }
     },
     
-    // TX 结束时调用 - 优化版，清理状态但保持连接
+    // TX 结束时调用 - 精简版，面板始终显示
     onTXStop: function() {
         console.log('🛑 ATR-1000 onTXStop 被调用, _txActive=', this._txActive);
         
         // 防抖：如果已经停止则跳过
         if (!this._txActive) {
             console.log('📻 ATR-1000 已在 RX 模式，跳过重复停止');
-            // 即使跳过，也确保面板隐藏
-            const section = document.getElementById('atr-meter-section');
-            if (section && section.classList.contains('visible')) {
-                section.classList.add('hidden');
-                section.classList.remove('visible');
-                console.log('✅ 强制隐藏ATR-1000面板');
-            }
             return;
         }
         this._txActive = false;
         
-        console.log('📻 TX 结束，准备隐藏ATR-1000面板');
+        console.log('📻 TX 结束');
         
         // 清理重试定时器
         if (this._startRetryTimer) {
@@ -2239,20 +2273,8 @@ const ATR1000 = {
             }
         }
         
-        // 立即隐藏面板，让频率调整区域显示出来（使用CSS类）
-        const section = document.getElementById('atr-meter-section');
-        if (section) {
-            section.classList.add('hidden');
-            section.classList.remove('visible');
-            section.classList.remove('loading');
-            console.log('✅ ATR-1000面板已隐藏 (CSS类: visible→hidden)');
-        } else {
-            console.warn('⚠️ 找不到ATR-1000面板元素');
-        }
-        
-        // 清零显示（下次TX时重新显示）
-        this.lastPower = 0;
-        this.lastSWR = 0;
+        // 面板保持显示（精简版始终可见），不再隐藏
+        console.log('✅ ATR-1000 面板保持显示（精简版）');
     }
 };
 

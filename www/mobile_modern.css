@@ -1119,3 +1119,221 @@ body {
 #indwsControlTRX {
     display: none !important;
 }
+
+////////////////////////////////////////////////////////////
+// V4.4 精简布局样式
+////////////////////////////////////////////////////////////
+
+/* 功率/驻波精简显示 - 始终可见 */
+.atr-meter-section-compact {
+    background: rgba(30, 40, 30, 0.9);
+    border-radius: 10px;
+    padding: 10px 15px;
+    margin: 8px 0;
+    border: 1px solid #3a5a3a;
+}
+
+.atr-compact-row {
+    display: flex;
+    gap: 20px;
+}
+
+.atr-compact-item {
+    flex: 1;
+    text-align: center;
+}
+
+.atr-compact-label {
+    font-size: 11px;
+    color: #888;
+    display: block;
+    margin-bottom: 2px;
+}
+
+.atr-compact-value-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: center;
+    gap: 2px;
+}
+
+.atr-compact-value {
+    font-size: 28px;
+    font-weight: bold;
+    color: #4CAF50;
+    line-height: 1;
+}
+
+.atr-compact-unit {
+    font-size: 12px;
+    color: #666;
+}
+
+/* 精简版进度条 */
+.atr-bar-compact {
+    height: 4px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 2px;
+    margin-top: 4px;
+    overflow: hidden;
+}
+
+.atr-power-bar-compact {
+    height: 100%;
+    background: linear-gradient(90deg, #4CAF50, #8BC34A, #FF9800, #f44336);
+    border-radius: 2px;
+    width: 0%;
+    transition: width 0.2s ease;
+}
+
+.atr-swr-bar-compact {
+    height: 100%;
+    background: #4CAF50;
+    border-radius: 2px;
+    width: 0%;
+    transition: width 0.2s ease, background 0.2s ease;
+}
+
+/* 音量控制精简版 */
+.volume-control-compact {
+    padding: 5px 10px;
+    margin: 5px 0;
+}
+
+.volume-row-compact {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.volume-icon-small {
+    font-size: 16px;
+}
+
+.volume-slider-compact {
+    flex: 1;
+    height: 4px;
+    -webkit-appearance: none;
+    appearance: none;
+    background: linear-gradient(90deg, #333, #555);
+    border-radius: 2px;
+    outline: none;
+}
+
+.volume-slider-compact::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #4CAF50;
+    cursor: pointer;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+}
+
+.volume-value-small {
+    font-size: 12px;
+    color: #888;
+    min-width: 35px;
+}
+
+/* 频率调谐精简版 */
+.frequency-tuning-compact {
+    padding: 8px 5px;
+    margin: 5px 0;
+}
+
+.tuning-controls-compact {
+    display: flex;
+    gap: 6px;
+    justify-content: center;
+}
+
+.tune-btn-compact {
+    flex: 1;
+    max-width: 70px;
+    padding: 10px 8px;
+    border: none;
+    border-radius: 8px;
+    background: linear-gradient(180deg, #3a3a3a, #2a2a2a);
+    color: #ccc;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.tune-btn-compact:active {
+    background: linear-gradient(180deg, #4a4a4a, #3a3a3a);
+    transform: scale(0.95);
+}
+
+/* 底部 TUNE 按钮 */
+.tune-button-footer {
+    flex: 0.6;
+    height: 70px;
+    border: none;
+    border-radius: 16px;
+    background: linear-gradient(180deg, #3a5a3a, #2a4a2a);
+    color: #8BC34A;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+}
+
+.tune-button-footer:active {
+    background: linear-gradient(180deg, #4a6a4a, #3a5a3a);
+    transform: scale(0.95);
+}
+
+.tune-label {
+    font-size: 14px;
+}
+
+/* 更新 PTT 区域布局 */
+.ptt-container {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    align-items: stretch;
+    padding: 10px;
+    padding-bottom: calc(10px + env(safe-area-inset-bottom));
+}
+
+/* PTT 按钮调整 */
+.ptt-button {
+    flex: 1.4;
+    height: 70px;
+    border: none;
+    border-radius: 16px;
+    background: linear-gradient(180deg, #c62828, #8b1a1a);
+    color: white;
+    font-size: 20px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 12px rgba(198, 40, 40, 0.4);
+}
+
+.ptt-button.active {
+    background: linear-gradient(180deg, #4CAF50, #388E3C);
+    box-shadow: 0 4px 12px rgba(76, 175, 80, 0.4);
+}
+
+.ptt-label {
+    font-size: 22px;
+}
+
+.ptt-sublabel {
+    display: none;  /* 隐藏子标签，更简洁 */
+}
