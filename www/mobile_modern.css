@@ -137,24 +137,19 @@ body {
 }
 
 .freq-main {
-    font-size: 32px;
+    font-size: 36px;
     font-weight: 700;
     letter-spacing: 2px;
     margin-bottom: 4px;
     font-variant-numeric: tabular-nums;
     font-family: 'Courier New', 'Monaco', 'Consolas', monospace;
-    /* 绿色荧光效果 */
+    /* 绿色荧光效果 - 无阴影，清晰易读 */
     color: #39FF14;
-    text-shadow: 
-        0 0 5px #39FF14,
-        0 0 10px #39FF14,
-        0 0 15px #39FF14,
-        0 0 20px rgba(57, 255, 20, 0.5);
-    background: linear-gradient(180deg, #0a0a0a 0%, #1a1a1a 100%);
-    padding: 8px 15px;
+    text-shadow: 0 0 8px rgba(57, 255, 20, 0.6);
+    background: #0a0a0a;
+    padding: 10px 20px;
     border-radius: 8px;
-    border: 1px solid #2a2a2a;
-    box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.5);
+    border: 1px solid #1a3a1a;
 }
 
 /* 频率输入框样式 - 绿色荧光风格 */
@@ -165,23 +160,21 @@ body {
     left: 50%;
     transform: translateX(-50%);
     width: 200px;
-    height: 44px;
-    font-size: 26px;
+    height: 48px;
+    font-size: 28px;
     font-weight: 700;
     text-align: center;
     font-family: 'Courier New', 'Monaco', 'Consolas', monospace;
-    background: linear-gradient(180deg, #0a0a0a 0%, #1a1a1a 100%);
+    background: #0a0a0a;
     color: #39FF14;
     border: 2px solid #39FF14;
     border-radius: 8px;
     outline: none;
     z-index: 100;
-    box-shadow: 0 0 15px rgba(57, 255, 20, 0.4), inset 0 0 20px rgba(0, 0, 0, 0.5);
 }
 
 .freq-input-hidden:focus {
     border-color: #39FF14;
-    box-shadow: 0 0 20px rgba(57, 255, 20, 0.6), inset 0 0 20px rgba(0, 0, 0, 0.5);
 }
 
 .freq-input-hidden::placeholder {
@@ -200,7 +193,7 @@ body {
 
 .freq-digit {
     display: inline-block;
-    min-width: 18px;
+    min-width: 20px;
 }
 
 .freq-separator {
@@ -1323,7 +1316,7 @@ body {
     transform: scale(0.95);
 }
 
-/* 频率调谐网格布局 */
+/* 频率调谐网格布局 - 两排 */
 .frequency-tuning-grid {
     padding: 8px 10px;
     margin: 5px 0;
@@ -1331,7 +1324,7 @@ body {
 
 .tuning-row {
     display: flex;
-    gap: 8px;
+    gap: 6px;
     justify-content: center;
     margin-bottom: 6px;
 }
@@ -1342,29 +1335,22 @@ body {
 
 .tune-btn-grid {
     flex: 1;
-    max-width: 100px;
-    padding: 12px 10px;
+    max-width: 75px;
+    padding: 14px 8px;
     border: none;
     border-radius: 10px;
-    background: linear-gradient(180deg, #2a3a2a, #1a2a1a);
+    background: #1a2a1a;
     color: #39FF14;
-    font-size: 16px;
+    font-size: 15px;
     font-weight: 700;
     font-family: 'Courier New', monospace;
     cursor: pointer;
-    transition: all 0.15s ease;
-    text-shadow: 0 0 5px rgba(57, 255, 20, 0.5);
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    transition: all 0.1s ease;
+    border: 1px solid #2a3a2a;
 }
 
 .tune-btn-grid:active {
-    background: linear-gradient(180deg, #3a4a3a, #2a3a2a);
-    transform: scale(0.95);
-    box-shadow: 0 0 10px rgba(57, 255, 20, 0.3);
-}
-
-.tune-btn-grid:active {
-    background: linear-gradient(180deg, #3a4a3a, #2a3a2a);
+    background: #2a3a2a;
     transform: scale(0.95);
 }
 
