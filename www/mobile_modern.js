@@ -260,7 +260,7 @@ function initializeElements() {
     domElements.statusTX = document.getElementById('status-tx');
     domElements.sMeterCanvas = document.getElementById('s-meter-canvas');
     domElements.quickButtons = document.querySelectorAll('.quick-btn');
-    domElements.tuneButtons = document.querySelectorAll('.tune-btn, .tune-btn-compact');
+    domElements.tuneButtons = document.querySelectorAll('.tune-btn, .tune-btn-compact, .tune-btn-grid');
 }
 
 // 在用户首次交互时初始化音频上下文

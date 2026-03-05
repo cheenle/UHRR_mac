@@ -128,7 +128,7 @@ body {
     font-size: 24px;
 }
 
-/* Frequency Display - 优化显示 */
+/* Frequency Display - 绿色荧光数码管风格 */
 .frequency-display-large {
     text-align: center;
     flex-grow: 1;
@@ -137,41 +137,57 @@ body {
 }
 
 .freq-main {
-    font-size: 28px;
-    font-weight: 600;
-    letter-spacing: 0.5px;
+    font-size: 32px;
+    font-weight: 700;
+    letter-spacing: 2px;
     margin-bottom: 4px;
     font-variant-numeric: tabular-nums;
+    font-family: 'Courier New', 'Monaco', 'Consolas', monospace;
+    /* 绿色荧光效果 */
+    color: #39FF14;
+    text-shadow: 
+        0 0 5px #39FF14,
+        0 0 10px #39FF14,
+        0 0 15px #39FF14,
+        0 0 20px rgba(57, 255, 20, 0.5);
+    background: linear-gradient(180deg, #0a0a0a 0%, #1a1a1a 100%);
+    padding: 8px 15px;
+    border-radius: 8px;
+    border: 1px solid #2a2a2a;
+    box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.5);
 }
 
-/* 频率输入框样式 */
+/* 频率输入框样式 - 绿色荧光风格 */
 .freq-input-hidden {
     display: none;
     position: absolute;
     top: 0;
     left: 50%;
     transform: translateX(-50%);
-    width: 180px;
-    height: 36px;
-    font-size: 22px;
-    font-weight: 600;
+    width: 200px;
+    height: 44px;
+    font-size: 26px;
+    font-weight: 700;
     text-align: center;
-    background: #1a1a1a;
-    color: #4CAF50;
-    border: 2px solid #4CAF50;
+    font-family: 'Courier New', 'Monaco', 'Consolas', monospace;
+    background: linear-gradient(180deg, #0a0a0a 0%, #1a1a1a 100%);
+    color: #39FF14;
+    border: 2px solid #39FF14;
     border-radius: 8px;
     outline: none;
     z-index: 100;
+    box-shadow: 0 0 15px rgba(57, 255, 20, 0.4), inset 0 0 20px rgba(0, 0, 0, 0.5);
 }
 
 .freq-input-hidden:focus {
-    border-color: #81C784;
-    box-shadow: 0 0 10px rgba(76, 175, 80, 0.3);
+    border-color: #39FF14;
+    box-shadow: 0 0 20px rgba(57, 255, 20, 0.6), inset 0 0 20px rgba(0, 0, 0, 0.5);
 }
 
 .freq-input-hidden::placeholder {
-    color: #666;
+    color: #2a5a2a;
     font-size: 14px;
+    font-family: sans-serif;
 }
 
 .freq-input-visible {
@@ -184,7 +200,7 @@ body {
 
 .freq-digit {
     display: inline-block;
-    min-width: 16px;
+    min-width: 18px;
 }
 
 .freq-separator {
@@ -1304,6 +1320,51 @@ body {
 
 .tune-btn-compact:active {
     background: linear-gradient(180deg, #4a4a4a, #3a3a3a);
+    transform: scale(0.95);
+}
+
+/* 频率调谐网格布局 */
+.frequency-tuning-grid {
+    padding: 8px 10px;
+    margin: 5px 0;
+}
+
+.tuning-row {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    margin-bottom: 6px;
+}
+
+.tuning-row:last-child {
+    margin-bottom: 0;
+}
+
+.tune-btn-grid {
+    flex: 1;
+    max-width: 100px;
+    padding: 12px 10px;
+    border: none;
+    border-radius: 10px;
+    background: linear-gradient(180deg, #2a3a2a, #1a2a1a);
+    color: #39FF14;
+    font-size: 16px;
+    font-weight: 700;
+    font-family: 'Courier New', monospace;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    text-shadow: 0 0 5px rgba(57, 255, 20, 0.5);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.tune-btn-grid:active {
+    background: linear-gradient(180deg, #3a4a3a, #2a3a2a);
+    transform: scale(0.95);
+    box-shadow: 0 0 10px rgba(57, 255, 20, 0.3);
+}
+
+.tune-btn-grid:active {
+    background: linear-gradient(180deg, #3a4a3a, #2a3a2a);
     transform: scale(0.95);
 }
 
