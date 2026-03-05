@@ -43,6 +43,7 @@ const domElements = {
     tuneButton: null,
     powerButton: null,
     freqDisplay: null,
+    freqInput: null,
     modeIndicator: null,
     vfoIndicator: null,
     statusCtrl: null,
@@ -251,6 +252,7 @@ function initializeElements() {
     domElements.tuneButton = document.getElementById('tune-btn');
     domElements.powerButton = document.getElementById('power-btn');
     domElements.freqDisplay = document.getElementById('freq-main-display');
+    domElements.freqInput = document.getElementById('freq-input');
     domElements.modeIndicator = document.getElementById('mode-indicator');
     domElements.vfoIndicator = document.getElementById('vfo-indicator');
     domElements.statusCtrl = document.getElementById('status-ctrl');
@@ -487,6 +489,34 @@ function setupEventListeners() {
         });
         
         console.log('🎵 底部 TUNE 按钮已初始化');
+    }
+    
+    // 频率显示点击切换到输入模式
+    if (domElements.freqDisplay && domElements.freqInput) {
+        // 点击频率显示区域显示输入框
+        domElements.freqDisplay.addEventListener('click', function() {
+            showFrequencyInput();
+        });
+        
+        // 输入框失去焦点时隐藏并应用频率
+        domElements.freqInput.addEventListener('blur', function() {
+            hideFrequencyInput(true);
+        });
+        
+        // 回车确认输入
+        domElements.freqInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                hideFrequencyInput(true);
+                this.blur();
+            } else if (e.key === 'Escape') {
+                e.preventDefault();
+                hideFrequencyInput(false);
+                this.blur();
+            }
+        });
+        
+        console.log('🔢 频率输入功能已初始化');
     }
     
     // 防止长按菜单
@@ -806,6 +836,85 @@ function tuneFrequency(step) {
         const tunerRecord = ATR1000.loadTunerForFreq(mobileState.currentFrequency);
         if (tunerRecord) {
             console.log(`🎵 自动加载天调: ${(mobileState.currentFrequency/1000).toFixed(1)}kHz`);
+        }
+    }
+}
+
+// 显示频率输入框
+function showFrequencyInput() {
+    if (!domElements.freqDisplay || !domElements.freqInput) return;
+    
+    // 隐藏频率显示
+    domElements.freqDisplay.classList.add('hidden-for-input');
+    
+    // 显示输入框并设置当前频率（kHz）
+    domElements.freqInput.classList.add('freq-input-visible');
+    const freqKhz = Math.round(mobileState.currentFrequency / 1000);
+    domElements.freqInput.value = freqKhz;
+    
+    // 聚焦并选中文本
+    setTimeout(() => {
+        domElements.freqInput.focus();
+        domElements.freqInput.select();
+    }, 50);
+    
+    console.log('🔢 显示频率输入框');
+}
+
+// 隐藏频率输入框
+function hideFrequencyInput(apply) {
+    if (!domElements.freqDisplay || !domElements.freqInput) return;
+    
+    // 隐藏输入框
+    domElements.freqInput.classList.remove('freq-input-visible');
+    domElements.freqDisplay.classList.remove('hidden-for-input');
+    
+    if (apply) {
+        // 解析输入的频率
+        let inputVal = domElements.freqInput.value.trim();
+        
+        // 支持多种格式：7053, 7.053, 7053000, 705300
+        let freqHz = 0;
+        
+        if (inputVal.includes('.')) {
+            // MHz 格式：7.053
+            freqHz = Math.round(parseFloat(inputVal) * 1000000);
+        } else {
+            // 纯数字，根据长度判断单位
+            const num = parseInt(inputVal, 10);
+            if (inputVal.length <= 5) {
+                // kHz 格式：7053
+                freqHz = num * 1000;
+            } else if (inputVal.length <= 7) {
+                // Hz 格式：7053000
+                freqHz = num;
+            } else {
+                // 已经是 Hz
+                freqHz = num;
+            }
+        }
+        
+        // 验证频率范围 (100kHz - 1000MHz)
+        if (freqHz >= 100000 && freqHz <= 1000000000) {
+            mobileState.currentFrequency = freqHz;
+            
+            // 更新全局频率变量
+            if (typeof TRXfrequency !== 'undefined') {
+                TRXfrequency = freqHz;
+            }
+            
+            updateFrequencyDisplay();
+            
+            // 发送频率到服务器
+            if (typeof sendTRXfreq === 'function') {
+                sendTRXfreq(freqHz);
+            } else {
+                sendWebSocketMessage("setFreq:" + freqHz);
+            }
+            
+            console.log(`✅ 设置频率: ${(freqHz/1000).toFixed(1)}kHz`);
+        } else {
+            console.warn('⚠️ 频率超出范围:', freqHz);
         }
     }
 }

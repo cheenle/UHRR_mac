@@ -133,6 +133,7 @@ body {
     text-align: center;
     flex-grow: 1;
     margin: 0 10px;
+    position: relative;
 }
 
 .freq-main {
@@ -141,6 +142,44 @@ body {
     letter-spacing: 0.5px;
     margin-bottom: 4px;
     font-variant-numeric: tabular-nums;
+}
+
+/* 频率输入框样式 */
+.freq-input-hidden {
+    display: none;
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 180px;
+    height: 36px;
+    font-size: 22px;
+    font-weight: 600;
+    text-align: center;
+    background: #1a1a1a;
+    color: #4CAF50;
+    border: 2px solid #4CAF50;
+    border-radius: 8px;
+    outline: none;
+    z-index: 100;
+}
+
+.freq-input-hidden:focus {
+    border-color: #81C784;
+    box-shadow: 0 0 10px rgba(76, 175, 80, 0.3);
+}
+
+.freq-input-hidden::placeholder {
+    color: #666;
+    font-size: 14px;
+}
+
+.freq-input-visible {
+    display: block !important;
+}
+
+.freq-main.hidden-for-input {
+    visibility: hidden;
 }
 
 .freq-digit {
