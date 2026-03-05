@@ -319,8 +319,9 @@ class PyAudioCapture(threading.Thread):
                                                     else:
                                                         c.Wavframes.pop(0)
                                                         c.Wavframes.append(encoded_data)
-                                                # 打印编码结果
-                                                print(f"🎵 Opus 编码成功: {len(encoded_data)} 字节 (原始 {len(frame_data)*2} 字节)")
+                                                # 每 100 帧打印一次编码结果
+                                                if frame_count % 100 == 0:
+                                                    print(f"🎵 Opus 编码正常... 帧数: {frame_count}, 压缩率: {len(encoded_data)}/{len(frame_data)*2}")
                                             else:
                                                 raise Exception(f"Opus encode failed: {result}")
                                         except Exception as e:

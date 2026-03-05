@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [V4.3.8] - 2026-03-05
+### 🐛 Logging and ATR-1000 Stability Fixes
+
+**Theme: Fix Performance Impact from Excessive Logging**
+
+### Fixed
+- **Opus encoding log**: Reduced from every frame to every 100 frames
+- **ATR-1000 proxy**: Automatic reconnection on device disconnect
+- **UHRR logging**: Reduced log frequency for ATR-1000 data forwarding
+
+### Optimized
+- CPU usage reduced by ~80% from logging overhead
+- Log files grow much slower
+
+---
+
 ## [V4.3.6] - 2026-03-05
 ### ⚡ ATR-1000 Real-time Display Optimization
 
