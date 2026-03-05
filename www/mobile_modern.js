@@ -861,12 +861,13 @@ function updateFrequencyDisplay() {
         mobileState.currentFrequency = TRXfrequency;
     }
     
-    const freqStr = mobileState.currentFrequency.toString().padStart(8, '0');
+    // 频率格式：kHz 单位，显示 5 位数字（如 07053 = 7053 kHz）
+    const freqKhz = Math.floor(mobileState.currentFrequency / 1000);
+    const freqStr = freqKhz.toString().padStart(5, '0');
     
-    // HF频段：两位MHz + 三位kHz + 三位Hz
+    // 更新显示元素（只更新 5 位数字）
     const elements = ['freq-10mhz', 'freq-1mhz', 
-                      'freq-100khz', 'freq-10khz', 'freq-1khz',
-                      'freq-100hz', 'freq-10hz', 'freq-1hz'];
+                      'freq-100khz', 'freq-10khz', 'freq-1khz'];
     
     elements.forEach((id, index) => {
         const el = document.getElementById(id);
