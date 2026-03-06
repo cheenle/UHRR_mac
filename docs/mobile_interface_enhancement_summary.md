@@ -3,7 +3,7 @@
 ## Overview
 This document summarizes the enhancements made to the Mobile Remote Radio Control (MRRC) interface to provide a modern, responsive mobile experience while preserving the existing desktop functionality.
 
-**Version**: v4.5.1 (2026-03-06)
+**Version**: v4.5.4 (2026-03-06)
 
 ## Key Enhancements
 
@@ -130,5 +130,5 @@ Potential future improvements:
 
 ---
 
-*This document summarizes MRRC v4.5.1 mobile interface enhancements.*
+*This document summarizes MRRC v4.5.4 mobile interface enhancements.*
 *Last updated: 2026-03-06*

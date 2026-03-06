@@ -2,7 +2,7 @@
 
 **Mobile Remote Radio Control - 移动端操作指南**
 
-版本：V4.5.0  
+版本：V4.5.4  
 更新日期：2026年3月6日
 
 ---
