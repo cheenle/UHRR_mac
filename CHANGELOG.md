@@ -5,6 +5,36 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [V4.5.4] - 2026-03-06
+
+### 🎵 WebRTC 最佳实践优化
+
+#### 优化内容
+基于 WebRTC 推荐参数优化 Opus 编码：
+
+| 参数 | 优化前 | 优化后 | 说明 |
+|------|--------|--------|------|
+| 帧长 | 40ms | **20ms** | WebRTC 推荐值，更快响应 |
+| 编码复杂度 | 10 | **5** | 平衡 CPU 和音质 |
+| DTX 静音检测 | 关闭 | **开启** | 静音时不编码，释放 CPU |
+| 帧大小 | 640 samples | **320 samples** | 配合 20ms 帧长 |
+
+#### 预期效果
+- 更快的音频处理周期（50次/秒 vs 25次/秒）
+- 降低 CPU 占用（复杂度降低 + DTX）
+- 静音时不编码，减少网络流量
+
+#### 技术细节
+```javascript
+// Opus 编码器配置（WebRTC 最佳实践）
+complexity = 5;         // 0-10，平衡 CPU 和音质
+DTX = enabled;          // 静音时不编码
+frameDuration = 20ms;   // WebRTC 推荐
+sampleRate = 16000Hz;   // 保持 16kHz
+```
+
+---
+
 ## [V4.5.3] - 2026-03-06
 
 ### 🔍 ATR-1000 PTT 发射时功率/驻波更新延迟问题复盘

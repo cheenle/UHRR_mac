@@ -1548,6 +1548,19 @@ var OpusEncoder = (function () {
         this.out_bytes = Opus.getMaxFrameSize();
         this.out_ptr = _malloc(this.out_bytes);
         this.out_buf = HEAPU8.subarray(this.out_ptr, this.out_ptr + this.out_bytes);
+        
+        // WebRTC 最佳实践优化参数
+        // OPUS_SET_COMPLEXITY_REQUEST = 4010, 降低编码复杂度 (0-10, 默认10)
+        var complexity_ptr = allocate(4, 'i32', ALLOC_STACK);
+        setValue(complexity_ptr, 5, 'i32');  // 复杂度 5，平衡 CPU 和音质
+        _opus_encoder_ctl(this.handle, 4010, complexity_ptr);
+        
+        // OPUS_SET_DTX_REQUEST = 4016, 开启 DTX 静音检测
+        var dtx_ptr = allocate(4, 'i32', ALLOC_STACK);
+        setValue(dtx_ptr, 1, 'i32');  // 1 = 开启 DTX
+        _opus_encoder_ctl(this.handle, 4016, dtx_ptr);
+        
+        console.log('🎵 Opus 编码器优化: complexity=5, DTX=enabled');
     }
     OpusEncoder.prototype.encode = function (pcm) {
         var output = [];
@@ -1689,12 +1702,13 @@ var OpusEncoderProcessor = function( wsh )
     // AudioContext 通常是 48kHz，Opus 编码器使用 16kHz
     // 降采样系数 = 输入采样率 / 目标采样率 = 48000 / 16000 = 3
     this.downSample = 3;  // 修复：从2改为3，正确降采样 48kHz → 16kHz
-    // Opus 编码参数优化 - 针对短波语音通信
-    // 帧时长: 40ms（与后端 RX 编码器一致）
+    // Opus 编码参数优化 - 基于 WebRTC 最佳实践
+    // 帧时长: 20ms（WebRTC 推荐，更快的处理周期）
     // 采样率: 16kHz（优化移动端性能）
     // 应用类型: 2048 = OPUS_APPLICATION_VOIP（优化语音质量）
-    // 默认比特率: ~24kbps（Opus 自动根据语音内容调整）
-    this.opusFrameDur = 40; // msec - 与后端一致
+    // 编码复杂度: 5（平衡 CPU 和音质）
+    // DTX: 开启（静音时不编码，释放 CPU）
+    this.opusFrameDur = 20; // msec - WebRTC 推荐值
     this.opusRate = 16000;  // Hz - 16kHz 优化移动端性能
     // 计算正确的缓冲区大小：bufferSize / downSample = 2048 / 3 ≈ 682 samples
     // Opus 帧大小 = 16000 * 40 / 1000 = 640 samples
@@ -1728,8 +1742,8 @@ OpusEncoderProcessor.prototype.onAudioProcess = function( e )
 	}
 	
 	// ========== 帧累积逻辑 ==========
-	// Opus 帧大小 = 16000Hz * 40ms / 1000 = 640 samples
-	var opusFrameSize = 640;
+	// Opus 帧大小 = 16000Hz * 20ms / 1000 = 320 samples
+	var opusFrameSize = 320;
 	
 	// 初始化累积缓冲区（如果不存在）
 	if (!this.frameAccumulator) {
