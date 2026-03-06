@@ -111,14 +111,8 @@ async function TXControl(action) {
                 window.updatePTTStatus(true);
             }
             
-            // 触发 ATR-1000 天调显示（仅TX期间）
-            console.log(`[${timestamp}] 🔍 检查 ATR1000: typeof=${typeof window.ATR1000}`);
-            if (typeof window.ATR1000 !== 'undefined') {
-                console.log(`[${timestamp}] 📻 调用 ATR1000.onTXStart()`);
-                window.ATR1000.onTXStart();
-            } else {
-                console.warn(`[${timestamp}] ⚠️ ATR1000 未定义，跳过天调显示`);
-            }
+            // V4.4.19: 移除 ATR-1000 相关调用，PTT 和 TUNE 使用相同的机制
+            // ATR-1000 数据通过心跳自动更新，无需手动触发
             
             console.log(`[${timestamp}] ✅ TX开始成功`);
             return true;
@@ -199,12 +193,8 @@ async function TXControl(action) {
                     window.updatePTTStatus(false);
                 }
                 
-                // 停止 ATR-1000 天调显示
-                console.log(`[TX Stop] 🔍 检查 ATR1000: typeof=${typeof window.ATR1000}`);
-                if (typeof window.ATR1000 !== 'undefined') {
-                    console.log(`[TX Stop] 📻 调用 ATR1000.onTXStop()`);
-                    window.ATR1000.onTXStop();
-                }
+                // V4.4.19: 移除 ATR-1000 相关调用，PTT 和 TUNE 使用相同的机制
+                // ATR-1000 数据通过心跳自动更新，无需手动触发
             }, 0);
             
             console.log(`[${timestamp}] ✅ TX停止成功 - 切换延迟最小化`);
