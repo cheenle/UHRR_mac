@@ -169,6 +169,8 @@ class ATR1000Client:
         """数据请求循环 - 优化版，智能 SYNC 发送策略"""
         global running, last_data_time
         
+        logger.info("🔄 数据请求线程已启动")
+        
         last_sync_time = 0
         sync_interval = 1.0
         no_data_count = 0
