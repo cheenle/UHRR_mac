@@ -2296,20 +2296,20 @@ const ATR1000 = {
         // 精简版面板保持显示，不断开时显示 "--"
     },
     
-    // 启动心跳保活
+    // 启动心跳保活 - 发送 sync 请求最新数据
     _startHeartbeat: function() {
         this._stopHeartbeat();  // 先停止旧的心跳
         this._heartbeatInterval = setInterval(() => {
             if (this.ws && this.ws.readyState === WebSocket.OPEN) {
                 try {
-                    this.ws.send(JSON.stringify({action: 'ping'}));
-                    // console.log('💓 ATR-1000 心跳发送');
+                    // 发送 sync 命令请求最新数据（而不是 ping）
+                    this.ws.send(JSON.stringify({action: 'sync'}));
                 } catch (e) {
-                    console.log('💓 ATR-1000 心跳发送失败:', e);
+                    console.log('💓 ATR-1000 sync 发送失败:', e);
                 }
             }
-        }, 10000);  // 每10秒发送一次心跳（iPhone Safari 需要更频繁）
-        console.log('💓 ATR-1000 心跳已启动 (10s interval)');
+        }, 2000);  // 每2秒发送一次 sync，确保数据及时更新
+        console.log('💓 ATR-1000 心跳已启动 (2s sync interval)');
     },
     
     // 停止心跳
