@@ -1308,39 +1308,40 @@ class ATR1000ProxyManager:
             threading.Timer(1.0, self._connect).start()
     
     def _broadcast_batch(self, message_batch):
-        """批量广播消息到所有前端客户端"""
+        """批量广播消息到所有前端客户端 - 线程安全版"""
         global ATR1000HandlerClients
         
-        # 复制客户端列表以避免线程问题
-        clients_snapshot = ATR1000HandlerClients[:]
-        client_count = len(clients_snapshot)
-        logger.info(f"📢 _broadcast_batch: 客户端={client_count}, 批次={len(message_batch)}")
-        
-        if client_count == 0 or not message_batch:
+        if not message_batch:
             return
         
         # 只广播最后一条消息（最新的数据）
         latest_data = message_batch[-1]
         
-        # 发送到所有客户端
-        sent_count = 0
-        failed_clients = []
+        # 必须在主线程中执行 WebSocket 操作
+        if self.main_ioloop:
+            from functools import partial
+            self.main_ioloop.add_callback(partial(self._do_broadcast_safe, latest_data))
+        else:
+            logger.warning("⚠️ main_ioloop 为空，无法广播")
+    
+    def _do_broadcast_safe(self, latest_data):
+        """在主线程中安全执行广播"""
+        global ATR1000HandlerClients
         
+        clients_snapshot = ATR1000HandlerClients[:]
+        client_count = len(clients_snapshot)
+        
+        if client_count == 0:
+            return
+        
+        # 发送到所有客户端
         for client in clients_snapshot:
             try:
                 client.write_message(latest_data, binary=False)
-                sent_count += 1
             except Exception as e:
-                failed_clients.append(client)
-        
-        # 记录发送结果
-        if sent_count > 0:
-            logger.debug(f"📤 ATR-1000 广播成功: 发送={sent_count}/{client_count}")
-        
-        # 在主线程中清理失败的客户端
-        if failed_clients and self.main_ioloop:
-            from functools import partial
-            self.main_ioloop.add_callback(partial(self._cleanup_failed_clients, failed_clients))
+                # 清理失败的客户端
+                if client in ATR1000HandlerClients:
+                    ATR1000HandlerClients.remove(client)
     
     def _cleanup_failed_clients(self, failed_clients):
         """清理失败的客户端（在主线程中执行）"""
