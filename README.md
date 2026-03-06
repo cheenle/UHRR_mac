@@ -27,7 +27,7 @@ A modern web-based remote control system optimized for mobile devices, enabling 
 
 ### 📱 Mobile Interface
 
-<img src="screenshots/mobile_interface.png" alt="Mobile Interface" width="320">
+<img src="screenshots/main.png" alt="Mobile Interface" width="320">
 
 > Modern mobile UI optimized for iPhone/Android with touch-friendly controls, large PTT button, and real-time S-meter display.
 
