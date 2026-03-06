@@ -478,8 +478,16 @@ def handle_unix_client(conn, addr, atr1000):
                         logger.info("客户端请求停止数据流")
                     
                     elif action == "sync":
-                        # 立即发送 SYNC 到 ATR-1000 设备请求最新数据
+                        # V4.4.18: sync 命令也触发活跃状态，保持高频率数据更新
+                        atr1000.set_active(True)
                         atr1000._send_sync()
+                        # 设置一个短定时器来重置活跃状态（如果 1 秒内没有新的 sync）
+                        if hasattr(atr1000, '_sync_active_timer'):
+                            atr1000._sync_active_timer.cancel()
+                        import threading
+                        atr1000._sync_active_timer = threading.Timer(1.0, lambda: atr1000.set_active(False) if len(clients) > 0 else None)
+                        atr1000._sync_active_timer.daemon = True
+                        atr1000._sync_active_timer.start()
                     
                     elif action == "get_data":
                         # 立即发送当前数据
