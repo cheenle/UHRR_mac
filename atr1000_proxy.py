@@ -5,13 +5,13 @@ ATR-1000 天调代理程序 - 独立运行
 
 功能：
 1. 通过 WebSocket 连接 ATR-1000 设备
-2. 提供 Unix Socket 接口供 UHRR 主程序调用
+2. 提供 Unix Socket 接口供 MRRC 主程序调用
 3. 按需启动/停止，不占用主程序资源
 
 使用方法：
     python3 atr1000_proxy.py --device 192.168.1.63 --port 60001
 
-作者: UHRR Team
+作者: MRRC Team
 """
 
 import argparse
@@ -399,7 +399,7 @@ def broadcast_to_clients():
             "cap": meter_data.get("cap", 0),
             "ind_uh": meter_data.get("ind_uh", 0.0),
             "cap_pf": meter_data.get("cap_pf", 0)
-        }) + "\n"  # 添加换行符，以便UHRR按行解析
+        }) + "\n"  # 添加换行符，以便MRRC按行解析
     
     # 打印广播日志（只在有实际功率且数据变化时）
     if meter_data["power"] > 0:

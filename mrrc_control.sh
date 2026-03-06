@@ -1,8 +1,11 @@
 #!/bin/bash
 
-# UHRR System Control Script
-# Start and stop script for Universal HamRadio Remote HTML5 system
+# MRRC System Control Script
+# Start and stop script for Mobile Remote Radio Control system
 ulimit -n 10240
+
+# 获取脚本所在目录（支持相对路径部署）
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
 # Configuration
 RIGCTL_MODEL="30003"  # IC-R9000
@@ -11,10 +14,10 @@ RIGCTL_SPEED="4800"
 RIGCTL_STOP_BITS="2"
 RIGCTL_HOST="127.0.0.1"
 RIGCTL_PORT="4532"
-UHRR_PORT="8877"
-LOG_DIR="/Users/cheenle/UHRR/UHRR_mac"
+MRRC_PORT="8877"
+LOG_DIR="$SCRIPT_DIR"
 RIGCTLD_LOG="$LOG_DIR/rigctld.log"
-UHRR_LOG="$LOG_DIR/uhrr.log"
+MRRC_LOG="$LOG_DIR/mrrc.log"
 ATR1000_LOG="$LOG_DIR/atr1000_proxy.log"
 
 # ATR-1000 Configuration
@@ -117,32 +120,32 @@ start_rigctld() {
     fi
 }
 
-# Function to start UHRR
-start_uhrr() {
-    if is_running "UHRR"; then
-        print_warning "UHRR is already running"
+# Function to start MRRC
+start_mrrc() {
+    if is_running "MRRC"; then
+        print_warning "MRRC is already running"
         return 1
     fi
     
-    print_status "Starting UHRR server..."
+    print_status "Starting MRRC server..."
     
     # Clear log files
-    > "$UHRR_LOG"
+    > "$MRRC_LOG"
     
-    # Start UHRR server
-    python3 "$LOG_DIR/UHRR" > "$UHRR_LOG" 2>&1 &
+    # Start MRRC server
+    python3 "$LOG_DIR/MRRC" > "$MRRC_LOG" 2>&1 &
     
     local pid=$!
     sleep 3
     
-    if is_running "UHRR"; then
-        print_success "UHRR started successfully (PID: $pid)"
-        echo "UHRR PID: $pid" > "$LOG_DIR/uhrr.pid"
-        print_success "UHRR is now accessible at https://localhost:$UHRR_PORT"
+    if is_running "MRRC"; then
+        print_success "MRRC started successfully (PID: $pid)"
+        echo "MRRC PID: $pid" > "$LOG_DIR/mrrc.pid"
+        print_success "MRRC is now accessible at https://localhost:$MRRC_PORT"
         return 0
     else
-        print_error "Failed to start UHRR"
-        print_error "Check $UHRR_LOG for details"
+        print_error "Failed to start MRRC"
+        print_error "Check $MRRC_LOG for details"
         return 1
     fi
 }
@@ -153,10 +156,10 @@ stop_rigctld() {
     rm -f "$LOG_DIR/rigctld.pid"
 }
 
-# Function to stop UHRR
-stop_uhrr() {
-    kill_process "UHRR"
-    rm -f "$LOG_DIR/uhrr.pid"
+# Function to stop MRRC
+stop_mrrc() {
+    kill_process "MRRC"
+    rm -f "$LOG_DIR/mrrc.pid"
 }
 
 # Function to start ATR-1000 proxy
@@ -239,7 +242,7 @@ stop_atu_server() {
 
 # Function to show status
 show_status() {
-    echo "=== UHRR System Status ==="
+    echo "=== MRRC System Status ==="
     
     if is_running "rigctld"; then
         local pid=$(get_pid "rigctld")
@@ -248,12 +251,21 @@ show_status() {
         print_error "rigctld is not running"
     fi
     
-    if is_running "UHRR"; then
-        local pid=$(get_pid "UHRR")
-        print_success "UHRR is running (PID: $pid)"
-        print_success "Accessible at https://localhost:$UHRR_PORT"
+    if is_running "MRRC"; then
+        local pid=$(get_pid "MRRC")
+        print_success "MRRC is running (PID: $pid)"
+        print_success "Accessible at https://localhost:$MRRC_PORT"
+        
+        # V5.0: 检查音频进程模式
+        if [ -f "$LOG_DIR/MRRC.conf" ]; then
+            if grep -q "enabled = true" "$LOG_DIR/MRRC.conf" 2>/dev/null; then
+                print_success "Audio Architecture: V5.0 (Independent Process Mode)"
+            else
+                print_status "Audio Architecture: V4.x (Legacy Thread Mode)"
+            fi
+        fi
     else
-        print_error "UHRR is not running"
+        print_error "MRRC is not running"
     fi
     
     if is_running "atr1000_proxy.py"; then
@@ -266,7 +278,7 @@ show_status() {
     echo ""
     echo "=== Log File Sizes ==="
     echo "rigctld log: $(ls -lh "$RIGCTLD_LOG" 2>/dev/null | awk '{print $5}' || echo '0 bytes')"
-    echo "UHRR log: $(ls -lh "$UHRR_LOG" 2>/dev/null | awk '{print $5}' || echo '0 bytes')"
+    echo "MRRC log: $(ls -lh "$MRRC_LOG" 2>/dev/null | awk '{print $5}' || echo '0 bytes')"
     echo "ATR-1000 log: $(ls -lh "$ATR1000_LOG" 2>/dev/null | awk '{print $5}' || echo '0 bytes')"
 }
 
@@ -279,9 +291,9 @@ show_logs() {
             echo "=== Last $lines lines from rigctld log ==="
             tail -n "$lines" "$RIGCTLD_LOG"
             ;;
-        uhrr)
-            echo "=== Last $lines lines from UHRR log ==="
-            tail -n "$lines" "$UHRR_LOG"
+        mrrc)
+            echo "=== Last $lines lines from MRRC log ==="
+            tail -n "$lines" "$MRRC_LOG"
             ;;
         atr1000)
             echo "=== Last $lines lines from ATR-1000 log ==="
@@ -291,8 +303,8 @@ show_logs() {
             echo "=== Last $lines lines from rigctld log ==="
             tail -n "$lines" "$RIGCTLD_LOG"
             echo ""
-            echo "=== Last $lines lines from UHRR log ==="
-            tail -n "$lines" "$UHRR_LOG"
+            echo "=== Last $lines lines from MRRC log ==="
+            tail -n "$lines" "$MRRC_LOG"
             echo ""
             echo "=== Last $lines lines from ATR-1000 log ==="
             tail -n "$lines" "$ATR1000_LOG"
@@ -302,7 +314,7 @@ show_logs() {
 
 # Function to restart the system
 restart_system() {
-    print_status "Restarting UHRR system..."
+    print_status "Restarting MRRC system..."
     stop
     sleep 3
     start
@@ -310,7 +322,7 @@ restart_system() {
 
 # Function to start all services
 start() {
-    print_status "Starting UHRR system..."
+    print_status "Starting MRRC system..."
     
     # Check if device exists
     if [ ! -e "$RIGCTL_DEVICE" ]; then
@@ -319,25 +331,25 @@ start() {
     
     start_rigctld
     sleep 2
-    start_uhrr
+    start_mrrc
     sleep 1
     start_atr1000
     
-    if is_running "rigctld" && is_running "UHRR"; then
-        print_success "UHRR system started successfully!"
+    if is_running "rigctld" && is_running "MRRC"; then
+        print_success "MRRC system started successfully!"
         show_status
     else
-        print_error "Failed to start UHRR system completely"
+        print_error "Failed to start MRRC system completely"
     fi
 }
 
 # Function to stop all services
 stop() {
-    print_status "Stopping UHRR system..."
+    print_status "Stopping MRRC system..."
     stop_atr1000
-    stop_uhrr
+    stop_mrrc
     stop_rigctld
-    print_success "UHRR system stopped"
+    print_success "MRRC system stopped"
 }
 
 # Main script logic
@@ -363,11 +375,11 @@ case "$1" in
     stop-rigctld)
         stop_rigctld
         ;;
-    start-uhrr)
-        start_uhrr
+    start-mrrc)
+        start_mrrc
         ;;
-    stop-uhrr)
-        stop_uhrr
+    stop-mrrc)
+        stop_mrrc
         ;;
     start-atr1000)
         start_atr1000
@@ -382,20 +394,20 @@ case "$1" in
         stop_atu_server
         ;;
     *)
-        echo "UHRR System Control Script"
-        echo "Usage: $0 {start|stop|restart|status|logs [lines] [service]|start-rigctld|stop-rigctld|start-uhrr|stop-uhrr|start-atr1000|stop-atr1000}"
+        echo "MRRC System Control Script"
+        echo "Usage: $0 {start|stop|restart|status|logs [lines] [service]|start-rigctld|stop-rigctld|start-mrrc|stop-mrrc|start-atr1000|stop-atr1000}"
         echo ""
         echo "Commands:"
-        echo "  start           - Start rigctld, UHRR and ATR-1000 proxy services"
+        echo "  start           - Start rigctld, MRRC and ATR-1000 proxy services"
         echo "  stop            - Stop all services"
         echo "  restart         - Restart the entire system"
         echo "  status          - Show current status of services"
         echo "  logs [n] [service] - Show last n lines of logs (default 20)"
-        echo "                    service can be 'rigctld', 'uhrr', 'atr1000' or 'all'"
+        echo "                    service can be 'rigctld', 'mrrc', 'atr1000' or 'all'"
         echo "  start-rigctld   - Start only rigctld service"
         echo "  stop-rigctld    - Stop only rigctld service"
-        echo "  start-uhrr      - Start only UHRR service"
-        echo "  stop-uhrr       - Stop only UHRR service"
+        echo "  start-mrrc      - Start only MRRC service"
+        echo "  stop-mrrc       - Stop only MRRC service"
         echo "  start-atr1000   - Start only ATR-1000 proxy service"
         echo "  stop-atr1000    - Stop only ATR-1000 proxy service"
         echo ""

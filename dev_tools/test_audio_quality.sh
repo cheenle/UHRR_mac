@@ -5,7 +5,7 @@ echo "=== 移动端音频质量测试 ==="
 
 # Check if server is running
 echo "1. 检查服务器状态..."
-if ps aux | grep UHRR | grep -v grep > /dev/null; then
+if ps aux | grep MRRC | grep -v grep > /dev/null; then
     echo "✅ 服务器运行正常"
 else
     echo "❌ 服务器未运行"

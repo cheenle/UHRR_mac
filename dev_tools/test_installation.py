@@ -69,7 +69,7 @@ def test_audio_interface():
 def test_config_file():
     """Test that configuration file exists and is readable"""
     print("\nTesting configuration file...")
-    config_file = "UHRR.conf"
+    config_file = "MRRC.conf"
     if os.path.exists(config_file):
         try:
             import configparser

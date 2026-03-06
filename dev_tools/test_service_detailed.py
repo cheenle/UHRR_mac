@@ -16,7 +16,7 @@ def test_service_detailed():
     # 启动服务作为子进程
     try:
         process = subprocess.Popen(
-            [sys.executable, './UHRR'],
+            [sys.executable, './MRRC'],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True,

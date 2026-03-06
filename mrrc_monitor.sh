@@ -1,10 +1,11 @@
 #!/bin/bash
 
-# UHRR 服务监控脚本
-# 通过 SSH 远程监控 UHRR 服务状态和性能
+# MRRC 服务监控脚本
+# 通过 SSH 远程监控 MRRC 服务状态和性能
 
-UHRR_DIR="/Users/cheenle/UHRR/UHRR_mac"
-SERVICE_NAME="com.user.uhrr"
+# 获取脚本所在目录（支持相对路径部署）
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+SERVICE_NAME="com.user.mrrc"
 
 # 颜色定义
 RED='\033[0;31m'
@@ -32,12 +33,12 @@ log_error() {
 
 # 检查基本状态
 check_basic_status() {
-    echo "=== UHRR 服务基本状态 ==="
+    echo "=== MRRC 服务基本状态 ==="
     
     # 检查进程
-    PID=$(pgrep -f "UHRR")
+    PID=$(pgrep -f "MRRC")
     if [ -n "$PID" ]; then
-        log_success "UHRR 进程运行中 (PID: $PID)"
+        log_success "MRRC 进程运行中 (PID: $PID)"
         
         # 获取进程详细信息
         echo "进程信息:"
@@ -51,11 +52,11 @@ check_basic_status() {
         UPTIME=$(ps -p $PID -o etime --no-headers)
         echo "运行时间: $UPTIME"
     else
-        log_error "UHRR 进程未运行"
+        log_error "MRRC 进程未运行"
     fi
     
     # 检查端口
-    PORT=8899
+    PORT=8877
     if lsof -i :$PORT > /dev/null 2>&1; then
         log_success "Web 服务器监听端口 $PORT"
         
@@ -85,7 +86,7 @@ check_system_resources() {
     echo "内存使用: ${ACTIVE_MEMORY}MB / ${TOTAL_MEMORY}MB (${MEMORY_PERCENT}%)"
     
     # 磁盘空间
-    DISK_USAGE=$(df -h "$UHRR_DIR" | tail -1 | awk '{print $5}')
+    DISK_USAGE=$(df -h "$SCRIPT_DIR" | tail -1 | awk '{print $5}')
     echo "磁盘使用率: $DISK_USAGE"
     
     echo ""
@@ -96,10 +97,10 @@ check_network_status() {
     echo "=== 网络连接状态 ==="
     
     # 检查本地连接
-    if netstat -an | grep ".8899" | grep "LISTEN" > /dev/null; then
-        log_success "本地端口 8899 监听正常"
+    if netstat -an | grep ".8877" | grep "LISTEN" > /dev/null; then
+        log_success "本地端口 8877 监听正常"
     else
-        log_error "本地端口 8899 未监听"
+        log_error "本地端口 8877 未监听"
     fi
     
     # 检查 rigctld 连接
@@ -117,10 +118,10 @@ check_logs_status() {
     echo "=== 日志文件状态 ==="
     
     LOG_FILES=(
-        "$UHRR_DIR/uhrr_service.log"
-        "$UHRR_DIR/uhrr_service_error.log"
-        "$UHRR_DIR/uhrr_debug.log"
-        "$UHRR_DIR/uhrr.log"
+        "$SCRIPT_DIR/mrrc_service.log"
+        "$SCRIPT_DIR/mrrc_service_error.log"
+        "$SCRIPT_DIR/mrrc_debug.log"
+        "$SCRIPT_DIR/mrrc.log"
     )
     
     for LOG_FILE in "${LOG_FILES[@]}"; do
@@ -145,8 +146,8 @@ check_errors_warnings() {
     WARNING_COUNT=0
     
     # 检查服务错误日志
-    if [ -f "$UHRR_DIR/uhrr_service_error.log" ]; then
-        ERRORS=$(grep -i -e "error" -e "failed" -e "exception" "$UHRR_DIR/uhrr_service_error.log" | tail -5)
+    if [ -f "$SCRIPT_DIR/mrrc_service_error.log" ]; then
+        ERRORS=$(grep -i -e "error" -e "failed" -e "exception" "$SCRIPT_DIR/mrrc_service_error.log" | tail -5)
         if [ -n "$ERRORS" ]; then
             log_error "服务错误日志中发现错误:"
             echo "$ERRORS"
@@ -157,15 +158,15 @@ check_errors_warnings() {
     fi
     
     # 检查调试日志
-    if [ -f "$UHRR_DIR/uhrr_debug.log" ]; then
-        WARNINGS=$(grep -i "warning" "$UHRR_DIR/uhrr_debug.log" | tail -5)
+    if [ -f "$SCRIPT_DIR/mrrc_debug.log" ]; then
+        WARNINGS=$(grep -i "warning" "$SCRIPT_DIR/mrrc_debug.log" | tail -5)
         if [ -n "$WARNINGS" ]; then
             log_warning "调试日志中发现警告:"
             echo "$WARNINGS"
             WARNING_COUNT=$((WARNING_COUNT + $(echo "$WARNINGS" | wc -l)))
         fi
         
-        RECENT_ERRORS=$(grep -i -e "error" -e "failed" "$UHRR_DIR/uhrr_debug.log" | tail -5)
+        RECENT_ERRORS=$(grep -i -e "error" -e "failed" "$SCRIPT_DIR/mrrc_debug.log" | tail -5)
         if [ -n "$RECENT_ERRORS" ]; then
             log_error "调试日志中发现错误:"
             echo "$RECENT_ERRORS"
@@ -215,7 +216,7 @@ p.terminate()
 
 # 生成健康报告
 generate_health_report() {
-    echo "=== UHRR 服务健康报告 ==="
+    echo "=== MRRC 服务健康报告 ==="
     echo "生成时间: $(date)"
     echo ""
     
@@ -229,22 +230,22 @@ generate_health_report() {
     echo "=== 建议操作 ==="
     
     # 根据状态给出建议
-    PID=$(pgrep -f "UHRR")
+    PID=$(pgrep -f "MRRC")
     if [ -z "$PID" ]; then
-        echo "❌ 服务未运行，建议执行: ./uhrr_control.sh start"
+        echo "❌ 服务未运行，建议执行: ./mrrc_control.sh start"
     else
         echo "✅ 服务运行正常"
         
         # 检查内存使用
         MEM_USAGE=$(ps -p $PID -o pmem --no-headers | awk '{print $1}' | cut -d. -f1)
         if [ "$MEM_USAGE" -gt 50 ]; then
-            echo "⚠️  内存使用较高，建议重启服务: ./uhrr_control.sh restart"
+            echo "⚠️  内存使用较高，建议重启服务: ./mrrc_control.sh restart"
         fi
     fi
     
     # 检查日志文件大小
-    if [ -f "$UHRR_DIR/uhrr_service.log" ]; then
-        LOG_SIZE=$(stat -f%z "$UHRR_DIR/uhrr_service.log")
+    if [ -f "$SCRIPT_DIR/mrrc_service.log" ]; then
+        LOG_SIZE=$(stat -f%z "$SCRIPT_DIR/mrrc_service.log")
         if [ "$LOG_SIZE" -gt 10485760 ]; then # 10MB
             echo "⚠️  服务日志文件较大，建议清理"
         fi
@@ -253,17 +254,17 @@ generate_health_report() {
 
 # 实时监控模式
 realtime_monitor() {
-    echo "启动 UHRR 服务实时监控..."
+    echo "启动 MRRC 服务实时监控..."
     echo "按 Ctrl+C 退出监控"
     echo ""
     
     while true; do
         clear
-        echo "=== UHRR 实时监控 - $(date '+%Y-%m-%d %H:%M:%S') ==="
+        echo "=== MRRC 实时监控 - $(date '+%Y-%m-%d %H:%M:%S') ==="
         echo ""
         
         # 基本状态
-        PID=$(pgrep -f "UHRR")
+        PID=$(pgrep -f "MRRC")
         if [ -n "$PID" ]; then
             echo "✅ 服务运行中 (PID: $PID)"
             
@@ -280,8 +281,8 @@ realtime_monitor() {
         fi
         
         # 端口状态
-        if lsof -i :8899 > /dev/null 2>&1; then
-            echo "🌐 Web 服务: 正常 (端口 8899)"
+        if lsof -i :8877 > /dev/null 2>&1; then
+            echo "🌐 Web 服务: 正常 (端口 8877)"
         else
             echo "🌐 Web 服务: 异常"
         fi
@@ -298,7 +299,7 @@ realtime_monitor() {
 
 # 显示帮助信息
 show_help() {
-    echo "UHRR 服务监控脚本"
+    echo "MRRC 服务监控脚本"
     echo ""
     echo "用法: $0 [命令]"
     echo ""

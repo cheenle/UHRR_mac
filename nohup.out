@@ -1,8 +1,0 @@
-2026-03-05T20:29:36.907+08:00 Gateway failed to start: gateway already running (pid 950); lock timeout after 5000ms
-If the gateway is supervised, stop it with: openclaw gateway stop
-2026-03-05T20:29:36.962+08:00 Port 18789 is already in use.
-2026-03-05T20:29:36.963+08:00 - pid 950 cheenle: openclaw-gateway (127.0.0.1:18789)
-2026-03-05T20:29:36.965+08:00 - Gateway already running locally. Stop it (openclaw gateway stop) or use a different port.
-2026-03-05T20:29:36.971+08:00 Gateway service appears loaded. Stop it first.
-2026-03-05T20:29:36.972+08:00 Tip: openclaw gateway stop
-2026-03-05T20:29:36.973+08:00 Or: launchctl bootout gui/$UID/ai.openclaw.gateway

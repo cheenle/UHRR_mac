@@ -23,7 +23,7 @@ ATR-1000 天调存储模块
     "notes": "40m波段最佳"
 }
 
-作者: UHRR Team
+作者: MRRC Team
 版本: 1.0.0
 """
 

@@ -12,8 +12,8 @@ signal.signal(signal.SIGALRM, timeout_handler)
 signal.alarm(10)  # 10秒超时
 
 try:
-    # 启动 UHRR 服务
-    result = subprocess.run([sys.executable, './UHRR'], 
+    # 启动 MRRC 服务
+    result = subprocess.run([sys.executable, './MRRC'], 
                           capture_output=True, text=True, timeout=10)
     print("STDOUT:")
     print(result.stdout)

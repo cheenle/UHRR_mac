@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.user.mrrc</string>
+    
+    <key>ProgramArguments</key>
+    <array>
+        <string>/usr/bin/python3</string>
+        <string>MRRC</string>
+    </array>
+    
+    <key>WorkingDirectory</key>
+    <string>/opt/mrrc</string>
+    
+    <key>RunAtLoad</key>
+    <true/>
+    
+    <key>KeepAlive</key>
+    <true/>
+    
+    <key>StandardOutPath</key>
+    <string>/opt/mrrc/logs/mrrc_service.log</string>
+    
+    <key>StandardErrorPath</key>
+    <string>/opt/mrrc/logs/mrrc_service_error.log</string>
+    
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/opt/local/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+        <key>PYTHONPATH</key>
+        <string>/opt/mrrc</string>
+    </dict>
+    
+    <key>SoftResourceLimits</key>
+    <dict>
+        <key>NumberOfFiles</key>
+        <integer>10240</integer>
+    </dict>
+    
+    <key>HardResourceLimits</key>
+    <dict>
+        <key>NumberOfFiles</key>
+        <integer>10240</integer>
+    </dict>
+    
+    <key>UserName</key>
+    <string>mrrc</string>
+    
+    <key>GroupName</key>
+    <string>staff</string>
+    
+    <key>StartInterval</key>
+    <integer>0</integer>
+    
+    <key>ThrottleInterval</key>
+    <integer>5</integer>
+    
+    <key>WatchPaths</key>
+    <array>
+        <string>/opt/mrrc/MRRC.conf</string>
+    </array>
+    
+    <key>QueueDirectories</key>
+    <array>
+        <string>/opt/mrrc</string>
+    </array>
+</dict>
+</plist>

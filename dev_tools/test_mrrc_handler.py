@@ -6,7 +6,7 @@ import tornado.ioloop
 class MainHandler(tornado.web.RequestHandler):
     def get(self):
         print("MainHandler called")
-        # 模拟 UHRR 的 MainHandler 逻辑
+        # 模拟 MRRC 的 MainHandler 逻辑
         self.set_header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
         # 直接读取并返回文件内容而不是使用 render
         try:

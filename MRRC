@@ -25,11 +25,11 @@ logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler('uhrr_debug.log'),
+        logging.FileHandler('mrrc_debug.log'),
         logging.StreamHandler()
     ]
 )
-logger = logging.getLogger('UHRR')
+logger = logging.getLogger('MRRC')
 # Use cross-platform Hamlib wrapper instead of direct import
 try:
     from hamlib_wrapper import HamlibWrapper
@@ -50,10 +50,18 @@ except ImportError:
     PYAUDIO_AVAILABLE = False
     print("PyAudio not available, falling back to ALSA")
 
+# V5.0 音频架构 - 独立进程模式
+try:
+    from process_manager import ProcessManager, ProcessConfig, get_process_manager
+    AUDIO_PROCESS_MODE = True
+except ImportError:
+    AUDIO_PROCESS_MODE = False
+    print("Process manager not available, using legacy thread mode")
+
 ############ Global variables ##################################
 CTRX=None
 config = configparser.ConfigParser()
-config.read('UHRR.conf')
+config.read('MRRC.conf')
 e="No"
 
 # ATU相关功能已移除
@@ -62,6 +70,32 @@ e="No"
 SCMD_FLAG = 0xFF
 SCMD_SYNC = 1
 SCMD_METER_STATUS = 2
+
+# ============================================================
+# V5.0 音频架构 - 全局变量
+# ============================================================
+# 音频进程管理器
+audio_process_manager = None
+
+# TX 音频队列（主进程 → 音频进程）
+tx_audio_queue = None
+
+# RX 客户端队列字典（共享）
+rx_client_queues = None
+
+# 音频进程配置标志
+AUDIO_WORKER_ENABLED = False
+AUDIO_WORKER_CONFIG = {
+    'enabled': False,
+    'tx_sample_rate': 16000,
+    'rx_sample_rate': 16000,
+    'opus_enabled': True,
+    'opus_bitrate': 20000,
+    'opus_complexity': 6,
+    'buffer_ms': 100,
+    'auto_restart': True,
+    'max_restarts': 5
+}
 
 ############ Global functions ##################################
 def writte_log(logmsg):
@@ -322,10 +356,28 @@ class WS_AudioRXHandler(tornado.websocket.WebSocketHandler):
 
 	def open(self):
 		self.set_nodelay(True)
-		global flagWavstart
+		global flagWavstart, AUDIO_WORKER_ENABLED, rx_client_queues
+		
 		if self not in AudioRXHandlerClients:
 			AudioRXHandlerClients.append(self)
 		self.Wavframes = []
+		
+		# ====================================================
+		# V5.0 音频架构 - 独立进程模式
+		# ====================================================
+		self.client_id = str(id(self))  # 唯一客户端 ID
+		
+		if AUDIO_WORKER_ENABLED and rx_client_queues is not None:
+			# 独立进程模式：创建客户端队列并注册
+			self.client_queue = mp.Queue(maxsize=50) if 'mp' in dir() else None
+			logger.info(f'🎵 AudioRX 客户端连接（独立进程模式）: {self.client_id}')
+			
+			# 如果 RX 音频进程已启动，注册此客户端
+			# 注意：这需要在 RX 音频进程启动后才能注册
+		else:
+			# 传统模式
+			logger.info('🎵 AudioRX 客户端连接（传统模式）')
+			
 		print('new connection on AudioRXHandler socket.')
 		flagWavstart = True
 		self.tailstream()
@@ -461,28 +513,57 @@ class WS_AudioTXHandler(tornado.websocket.WebSocketHandler):
 
 	def TX_init(self, msg) :
 
+		# 所有 global 声明必须在函数开始处
+		global AUDIO_WORKER_ENABLED, CTRX, ControlTRXHandlerClients
+
 		itrate, is_encoded, op_rate, op_frm_dur = [int(i) for i in msg.split(',')]
 		self.is_encoded = is_encoded
 		if is_encoded:
 			self.decoder = OpusDecoder(op_rate, 1)
 			self.frame_size = op_frm_dur * op_rate
 
-		if PYAUDIO_AVAILABLE:
-			# Use PyAudio
+		# ====================================================
+		# V5.0 音频架构 - 独立进程模式
+		# ====================================================
+		
+		if AUDIO_WORKER_ENABLED:
+			# 独立进程模式：不需要初始化 PyAudio
+			# 音频进程已经在启动时初始化
+			logger.info(f'TX_init: 独立进程模式, rate={itrate}, encoded={is_encoded}')
+			
+			# 触发 PTT
+			if CTRX and CTRX.infos.get("PTT") == False:
+				logger.info("🎯 TX初始化成功，自动触发PTT=1")
+				CTRX.setPTT("true")
+				
+				# 广播PTT状态变化
+				try:
+					clients_to_remove = []
+					for client in ControlTRXHandlerClients:
+						try:
+							if client.ws_connection and not client.close_code:
+								client.write_message("getPTT:true")
+						except Exception:
+							clients_to_remove.append(client)
+					for client in clients_to_remove:
+						if client in ControlTRXHandlerClients:
+							ControlTRXHandlerClients.remove(client)
+				except Exception as e:
+					logger.error(f"Error broadcasting PTT status: {e}")
+		elif PYAUDIO_AVAILABLE:
+			# 传统模式：初始化 PyAudio
 			try:
 				self.audio_playback = PyAudioPlayback(config, itrate, is_encoded, op_rate, op_frm_dur)
 				logger.info(f'PyAudio TX initialized: rate={itrate}, encoded={is_encoded}')
 				
 				# 使用PyAudio TX初始化作为可靠的PTT触发条件
 				# 当PyAudio TX初始化成功时，自动设置PTT=1
-				global CTRX
 				if CTRX and CTRX.infos.get("PTT") == False:
 					logger.info("🎯 PyAudio TX初始化成功，自动触发PTT=1")
 					CTRX.setPTT("true")
 					
 					# 广播PTT状态变化
 					try:
-						global ControlTRXHandlerClients
 						clients_to_remove = []
 						for client in ControlTRXHandlerClients:
 							try:
@@ -509,6 +590,7 @@ class WS_AudioTXHandler(tornado.websocket.WebSocketHandler):
 				logger.info(f'ALSA TX initialized: rate={itrate}, device={device}, periodsize=512')
 			except Exception as e:
 				logger.error(f'ALSA TX initialization failed: {e}')
+				raise
 				raise		
 	
 	def open(self):
@@ -561,21 +643,44 @@ class WS_AudioTXHandler(tornado.websocket.WebSocketHandler):
 				except Exception as e:
 					logger.error(f"Error broadcasting PTT status: {e}")
 		else :
-			if PYAUDIO_AVAILABLE:
-				# Use PyAudio
-				if hasattr(self, 'audio_playback') and self.audio_playback:
-					self.audio_playback.write(data)
-					gc.collect()
+			# ====================================================
+			# V5.0 音频架构 - 独立进程模式
+			# ====================================================
+			global AUDIO_WORKER_ENABLED, tx_audio_queue
+			
+			if AUDIO_WORKER_ENABLED and tx_audio_queue is not None:
+				# 独立进程模式：将数据放入队列，不阻塞主进程
+				try:
+					metadata = {
+						'encoding': 'opus' if self.is_encoded else 'pcm',
+						'timestamp': time.time()
+					}
+					tx_audio_queue.put_nowait((data, metadata))
+					# ⚡ 零阻塞！没有 audio_playback.write()
+					# ⚡ 没有 gc.collect()！
+				except Exception as e:
+					# 队列满时丢弃数据（保护机制）
+					if not hasattr(self, '_queue_full_logged'):
+						logger.warning(f"TX audio queue full, dropping data: {e}")
+						self._queue_full_logged = True
 			else:
-				# Fallback to ALSA
-				if hasattr(self, 'inp') and self.inp:
-					if self.is_encoded and hasattr(self, 'decoder'):
-						pcm = self.decoder.decode(data, self.frame_size, False)
-						self.inp.write(pcm)
-						gc.collect()
-					else :
-						self.inp.write(data)
-						gc.collect()
+				# 传统模式（V4.x 兼容）- 已优化：移除 gc.collect()
+				if PYAUDIO_AVAILABLE:
+					# Use PyAudio
+					if hasattr(self, 'audio_playback') and self.audio_playback:
+						self.audio_playback.write(data)
+						# ⚡ V5.0 优化：移除 gc.collect() 调用
+						# 原因：gc.collect() 会阻塞 10-30ms，导致 ATR-1000 数据堆积
+				else:
+					# Fallback to ALSA
+					if hasattr(self, 'inp') and self.inp:
+						if self.is_encoded and hasattr(self, 'decoder'):
+							pcm = self.decoder.decode(data, self.frame_size, False)
+							self.inp.write(pcm)
+							# ⚡ V5.0 优化：移除 gc.collect() 调用
+						else :
+							self.inp.write(data)
+							# ⚡ V5.0 优化：移除 gc.collect() 调用
 
 	def on_close(self):
 		global AudioTXHandlerClients
@@ -1308,13 +1413,12 @@ class ATR1000ProxyManager:
             threading.Timer(1.0, self._connect).start()
     
     def _broadcast_batch(self, message_batch):
-        """批量广播消息到所有前端客户端"""
+        """批量广播消息到所有前端客户端 - V5.0 线程安全版本"""
         global ATR1000HandlerClients
         
         # 复制客户端列表以避免线程问题
         clients_snapshot = ATR1000HandlerClients[:]
         client_count = len(clients_snapshot)
-        logger.info(f"📢 _broadcast_batch: 客户端={client_count}, 批次={len(message_batch)}")
         
         if client_count == 0 or not message_batch:
             return
@@ -1322,33 +1426,43 @@ class ATR1000ProxyManager:
         # 只广播最后一条消息（最新的数据）
         latest_data = message_batch[-1]
         
-        # 发送到所有客户端
+        # ====================================================
+        # V5.0 关键修复：使用 add_callback 确保线程安全
+        # WebSocket 操作必须在主线程（IOLoop 所在线程）执行
+        # ====================================================
+        if self.main_ioloop:
+            # 在主线程中执行广播
+            from functools import partial
+            self.main_ioloop.add_callback(
+                partial(self._do_broadcast_in_main_thread, latest_data, clients_snapshot)
+            )
+        else:
+            # 如果没有 IOLoop 引用，记录警告
+            logger.warning("⚠️ ATR-1000: main_ioloop 未设置，无法广播")
+    
+    def _do_broadcast_in_main_thread(self, data, clients_snapshot):
+        """在主线程中执行实际的 WebSocket 广播"""
+        global ATR1000HandlerClients
+        
         sent_count = 0
         failed_clients = []
         
         for client in clients_snapshot:
             try:
-                client.write_message(latest_data, binary=False)
-                sent_count += 1
+                if client.ws_connection and not client.close_code:
+                    client.write_message(data, binary=False)
+                    sent_count += 1
             except Exception as e:
                 failed_clients.append(client)
+                logger.debug(f"广播到客户端失败: {e}")
         
-        # 记录发送结果
-        if sent_count > 0:
-            logger.debug(f"📤 ATR-1000 广播成功: 发送={sent_count}/{client_count}")
-        
-        # 在主线程中清理失败的客户端
-        if failed_clients and self.main_ioloop:
-            from functools import partial
-            self.main_ioloop.add_callback(partial(self._cleanup_failed_clients, failed_clients))
-    
-    def _cleanup_failed_clients(self, failed_clients):
-        """清理失败的客户端（在主线程中执行）"""
-        global ATR1000HandlerClients
+        # 清理失败的客户端
         for client in failed_clients:
             if client in ATR1000HandlerClients:
                 ATR1000HandlerClients.remove(client)
-                logger.info(f"🔌 移除断开连接的 ATR-1000 前端客户端")
+        
+        if sent_count > 0:
+            logger.debug(f"📤 ATR-1000 广播成功: 发送={sent_count}/{len(clients_snapshot)}")
     
     def _do_broadcast_batch(self, message_batch):
         """实际执行批量广播（在主线程中）"""
@@ -2257,6 +2371,39 @@ class threadtimeoutTRXshutdown(threading.Thread):
 			timeoutTRXshutdown()
 
 ############ Config ##############
+class ProcessStatusHandler(tornado.web.RequestHandler):
+	"""V5.0 进程状态监控 API"""
+	
+	def get(self):
+		"""返回所有音频进程的状态"""
+		global AUDIO_WORKER_ENABLED, AUDIO_WORKER_CONFIG, audio_process_manager
+		
+		status = {
+			'v5_architecture': True,
+			'worker_mode': 'independent_process' if AUDIO_WORKER_ENABLED else 'legacy_thread',
+			'config': AUDIO_WORKER_CONFIG,
+			'processes': {}
+		}
+		
+		if AUDIO_WORKER_ENABLED and audio_process_manager:
+			# 获取所有进程状态
+			for name, proc_info in audio_process_manager.processes.items():
+				status['processes'][name] = {
+					'running': proc_info.process.is_alive() if proc_info.process else False,
+					'pid': proc_info.process.pid if proc_info.process else None,
+					'state': proc_info.state.value if proc_info.state else 'unknown',
+					'restart_count': proc_info.restart_count,
+					'last_start': proc_info.start_time,
+					'last_error': proc_info.last_error,
+				}
+		else:
+			status['processes'] = {
+				'note': 'Legacy mode - processes not available'
+			}
+		
+		self.set_header('Content-Type', 'application/json')
+		self.write(json.dumps(status, indent=2, default=str))
+
 class ConfigHandler(BaseHandler):
 	def get(self):
 	
@@ -2292,8 +2439,8 @@ class ConfigHandler(BaseHandler):
 		self.write("""[SERVER]<br/><br/>""")
 		self.write("""SERVER TCP/IP port:<input type="text" name="SERVER.port" value="""+config['SERVER']['port']+""">Defautl:<b>8888</b>.The server port<br/><br/>""")
 		self.write("""SERVER Authentification type:<input type="text" name="SERVER.auth" value="""+config['SERVER']['auth']+"""> Defautl:<b>leave blank</b>. Else you can use "FILE" or/and "PAM".<br/><br/>""")
-		self.write("""SERVER database users file:<input type="text" name="SERVER.db_users_file" value="""+config['SERVER']['db_users_file']+"""> Defautl:<b>UHRR_users.db</b> Only if you use Authentification type "FILE".<br/><br/>""")
-		self.write("""You can change database users file in UHRR.conf.<br/> To add a user in FILE type, add it in UHRR_users.db (default file name).<br/>Add one account per line as login password.<br/>""")
+		self.write("""SERVER database users file:<input type="text" name="SERVER.db_users_file" value="""+config['SERVER']['db_users_file']+"""> Defautl:<b>mrrc_users.db</b> Only if you use Authentification type "FILE".<br/><br/>""")
+		self.write("""You can change database users file in MRRC.conf.<br/> To add a user in FILE type, add it in mrrc_users.db (default file name).<br/>Add one account per line as login password.<br/>""")
 		self.write("""If you plan to use PAM you can add account in command line: adduser --no-create-home --system thecallsign.<br/><br/>""")
 		self.write("""If you whant to change certfile and keyfile, replace "UHRH.crt" and "UHRH.key" in the boot folder, and when the pi boot, it will use those files to start http ssl.<br/><br/>""")
 
@@ -2441,12 +2588,12 @@ class ConfigHandler(BaseHandler):
 			print(s,o,v)
 			if config.has_option(s,o):
 				config[s][o]=v
-		with open('UHRR.conf', 'w') as configfile:
+		with open('MRRC.conf', 'w') as configfile:
 			config.write(configfile)
 		self.write("""<html><head><script>window.setTimeout(function() {window.location.href = 'https://'+window.location.hostname+':'+ '"""+config['SERVER']['port']+"""';}, 10000);</script><head><body>You will be redirected automatically. Please wait...<br><img width="40px" height=40px" src="../img/spinner.gif"></body></html>""")
 		self.flush() 
 		time.sleep(2)
-		os.system("sleep 2;./UHRR &")
+		os.system("sleep 2;./MRRC &")
 		os._exit(1)
 		
 ############ Login ##############
@@ -2543,14 +2690,14 @@ PTT Off Result: {ptt_off}
 Rig Status: {CTRX.rig}
 Rig Command Base: {getattr(CTRX, 'rigctl_base_cmd', 'Not available')}
 
-Check uhrr_debug.log for detailed logs."""
+Check mrrc_debug.log for detailed logs."""
 			
 			self.write(response)
 			logger.info("Test completed successfully")
 			
 		except Exception as e:
 			logger.error(f"Test failed with exception: {e}")
-			self.write(f"Test failed: {e}\nCheck uhrr_debug.log for details.")
+			self.write(f"Test failed: {e}\nCheck mrrc_debug.log for details.")
 
 ############ Mobile Interface Handler ##############
 class MobileHandler(BaseHandler):
@@ -2605,6 +2752,74 @@ class MainHandler(BaseHandler):
 
 if __name__ == "__main__":	
 	
+	# ============================================================
+	# V5.0 音频架构 - 初始化独立进程模式
+	# ============================================================
+	# 注意：AUDIO_WORKER_ENABLED 等变量已在全局区域定义，这里直接使用
+	
+	# 读取音频进程配置
+	if config.has_section('AUDIO_WORKER'):
+		AUDIO_WORKER_CONFIG['enabled'] = config.getboolean('AUDIO_WORKER', 'enabled', fallback=False)
+		AUDIO_WORKER_CONFIG['tx_sample_rate'] = config.getint('AUDIO_WORKER', 'tx_sample_rate', fallback=16000)
+		AUDIO_WORKER_CONFIG['rx_sample_rate'] = config.getint('AUDIO_WORKER', 'rx_sample_rate', fallback=16000)
+		AUDIO_WORKER_CONFIG['opus_enabled'] = config.getboolean('AUDIO_WORKER', 'opus_enabled', fallback=True)
+		AUDIO_WORKER_CONFIG['opus_bitrate'] = config.getint('AUDIO_WORKER', 'opus_bitrate', fallback=20000)
+		AUDIO_WORKER_CONFIG['opus_complexity'] = config.getint('AUDIO_WORKER', 'opus_complexity', fallback=6)
+		AUDIO_WORKER_CONFIG['buffer_ms'] = config.getint('AUDIO_WORKER', 'buffer_ms', fallback=100)
+		AUDIO_WORKER_CONFIG['auto_restart'] = config.getboolean('PROCESS_MANAGER', 'auto_restart', fallback=True)
+		AUDIO_WORKER_CONFIG['max_restarts'] = config.getint('PROCESS_MANAGER', 'max_restarts', fallback=5)
+		
+	# 启用独立进程模式
+	if AUDIO_WORKER_CONFIG['enabled'] and AUDIO_PROCESS_MODE:
+		logger.info("=" * 60)
+		logger.info("🚀 V5.0 音频架构 - 独立进程模式启动中...")
+		logger.info("=" * 60)
+		
+		try:
+			# 创建进程管理器
+			audio_process_manager = ProcessManager()
+			
+			# 创建 TX 音频队列
+			tx_audio_queue = audio_process_manager.create_queue('tx_audio', maxsize=100)
+			
+			# 创建 RX 客户端队列字典
+			rx_client_queues = audio_process_manager.create_shared_dict('rx_clients')
+			
+			# 注册 TX 音频进程
+			from audio_worker import audio_worker_main
+			audio_process_manager.register_process(ProcessConfig(
+				name="tx_audio_worker",
+				target=audio_worker_main,
+				args=(
+					tx_audio_queue,
+					AUDIO_WORKER_CONFIG['tx_sample_rate'],
+					AUDIO_WORKER_CONFIG['opus_enabled'],
+					config.get('AUDIO', 'outputdevice', fallback=''),
+					AUDIO_WORKER_CONFIG['buffer_ms']
+				),
+				auto_restart=AUDIO_WORKER_CONFIG['auto_restart'],
+				max_restarts=AUDIO_WORKER_CONFIG['max_restarts'],
+				restart_delay=2.0,
+				daemon=True
+			))
+			
+			# 启动音频进程
+			audio_process_manager.start_all()
+			
+			AUDIO_WORKER_ENABLED = True
+			logger.info("✅ V5.0 音频架构 - 独立进程模式启动成功")
+			
+		except Exception as e:
+			logger.error(f"❌ 音频进程启动失败，回退到传统模式: {e}")
+			AUDIO_WORKER_ENABLED = False
+	else:
+		logger.info("V5.0 音频架构 - 使用传统线程模式")
+		AUDIO_WORKER_ENABLED = False
+	
+	# ============================================================
+	# 主程序启动
+	# ============================================================
+	
 	try:
 		if is_rtlsdr_present:
 			threadFFT = loadFFTdata()
@@ -2635,6 +2850,7 @@ if __name__ == "__main__":
 			
 			(r'/(panfft.*)', tornado.web.StaticFileHandler, { 'path' : './www/panadapter' }),
 			(r'/CONFIG', ConfigHandler),
+			(r'/API/process_status', ProcessStatusHandler),  # V5.0 进程状态监控
 			(r'/test', TestRadioHandler),
 			(r'/mobile', MobileHandler),
 			(r'/', MainHandler),

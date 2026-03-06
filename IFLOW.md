@@ -31,17 +31,20 @@
 
 ```
 MRRC/
-├── UHRR                          # 后端主程序 (Tornado WebSocket服务器)
-├── UHRR.conf                     # 系统核心配置文件
+├── MRRC                          # 后端主程序 (Tornado WebSocket服务器)
+├── MRRC.conf                     # 系统核心配置文件
 ├── audio_interface.py            # PyAudio采集/播放封装与客户端分发
+├── audio_worker.py               # 🆕 V5.0 TX音频独立进程
+├── rx_audio_worker.py            # 🆕 V5.0 RX音频独立进程
+├── process_manager.py            # 🆕 V5.0 进程生命周期管理
 ├── hamlib_wrapper.py             # 与rigctld通信的辅助逻辑
 ├── tci_client.py                 # TCI协议客户端实现
 ├── atr1000_proxy.py              # ATR-1000独立代理程序
 ├── atr1000_tuner.py              # 天调存储模块
 ├── atr1000_tuner.json            # 天调参数数据文件
-├── uhrr_control.sh               # 系统控制脚本（启动/停止/状态）
-├── uhrr_monitor.sh               # 系统监控脚本
-├── uhrr_setup.sh                 # 系统安装配置脚本
+├── mrrc_control.sh               # 系统控制脚本（启动/停止/状态）
+├── mrrc_monitor.sh               # 系统监控脚本
+├── mrrc_setup.sh                 # 系统安装配置脚本
 ├── www/                          # 前端页面与脚本
 │   ├── controls.js               # 音频与控制主逻辑
 │   ├── tx_button_optimized.js    # TX按钮事件与时序优化
@@ -63,7 +66,7 @@ MRRC/
 │   ├── debug_audio_rx.html       # RX音频调试页面
 │   ├── debug_audio_state.html    # 音频状态调试页面
 │   ├── debug_power_button.html   # 电源按钮调试页面
-│   ├── debug_uhrr.py             # UHRR调试脚本
+│   ├── debug_mrrc.py             # MRRC调试脚本
 │   ├── simple_audio_test.html    # 简单音频测试页面
 │   ├── test_audio.py             # 音频测试脚本
 │   ├── test_audio_capture.py     # 音频采集测试脚本
@@ -97,7 +100,7 @@ MRRC/
 ├── opus/                         # Opus编解码器Python绑定
 ├── screenshots/                  # 截图资源目录
 ├── *.wav                         # 音频测试文件 (cq.wav, tune.wav等)
-└── com.user.uhrr.plist           # macOS launchd服务配置
+└── com.user.mrrc.plist           # macOS launchd服务配置
 ```
 
 ## 核心功能与架构
@@ -164,7 +167,7 @@ MRRC/
 - **电压电流监控**：实时显示电源电压 (Vin, 12V) 和电流 (Idq)
 - **多用户登录**：支持多用户账号登录验证
 
-## 关键配置文件 (UHRR.conf)
+## 关键配置文件 (MRRC.conf)
 
 主要配置项：
 - `[SERVER]`: 端口、证书路径、认证设置
@@ -223,7 +226,7 @@ MRRC/
 - `debug_audio_rx.html`: RX音频调试页面
 - `debug_audio_state.html`: 音频状态调试页面
 - `debug_power_button.html`: 电源按钮调试页面
-- `debug_uhrr.py`: UHRR调试脚本
+- `debug_mrrc.py`: MRRC调试脚本
 
 ### TCI协议测试
 - `tci_client.py`: TCI协议客户端实现
@@ -268,7 +271,7 @@ MRRC/
 
 3. **配置TLS证书**（可选但推荐）
    - 将证书放入 `certs/` 目录
-   - 编辑 `UHRR.conf` 配置证书路径：
+   - 编辑 `MRRC.conf` 配置证书路径：
      ```ini
      [SERVER]
      port = 443
@@ -279,11 +282,10 @@ MRRC/
 4. **启动服务**
    ```bash
    # 使用控制脚本（推荐）
-   ./uhrr_control.sh start
+   ./mrrc_control.sh start
    
    # 或直接启动
-   python3 ./UHRR
-   ```
+   python3 ./MRRC   ```
 
 5. **访问**
    - 桌面端：`https://<你的域名或IP>/`（若使用443端口）
@@ -293,30 +295,30 @@ MRRC/
 ### 系统控制命令
 
 ```bash
-# 启动所有服务（rigctld, UHRR, ATR-1000代理）
-./uhrr_control.sh start
+# 启动所有服务（rigctld, MRRC, ATR-1000代理）
+./mrrc_control.sh start
 
 # 停止所有服务
-./uhrr_control.sh stop
+./mrrc_control.sh stop
 
 # 重启系统
-./uhrr_control.sh restart
+./mrrc_control.sh restart
 
 # 查看状态
-./uhrr_control.sh status
+./mrrc_control.sh status
 
 # 查看日志
-./uhrr_control.sh logs [行数] [服务名]
+./mrrc_control.sh logs [行数] [服务名]
 
 # 单独启动服务
-./uhrr_control.sh start-rigctld
-./uhrr_control.sh start-uhrr
-./uhrr_control.sh start-atr1000
+./mrrc_control.sh start-rigctld
+./mrrc_control.sh start-mrrc
+./mrrc_control.sh start-atr1000
 
 # 单独停止服务
-./uhrr_control.sh stop-rigctld
-./uhrr_control.sh stop-uhrr
-./uhrr_control.sh stop-atr1000
+./mrrc_control.sh stop-rigctld
+./mrrc_control.sh stop-mrrc
+./mrrc_control.sh stop-atr1000
 ```
 
 ### Docker部署
@@ -342,20 +344,20 @@ MRRC/
 
 ```bash
 # 加载服务配置
-launchctl load com.user.uhrr.plist
+launchctl load com.user.mrrc.plist
 
 # 启动服务
-launchctl start com.user.uhrr
+launchctl start com.user.mrrc
 
 # 查看服务状态
-launchctl list | grep uhrr
+launchctl list | grep mrrc
 ```
 
-服务配置文件：`com.user.uhrr.plist`
+服务配置文件：`com.user.mrrc.plist`
 - 自动启动：RunAtLoad = true
 - 保持运行：KeepAlive = true
-- 日志输出：uhrr_service.log, uhrr_service_error.log
-- 工作目录：/Users/cheenle/UHRR/UHRR_mac
+- 日志输出：logs/mrrc_service.log, logs/mrrc_service_error.log
+- 工作目录：部署目录（如 /opt/mrrc）
 
 ### 移动端访问
 
@@ -387,7 +389,7 @@ ATR-1000 是一款自动天调设备，支持功率测量和SWR监测。MRRC 系
          │ WebSocket (/WSATR1000)
          ▼
 ┌─────────────────┐
-│   UHRR 主程序    │
+│   MRRC 主程序    │
 │ WS_ATR1000Handler│
 └────────┬────────┘
          │ Unix Socket (/tmp/atr1000_proxy.sock)
@@ -407,7 +409,7 @@ ATR-1000 是一款自动天调设备，支持功率测量和SWR监测。MRRC 系
 
 **方式一：使用控制脚本**
 ```bash
-./uhrr_control.sh start-atr1000
+./mrrc_control.sh start-atr1000
 ```
 
 **方式二：手动启动**
@@ -416,7 +418,7 @@ ATR-1000 是一款自动天调设备，支持功率测量和SWR监测。MRRC 系
 python3 atr1000_proxy.py --device 192.168.1.63 --port 60001 &
 
 # 或使用系统控制脚本
-./uhrr_control.sh start
+./mrrc_control.sh start
 ```
 
 ### 配置说明
@@ -759,6 +761,78 @@ cat certs/fullchain.pem | openssl x509 -text -noout
 
 ## 版本历史
 
+### V5.0.0 音频架构重构 (2026-03-06)
+
+**主题：多进程音频架构 - 彻底解决 ATR-1000 PTT 延迟问题**
+
+#### 核心架构
+```
+┌─────────────────────────────────────────────────────────┐
+│                    V5.0 多进程架构                        │
+├─────────────────────────────────────────────────────────┤
+│  ┌─────────────────────────────────────────────────┐   │
+│  │        MRRC 主进程 (零阻塞事件循环)               │   │
+│  │  - WebSocket 只转发，不处理                      │   │
+│  │  - 控制协议处理                                  │   │
+│  │  - ATR-1000 数据广播（线程安全）                  │   │
+│  └───────────────────┬─────────────────────────────┘   │
+│                      │ multiprocessing.Queue           │
+│         ┌────────────┼────────────┐                    │
+│         ▼            ▼            ▼                    │
+│  ┌───────────┐ ┌───────────┐ ┌───────────┐            │
+│  │ TX 音频   │ │ ATR-1000  │ │ RX 音频   │            │
+│  │ Worker    │ │ Proxy     │ │ Worker    │            │
+│  │ 独立进程  │ │ 独立进程  │ │ 独立进程  │            │
+│  └───────────┘ └───────────┘ └───────────┘            │
+└─────────────────────────────────────────────────────────┘
+```
+
+#### 核心改进
+- **进程隔离**：音频处理与控制逻辑完全分离
+- **零阻塞**：主进程 WebSocket 完全异步，无 gc.collect()
+- **线程安全**：ATR-1000 广播使用 `IOLoop.add_callback()`
+- **自动恢复**：进程崩溃后自动重启
+
+#### 关键修复
+| 问题 | 原因 | 解决方案 |
+|------|------|----------|
+| ATR-1000 PTT 延迟 | 音频处理阻塞 IOLoop | 独立进程处理音频 |
+| gc.collect() 阻塞 | 每帧调用 GC | 完全移除 |
+| 线程不安全广播 | 直接调用 write_message | 使用 add_callback |
+
+#### 新增文件
+- `audio_worker.py` - TX 音频独立进程
+- `rx_audio_worker.py` - RX 音频独立进程
+- `process_manager.py` - 进程生命周期管理
+- `docs/design/v5.0_audio_architecture/` - 设计文档存档
+
+#### 新增配置
+```ini
+[AUDIO_WORKER]
+enabled = true          # 启用独立进程模式
+tx_sample_rate = 16000
+rx_sample_rate = 16000
+opus_enabled = true
+opus_bitrate = 20000
+buffer_ms = 100
+
+[PROCESS_MANAGER]
+auto_restart = true
+max_restarts = 5
+```
+
+#### 新增 API
+- `GET /API/process_status` - 查看音频进程状态
+
+#### 性能目标
+| 指标 | V4.5.4 | V5.0 目标 |
+|------|--------|-----------|
+| ATR-1000 更新延迟 | 500-2000ms | <100ms |
+| TX→RX 切换延迟 | <100ms | <20ms |
+| CPU 峰值 | 80-100% | <40% |
+
+---
+
 ### V4.5.4 WebRTC 最佳实践优化 (2026-03-06)
 
 **主题：基于 WebRTC 推荐参数优化 Opus 编码**
@@ -896,12 +970,12 @@ cat certs/fullchain.pem | openssl x509 -text -noout
 
 #### 核心改进
 - **ATR-1000独立代理程序**：`atr1000_proxy.py`
-  - 独立进程，不阻塞UHRR主程序
+  - 独立进程，不阻塞MRRC主程序
   - Unix Socket通信 (`/tmp/atr1000_proxy.sock`)
   - 自动重连ATR-1000设备
   - 按需数据请求（仅当有客户端连接时）
 
-- **UHRR中添加ATR-1000 WebSocket端点**
+- **MRRC中添加ATR-1000 WebSocket端点**
   - 路由 `/WSATR1000`
   - 通过Unix Socket桥接前端与独立代理
 
@@ -1003,6 +1077,6 @@ cat certs/fullchain.pem | openssl x509 -text -noout
 ---
 
 **最后更新**：2026年3月6日  
-**文档版本**：v4.5.4  
-**发布版本**：V4.5.4  
+**文档版本**：v5.0.0  
+**发布版本**：V5.0.0  
 **维护者**：MRRC开发团队
