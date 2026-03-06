@@ -5,6 +5,64 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [V4.5.3] - 2026-03-06
+### 🔍 ATR-1000 响应延迟分析与尝试
+
+**主题：分析 TX 音频处理对 ATR-1000 响应的影响**
+
+### 尝试的方案
+1. **简化 TX 音频处理**：移除 Opus 编码，使用 PCM 直发
+   - 结果：RX 解码失败（后端发送 Opus，前端期望 Int16）
+
+2. **移动端切换 PCM 模式**：将 `#encode` 设为 unchecked
+   - 结果：RX 解码失败（`encode` 同时控制 TX 和 RX）
+
+### 发现的问题
+- **架构限制**：`encode` 变量同时控制 TX 编码和 RX 解码
+- **不能单独切换**：要 TX 用 PCM，需要分离 TX/RX 编码控制
+- **后端默认 Opus**：RX 默认发送 Opus 编码数据
+
+### 技术分析
+- TX 码率正常：`TX: 235.5 kbps`（PCM 模式时）
+- RX 解码错误：`byte length of Int16Array should be a multiple of 2`
+- 原因：后端发送 Opus 数据，前端用 Int16 解码失败
+
+### 建议的后续方案
+1. **分离 TX/RX 编码控制**：修改 `sendSettings()` 和后端
+2. **保持 Opus 编码**：因为它是正常工作的
+3. **其他优化方向**：优化 Opus 编码参数或帧大小
+
+### 文件变更
+- 无有效变更（所有尝试已回滚）
+
+---
+
+## [V4.5.2] - 2026-03-06
+### 🔧 ATR-1000 通讯机制分析
+
+**主题：ATR-1000 通讯频率与数据同步机制分析**
+
+### 分析内容
+- **通讯机制审查**：全面分析前端-后端-设备三方数据流
+- **当前性能确认**：0.5秒更新间隔已正确实现
+- **负载评估**：当前设备负载在可接受范围内
+
+### 当前实现状态
+| 组件 | 优化措施 | 状态 |
+|------|---------|------|
+| 前端 | 500ms sync 间隔 + 双重保护 | ✅ 已实现 |
+| UHRR | 50ms 批量广播 | ✅ 已实现 |
+| 代理 | 被动模式，不主动 SYNC | ✅ 已实现 |
+
+### 优化建议（已记录，待后续实施）
+- 后端 SYNC 命令节流（500ms）
+- 智能频率策略（RX 1秒/TX 0.5秒）
+
+### 文件变更
+- 无代码变更，仅版本号更新
+
+---
+
 ## [V4.5.1] - 2026-03-06
 ### 🎨 频率调整按钮布局优化
 
