@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>音频接收调试页面</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background: #1a1a1a;
+            color: white;
+        }
+        
+        .debug-section {
+            background: #333;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 10px;
+        }
+        
+        .status {
+            background: #444;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            font-family: monospace;
+            white-space: pre-wrap;
+        }
+        
+        .success { color: #00ff00; }
+        .error { color: #ff0000; }
+        .warning { color: #ffff00; }
+        .info { color: #00aaff; }
+        
+        .button {
+            background: linear-gradient(145deg, #ff6600, #cc4400);
+            border: 2px solid #ff8800;
+            border-radius: 8px;
+            padding: 12px 20px;
+            color: white;
+            font-weight: bold;
+            margin: 5px;
+            cursor: pointer;
+        }
+        
+        .button:active {
+            transform: scale(0.95);
+        }
+        
+        .meter {
+            width: 100%;
+            height: 20px;
+            background: #222;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+        
+        .meter-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #00ff00, #ffff00, #ff0000);
+            transition: width 0.1s ease;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔊 音频接收调试页面</h1>
+    
+    <div class="debug-section">
+        <h2>连接状态</h2>
+        <div class="status" id="connection-status">等待连接...</div>
+        <button class="button" onclick="connectWebSocket()">连接WebSocket</button>
+        <button class="button" onclick="disconnectWebSocket()">断开连接</button>
+    </div>
+    
+    <div class="debug-section">
+        <h2>音频上下文状态</h2>
+        <div class="status" id="audio-context-status">未初始化</div>
+        <button class="button" onclick="initAudioContext()">初始化音频</button>
+        <button class="button" onclick="testAudioPlayback()">测试音频播放</button>
+    </div>
+    
+    <div class="debug-section">
+        <h2>音频数据监控</h2>
+        <div class="meter">
+            <div class="meter-bar" id="audio-level-meter" style="width: 0%"></div>
+        </div>
+        <div class="status" id="audio-data-status">等待音频数据...</div>
+        <div class="status" id="buffer-status">缓冲区: 0</div>
+    </div>
+    
+    <div class="debug-section">
+        <h2>调试日志</h2>
+        <div class="status" id="debug-log" style="max-height: 300px; overflow-y: auto;"></div>
+        <button class="button" onclick="clearLog()">清空日志</button>
+    </div>
+
+    <script>
+        // 全局变量
+        let wsAudioRX = null;
+        let audioContext = null;
+        let audioSourceNode = null;
+        let audioGainNode = null;
+        let audioAnalyser = null;
+        let audioBuffer = [];
+        let isConnected = false;
+        
+        // 日志函数
+        function log(message, type = 'info') {
+            const logElement = document.getElementById('debug-log');
+            const timestamp = new Date().toLocaleTimeString();
+            const className = type === 'error' ? 'error' : type === 'warning' ? 'warning' : type === 'success' ? 'success' : 'info';
+            logElement.innerHTML += `<div class="${className}">[${timestamp}] ${message}</div>`;
+            logElement.scrollTop = logElement.scrollHeight;
+        }
+        
+        function clearLog() {
+            document.getElementById('debug-log').innerHTML = '';
+        }
+        
+        // WebSocket连接
+        function connectWebSocket() {
+            if (wsAudioRX && wsAudioRX.readyState === WebSocket.OPEN) {
+                log('WebSocket已连接', 'warning');
+                return;
+            }
+            
+            log('正在连接WebSocket...', 'info');
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const baseUrl = `${protocol}//${window.location.host}`;
+            
+            wsAudioRX = new WebSocket(`${baseUrl}/WSaudioRX`);
+            wsAudioRX.binaryType = 'arraybuffer';
+            
+            wsAudioRX.onopen = function() {
+                isConnected = true;
+                log('WebSocket连接成功', 'success');
+                document.getElementById('connection-status').innerHTML = '<span class="success">✅ 已连接</span>';
+                
+                // 连接成功后初始化音频
+                initAudioContext();
+            };
+            
+            wsAudioRX.onmessage = function(event) {
+                handleAudioData(event.data);
+            };
+            
+            wsAudioRX.onclose = function() {
+                isConnected = false;
+                log('WebSocket连接关闭', 'warning');
+                document.getElementById('connection-status').innerHTML = '<span class="error">❌ 连接关闭</span>';
+            };
+            
+            wsAudioRX.onerror = function(error) {
+                log('WebSocket错误: ' + error, 'error');
+                document.getElementById('connection-status').innerHTML = '<span class="error">❌ 连接错误</span>';
+            };
+        }
+        
+        function disconnectWebSocket() {
+            if (wsAudioRX) {
+                wsAudioRX.close();
+                wsAudioRX = null;
+            }
+            isConnected = false;
+            document.getElementById('connection-status').innerHTML = '<span class="warning">⚠️ 已断开</span>';
+        }
+        
+        // 音频上下文初始化
+        function initAudioContext() {
+            try {
+                if (!window.AudioContext && !window.webkitAudioContext) {
+                    log('Web Audio API不支持', 'error');
+                    return;
+                }
+                
+                audioContext = new (window.AudioContext || window.webkitAudioContext)({
+                    latencyHint: "interactive",
+                    sampleRate: 44100
+                });
+                
+                log(`AudioContext创建成功，状态: ${audioContext.state}，采样率: ${audioContext.sampleRate}Hz`, 'success');
+                
+                if (audioContext.state === 'suspended') {
+                    log('AudioContext被暂停，需要用户交互', 'warning');
+                    document.getElementById('audio-context-status').innerHTML = '<span class="warning">⚠️ 已暂停，需要用户交互</span>';
+                    
+                    // 添加用户交互监听器
+                    const resumeAudio = () => {
+                        audioContext.resume().then(() => {
+                            log('AudioContext已恢复', 'success');
+                            setupAudioNodes();
+                        }).catch(err => {
+                            log('恢复AudioContext失败: ' + err.message, 'error');
+                        });
+                    };
+                    
+                    document.addEventListener('touchstart', resumeAudio, { once: true });
+                    document.addEventListener('click', resumeAudio, { once: true });
+                } else {
+                    setupAudioNodes();
+                }
+                
+            } catch (error) {
+                log('初始化AudioContext失败: ' + error.message, 'error');
+            }
+        }
+        
+        // 设置音频节点
+        function setupAudioNodes() {
+            try {
+                // 创建音频节点
+                audioGainNode = audioContext.createGain();
+                audioAnalyser = audioContext.createAnalyser();
+                audioSourceNode = audioContext.createScriptProcessor(256, 1, 1);
+                
+                // 设置音频处理链
+                audioSourceNode.connect(audioGainNode);
+                audioGainNode.connect(audioAnalyser);
+                audioGainNode.connect(audioContext.destination);
+                
+                // 设置音频处理函数
+                audioSourceNode.onaudioprocess = processAudioData;
+                
+                // 启动音频源节点
+                audioSourceNode.start(0);
+                
+                // 设置增益
+                audioGainNode.gain.value = 0.8;
+                
+                log('音频节点设置完成', 'success');
+                document.getElementById('audio-context-status').innerHTML = '<span class="success">✅ 音频已初始化</span>';
+                
+                // 开始监控
+                startAudioMonitoring();
+                
+            } catch (error) {
+                log('设置音频节点失败: ' + error.message, 'error');
+            }
+        }
+        
+        // 处理音频数据
+        function processAudioData(event) {
+            const outputBuffer = event.outputBuffer.getChannelData(0);
+            
+            if (audioBuffer.length === 0) {
+                // 没有数据时输出静音
+                for (let i = 0; i < outputBuffer.length; i++) {
+                    outputBuffer[i] = 0;
+                }
+                return;
+            }
+            
+            // 处理音频数据
+            const audioData = audioBuffer.shift();
+            const minLength = Math.min(audioData.length, outputBuffer.length);
+            
+            for (let i = 0; i < minLength; i++) {
+                outputBuffer[i] = audioData[i];
+            }
+            
+            // 填充剩余空间
+            for (let i = minLength; i < outputBuffer.length; i++) {
+                outputBuffer[i] = 0;
+            }
+            
+            // 更新音频电平显示
+            updateAudioLevel(outputBuffer);
+        }
+        
+        // 处理接收到的音频数据
+        function handleAudioData(data) {
+            try {
+                const audioData = new Float32Array(data);
+                audioBuffer.push(audioData);
+                
+                // 检查音频数据
+                const maxValue = Math.max(...audioData);
+                if (maxValue > 0.01) {
+                    log(`收到音频数据，最大值: ${maxValue.toFixed(4)}`, 'success');
+                }
+                
+                // 更新缓冲区状态
+                document.getElementById('buffer-status').innerHTML = `缓冲区: ${audioBuffer.length}`;
+                
+                // 防止缓冲区过大
+                if (audioBuffer.length > 10) {
+                    log('缓冲区过大，丢弃旧数据', 'warning');
+                    audioBuffer = audioBuffer.slice(-5);
+                }
+                
+            } catch (error) {
+                log('处理音频数据失败: ' + error.message, 'error');
+            }
+        }
+        
+        // 更新音频电平显示
+        function updateAudioLevel(audioData) {
+            const maxValue = Math.max(...audioData);
+            const level = Math.min(100, maxValue * 100);
+            
+            document.getElementById('audio-level-meter').style.width = level + '%';
+            
+            if (level > 1) {
+                document.getElementById('audio-data-status').innerHTML = `<span class="success">音频电平: ${level.toFixed(1)}%</span>`;
+            } else {
+                document.getElementById('audio-data-status').innerHTML = '<span class="warning">音频电平: 静音</span>';
+            }
+        }
+        
+        // 开始音频监控
+        function startAudioMonitoring() {
+            setInterval(() => {
+                if (audioAnalyser) {
+                    const dataArray = new Float32Array(audioAnalyser.frequencyBinCount);
+                    audioAnalyser.getFloatFrequencyData(dataArray);
+                    
+                    const maxFreq = Math.max(...dataArray);
+                    if (maxFreq > -60) {
+                        log(`频谱分析 - 最大频率: ${maxFreq.toFixed(1)}dB`, 'info');
+                    }
+                }
+            }, 1000);
+        }
+        
+        // 测试音频播放
+        function testAudioPlayback() {
+            if (!audioContext) {
+                log('请先初始化音频上下文', 'error');
+                return;
+            }
+            
+            try {
+                // 创建测试音频
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                
+                oscillator.frequency.value = 440; // A4音符
+                gainNode.gain.value = 0.1;
+                
+                oscillator.start();
+                
+                log('播放测试音频 (440Hz)', 'success');
+                
+                // 1秒后停止
+                setTimeout(() => {
+                    oscillator.stop();
+                    log('测试音频播放完成', 'success');
+                }, 1000);
+                
+            } catch (error) {
+                log('测试音频播放失败: ' + error.message, 'error');
+            }
+        }
+        
+        // 页面加载完成后自动连接
+        document.addEventListener('DOMContentLoaded', function() {
+            log('调试页面已加载', 'info');
+            connectWebSocket();
+        });
+    </script>
+</body>
+</html>

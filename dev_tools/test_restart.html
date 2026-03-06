@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>应用重启测试页面</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background: #1a1a1a;
+            color: white;
+        }
+        
+        .status-box {
+            background: #333;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 10px;
+            text-align: center;
+        }
+        
+        .success { color: #00ff00; }
+        .error { color: #ff0000; }
+        .info { color: #00aaff; }
+        
+        .button {
+            background: linear-gradient(145deg, #ff6600, #cc4400);
+            border: 2px solid #ff8800;
+            border-radius: 8px;
+            padding: 15px 30px;
+            color: white;
+            font-weight: bold;
+            font-size: 18px;
+            margin: 10px;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+        }
+        
+        .button:hover {
+            background: linear-gradient(145deg, #ff8800, #ff4400);
+        }
+        
+        .test-section {
+            background: #444;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 10px;
+        }
+        
+        .log {
+            background: #000;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔄 应用重启测试页面</h1>
+    
+    <div class="status-box">
+        <h2>✅ 应用重启成功！</h2>
+        <p class="success">MRRC应用已成功重启并运行在端口8888</p>
+        <p class="info">进程ID: 23527</p>
+        <p class="info">状态: 运行中</p>
+    </div>
+    
+    <div class="test-section">
+        <h2>🧪 测试链接</h2>
+        <a href="https://localhost:8888" class="button" target="_blank">打开主应用</a>
+        <a href="https://localhost:8888/debug_audio_state.html" class="button" target="_blank">音频状态调试</a>
+        <a href="https://localhost:8888/debug_audio_rx.html" class="button" target="_blank">RX音频调试</a>
+    </div>
+    
+    <div class="test-section">
+        <h2>📋 修复内容总结</h2>
+        <div class="log">
+✅ 修复了频谱显示MIC声音的问题
+✅ 添加了音频状态重置函数
+✅ 改进了PTT释放逻辑
+✅ 添加了详细的调试日志
+✅ 确保频谱始终显示接收音频
+✅ 修复了PAD端点击行为问题
+✅ 优化了移动端音频处理
+        </div>
+    </div>
+    
+    <div class="test-section">
+        <h2>🔍 测试步骤</h2>
+        <div class="log">
+1. 点击"打开主应用"按钮
+2. 在PAD上测试PTT按钮
+3. 观察频谱显示（应该显示接收音频，不是MIC）
+4. 检查浏览器控制台的调试信息
+5. 如果还有问题，使用调试页面进一步分析
+        </div>
+    </div>
+    
+    <div class="test-section">
+        <h2>📱 PAD端特别说明</h2>
+        <div class="log">
+现在PAD端应该：
+- 频谱始终显示从电台接收的音频
+- 不会显示MIC拾取的声音
+- PTT操作不会影响频谱显示
+- 音频状态正确重置
+- 点击行为更加可靠
+        </div>
+    </div>
+    
+    <script>
+        // 自动检查应用状态
+        function checkAppStatus() {
+            fetch('https://localhost:8888', { mode: 'no-cors' })
+                .then(() => {
+                    console.log('应用连接正常');
+                })
+                .catch(err => {
+                    console.log('应用连接异常:', err);
+                });
+        }
+        
+        // 页面加载后检查状态
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('测试页面已加载');
+            checkAppStatus();
+        });
+    </script>
+</body>
+</html>

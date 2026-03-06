@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  MRRC/macOS launchd 服务配置文件模板
+  
+  【重要说明】
+  launchd 要求使用绝对路径，请在部署时执行以下命令自动生成正确的配置：
+  
+    ./mrrc_setup.sh install
+  
+  或手动替换以下占位符：
+    {{INSTALL_DIR}} -> 您的 MRRC 安装目录绝对路径
+    例如：/home/user/MRRC 或 /Users/yourname/MRRC
+  
+  配置步骤：
+  1. 复制此文件：cp com.user.mrrc.plist ~/Library/LaunchAgents/
+  2. 编辑文件，替换所有 {{INSTALL_DIR}} 为实际路径
+  3. 加载服务：launchctl load ~/Library/LaunchAgents/com.user.mrrc.plist
+  
+  详细说明请参阅：docs/DEPLOYMENT_GUIDE.md
+-->
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.user.mrrc</string>
+    
+    <key>ProgramArguments</key>
+    <array>
+        <string>{{INSTALL_DIR}}/MRRC</string>
+    </array>
+    
+    <key>WorkingDirectory</key>
+    <string>{{INSTALL_DIR}}</string>
+    
+    <key>StandardOutPath</key>
+    <string>{{INSTALL_DIR}}/mrrc_service.log</string>
+    
+    <key>StandardErrorPath</key>
+    <string>{{INSTALL_DIR}}/mrrc_service_error.log</string>
+    
+    <key>RunAtLoad</key>
+    <true/>
+    
+    <key>KeepAlive</key>
+    <true/>
+    
+    <key>ProcessType</key>
+    <string>Interactive</string>
+    
+    <key>SessionCreate</key>
+    <true/>
+    
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+        <key>PYTHONPATH</key>
+        <string>{{INSTALL_DIR}}</string>
+    </dict>
+</dict>
+</plist>

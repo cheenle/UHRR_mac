@@ -1,0 +1,35 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+.eggs/
+
+# Logs
+*.log
+*.pid
+nohup.out
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Certificates (sensitive)
+certs/*.pem
+certs/*.key
+certs/*.crt
+!certs/*.md
+
+# User database
+MRRC_users.db
+
+# Audio files
+*.wav

@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Port Scanner Utility</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #1a1a1a;
+            color: white;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        h1 {
+            color: #4CAF50;
+            text-align: center;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            background-color: #2a2a2a;
+            border-radius: 10px;
+            border: 1px solid #444;
+        }
+        .result {
+            margin: 5px 0;
+            padding: 8px;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 14px;
+        }
+        .open {
+            background-color: #2E7D32;
+            color: white;
+        }
+        .closed {
+            background-color: #C62828;
+            color: white;
+        }
+        .filtered {
+            background-color: #EF6C00;
+            color: white;
+        }
+        .info {
+            background-color: #1565C0;
+            color: white;
+        }
+        .progress {
+            background-color: #7B1FA2;
+            color: white;
+        }
+        button {
+            background-color: #444;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            margin: 5px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #555;
+        }
+        button:disabled {
+            background-color: #666;
+            cursor: not-allowed;
+        }
+        input, select {
+            padding: 8px;
+            margin: 5px;
+            border-radius: 5px;
+            border: 1px solid #666;
+            background-color: #333;
+            color: white;
+        }
+        label {
+            display: inline-block;
+            width: 150px;
+            text-align: right;
+            margin-right: 10px;
+        }
+        .scan-progress {
+            width: 100%;
+            height: 20px;
+            background-color: #333;
+            border-radius: 10px;
+            margin: 10px 0;
+            overflow: hidden;
+        }
+        .scan-progress-bar {
+            height: 100%;
+            background-color: #4CAF50;
+            width: 0%;
+            transition: width 0.3s;
+        }
+        .port-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
+            gap: 5px;
+            margin: 10px 0;
+        }
+        .port-item {
+            padding: 5px;
+            text-align: center;
+            border-radius: 3px;
+            font-size: 12px;
+        }
+        .port-open {
+            background-color: #4CAF50;
+        }
+        .port-closed {
+            background-color: #f44336;
+        }
+        .port-unknown {
+            background-color: #9e9e9e;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Port Scanner Utility</h1>
+        
+        <div class="test-section">
+            <h3>Scan Configuration</h3>
+            <div>
+                <label for="target-ip">Target IP:</label>
+                <input type="text" id="target-ip" value="192.168.1.12" placeholder="IP Address">
+            </div>
+            <div>
+                <label for="start-port">Start Port:</label>
+                <input type="number" id="start-port" value="1" placeholder="Start" min="1" max="65535">
+                <label for="end-port">End Port:</label>
+                <input type="number" id="end-port" value="100" placeholder="End" min="1" max="65535">
+            </div>
+            <div>
+                <label for="scan-type">Scan Type:</label>
+                <select id="scan-type">
+                    <option value="websocket">WebSocket Scan</option>
+                    <option value="http">HTTP Scan</option>
+                </select>
+            </div>
+            <div>
+                <label for="timeout">Timeout (ms):</label>
+                <input type="number" id="timeout" value="3000" min="100" max="30000">
+            </div>
+            <div>
+                <button id="start-scan">Start Scan</button>
+                <button id="stop-scan" disabled>Stop Scan</button>
+                <button id="clear-results">Clear Results</button>
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h3>Scan Progress</h3>
+            <div class="scan-progress">
+                <div class="scan-progress-bar" id="progress-bar"></div>
+            </div>
+            <div id="progress-text">Ready to scan</div>
+        </div>
+        
+        <div class="test-section">
+            <h3>Scan Results</h3>
+            <div id="results"></div>
+        </div>
+        
+        <div class="test-section">
+            <h3>Quick Scan Presets</h3>
+            <div>
+                <button onclick="setPreset(1, 1000)">Common Ports (1-1000)</button>
+                <button onclick="setPreset(80, 85)">Web Ports (80-85)</button>
+                <button onclick="setPreset(1, 100)">First 100 Ports (1-100)</button>
+                <button onclick="setPreset(81, 81)">ATR-1000 Port (81)</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const targetIp = document.getElementById('target-ip');
+        const startPort = document.getElementById('start-port');
+        const endPort = document.getElementById('end-port');
+        const scanType = document.getElementById('scan-type');
+        const timeoutInput = document.getElementById('timeout');
+        const startScanBtn = document.getElementById('start-scan');
+        const stopScanBtn = document.getElementById('stop-scan');
+        const resultsDiv = document.getElementById('results');
+        const progressBar = document.getElementById('progress-bar');
+        const progressText = document.getElementById('progress-text');
+        
+        let isScanning = false;
+        let stopRequested = false;
+        
+        function setPreset(start, end) {
+            startPort.value = start;
+            endPort.value = end;
+        }
+        
+        function addResult(message, type = 'info') {
+            const resultDiv = document.createElement('div');
+            resultDiv.className = `result ${type}`;
+            resultDiv.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            resultsDiv.appendChild(resultDiv);
+            resultsDiv.scrollTop = resultsDiv.scrollHeight;
+        }
+        
+        function clearResults() {
+            resultsDiv.innerHTML = '';
+        }
+        
+        function updateProgress(current, total) {
+            const percentage = Math.round((current / total) * 100);
+            progressBar.style.width = `${percentage}%`;
+            progressText.textContent = `Scanning: ${current}/${total} (${percentage}%)`;
+        }
+        
+        async function testPortWebSocket(ip, port, timeout) {
+            return new Promise((resolve) => {
+                const url = `ws://${ip}:${port}/`;
+                let resolved = false;
+                
+                try {
+                    const socket = new WebSocket(url);
+                    const timeoutId = setTimeout(() => {
+                        if (!resolved) {
+                            resolved = true;
+                            try {
+                                socket.close();
+                            } catch (e) {
+                                // Ignore errors
+                            }
+                            resolve({port, status: 'closed', error: 'timeout'});
+                        }
+                    }, timeout);
+                    
+                    socket.onopen = function() {
+                        if (!resolved) {
+                            resolved = true;
+                            clearTimeout(timeoutId);
+                            socket.close();
+                            resolve({port, status: 'open'});
+                        }
+                    };
+                    
+                    socket.onerror = function(error) {
+                        if (!resolved) {
+                            resolved = true;
+                            clearTimeout(timeoutId);
+                            resolve({port, status: 'closed', error: error.message});
+                        }
+                    };
+                    
+                    socket.onclose = function() {
+                        // If we get here without resolving, it's likely closed
+                        if (!resolved) {
+                            resolved = true;
+                            clearTimeout(timeoutId);
+                            resolve({port, status: 'closed', error: 'connection closed'});
+                        }
+                    };
+                } catch (error) {
+                    if (!resolved) {
+                        resolved = true;
+                        resolve({port, status: 'closed', error: error.message});
+                    }
+                }
+            });
+        }
+        
+        async function testPortHttp(ip, port, timeout) {
+            return new Promise((resolve) => {
+                const url = `http://${ip}:${port}/`;
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), timeout);
+                
+                fetch(url, {
+                    method: 'HEAD',
+                    mode: 'no-cors',
+                    signal: controller.signal
+                }).then(response => {
+                    clearTimeout(timeoutId);
+                    resolve({port, status: 'open'});
+                }).catch(error => {
+                    clearTimeout(timeoutId);
+                    if (error.name === 'AbortError') {
+                        resolve({port, status: 'filtered', error: 'timeout'});
+                    } else {
+                        resolve({port, status: 'closed', error: error.message});
+                    }
+                });
+            });
+        }
+        
+        async function scanPorts() {
+            if (isScanning) return;
+            
+            const ip = targetIp.value || '192.168.1.12';
+            const start = parseInt(startPort.value) || 1;
+            const end = parseInt(endPort.value) || 100;
+            const type = scanType.value;
+            const timeout = parseInt(timeoutInput.value) || 3000;
+            
+            if (start > end || start < 1 || end > 65535) {
+                addResult('Invalid port range', 'error');
+                return;
+            }
+            
+            isScanning = true;
+            stopRequested = false;
+            startScanBtn.disabled = true;
+            stopScanBtn.disabled = false;
+            
+            addResult(`Starting ${type} scan of ${ip}:${start}-${end}`, 'info');
+            
+            const totalPorts = end - start + 1;
+            let scannedPorts = 0;
+            const openPorts = [];
+            
+            for (let port = start; port <= end && !stopRequested; port++) {
+                if (stopRequested) break;
+                
+                updateProgress(scannedPorts, totalPorts);
+                
+                try {
+                    let result;
+                    if (type === 'websocket') {
+                        result = await testPortWebSocket(ip, port, timeout);
+                    } else {
+                        result = await testPortHttp(ip, port, timeout);
+                    }
+                    
+                    scannedPorts++;
+                    
+                    if (result.status === 'open') {
+                        addResult(`Port ${port}: OPEN`, 'open');
+                        openPorts.push(port);
+                    } else if (result.status === 'filtered') {
+                        addResult(`Port ${port}: FILTERED (${result.error})`, 'filtered');
+                    } else {
+                        // Only show closed ports for specific ports or if there are few total ports
+                        if (totalPorts <= 50 || port === 81 || port === 80 || port === 443) {
+                            addResult(`Port ${port}: CLOSED (${result.error})`, 'closed');
+                        }
+                    }
+                } catch (error) {
+                    scannedPorts++;
+                    addResult(`Port ${port}: ERROR (${error.message})`, 'error');
+                }
+                
+                // Small delay to prevent overwhelming the browser
+                await new Promise(resolve => setTimeout(resolve, 50));
+            }
+            
+            isScanning = false;
+            startScanBtn.disabled = false;
+            stopScanBtn.disabled = true;
+            updateProgress(totalPorts, totalPorts);
+            
+            if (stopRequested) {
+                addResult('Scan stopped by user', 'info');
+            } else {
+                addResult(`Scan completed. Found ${openPorts.length} open ports: ${openPorts.join(', ')}`, 'success');
+            }
+        }
+        
+        function stopScan() {
+            stopRequested = true;
+            stopScanBtn.disabled = true;
+            addResult('Stopping scan...', 'info');
+        }
+        
+        startScanBtn.addEventListener('click', scanPorts);
+        stopScanBtn.addEventListener('click', stopScan);
+        document.getElementById('clear-results').addEventListener('click', clearResults);
+        
+        // Initialize
+        addResult('Port Scanner Utility Ready', 'info');
+        addResult('Configure scan parameters and click "Start Scan"', 'info');
+    </script>
+</body>
+</html>

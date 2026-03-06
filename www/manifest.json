@@ -1,0 +1,21 @@
+{
+  "name": "HamRadio Modern Mobile",
+  "short_name": "HamRadio",
+  "description": "Modern mobile interface for Universal HamRadio Remote",
+  "start_url": "/mobile_modern.html",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#1a1a1a",
+  "icons": [
+    {
+      "src": "/favicon.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/favicon.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

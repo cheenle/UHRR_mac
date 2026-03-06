@@ -1,0 +1,1434 @@
+/* Modern Mobile Interface CSS - 优化版 */
+/* 针对小屏幕和触摸操作优化 */
+
+/* CSS Reset and Base Styles */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    background-color: #000;
+    color: #fff;
+    height: 100vh;
+    width: 100vw;
+    overflow: hidden;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+}
+
+/* Safe Area Insets for iPhone X+ */
+.safe-area-top {
+    height: env(safe-area-inset-top);
+    background-color: #1a1a1a;
+}
+
+.safe-area-bottom {
+    height: env(safe-area-inset-bottom);
+    background-color: #1a1a1a;
+}
+
+/* Main Container */
+.mobile-modern-container {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    padding: 0 env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+    background-color: #000;
+}
+
+/* Header Styles - 紧凑布局 */
+.app-header {
+    background-color: #1a1a1a;
+    padding: 8px 12px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+    z-index: 100;
+}
+
+.header-main {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.header-btn {
+    background: none;
+    border: none;
+    color: #fff;
+    font-size: 22px;
+    cursor: pointer;
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: background-color 0.15s;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.header-btn:active {
+    background-color: rgba(255, 255, 255, 0.15);
+    transform: scale(0.95);
+}
+
+/* 电源按钮 */
+.power-btn {
+    background-color: rgba(255, 255, 255, 0.1);
+    font-size: 24px;
+}
+
+.power-btn:active {
+    background-color: rgba(0, 255, 0, 0.3);
+}
+
+.power-btn.active {
+    background-color: rgba(0, 255, 0, 0.25);
+    box-shadow: 0 0 10px rgba(0, 255, 0, 0.3);
+}
+
+.menu-btn {
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+.hamburger {
+    width: 20px;
+    height: 2px;
+    background-color: #fff;
+    position: relative;
+    border-radius: 2px;
+}
+
+.hamburger:before,
+.hamburger:after {
+    content: '';
+    position: absolute;
+    width: 20px;
+    height: 2px;
+    background-color: #fff;
+    border-radius: 2px;
+}
+
+.hamburger:before { top: -6px; }
+.hamburger:after { bottom: -6px; }
+
+.power-icon {
+    font-size: 24px;
+}
+
+/* Frequency Display - 绿色荧光数码管风格 */
+.frequency-display-large {
+    text-align: center;
+    flex-grow: 1;
+    margin: 0 10px;
+    position: relative;
+}
+
+.freq-main {
+    font-size: 36px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    margin-bottom: 4px;
+    font-variant-numeric: tabular-nums;
+    font-family: 'Courier New', 'Monaco', 'Consolas', monospace;
+    /* 绿色荧光效果 - 无阴影，清晰易读 */
+    color: #39FF14;
+    text-shadow: 0 0 8px rgba(57, 255, 20, 0.6);
+    background: #0a0a0a;
+    padding: 10px 20px;
+    border-radius: 8px;
+    border: 1px solid #1a3a1a;
+}
+
+/* 频率输入框样式 - 绿色荧光风格 */
+.freq-input-hidden {
+    display: none;
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 200px;
+    height: 48px;
+    font-size: 28px;
+    font-weight: 700;
+    text-align: center;
+    font-family: 'Courier New', 'Monaco', 'Consolas', monospace;
+    background: #0a0a0a;
+    color: #39FF14;
+    border: 2px solid #39FF14;
+    border-radius: 8px;
+    outline: none;
+    z-index: 100;
+}
+
+.freq-input-hidden:focus {
+    border-color: #39FF14;
+}
+
+.freq-input-hidden::placeholder {
+    color: #2a5a2a;
+    font-size: 14px;
+    font-family: sans-serif;
+}
+
+.freq-input-visible {
+    display: block !important;
+}
+
+.freq-main.hidden-for-input {
+    visibility: hidden;
+}
+
+.freq-digit {
+    display: inline-block;
+    min-width: 20px;
+}
+
+.freq-separator {
+    margin: 0 1px;
+    color: #666;
+}
+
+.freq-unit {
+    font-size: 16px;
+    color: #666;
+    margin-left: 4px;
+}
+
+/* 隐藏最后三位小频率 */
+.freq-digit.last-three {
+    display: none;
+}
+
+.freq-sub {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    font-size: 13px;
+    color: #888;
+}
+
+.vfo-indicator,
+.mode-indicator {
+    padding: 2px 8px;
+    border-radius: 8px;
+    background-color: rgba(255, 255, 255, 0.1);
+    font-weight: 500;
+}
+
+/* Status Bar - 紧凑 */
+.status-bar {
+    display: flex;
+    justify-content: flex-start;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 0;
+    flex-wrap: wrap;
+}
+
+.status-item {
+    font-size: 11px;
+    padding: 2px 6px;
+    border-radius: 8px;
+    background-color: rgba(255, 255, 255, 0.1);
+    display: flex;
+    align-items: center;
+    gap: 2px;
+}
+
+.status-item.connected {
+    background-color: #2e7d32;
+}
+
+.status-item#status-tx.active {
+    background-color: #c62828;
+    animation: pulse 1s infinite;
+}
+
+/* Opus 编码状态指示器 */
+.status-item.opus-indicator {
+    font-size: 14px;
+    padding: 2px 6px;
+    background-color: #1565c0;
+    opacity: 0.5;
+    transition: opacity 0.3s ease;
+}
+
+.status-item.opus-indicator.active {
+    opacity: 1;
+    background-color: #2e7d32;
+}
+
+#indwsAudioRX, #indwsAudioTX {
+    padding: 2px 4px;
+}
+
+#indwsAudioRX img, #indwsAudioTX img {
+    width: 10px;
+    height: 10px;
+}
+
+.signal-strength {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.signal-bars {
+    display: flex;
+    height: 16px;
+    align-items: flex-end;
+    gap: 1px;
+}
+
+.signal-bar {
+    width: 3px;
+    background-color: #4CAF50;
+    border-radius: 1px 1px 0 0;
+}
+
+.signal-bar:nth-child(1) { height: 3px; }
+.signal-bar:nth-child(2) { height: 6px; }
+.signal-bar:nth-child(3) { height: 9px; }
+.signal-bar:nth-child(4) { height: 12px; }
+.signal-bar:nth-child(5) { height: 16px; }
+
+.signal-text {
+    font-size: 12px;
+    color: #4CAF50;
+    font-weight: bold;
+    min-width: 80px;
+    text-align: right;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.6; }
+}
+
+/* Main Content - 优化间距 */
+.main-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* S-Meter Section - 紧凑 */
+.s-meter-section {
+    text-align: center;
+    padding: 5px 0;
+}
+
+#s-meter-canvas {
+    width: 100%;
+    max-width: 320px;
+    height: 60px;
+    background-color: #111;
+    border-radius: 8px;
+}
+
+.s-meter-labels {
+    display: none; /* 隐藏标签节省空间 */
+}
+
+/* Quick Controls - 优化按钮 */
+.quick-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.control-row {
+    display: flex;
+    gap: 8px;
+}
+
+.quick-btn {
+    flex: 1;
+    background-color: #1a1a1a;
+    border: 1px solid #333;
+    border-radius: 10px;
+    color: #fff;
+    padding: 12px 4px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s;
+    min-height: 44px;
+    touch-action: manipulation;
+}
+
+.quick-btn:active {
+    transform: scale(0.97);
+    background-color: #2a2a2a;
+    border-color: #444;
+}
+
+.quick-btn.active {
+    background-color: #1565c0;
+    border-color: #1976d2;
+}
+
+/* Volume Control - 音量控制 */
+.volume-control {
+    background: linear-gradient(180deg, #1e1e1e 0%, #1a1a1a 100%);
+    border-radius: 12px;
+    padding: 12px 15px;
+    margin: 5px 0;
+}
+
+.volume-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.volume-icon {
+    font-size: 20px;
+    min-width: 28px;
+    text-align: center;
+}
+
+.volume-slider {
+    flex: 1;
+    height: 8px;
+    -webkit-appearance: none;
+    appearance: none;
+    background: linear-gradient(90deg, #2e7d32 0%, #4CAF50 50%, #ff9800 75%, #f44336 100%);
+    border-radius: 4px;
+    outline: none;
+    cursor: pointer;
+}
+
+.volume-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 24px;
+    height: 24px;
+    background: #fff;
+    border-radius: 50%;
+    cursor: pointer;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+    transition: transform 0.1s;
+}
+
+.volume-slider::-webkit-slider-thumb:active {
+    transform: scale(1.1);
+}
+
+.volume-slider::-moz-range-thumb {
+    width: 24px;
+    height: 24px;
+    background: #fff;
+    border-radius: 50%;
+    cursor: pointer;
+    border: none;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+}
+
+.volume-value {
+    min-width: 45px;
+    text-align: right;
+    font-size: 14px;
+    font-weight: bold;
+    color: #4CAF50;
+}
+
+/* Frequency Tuning - 优化布局 */
+.frequency-tuning {
+    margin-top: 5px;
+}
+
+.tuning-controls {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(2, 1fr);
+    gap: 8px;
+}
+
+/* 减号按钮样式（第一行） */
+.tune-btn[id^="tune-down"] {
+    background-color: #1a1a1a;
+    border: 1px solid #444;
+}
+
+/* 加号按钮样式（第二行左侧两个） */
+.tune-btn[id^="tune-up"] {
+    background-color: #1a1a1a;
+    border: 1px solid #444;
+}
+
+/* TUNE天调按钮样式（顶部控制栏） */
+.quick-btn.tune-btn-header {
+    background-color: #FF9800;
+    border: 1px solid #FF9800;
+    font-weight: bold;
+    color: #fff;
+}
+
+.quick-btn.tune-btn-header:active,
+.quick-btn.tune-btn-header.active {
+    background-color: #FF5722;
+    border-color: #FF5722;
+}
+
+.tune-btn {
+    background-color: #1a1a1a;
+    border: 1px solid #333;
+    border-radius: 10px;
+    color: #fff;
+    padding: 14px 8px;
+    font-size: 15px;
+    font-weight: 500;
+    cursor: pointer;
+    min-height: 50px;
+    transition: all 0.15s;
+    touch-action: manipulation;
+}
+
+.tune-btn:active {
+    transform: scale(0.97);
+    background-color: #2a2a2a;
+}
+
+/* PTT Section - 优化大按钮 */
+.ptt-section {
+    background-color: #1a1a1a;
+    padding: 15px 10px;
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.3);
+    position: sticky;
+    bottom: 0;
+    z-index: 100;
+}
+
+.ptt-container {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 12px;
+}
+
+.ptt-button {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 30% 30%, #ff5555, #cc0000);
+    border: 3px solid rgba(255, 255, 255, 0.8);
+    color: white;
+    font-size: 22px;
+    font-weight: bold;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 4px 15px rgba(255, 68, 68, 0.4);
+    transition: all 0.1s;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.ptt-button:active {
+    transform: scale(0.95);
+    background: radial-gradient(circle at 30% 30%, #ff7777, #dd0000);
+    box-shadow: 0 2px 8px rgba(255, 68, 68, 0.6);
+}
+
+.ptt-label {
+    font-size: 24px;
+    font-weight: bold;
+}
+
+.ptt-sublabel {
+    font-size: 11px;
+    opacity: 0.8;
+}
+
+/* Off-canvas Menu */
+.off-canvas-menu {
+    position: fixed;
+    top: 0;
+    left: -280px;
+    width: 280px;
+    height: 100vh;
+    background-color: #1a1a1a;
+    z-index: 1001;
+    transition: left 0.25s ease;
+    box-shadow: 2px 0 15px rgba(0, 0, 0, 0.4);
+    padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom) 0;
+}
+
+.off-canvas-menu.open {
+    left: 0;
+}
+
+.menu-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 12px;
+    border-bottom: 1px solid #333;
+}
+
+.menu-header h2 {
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.menu-close-btn {
+    background: none;
+    border: none;
+    color: #fff;
+    font-size: 26px;
+    cursor: pointer;
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+}
+
+.menu-close-btn:active {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.menu-content {
+    padding: 10px 0;
+}
+
+.menu-list {
+    list-style: none;
+}
+
+.menu-item {
+    display: block;
+    padding: 14px 16px;
+    color: #fff;
+    text-decoration: none;
+    font-size: 15px;
+    border-bottom: 1px solid #2a2a2a;
+    transition: background-color 0.15s;
+}
+
+.menu-item:active {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Menu Overlay */
+.menu-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.6);
+    z-index: 1000;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.25s ease;
+}
+
+.menu-overlay.open {
+    opacity: 1;
+    visibility: visible;
+}
+
+/* Modal Panel Styles */
+#modal-panel-container {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.85);
+    z-index: 1000;
+    justify-content: center;
+    align-items: center;
+    padding: 15px;
+}
+
+.modal-panel {
+    background-color: #1a1a1a;
+    border-radius: 14px;
+    padding: 16px;
+    max-width: 320px;
+    width: 100%;
+    max-height: 75vh;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.modal-panel h3 {
+    text-align: center;
+    margin-bottom: 14px;
+    font-size: 16px;
+    color: #4CAF50;
+}
+
+.modal-panel p {
+    text-align: center;
+    color: #888;
+    margin-bottom: 8px;
+    font-size: 13px;
+}
+
+.modal-panel hr {
+    border: none;
+    border-top: 1px solid #333;
+    margin: 12px 0;
+}
+
+.band-grid,
+.mode-grid,
+.filter-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin-bottom: 14px;
+}
+
+.band-select-btn,
+.mode-select-btn,
+.filter-select-btn {
+    padding: 12px 6px;
+    background-color: #2a2a2a;
+    border: 1px solid #3a3a3a;
+    border-radius: 8px;
+    color: #fff;
+    font-size: 13px;
+    cursor: pointer;
+    min-height: 44px;
+    transition: all 0.15s;
+}
+
+.band-select-btn:active,
+.mode-select-btn:active,
+.filter-select-btn:active {
+    background-color: #4CAF50;
+    color: #000;
+}
+
+.mode-select-btn.active {
+    background-color: #2e7d32;
+    border-color: #4CAF50;
+}
+
+/* TX EQ 选择按钮 */
+.txeq-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.txeq-select-btn {
+    padding: 15px 10px;
+    background-color: #2a2a2a;
+    border: 2px solid #3a3a3a;
+    border-radius: 10px;
+    color: #fff;
+    font-size: 14px;
+    cursor: pointer;
+    min-height: 80px;
+    transition: all 0.15s;
+    text-align: center;
+    line-height: 1.3;
+}
+
+.txeq-select-btn:active {
+    background-color: #4CAF50;
+    border-color: #4CAF50;
+    color: #000;
+}
+
+.txeq-btn-active {
+    background-color: #2e7d32;
+    border-color: #4CAF50;
+}
+
+.close-panel-btn {
+    width: 100%;
+    padding: 14px;
+    background-color: #333;
+    border: 1px solid #444;
+    border-radius: 10px;
+    color: #fff;
+    font-size: 15px;
+    cursor: pointer;
+    min-height: 48px;
+}
+
+.close-panel-btn:active {
+    background-color: #444;
+}
+
+/* Settings Panel */
+.setting-item {
+    margin-bottom: 14px;
+}
+
+.setting-item label {
+    display: block;
+    margin-bottom: 6px;
+    color: #aaa;
+    font-size: 13px;
+}
+
+.setting-item input[type="range"] {
+    width: 100%;
+    height: 36px;
+    -webkit-appearance: none;
+    background-color: #333;
+    border-radius: 18px;
+}
+
+.setting-item input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 24px;
+    height: 24px;
+    background-color: #4CAF50;
+    border-radius: 50%;
+    cursor: pointer;
+}
+
+/* 较大屏幕适配 */
+@media (min-width: 390px) {
+    .freq-main {
+        font-size: 32px;
+    }
+    
+    .ptt-button {
+        width: 130px;
+        height: 130px;
+    }
+}
+
+@media (min-width: 428px) {
+    .freq-main {
+        font-size: 36px;
+    }
+    
+    .quick-btn {
+        padding: 14px 6px;
+    }
+    
+    .ptt-button {
+        width: 140px;
+        height: 140px;
+    }
+    
+    .ptt-label {
+        font-size: 26px;
+    }
+}
+
+@media (min-width: 768px) {
+    .mobile-modern-container {
+        max-width: 450px;
+        margin: 0 auto;
+        box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+    }
+    
+    .freq-main {
+        font-size: 40px;
+    }
+    
+    .ptt-button {
+        width: 150px;
+        height: 150px;
+    }
+}
+
+/* 横屏适配 */
+@media (orientation: landscape) and (max-height: 500px) {
+    .app-header {
+        padding: 4px 12px;
+    }
+    
+    .header-main {
+        margin-bottom: 4px;
+    }
+    
+    .freq-main {
+        font-size: 24px;
+        margin-bottom: 2px;
+    }
+    
+    .freq-sub {
+        font-size: 11px;
+    }
+    
+    .status-bar {
+        padding: 2px 0;
+    }
+    
+    .main-content {
+        padding: 6px;
+        gap: 8px;
+    }
+    
+    #s-meter-canvas {
+        height: 40px;
+    }
+    
+    .quick-controls {
+        flex-direction: row;
+        flex-wrap: wrap;
+    }
+    
+    .control-row {
+        flex: 1;
+        min-width: 200px;
+    }
+    
+    .tuning-controls {
+        grid-template-columns: repeat(6, 1fr);
+    }
+    
+    .ptt-section {
+        padding: 8px 10px;
+    }
+    
+    .ptt-button {
+        width: 80px;
+        height: 80px;
+    }
+    
+    .ptt-label {
+        font-size: 18px;
+    }
+    
+    .ptt-sublabel {
+        display: none;
+    }
+}
+
+/* Dark Mode */
+@media (prefers-color-scheme: dark) {
+    body {
+        background-color: #000;
+        color: #fff;
+    }
+}
+
+/* High Contrast */
+@media (prefers-contrast: high) {
+    .ptt-button {
+        border: 4px solid #fff;
+    }
+    
+    .quick-btn,
+    .tune-btn {
+        border: 2px solid #fff;
+    }
+}
+
+/* Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
+////////////////////////////////////////////////////////////
+// ATR-1000 功率/驻波显示样式
+////////////////////////////////////////////////////////////
+
+.atr-meter-section {
+    background: linear-gradient(180deg, #1a2a1a 0%, #0d1a0d 100%);
+    border-radius: 12px;
+    padding: 12px;
+    margin: 8px 0;
+    border: 1px solid #2a4a2a;
+}
+
+/* ATR面板隐藏状态 - 使用!important确保优先级 */
+.atr-meter-section.hidden {
+    display: none !important;
+}
+
+.atr-meter-section.visible {
+    display: block !important;
+}
+
+.atr-meter-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #2a4a2a;
+}
+
+.atr-meter-title {
+    font-size: 14px;
+    font-weight: bold;
+    color: #4CAF50;
+}
+
+.atr-meter-status {
+    font-size: 12px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    background-color: #333;
+    color: #888;
+}
+
+.atr-meter-status.connected {
+    background-color: #2e7d32;
+    color: #fff;
+}
+
+.atr-meter-status.disconnected {
+    background-color: #c62828;
+    color: #fff;
+}
+
+.atr-meter-cards {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.atr-card {
+    flex: 1;
+    background-color: #111;
+    border-radius: 10px;
+    padding: 12px 8px;
+    text-align: center;
+    border: 1px solid #333;
+}
+
+.atr-label {
+    display: block;
+    font-size: 12px;
+    color: #888;
+    margin-bottom: 4px;
+}
+
+.atr-value {
+    font-size: 32px;
+    font-weight: bold;
+    color: #4CAF50;
+    line-height: 1.1;
+}
+
+.atr-unit {
+    font-size: 12px;
+    color: #666;
+}
+
+/* 功率条形图 */
+.atr-power-bar-container {
+    margin-bottom: 8px;
+}
+
+.atr-power-bar {
+    height: 8px;
+    background-color: #4CAF50;
+    border-radius: 4px;
+    width: 0%;
+    transition: width 0.3s ease, background 0.3s ease;
+}
+
+.atr-power-scale {
+    display: flex;
+    justify-content: space-between;
+    font-size: 10px;
+    color: #666;
+    margin-top: 2px;
+}
+
+/* SWR 驻波条 */
+.atr-swr-bar-container {
+    margin-top: 4px;
+}
+
+.atr-swr-bar {
+    height: 6px;
+    background-color: #4CAF50;
+    border-radius: 3px;
+    width: 0%;
+    transition: width 0.3s ease, background 0.3s ease;
+}
+
+.atr-swr-scale {
+    display: flex;
+    justify-content: space-between;
+    font-size: 10px;
+    color: #666;
+    margin-top: 2px;
+}
+
+/* 继电器状态 */
+.atr-relay-status {
+    margin-top: 8px;
+    padding: 6px 10px;
+    background: rgba(0,0,0,0.1);
+    border-radius: 6px;
+    text-align: center;
+}
+
+.atr-relay-info {
+    font-size: 12px;
+    color: #555;
+    font-family: 'Monaco', 'Consolas', monospace;
+}
+
+/* 操作按钮 */
+.atr-action-buttons {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+    justify-content: center;
+}
+
+.atr-btn {
+    flex: 1;
+    max-width: 80px;
+    padding: 8px 4px;
+    border: none;
+    border-radius: 8px;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.atr-btn-tune {
+    background: linear-gradient(135deg, #2196F3, #1976D2);
+    color: white;
+}
+
+.atr-btn-tune:active {
+    background: linear-gradient(135deg, #1976D2, #1565C0);
+    transform: scale(0.95);
+}
+
+.atr-btn-save {
+    background: linear-gradient(135deg, #4CAF50, #388E3C);
+    color: white;
+}
+
+.atr-btn-save:active {
+    background: linear-gradient(135deg, #388E3C, #2E7D32);
+    transform: scale(0.95);
+}
+
+.atr-btn-load {
+    background: linear-gradient(135deg, #FF9800, #F57C00);
+    color: white;
+}
+
+.atr-btn-load:active {
+    background: linear-gradient(135deg, #F57C00, #EF6C00);
+    transform: scale(0.95);
+}
+
+/* 隐藏桌面版遮罩层 - 移动端不使用 */
+#ombre-body,
+#pop-upspinner {
+    display: none !important;
+    z-index: -1 !important;
+    pointer-events: none !important;
+}
+
+/* indwsControlTRX 样式 */
+#indwsControlTRX {
+    padding: 2px 4px;
+}
+#indwsControlTRX img {
+    width: 10px;
+    height: 10px;
+}
+
+/* 隐藏 indwsControlTRX - 移动端不显示 */
+#indwsControlTRX {
+    display: none !important;
+}
+
+////////////////////////////////////////////////////////////
+// V4.4 精简布局样式
+////////////////////////////////////////////////////////////
+
+/* 功率/驻波精简显示 - 始终可见 */
+.atr-meter-section-compact {
+    background: rgba(30, 40, 30, 0.9);
+    border-radius: 10px;
+    padding: 10px 15px;
+    margin: 8px 0;
+    border: 1px solid #3a5a3a;
+    display: block;
+}
+
+.atr-meter-section-compact.hidden {
+    display: none !important;
+}
+
+.atr-meter-section-compact.visible {
+    display: block !important;
+}
+
+.atr-compact-row {
+    display: flex;
+    gap: 20px;
+}
+
+.atr-compact-item {
+    flex: 1;
+    text-align: center;
+}
+
+.atr-compact-label {
+    font-size: 11px;
+    color: #888;
+    display: block;
+    margin-bottom: 2px;
+}
+
+.atr-compact-value-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: center;
+    gap: 2px;
+}
+
+.atr-compact-value {
+    font-size: 28px;
+    font-weight: bold;
+    color: #4CAF50;
+    line-height: 1;
+}
+
+.atr-compact-unit {
+    font-size: 12px;
+    color: #666;
+}
+
+/* 精简版进度条 */
+.atr-bar-compact {
+    height: 4px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 2px;
+    margin-top: 4px;
+    overflow: hidden;
+}
+
+.atr-power-bar-compact {
+    height: 100%;
+    background: linear-gradient(90deg, #4CAF50, #8BC34A, #FF9800, #f44336);
+    border-radius: 2px;
+    width: 0%;
+    transition: width 0.2s ease;
+}
+
+.atr-swr-bar-compact {
+    height: 100%;
+    background: #4CAF50;
+    border-radius: 2px;
+    width: 0%;
+    transition: width 0.2s ease, background 0.2s ease;
+}
+
+/* 音量控制精简版 */
+.volume-control-compact {
+    padding: 5px 10px;
+    margin: 5px 0;
+}
+
+.volume-row-compact {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.volume-icon-small {
+    font-size: 16px;
+}
+
+.volume-slider-compact {
+    flex: 1;
+    height: 4px;
+    -webkit-appearance: none;
+    appearance: none;
+    background: linear-gradient(90deg, #333, #555);
+    border-radius: 2px;
+    outline: none;
+}
+
+.volume-slider-compact::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #4CAF50;
+    cursor: pointer;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+}
+
+.volume-value-small {
+    font-size: 12px;
+    color: #888;
+    min-width: 35px;
+}
+
+/* 频率调谐精简版 */
+.frequency-tuning-compact {
+    padding: 8px 5px;
+    margin: 5px 0;
+}
+
+.tuning-controls-compact {
+    display: flex;
+    gap: 6px;
+    justify-content: center;
+}
+
+.tune-btn-compact {
+    flex: 1;
+    max-width: 70px;
+    padding: 10px 8px;
+    border: none;
+    border-radius: 8px;
+    background: linear-gradient(180deg, #3a3a3a, #2a2a2a);
+    color: #ccc;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.tune-btn-compact:active {
+    background: linear-gradient(180deg, #4a4a4a, #3a3a3a);
+    transform: scale(0.95);
+}
+
+/* 频率调谐网格布局 - 两排 */
+.frequency-tuning-grid {
+    padding: 8px 10px;
+    margin: 5px 0;
+}
+
+.tuning-row {
+    display: flex;
+    gap: 6px;
+    justify-content: center;
+    margin-bottom: 6px;
+}
+
+.tuning-row:last-child {
+    margin-bottom: 0;
+}
+
+.tune-btn-grid {
+    flex: 1;
+    max-width: 75px;
+    padding: 14px 8px;
+    border: none;
+    border-radius: 10px;
+    background: #3a3a3a;
+    color: #FFF8E7;
+    font-size: 16px;
+    font-weight: 800;
+    font-family: 'Courier New', monospace;
+    cursor: pointer;
+    transition: all 0.1s ease;
+    border: 1px solid #4a4a4a;
+}
+
+.tune-btn-grid:active {
+    background: #4a4a4a;
+    transform: scale(0.95);
+}
+
+/* 底部 TUNE 按钮 */
+.tune-button-footer {
+    flex: 0.6;
+    height: 70px;
+    border: none;
+    border-radius: 16px;
+    background: linear-gradient(180deg, #3a5a3a, #2a4a2a);
+    color: #8BC34A;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+}
+
+.tune-button-footer:active {
+    background: linear-gradient(180deg, #4a6a4a, #3a5a3a);
+    transform: scale(0.95);
+}
+
+.tune-label {
+    font-size: 14px;
+}
+
+/* 更新 PTT 区域布局 */
+.ptt-container {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    align-items: stretch;
+    padding: 10px;
+    padding-bottom: calc(10px + env(safe-area-inset-bottom));
+}
+
+/* PTT 按钮调整 */
+.ptt-button {
+    flex: 1.4;
+    height: 70px;
+    border: none;
+    border-radius: 16px;
+    background: linear-gradient(180deg, #c62828, #8b1a1a);
+    color: white;
+    font-size: 20px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 12px rgba(198, 40, 40, 0.4);
+}
+
+.ptt-button.active {
+    background: linear-gradient(180deg, #4CAF50, #388E3C);
+    box-shadow: 0 4px 12px rgba(76, 175, 80, 0.4);
+}
+
+.ptt-label {
+    font-size: 22px;
+}
+
+.ptt-sublabel {
+    display: none;  /* 隐藏子标签，更简洁 */
+}

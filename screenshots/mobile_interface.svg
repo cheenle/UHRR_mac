@@ -1,0 +1,81 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="390" height="844" viewBox="0 0 390 844">
+  <!-- Background -->
+  <rect width="390" height="844" fill="#1a1a1a"/>
+  
+  <!-- Status Bar -->
+  <rect x="0" y="0" width="390" height="44" fill="#111"/>
+  <text x="20" y="28" fill="#fff" font-family="Arial" font-size="14">📶</text>
+  <text x="50" y="28" fill="#fff" font-family="Arial" font-size="14">MRRC</text>
+  <text x="320" y="28" fill="#fff" font-family="Arial" font-size="14">100%</text>
+  
+  <!-- Header -->
+  <rect x="0" y="44" width="390" height="60" fill="#222"/>
+  <text x="20" y="82" fill="#fff" font-family="Arial" font-size="24" font-weight="bold">7.053.000 MHz</text>
+  <rect x="300" y="60" width="40" height="30" rx="15" fill="#4CAF50"/>
+  <text x="315" y="80" fill="#fff" font-family="Arial" font-size="14">USB</text>
+  
+  <!-- S-Meter -->
+  <rect x="20" y="120" width="350" height="80" rx="10" fill="#111"/>
+  <rect x="30" y="140" width="240" height="20" rx="5" fill="#333"/>
+  <rect x="30" y="140" width="120" height="20" rx="5" fill="url(#gradient)"/>
+  <defs>
+    <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#4CAF50"/>
+      <stop offset="50%" stop-color="#FFC107"/>
+      <stop offset="100%" stop-color="#F44336"/>
+    </linearGradient>
+  </defs>
+  <text x="30" y="180" fill="#888" font-family="Arial" font-size="12">S1  S3  S5  S7  S9  +20 +40 +60</text>
+  <text x="300" y="170" fill="#4CAF50" font-family="Arial" font-size="18" font-weight="bold">S7</text>
+  
+  <!-- Frequency Controls -->
+  <rect x="20" y="220" width="350" height="100" rx="10" fill="#222"/>
+  <rect x="30" y="230" width="70" height="35" rx="8" fill="#333"/>
+  <text x="45" y="255" fill="#fff" font-family="Arial" font-size="14">-10k</text>
+  <rect x="110" y="230" width="70" height="35" rx="8" fill="#333"/>
+  <text x="125" y="255" fill="#fff" font-family="Arial" font-size="14">-5k</text>
+  <rect x="190" y="230" width="70" height="35" rx="8" fill="#333"/>
+  <text x="210" y="255" fill="#fff" font-family="Arial" font-size="14">-1k</text>
+  <rect x="30" y="275" width="70" height="35" rx="8" fill="#333"/>
+  <text x="50" y="300" fill="#fff" font-family="Arial" font-size="14">+10k</text>
+  <rect x="110" y="275" width="70" height="35" rx="8" fill="#333"/>
+  <text x="130" y="300" fill="#fff" font-family="Arial" font-size="14">+5k</text>
+  <rect x="190" y="275" width="70" height="35" rx="8" fill="#333"/>
+  <text x="210" y="300" fill="#fff" font-family="Arial" font-size="14">+1k</text>
+  <rect x="280" y="240" width="80" height="60" rx="8" fill="#1565c0"/>
+  <text x="295" y="278" fill="#fff" font-family="Arial" font-size="16" font-weight="bold">TUNE</text>
+  
+  <!-- Volume Control -->
+  <rect x="20" y="340" width="350" height="50" rx="10" fill="#222"/>
+  <text x="40" y="372" fill="#fff" font-family="Arial" font-size="18">🔊</text>
+  <rect x="80" y="358" width="230" height="8" rx="4" fill="#333"/>
+  <rect x="80" y="358" width="140" height="8" rx="4" fill="url(#gradient)"/>
+  <circle cx="220" cy="362" r="12" fill="#fff"/>
+  <text x="320" y="372" fill="#4CAF50" font-family="Arial" font-size="14" font-weight="bold">60%</text>
+  
+  <!-- Quick Buttons -->
+  <rect x="20" y="410" width="350" height="80" rx="10" fill="#222"/>
+  <rect x="30" y="420" width="100" height="30" rx="8" fill="#1565c0"/>
+  <text x="55" y="440" fill="#fff" font-family="Arial" font-size="12">VFO A</text>
+  <rect x="140" y="420" width="100" height="30" rx="8" fill="#333"/>
+  <text x="165" y="440" fill="#fff" font-family="Arial" font-size="12">VFO B</text>
+  <rect x="250" y="420" width="100" height="30" rx="8" fill="#333"/>
+  <text x="275" y="440" fill="#fff" font-family="Arial" font-size="12">USB</text>
+  <rect x="30" y="460" width="100" height="25" rx="8" fill="#333"/>
+  <text x="55" y="477" fill="#fff" font-family="Arial" font-size="11">20m</text>
+  <rect x="140" y="460" width="100" height="25" rx="8" fill="#333"/>
+  <text x="165" y="477" fill="#fff" font-family="Arial" font-size="11">MID</text>
+  <rect x="250" y="460" width="100" height="25" rx="8" fill="#333"/>
+  <text x="275" y="477" fill="#fff" font-family="Arial" font-size="11">TUNE</text>
+  
+  <!-- PTT Button -->
+  <rect x="40" y="700" width="310" height="100" rx="50" fill="#c62828"/>
+  <text x="165" y="760" fill="#fff" font-family="Arial" font-size="24" font-weight="bold">PTT</text>
+  
+  <!-- Safe Area -->
+  <rect x="0" y="800" width="390" height="44" fill="#111"/>
+  
+  <!-- Label -->
+  <text x="195" y="560" fill="#666" font-family="Arial" font-size="16" text-anchor="middle">Mobile Interface</text>
+  <text x="195" y="580" fill="#444" font-family="Arial" font-size="12" text-anchor="middle">iPhone 15 Optimized</text>
+</svg>

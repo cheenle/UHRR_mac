@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="HamRadio">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#1a1a1a">
+    <title>iPhone Ham Radio Remote</title>
+    <link rel="apple-touch-icon" href="favicon.png">
+    <link rel="stylesheet" type="text/css" href="iphone.css">
+</head>
+<body>
+    <!-- 安全区域适配 -->
+    <div class="safe-area-top"></div>
+    
+    <!-- 主容器 -->
+    <div class="iphone-container">
+        <!-- 顶部状态栏 -->
+        <header class="header">
+            <div class="header-left">
+                <button id="menu-btn" class="icon-btn">☰</button>
+            </div>
+            <div class="header-center">
+                <div class="frequency-display" id="frequency-display">
+                    <span class="freq-main" id="freq-main">7.053.000</span>
+                    <span class="freq-unit">MHz</span>
+                </div>
+            </div>
+            <div class="header-right">
+                <button id="power-btn" class="icon-btn power-off">⏻</button>
+            </div>
+        </header>
+        
+        <!-- 状态指示器 -->
+        <div class="status-bar">
+            <div class="status-item" id="status-ctrl">
+                <span class="status-dot"></span>
+                <span class="status-label">CTRL</span>
+            </div>
+            <div class="status-item" id="status-rx">
+                <span class="status-dot"></span>
+                <span class="status-label">RX</span>
+            </div>
+            <div class="status-item" id="status-tx">
+                <span class="status-dot"></span>
+                <span class="status-label">TX</span>
+            </div>
+            <div class="signal-strength">
+                <div class="signal-bars">
+                    <div class="signal-bar"></div>
+                    <div class="signal-bar"></div>
+                    <div class="signal-bar"></div>
+                    <div class="signal-bar"></div>
+                    <div class="signal-bar"></div>
+                </div>
+                <span class="signal-text" id="signal-text">S9</span>
+            </div>
+        </div>
+        
+        <!-- 主要控制区域 -->
+        <main class="main-content">
+            <!-- 模式和VFO选择 -->
+            <div class="mode-vfo-section">
+                <div class="mode-selector">
+                    <button class="mode-btn active" data-mode="USB">USB</button>
+                    <button class="mode-btn" data-mode="LSB">LSB</button>
+                    <button class="mode-btn" data-mode="CW">CW</button>
+                </div>
+                <div class="vfo-selector">
+                    <button class="vfo-btn active" data-vfo="A">VFO A</button>
+                    <button class="vfo-btn" data-vfo="B">VFO B</button>
+                </div>
+            </div>
+            
+            <!-- 频率调节 -->
+            <div class="frequency-control">
+                <div class="freq-digits">
+                    <div class="freq-digit-group">
+                        <div class="digit-up" data-digit="cmhz">▲</div>
+                        <div class="digit-display" id="cmhz">7</div>
+                        <div class="digit-down" data-digit="cmhz">▼</div>
+                    </div>
+                    <div class="freq-digit-group">
+                        <div class="digit-up" data-digit="dmhz">▲</div>
+                        <div class="digit-display" id="dmhz">0</div>
+                        <div class="digit-down" data-digit="dmhz">▼</div>
+                    </div>
+                    <div class="freq-digit-group">
+                        <div class="digit-up" data-digit="umhz">▲</div>
+                        <div class="digit-display" id="umhz">5</div>
+                        <div class="digit-down" data-digit="umhz">▼</div>
+                    </div>
+                    <div class="freq-separator">.</div>
+                    <div class="freq-digit-group">
+                        <div class="digit-up" data-digit="ckhz">▲</div>
+                        <div class="digit-display" id="ckhz">3</div>
+                        <div class="digit-down" data-digit="ckhz">▼</div>
+                    </div>
+                    <div class="freq-digit-group">
+                        <div class="digit-up" data-digit="dkhz">▲</div>
+                        <div class="digit-display" id="dkhz">0</div>
+                        <div class="digit-down" data-digit="dkhz">▼</div>
+                    </div>
+                    <div class="freq-digit-group">
+                        <div class="digit-up" data-digit="ukhz">▲</div>
+                        <div class="digit-display" id="ukhz">0</div>
+                        <div class="digit-down" data-digit="ukhz">▼</div>
+                    </div>
+                    <div class="freq-separator">.</div>
+                    <div class="freq-digit-group">
+                        <div class="digit-up" data-digit="chz">▲</div>
+                        <div class="digit-display" id="chz">0</div>
+                        <div class="digit-down" data-digit="chz">▼</div>
+                    </div>
+                    <div class="freq-digit-group">
+                        <div class="digit-up" data-digit="dhz">▲</div>
+                        <div class="digit-display" id="dhz">0</div>
+                        <div class="digit-down" data-digit="dhz">▼</div>
+                    </div>
+                    <div class="freq-digit-group">
+                        <div class="digit-up" data-digit="uhz">▲</div>
+                        <div class="digit-display" id="uhz">0</div>
+                        <div class="digit-down" data-digit="uhz">▼</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 快捷频段选择 -->
+            <div class="band-selector">
+                <button class="band-btn" data-band="1845500">160m</button>
+                <button class="band-btn" data-band="3850000">80m</button>
+                <button class="band-btn" data-band="7050000">40m</button>
+                <button class="band-btn" data-band="14270000">20m</button>
+                <button class="band-btn" data-band="21400000">15m</button>
+                <button class="band-btn" data-band="28450000">10m</button>
+            </div>
+        </main>
+        
+        <!-- PTT按钮 - 底部固定 -->
+        <footer class="ptt-footer">
+            <div class="ptt-container">
+                <button id="ptt-btn" class="ptt-button">
+                    <span class="ptt-label">PTT</span>
+                    <span class="ptt-sublabel">按住说话</span>
+                </button>
+            </div>
+        </footer>
+    </div>
+    
+    <!-- 安全区域适配 -->
+    <div class="safe-area-bottom"></div>
+    
+    <!-- 隐藏的WebSocket状态指示器 -->
+    <div id="indwsAudioTX" style="display: none;"><img src="img/critsred.png">wsTX</div>
+    <div id="indwsAudioRX" style="display: none;"><img src="img/critsred.png">wsRX</div>
+    <div id="indwsControlTRX" style="display: none;"><img src="img/critsred.png">wsCtrl</div>
+    
+    <script src="iphone.js"></script>
+</body>
+</html>
