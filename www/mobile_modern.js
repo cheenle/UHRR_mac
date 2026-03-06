@@ -1815,22 +1815,21 @@ const ATR1000 = {
         cap_pf: 0     // 电容值 (pF)
     },
     
-    // 初始化 - 只建立WebSocket连接，不显示面板（面板在TX时显示）
+    // 初始化 - 建立WebSocket连接，面板始终显示（精简版）
     init: function() {
         console.log('📻 ATR-1000 代理模式初始化...');
         this._reconnectTimer = null;
         this._reconnectAttempts = 0;
         this._maxReconnectAttempts = 10;
         
-        // 确保面板初始隐藏（使用CSS类）
+        // 精简版面板始终显示
         const section = document.getElementById('atr-meter-section');
         if (section) {
-            section.classList.add('hidden');
-            section.classList.remove('visible');
+            section.classList.remove('hidden');
+            section.classList.add('visible');
         }
         
-        // 预连接WebSocket（不显示面板，不发送start命令）
-        // 面板只在 onTXStart 被调用时显示
+        // 预连接WebSocket
         this.connect();
     },
     
@@ -2294,13 +2293,7 @@ const ATR1000 = {
     onPowerOff: function() {
         console.log('📻 Power 关闭，断开 ATR-1000 代理');
         this.disconnect();
-        
-        // 隐藏面板
-        const section = document.getElementById('atr-meter-section');
-        if (section) {
-            section.classList.add('hidden');
-            section.classList.remove('visible');
-        }
+        // 精简版面板保持显示，不断开时显示 "--"
     },
     
     // 启动心跳保活
