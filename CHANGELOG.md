@@ -6,34 +6,50 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [V4.5.3] - 2026-03-06
-### 🔍 ATR-1000 响应延迟分析与尝试
 
-**主题：分析 TX 音频处理对 ATR-1000 响应的影响**
+### 🔍 ATR-1000 PTT 发射时功率/驻波更新延迟问题复盘
 
-### 尝试的方案
-1. **简化 TX 音频处理**：移除 Opus 编码，使用 PCM 直发
-   - 结果：RX 解码失败（后端发送 Opus，前端期望 Int16）
+#### 问题描述
+- **现象**：TUNE 模式下功率/驻波更新及时，PTT 发射模式下更新延迟严重甚至无更新
+- **影响**：移动端用户无法实时监控发射功率和驻波比
 
-2. **移动端切换 PCM 模式**：将 `#encode` 设为 unchecked
-   - 结果：RX 解码失败（`encode` 同时控制 TX 和 RX）
+#### 尝试的方案
 
-### 发现的问题
-- **架构限制**：`encode` 变量同时控制 TX 编码和 RX 解码
-- **不能单独切换**：要 TX 用 PCM，需要分离 TX/RX 编码控制
-- **后端默认 Opus**：RX 默认发送 Opus 编码数据
+| 方案 | 内容 | 结果 | 原因分析 |
+|------|------|------|----------|
+| **方案1** | 简化 TX 音频处理，移除降采样和帧累积 | ❌ PTT 立即切回 RX | 采样率不匹配（后端期望16kHz，实际发送48kHz） |
+| **方案2** | 移动端切换到 PCM 模式（encode=0） | ❌ RX 全是噪音 | encode 变量同时控制 TX 编码和 RX 解码，后端仍发 Opus |
+| **方案3** | 降低 Opus 码率到 8kbps | ❌ 无改善 | CPU 占用不是主要瓶颈 |
 
-### 技术分析
-- TX 码率正常：`TX: 235.5 kbps`（PCM 模式时）
-- RX 解码错误：`byte length of Int16Array should be a multiple of 2`
-- 原因：后端发送 Opus 数据，前端用 Int16 解码失败
+#### 根本原因分析
 
-### 建议的后续方案
-1. **分离 TX/RX 编码控制**：修改 `sendSettings()` 和后端
-2. **保持 Opus 编码**：因为它是正常工作的
-3. **其他优化方向**：优化 Opus 编码参数或帧大小
+1. **架构限制**：`encode` 变量同时控制 TX 编码和 RX 解码，无法单独切换
+2. **主线程阻塞**：`ScriptProcessorNode.onAudioProcess` 每 20ms 执行一次，阻塞 ATR-1000 WebSocket 消息处理
+3. **消息处理延迟**：ATR-1000 sync 响应需要在主线程空闲时才能处理
 
-### 文件变更
-- 无有效变更（所有尝试已回滚）
+#### 技术细节
+
+```
+TX 音频处理链路（每 20ms 执行）：
+麦克风 → 降采样(48k→16k) → 帧累积(640样本) → Opus 编码 → WebSocket 发送
+         ↓
+    主线程阻塞 5-10ms
+         ↓
+    ATR-1000 sync 响应被延迟
+```
+
+#### 未来优化方向
+
+| 优先级 | 方案 | 难度 | 预期效果 |
+|--------|------|------|----------|
+| **高** | Web Worker 音频编码 | 高 | 彻底释放主线程 |
+| **中** | 分离 TX/RX 编码控制 | 中 | 允许 TX 用 PCM，RX 用 Opus |
+| **低** | 后端 sync 节流 | 低 | 减少设备负载 |
+| **低** | 增大 ScriptProcessorNode 缓冲区 | 低 | 降低回调频率 |
+
+#### 结论
+
+当前系统核心功能（TX/RX 音频）稳定工作。ATR-1000 响应延迟问题需要较大的架构改动（Web Worker），建议在未来版本中规划实施。
 
 ---
 
