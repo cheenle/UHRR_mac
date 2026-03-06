@@ -2336,7 +2336,7 @@ const ATR1000 = {
         }
     },
     
-    // TX 开始时调用 - 精简版，面板始终显示
+    // TX 开始时调用 - V4.4.16: 不发送 start/stop 命令，使用与 TUNE 相同的方式
     onTXStart: function() {
         // 防抖：如果已经启动则跳过
         if (this._txActive) {
@@ -2345,72 +2345,15 @@ const ATR1000 = {
         }
         this._txActive = true;
         
-        console.log('📻 TX 开始，发送 ATR-1000 start 命令');
+        console.log('📻 TX 开始（不发送 start 命令，依赖心跳同步）');
         
-        // 定义发送 start 命令的函数
-        const sendStartCommand = () => {
-            const wsState = this.ws ? this.ws.readyState : 'null';
-            console.log(`📻 sendStartCommand: ws=${this.ws ? 'exists' : 'null'}, readyState=${wsState}, _txActive=${this._txActive}`);
-            
-            if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-                try {
-                    this.ws.send(JSON.stringify({action: 'start'}));
-                    console.log('📤 发送 ATR-1000 start 命令');
-                    // 重置消息计数
-                    this._msgCount = 0;
-                    // 连接成功，重置重连计数
-                    this._reconnectAttempts = 0;
-                } catch (e) {
-                    console.error('发送 start 命令失败:', e);
-                }
-            } else if (this.ws && this.ws.readyState === WebSocket.CONNECTING) {
-                // 正在连接中，等待连接完成后发送（onopen 会处理）
-                console.log('📻 WebSocket 正在连接中，等待 onopen...');
-                this._pendingStart = true;
-            } else {
-                console.log('📻 WebSocket 未就绪或已断开，尝试重新连接...');
-                // 尝试重新连接
-                this._pendingStart = true;
-                this.connect();
-                
-                // 延迟重试
-                if (this._txActive && !this._startRetryTimer) {
-                    this._startRetryTimer = setTimeout(() => {
-                        this._startRetryTimer = null;
-                        if (this._txActive) sendStartCommand();
-                    }, 200);  // 增加到 200ms
-                }
-            }
-        };
-        
-        // 检查连接状态
-        if (this.isConnected && this.ws && this.ws.readyState === WebSocket.OPEN) {
-            // 已连接，直接发送
-            sendStartCommand();
-        } else {
-            // 未连接，先连接再发送
-            console.log('📻 ATR-1000 未连接，正在建立连接...');
-            this._pendingStart = true;
-            
-            // 等待连接成功后发送 start
-            const checkAndSend = () => {
-                if (this.isConnected && this.ws && this.ws.readyState === WebSocket.OPEN) {
-                    this._pendingStart = false;
-                    sendStartCommand();
-                } else if (this._txActive) {
-                    // 继续等待
-                    setTimeout(checkAndSend, 100);
-                }
-            };
-            
-            // 启动连接
-            this.connect();
-            // 开始检查
-            setTimeout(checkAndSend, 100);
-        }
+        // V4.4.16: 不再发送 start 命令，让数据通过心跳机制自然流动
+        // 这与 TUNE 模式一致
+        // 重置消息计数
+        this._msgCount = 0;
     },
     
-    // TX 结束时调用 - 精简版，面板始终显示
+    // TX 结束时调用 - V4.4.16: 不发送 start/stop 命令，与 TUNE 方式一致
     onTXStop: function() {
         console.log('🛑 ATR-1000 onTXStop 被调用, _txActive=', this._txActive);
         
@@ -2421,7 +2364,7 @@ const ATR1000 = {
         }
         this._txActive = false;
         
-        console.log('📻 TX 结束');
+        console.log('📻 TX 结束（不发送 stop 命令，依赖心跳同步）');
         
         // 清理重试定时器
         if (this._startRetryTimer) {
@@ -2436,17 +2379,10 @@ const ATR1000 = {
         }
         this._pendingUpdate = null;
         
-        // 发送 stop 命令（保持连接预热）
-        if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-            try {
-                this.ws.send(JSON.stringify({action: 'stop'}));
-                console.log('📤 发送 ATR-1000 stop 命令');
-            } catch (e) {
-                console.log('发送 stop 命令失败:', e);
-            }
-        }
+        // V4.4.16: 不再发送 stop 命令，保持数据流持续
+        // 心跳机制会持续同步数据
         
-        // 面板保持显示（精简版始终可见），不再隐藏
+        // 面板保持显示（精简版始终可见）
         console.log('✅ ATR-1000 面板保持显示（精简版）');
     }
 };
