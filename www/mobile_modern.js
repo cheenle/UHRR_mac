@@ -1804,8 +1804,6 @@ const ATR1000Monitor = {
 
 const ATR1000 = {
     ws: null,
-    worker: null,           // V4.6.0: Web Worker 实例
-    useWorker: true,        // V4.6.0: 是否使用 Worker 模式
     isConnected: false,
     lastPower: 0,
     lastSWR: 0,
@@ -1823,7 +1821,7 @@ const ATR1000 = {
         cap_pf: 0     // 电容值 (pF)
     },
     
-    // 初始化 - V4.6.0: 优先使用 Worker 模式
+    // 初始化 - 建立WebSocket连接，面板始终显示（精简版）
     init: function() {
         console.log('📻 ATR-1000 代理模式初始化...');
         this._reconnectTimer = null;
@@ -1837,108 +1835,12 @@ const ATR1000 = {
             section.classList.add('visible');
         }
         
-        // V4.6.0: 检查 Worker 支持
-        if (this.useWorker && typeof Worker !== 'undefined') {
-            this._initWorker();
-        } else {
-            // 回退到传统 WebSocket 模式
-            this.useWorker = false;
-            this.connect();
-        }
+        // 预连接WebSocket
+        this.connect();
     },
     
-    // V4.6.0: 初始化 Worker
-    _initWorker: function() {
-        try {
-            // 创建 Worker
-            this.worker = new Worker('atr1000_worker.js');
-            
-            // Worker 消息处理
-            this.worker.onmessage = (e) => {
-                const { type, data, msgCount } = e.data;
-                
-                switch (type) {
-                    case 'connected':
-                        this.isConnected = true;
-                        this._reconnectAttempts = 0;
-                        console.log('✅ ATR-1000 Worker 已连接');
-                        this.updateStatus('已连接');
-                        break;
-                        
-                    case 'disconnected':
-                        this.isConnected = false;
-                        console.log('🔴 ATR-1000 Worker 断开');
-                        this.updateStatus('断开');
-                        this._handleDisconnect();
-                        break;
-                        
-                    case 'meter':
-                        // 接收 Worker 解析后的数据，直接更新 DOM
-                        this._msgCount = msgCount;
-                        this.lastPower = data.power || 0;
-                        this.lastSWR = data.swr || 0;
-                        
-                        // 更新继电器状态
-                        if (data.sw !== undefined) {
-                            this.relayStatus.sw = data.sw;
-                            this.relayStatus.ind = data.ind || 0;
-                            this.relayStatus.cap = data.cap || 0;
-                            this.relayStatus.ind_uh = data.ind_uh || 0;
-                            this.relayStatus.cap_pf = data.cap_pf || 0;
-                        }
-                        
-                        // 直接更新 DOM
-                        this._doUpdateDisplay();
-                        
-                        // 每10条打印日志
-                        if (msgCount % 10 === 0) {
-                            console.log(`📊 ATR-1000 #${msgCount}: power=${data.power}W, swr=${data.swr.toFixed(2)}`);
-                        }
-                        break;
-                        
-                    case 'error':
-                        console.error('ATR-1000 Worker 错误:', data);
-                        break;
-                }
-            };
-            
-            this.worker.onerror = (e) => {
-                console.error('ATR-1000 Worker 加载失败:', e);
-                // 回退到传统模式
-                this.useWorker = false;
-                this.connect();
-            };
-            
-            console.log('🚀 ATR-1000 Worker 模式已启用');
-            
-            // 连接 WebSocket
-            this.connect();
-            
-        } catch (e) {
-            console.error('Worker 初始化失败:', e);
-            this.useWorker = false;
-            this.connect();
-        }
-    },
-    
-    // 连接后端 ATR-1000 代理 - V4.6.0: Worker 模式
+    // 连接后端 ATR-1000 代理
     connect: function() {
-        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const host = window.location.host;
-        const url = `${protocol}//${host}/WSATR1000`;
-        
-        if (this.useWorker && this.worker) {
-            // Worker 模式：发送连接命令给 Worker
-            console.log('📻 [Worker模式] 连接 ATR-1000:', url);
-            this.worker.postMessage({ type: 'connect', data: { url: url } });
-        } else {
-            // 传统模式：保持原有逻辑
-            this._connectTraditional(url);
-        }
-    },
-    
-    // 传统 WebSocket 连接（回退模式）
-    _connectTraditional: function(url) {
         // 检查是否已有连接（OPEN 或 CONNECTING 状态）
         if (this.ws && (this.ws.readyState === WebSocket.OPEN || this.ws.readyState === WebSocket.CONNECTING)) {
             console.log('📻 ATR-1000 代理已连接或正在连接，跳过');
@@ -1955,7 +1857,12 @@ const ATR1000 = {
         }
         
         try {
-            console.log('📻 [传统模式] 连接 ATR-1000 后端代理:', url);
+            // 使用当前页面的主机和协议，连接后端代理 WebSocket
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const host = window.location.host;
+            const url = `${protocol}//${host}/WSATR1000`;
+            
+            console.log('📻 连接 ATR-1000 后端代理:', url);
             this.ws = new WebSocket(url);
             
             this.ws.onopen = () => {
@@ -2021,13 +1928,10 @@ const ATR1000 = {
         }
     },
     
-    // 断开连接 - V4.6.0: Worker 模式
+    // 断开连接
     disconnect: function() {
-        if (this.useWorker && this.worker) {
-            // Worker 模式：发送断开命令
-            this.worker.postMessage({ type: 'disconnect' });
-        } else if (this.ws) {
-            // 传统模式：只有在本 OPEN 状态时才发送 stop 消息
+        if (this.ws) {
+            // 只有在 OPEN 状态时才发送 stop 消息
             if (this.ws.readyState === WebSocket.OPEN) {
                 try {
                     this.ws.send(JSON.stringify({action: 'stop'}));
@@ -2387,41 +2291,30 @@ const ATR1000 = {
         // 精简版面板保持显示，不断开时显示 "--"
     },
     
-    // 启动心跳保活 - V4.6.0: Worker 模式由 Worker 内部管理
+    // 启动心跳保活 - 发送 sync 请求最新数据
     _startHeartbeat: function() {
-        if (this.useWorker && this.worker) {
-            // Worker 模式：发送启动心跳命令
-            this.worker.postMessage({ type: 'startHeartbeat' });
-            console.log('💓 ATR-1000 Worker 心跳已启动');
-        } else {
-            // 传统模式
-            this._stopHeartbeat();  // 先停止旧的心跳
-            this._lastSyncTime = 0;  // 初始化上次同步时间
-            this._heartbeatInterval = setInterval(() => {
-                if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-                    const now = Date.now();
-                    // V4.5.5: 最小间隔 250ms（从500ms优化）
-                    if (now - this._lastSyncTime >= 250) {
-                        try {
-                            this.ws.send(JSON.stringify({action: 'sync'}));
-                            this._lastSyncTime = now;
-                        } catch (e) {
-                            console.log('💓 ATR-1000 sync 发送失败:', e);
-                        }
+        this._stopHeartbeat();  // 先停止旧的心跳
+        this._lastSyncTime = 0;  // 初始化上次同步时间
+        this._heartbeatInterval = setInterval(() => {
+            if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+                const now = Date.now();
+                // V4.4.22c: 双重保护 - 确保最小间隔 500ms
+                if (now - this._lastSyncTime >= 500) {
+                    try {
+                        this.ws.send(JSON.stringify({action: 'sync'}));
+                        this._lastSyncTime = now;
+                    } catch (e) {
+                        console.log('💓 ATR-1000 sync 发送失败:', e);
                     }
                 }
-            }, 250);  // 每0.25秒检查一次（V4.5.5优化）
-            console.log('💓 ATR-1000 心跳已启动 (0.25s sync interval, 高频更新)');
-        }
+            }
+        }, 500);  // 每0.5秒检查一次
+        console.log('💓 ATR-1000 心跳已启动 (0.5s sync interval, 双重保护)');
     },
     
-    // 停止心跳 - V4.6.0: Worker 模式
+    // 停止心跳
     _stopHeartbeat: function() {
-        if (this.useWorker && this.worker) {
-            // Worker 模式：发送停止心跳命令
-            this.worker.postMessage({ type: 'stopHeartbeat' });
-            console.log('💓 ATR-1000 Worker 心跳已停止');
-        } else if (this._heartbeatInterval) {
+        if (this._heartbeatInterval) {
             clearInterval(this._heartbeatInterval);
             this._heartbeatInterval = null;
             console.log('💓 ATR-1000 心跳已停止');
@@ -2491,27 +2384,6 @@ const ATR1000 = {
         
         // 面板保持显示（精简版始终可见）
         console.log('✅ ATR-1000 面板保持显示（精简版）');
-    },
-    
-    // V4.6.0: 处理断开连接（Worker 和传统模式共用）
-    _handleDisconnect: function() {
-        this._stopHeartbeat();
-        
-        // 自动重连
-        if (this._reconnectAttempts < this._maxReconnectAttempts) {
-            this._reconnectAttempts++;
-            const delay = Math.min(1000 * this._reconnectAttempts, 10000);
-            console.log(`📻 ATR-1000 尝试重连 (${this._reconnectAttempts}/${this._maxReconnectAttempts})...`);
-            
-            if (this._reconnectTimer) {
-                clearTimeout(this._reconnectTimer);
-            }
-            this._reconnectTimer = setTimeout(() => {
-                this.connect();
-            }, delay);
-        } else {
-            console.log('📻 ATR-1000 重连次数超限，停止重连');
-        }
     }
 };
 

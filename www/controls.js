@@ -1986,8 +1986,6 @@ MediaHandler.prototype.callback = function( stream )
 {
     console.log( '🎤 MediaHandler.callback: 开始设置麦克风...' );
     
-    var self = this;
-    
     // iOS Safari 关键：确保AudioContext处于running状态
     if (this.context.state === 'suspended') {
         console.log('🎤 MediaHandler.callback: AudioContext suspended，尝试恢复...');
@@ -2001,70 +1999,20 @@ MediaHandler.prototype.callback = function( stream )
 	AudioTX_analyser = this.context.createAnalyser();
 	this.gain_node = this.context.createGain();
     this.micSource = this.context.createMediaStreamSource( stream );
+    this.processor = this.context.createScriptProcessor( this.audioProcessor.bufferSize, 1, 1 );
+    this.processor.onaudioprocess = this.audioProcessor.onAudioProcess.bind( this.audioProcessor );
     
     // 初始化 TX EQ
     initTX_EQ(this.context);
     
-    // 音频链前半部分: micSource → eqLow → eqMid → eqHigh → gain_node
+    // 音频链: micSource → eqLow → eqMid → eqHigh → gain_node → processor
     this.micSource.connect(AudioTX_eqLow);
     AudioTX_eqLow.connect(AudioTX_eqMid);
     AudioTX_eqMid.connect(AudioTX_eqHigh);
     AudioTX_eqHigh.connect(this.gain_node);
+	this.gain_node.connect( this.processor );
+    this.processor.connect( this.context.destination );
 	this.gain_node.connect( AudioTX_analyser );
-    
-    // ========== V4.5.5: 尝试使用 AudioWorklet ==========
-    if (this.context.audioWorklet && typeof this.context.audioWorklet.addModule === 'function') {
-        console.log('🎤 MediaHandler: 检测到 AudioWorklet 支持，尝试加载 TX Worklet...');
-        
-        this.context.audioWorklet.addModule('tx_worklet_processor.js').then(function() {
-            console.log('✅ MediaHandler: TX Worklet 模块加载成功');
-            
-            TX_USE_WORKLET = true;
-            
-            // 创建 AudioWorkletNode
-            TX_workletNode = new AudioWorkletNode(self.context, 'tx-worklet-processor');
-            
-            // 发送配置
-            TX_workletNode.port.postMessage({
-                type: 'config',
-                inputSampleRate: self.context.sampleRate,
-                targetSampleRate: 16000,
-                downSample: self.audioProcessor.downSample || 3
-            });
-            
-            // 处理来自 Worklet 的音频帧
-            TX_workletNode.port.onmessage = function(event) {
-                if (event.data.type === 'ready') {
-                    console.log('🎤 MediaHandler: TX Worklet 就绪');
-                    return;
-                }
-                
-                if (event.data.type === 'audioFrame' && isRecording) {
-                    TX_handleWorkletFrame(event.data.frame);
-                }
-            };
-            
-            // 连接音频链: gain_node → workletNode → destination
-            self.gain_node.connect(TX_workletNode);
-            TX_workletNode.connect(self.context.destination);
-            
-            // 替代旧的 processor
-            self.processor = TX_workletNode;
-            
-            console.log('✅ MediaHandler.callback: AudioWorklet 模式已启用 (主线程不再阻塞)');
-            
-        }).catch(function(err) {
-            console.warn('⚠️ MediaHandler: AudioWorklet 加载失败，回退到 ScriptProcessor:', err);
-            TX_USE_WORKLET = false;
-            self._setupScriptProcessor();
-        });
-        
-    } else {
-        // 不支持 AudioWorklet，使用传统方式
-        console.log('🎤 MediaHandler: 不支持 AudioWorklet，使用 ScriptProcessor');
-        TX_USE_WORKLET = false;
-        this._setupScriptProcessor();
-    }
     
     // 从Cookie恢复EQ预设
     var savedPreset = typeof getCookie === 'function' ? getCookie('TX_EQ_Preset') : '';
@@ -2073,101 +2021,6 @@ MediaHandler.prototype.callback = function( stream )
     }
     
     console.log( '✅ MediaHandler.callback: 麦克风设置完成 (含TX EQ)' );
-}
-
-// ScriptProcessor 回退方法
-MediaHandler.prototype._setupScriptProcessor = function() {
-    this.processor = this.context.createScriptProcessor( this.audioProcessor.bufferSize, 1, 1 );
-    this.processor.onaudioprocess = this.audioProcessor.onAudioProcess.bind( this.audioProcessor );
-    this.gain_node.connect( this.processor );
-    this.processor.connect( this.context.destination );
-    console.log('🎤 MediaHandler: ScriptProcessor 模式已启用');
-}
-
-////////////////////////////////////////////////////////////
-// TX AudioWorklet 帧处理函数
-// V4.5.5: 使用帧队列和微任务调度，避免阻塞主线程
-////////////////////////////////////////////////////////////
-var TX_frameQueue = [];
-var TX_processingFrame = false;
-var TX_lastFrameTime = 0;
-
-function TX_handleWorkletFrame(frame) {
-    // 快速入队，不阻塞
-    TX_frameQueue.push(frame);
-    
-    // 如果不在处理中，调度处理
-    if (!TX_processingFrame) {
-        TX_processingFrame = true;
-        
-        // 使用 requestAnimationFrame 调度，让浏览器有机会处理其他消息
-        if (typeof requestAnimationFrame === 'function') {
-            requestAnimationFrame(TX_processFrameQueue);
-        } else {
-            // 回退到 setTimeout(0) - 微任务调度
-            setTimeout(TX_processFrameQueue, 0);
-        }
-    }
-}
-
-function TX_processFrameQueue() {
-    if (!wsAudioTX || wsAudioTX.readyState !== WebSocket.OPEN) {
-        TX_frameQueue = [];
-        TX_processingFrame = false;
-        return;
-    }
-    
-    // 处理队列中的帧（每次最多处理 3 帧，避免长时间阻塞）
-    var framesToProcess = Math.min(3, TX_frameQueue.length);
-    
-    for (var f = 0; f < framesToProcess; f++) {
-        var frame = TX_frameQueue.shift();
-        if (!frame) continue;
-        
-        if (encode) {
-            // Opus 编码模式
-            if (!TX_workletOpusEncoder) {
-                TX_workletOpusEncoder = new OpusEncoder(16000, 1, 2048, 20);
-            }
-            
-            try {
-                var encoded = TX_workletOpusEncoder.encode_float(frame);
-                
-                if (!window.__txBytes) { window.__txBytes = 0; }
-                
-                for (var idx = 0; idx < encoded.length; idx++) {
-                    if (encoded[idx] && encoded[idx].byteLength) {
-                        window.__txBytes += encoded[idx].byteLength;
-                    }
-                    wsAudioTX.send(encoded[idx]);
-                }
-            } catch (e) {
-                // 静默处理编码错误
-            }
-        } else {
-            // PCM Int16 模式
-            var int16Frame = new Int16Array(frame.length);
-            for (var i = 0; i < frame.length; i++) {
-                int16Frame[i] = frame[i] * 0x7FFF;
-            }
-            
-            if (!window.__txBytes) { window.__txBytes = 0; }
-            window.__txBytes += int16Frame.byteLength;
-            
-            wsAudioTX.send(int16Frame);
-        }
-    }
-    
-    // 如果还有帧未处理，继续调度
-    if (TX_frameQueue.length > 0) {
-        if (typeof requestAnimationFrame === 'function') {
-            requestAnimationFrame(TX_processFrameQueue);
-        } else {
-            setTimeout(TX_processFrameQueue, 0);
-        }
-    } else {
-        TX_processingFrame = false;
-    }
 }
 
 
@@ -2201,16 +2054,6 @@ var isRecording = false, encode = false;
 var wsAudioTX = "";
 var ap = "";
 var mh = "";
-
-////////////////////////////////////////////////////////////
-// TX AudioWorklet 支持 - 解决主线程阻塞问题
-// V4.5.5 - 2026-03-06
-////////////////////////////////////////////////////////////
-var TX_USE_WORKLET = false;           // 是否使用 AudioWorklet
-var TX_workletNode = null;            // AudioWorkletNode 实例
-var TX_workletFrameHandler = null;    // 帧处理器（编码和发送）
-var TX_workletOpusEncoder = null;     // Opus 编码器（Worklet 模式专用）
-var TX_workletFrameAccumulator = [];  // 帧累积器（用于非实时编码）
 
 const TXinstantMeter = document.querySelector('#Txinstant meter');
 
@@ -2286,16 +2129,6 @@ function startRecord()
             console.error('❌ TX AudioContext 恢复失败:', e);
         });
     }
-    
-    // V4.5.5: 预初始化 TX Worklet Opus 编码器，避免第一次 PTT 阻塞
-    if (TX_USE_WORKLET && encode && !TX_workletOpusEncoder) {
-        TX_workletOpusEncoder = new OpusEncoder(16000, 1, 2048, 20);
-        console.log('🎤 TX Worklet: Opus 编码器预初始化完成');
-    }
-    
-    // V4.5.5: 清空帧队列
-    TX_frameQueue = [];
-    TX_processingFrame = false;
     
     sendSettings();
     isRecording = true;
@@ -2376,16 +2209,6 @@ function startTune() {
         if (tuneBtn) {
             tuneBtn.className = 'button_pressed';
             tuneBtn.style.background = '#FF5722';
-        }
-
-        // V4.5.5: 立即发送 ATR-1000 sync 请求，与 PTT 保持一致
-        if (typeof window.ATR1000 !== 'undefined' && window.ATR1000.ws && window.ATR1000.ws.readyState === WebSocket.OPEN) {
-            try {
-                window.ATR1000.ws.send(JSON.stringify({action: 'sync'}));
-                console.log('📻 TUNE 开始，立即请求 ATR-1000 数据');
-            } catch (e) {
-                console.log('📻 发送 ATR-1000 sync 失败:', e);
-            }
         }
 
     } catch (error) {
