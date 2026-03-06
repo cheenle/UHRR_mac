@@ -1,4 +1,5 @@
 // Modern Mobile Interface JavaScript for iPhone 15 and modern browsers
+// V4.4.21 - 2026-03-06
 // 完全兼容 controls.js 的实现，确保与桌面版一致的行为
 // 
 // 重要：此文件依赖 controls.js 先加载
