@@ -1002,6 +1002,47 @@ cat certs/fullchain.pem | openssl x509 -text -noout
 
 ---
 
+### V4.6.0 TX AudioWorklet + ATR-1000 Worker 双重架构 (2026-03-06)
+
+**主题：彻底解决主线程阻塞问题**
+
+#### 核心改进
+- **TX AudioWorklet**: 将 TX 音频处理从 ScriptProcessorNode 迁移到 AudioWorklet
+- **ATR-1000 Worker**: 将 ATR-1000 WebSocket 移到 Web Worker
+
+#### 新增文件
+- `www/tx_worklet_processor.js` - TX AudioWorklet 处理器
+  - 独立线程降采样 (44100Hz → 16000Hz)
+  - 独立线程帧累积
+  - 通过 MessagePort 发送音频帧
+
+- `www/atr1000_worker.js` - ATR-1000 Web Worker
+  - 独立线程 WebSocket 连接
+  - 独立线程 JSON 解析
+  - 独立线程心跳管理
+
+#### 架构对比
+
+| 架构 | 音频处理 | ATR-1000 | 主线程状态 |
+|------|----------|----------|------------|
+| V4.5.x | ScriptProcessorNode (阻塞) | 主线程 WebSocket | 阻塞 |
+| V4.6.0 | AudioWorklet (隔离) | Worker (隔离) | 空闲 |
+
+#### 性能预期
+| 指标 | V4.5.x | V4.6.0 |
+|------|--------|--------|
+| PTT期间 ATR-1000 更新 | 2次 (积压) | 实时 |
+| 主线程 CPU 占用 | 高 | 低 |
+| 消息处理延迟 | 积压严重 | 即时 |
+
+#### 文件变更
+- `www/tx_worklet_processor.js` - 新增 TX AudioWorklet 处理器
+- `www/atr1000_worker.js` - 新增 ATR-1000 Web Worker
+- `www/controls.js` - TX AudioWorklet 支持
+- `www/mobile_modern.js` - ATR-1000 Worker 模式支持
+
+---
+
 ### V4.5.4 WebRTC 最佳实践优化 (2026-03-06)
 
 **主题：基于 WebRTC 推荐参数优化 Opus 编码**
@@ -1246,6 +1287,5 @@ cat certs/fullchain.pem | openssl x509 -text -noout
 ---
 
 **最后更新**：2026年3月6日  
-**文档版本**：v4.5.5  
-**发布版本**：V4.5.5  
-**维护者**：MRRC开发团队
+**文档版本**：v4.6.0
+**发布版本**：V4.6.0**维护者**：MRRC开发团队
