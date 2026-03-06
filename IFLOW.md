@@ -52,6 +52,9 @@ MRRC/
 │   ├── mobile_modern.js          # 移动端界面逻辑
 │   ├── mobile_modern.css         # 移动端界面样式
 │   ├── mobile_audio_direct_copy.js # 移动端音频处理
+│   ├── control_trx.js            # 电台控制逻辑
+│   ├── ui_utils.js               # UI工具函数
+│   ├── touch-enhancements.js     # 触摸增强
 │   ├── manifest.json             # PWA应用清单文件
 │   └── sw.js                     # Service Worker (离线支持)
 ├── certs/                        # TLS证书目录
@@ -83,9 +86,12 @@ MRRC/
 │   ├── latency_optimization_guide.md       # TX/RX切换延迟优化指南
 │   ├── mobile_modern_interface.md          # 现代移动端界面文档
 │   ├── Mobile_User_Manual.md               # 移动端用户手册
+│   ├── Mobile_User_Manual.html             # 移动端用户手册(HTML)
 │   ├── Performance_Optimization_Guide.md   # 性能优化指南
 │   ├── Component_Detailed_Analysis.md      # 组件详细分析
 │   ├── Comprehensive_Architecture_Analysis.md # 综合架构分析
+│   ├── End_to_End_Analysis_Report.md       # 端到端分析报告
+│   ├── ATR1000_Display_Issue_Analysis.md   # ATR-1000显示问题分析
 │   ├── iphone15_mobile_interface_analysis.md # iPhone 15界面分析
 │   └── mobile_interface_enhancement_summary.md # 移动界面增强总结
 ├── opus/                         # Opus编解码器Python绑定
@@ -233,6 +239,8 @@ MRRC/
 - 性能优化指南详见 `docs/Performance_Optimization_Guide.md`
 - 组件详细分析详见 `docs/Component_Detailed_Analysis.md`
 - 综合架构分析详见 `docs/Comprehensive_Architecture_Analysis.md`
+- 端到端分析报告详见 `docs/End_to_End_Analysis_Report.md`
+- ATR-1000显示问题分析详见 `docs/ATR1000_Display_Issue_Analysis.md`
 - iPhone 15界面分析详见 `docs/iphone15_mobile_interface_analysis.md`
 - 移动界面增强总结详见 `docs/mobile_interface_enhancement_summary.md`
 
@@ -944,7 +952,7 @@ cat certs/fullchain.pem | openssl x509 -text -noout
 
 ---
 
-**最后更新**：2026年3月6日  
+**最后更新**：2026年3月7日  
 **文档版本**：v4.5.1  
 **发布版本**：V4.5.1  
 **维护者**：MRRC开发团队
