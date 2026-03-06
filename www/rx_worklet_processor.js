@@ -30,6 +30,8 @@ class RxPlayerProcessor extends AudioWorkletProcessor {
       else if (data && data.type === 'flush') {
         // 清空队列（PTT释放时使用）
         this.queue.length = 0;
+        // V4.4.22b: 重置欠载计数器
+        this._underrunCount = 0;
       } 
       else if (data && data.type === 'config') {
         // 配置参数

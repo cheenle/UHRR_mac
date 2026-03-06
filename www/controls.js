@@ -1754,6 +1754,11 @@ OpusEncoderProcessor.prototype.onAudioProcess = function( e )
 			// 编码并发送
 		    var res = this.opusEncoder.encode_float(frame);
 
+			// V4.4.22: 检查 WebSocket 状态，避免向已关闭的连接发送数据
+			if (this.wsh.readyState !== WebSocket.OPEN) {
+				return;
+			}
+
 		    for( var idx = 0; idx < res.length; ++idx )
 			{
 				// 码率统计：TX（编码后）
@@ -1777,6 +1782,11 @@ OpusEncoderProcessor.prototype.onAudioProcess = function( e )
 				int16Frame[j] = frame[j] * 0x7FFF; // 使用0x7FFF避免溢出
 			}
 			
+			// V4.4.22: 检查 WebSocket 状态
+			if (this.wsh.readyState !== WebSocket.OPEN) {
+				return;
+			}
+
 		    // 码率统计：TX（PCM直发）
 		    if (!window.__txBytes) { window.__txBytes = 0; }
 		    window.__txBytes += int16Frame.byteLength;

@@ -5,6 +5,57 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [V4.5.0] - 2026-03-06
+### 🎉 ATR-1000 实时功率显示稳定版
+
+**主题：ATR-1000 功率/SWR 实时显示完全稳定**
+
+### 核心改进
+
+#### ATR-1000 实时显示优化
+- **PTT 期间实时更新**：发射时功率/SWR 实时显示，延迟 <500ms
+- **TUNE 模式同步**：天调模式同样支持实时功率显示
+- **双重时间保护**：确保 sync 请求最小间隔 500ms，避免压垮设备
+- **连接预热机制**：页面加载时预先建立连接，PTT 响应 <200ms
+
+#### WebSocket 状态检查
+- **防止错误发送**：检查 WebSocket 状态后再发送音频数据
+- **避免 CLOSING/CLOSED 状态错误**：不再向已关闭连接发送数据
+
+#### AudioWorklet 优化
+- **欠载计数器重置**：PTT 释放时重置 AudioWorklet 欠载计数
+- **日志清理**：减少不必要的控制台日志
+
+### 性能指标
+| 指标 | V4.4 | V4.5 |
+|------|------|------|
+| PTT 到功率显示 | ~2秒 | <200ms |
+| Sync 请求间隔 | 不稳定 | 稳定 500ms |
+| WebSocket 错误 | 偶发 | 无 |
+| ATR-1000 稳定性 | 有压垮风险 | 稳定运行 |
+
+### 文件变更
+- `www/controls.js` - WebSocket 状态检查
+- `www/mobile_modern.js` - 双重时间保护、心跳优化
+- `www/mobile_modern.html` - 版本号更新
+- `www/rx_worklet_processor.js` - 欠载计数器重置
+
+### 版本历史详情
+
+#### V4.4.22c - 双重时间保护
+- 添加时间戳检查确保 sync 最小间隔 500ms
+- 防止 setInterval 被错误调用多次
+
+#### V4.4.22b - 心跳间隔修复
+- 修正心跳间隔为 0.5 秒
+- AudioWorklet 欠载计数器重置
+
+#### V4.4.22 - WebSocket 状态检查
+- PTT 期间检查 WebSocket 状态
+- 避免向已关闭连接发送数据
+
+---
+
 ## [V4.4.9] - 2026-03-06
 ### ✨ 频率显示初始化优化
 

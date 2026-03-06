@@ -2289,17 +2289,22 @@ const ATR1000 = {
     // 启动心跳保活 - 发送 sync 请求最新数据
     _startHeartbeat: function() {
         this._stopHeartbeat();  // 先停止旧的心跳
+        this._lastSyncTime = 0;  // 初始化上次同步时间
         this._heartbeatInterval = setInterval(() => {
             if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-                try {
-                    // 发送 sync 命令请求最新数据（而不是 ping）
-                    this.ws.send(JSON.stringify({action: 'sync'}));
-                } catch (e) {
-                    console.log('💓 ATR-1000 sync 发送失败:', e);
+                const now = Date.now();
+                // V4.4.22c: 双重保护 - 确保最小间隔 500ms
+                if (now - this._lastSyncTime >= 500) {
+                    try {
+                        this.ws.send(JSON.stringify({action: 'sync'}));
+                        this._lastSyncTime = now;
+                    } catch (e) {
+                        console.log('💓 ATR-1000 sync 发送失败:', e);
+                    }
                 }
             }
-        }, 1000);  // V4.4.21: 每秒发送一次 sync，避免压垮 ATR-1000 设备
-        console.log('💓 ATR-1000 心跳已启动 (1s sync interval)');
+        }, 500);  // 每0.5秒检查一次
+        console.log('💓 ATR-1000 心跳已启动 (0.5s sync interval, 双重保护)');
     },
     
     // 停止心跳
