@@ -198,9 +198,6 @@ class ATR1000Client:
                 
                 # 睡眠间隔
                 time.sleep(1.0)  # 每秒检查一次
-                    time.sleep(0.05)  # TX期间50ms检查
-                else:
-                    time.sleep(0.2)   # 非TX期间200ms检查
                 
             except Exception as e:
                 logger.error(f"请求循环错误: {e}")
