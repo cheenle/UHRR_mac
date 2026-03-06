@@ -5,6 +5,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [V4.4.9] - 2026-03-06
+### ✨ 频率显示初始化优化
+
+**主题：刷新页面时从电台获取实际频率**
+
+### 问题描述
+- 刷新页面时频率显示默认为 7053 kHz
+- 用户期望看到电台当前的实际频率
+
+### 修复内容
+- **showTRXfreq 函数优化**：支持新的 5 位 kHz 移动端格式
+- **WebSocket 连接时自动获取频率**：`wsControlTRXopen()` 发送 `getFreq:` 命令
+- **向后兼容**：同时支持旧版 9 位 Hz 格式
+
+### 技术实现
+- 页面加载 → WebSocket 连接 → 发送 `getFreq:` → 收到频率 → 调用 `showTRXfreq()` → 更新显示
+- 新格式：`07053` = 7053 kHz（5 位数字）
+- 旧格式：`007053000` = 7053000 Hz（9 位数字）
+
+### 文件变更
+- `www/controls.js` - `showTRXfreq()` 函数支持新旧两种格式
+
+---
+
 ## [V4.4.0] - 2026-03-05
 ### 🚀 ATR-1000 Real-time Display Major Fix
 

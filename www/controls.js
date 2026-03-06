@@ -893,20 +893,34 @@ function showTRXfreq(freq){
 		if (uhz) uhz.innerHTML=freq.substring(8, 9);
 	}
 	
-	// 移动版元素（freq-100mhz, freq-10mhz 等）
+	// 移动版元素 - 新版 5 位 kHz 格式（mobile_modern.html）
+	var freq10mhz = document.getElementById("freq-10mhz");
+	if (freq10mhz) {
+		// kHz 格式：显示 5 位（如 07053 = 7053 kHz）
+		var freqKhz = Math.floor(parseInt(freq) / 1000);
+		var freqStr = freqKhz.toString().padStart(5, '0');
+		freq10mhz.innerHTML = freqStr[0];
+		var freq1mhz = document.getElementById("freq-1mhz");
+		if (freq1mhz) freq1mhz.innerHTML = freqStr[1];
+		var freq100khz = document.getElementById("freq-100khz");
+		if (freq100khz) freq100khz.innerHTML = freqStr[2];
+		var freq10khz = document.getElementById("freq-10khz");
+		if (freq10khz) freq10khz.innerHTML = freqStr[3];
+		var freq1khz = document.getElementById("freq-1khz");
+		if (freq1khz) freq1khz.innerHTML = freqStr[4];
+	}
+	
+	// 移动版元素 - 旧版 9 位 Hz 格式（兼容其他移动界面）
 	var freq100mhz = document.getElementById("freq-100mhz");
 	if (freq100mhz) {
 		freq100mhz.innerHTML=freq.substring(0, 1);
-		var freq10mhz = document.getElementById("freq-10mhz");
-		if (freq10mhz) freq10mhz.innerHTML=freq.substring(1, 2);
-		var freq1mhz = document.getElementById("freq-1mhz");
-		if (freq1mhz) freq1mhz.innerHTML=freq.substring(2, 3);
-		var freq100khz = document.getElementById("freq-100khz");
-		if (freq100khz) freq100khz.innerHTML=freq.substring(3, 4);
-		var freq10khz = document.getElementById("freq-10khz");
-		if (freq10khz) freq10khz.innerHTML=freq.substring(4, 5);
-		var freq1khz = document.getElementById("freq-1khz");
-		if (freq1khz) freq1khz.innerHTML=freq.substring(5, 6);
+		var freq10mhz_old = document.getElementById("freq-10mhz");
+		if (freq10mhz_old && !freq10mhz) freq10mhz_old.innerHTML=freq.substring(1, 2);
+		var freq1mhz_old = document.getElementById("freq-1mhz");
+		if (freq1mhz_old && !document.getElementById("freq-1mhz")) freq1mhz_old.innerHTML=freq.substring(2, 3);
+		var freq100khz_old = document.getElementById("freq-100khz");
+		var freq10khz_old = document.getElementById("freq-10khz");
+		var freq1khz_old = document.getElementById("freq-1khz");
 		var freq100hz = document.getElementById("freq-100hz");
 		if (freq100hz) freq100hz.innerHTML=freq.substring(6, 7);
 		var freq10hz = document.getElementById("freq-10hz");
