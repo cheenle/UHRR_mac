@@ -1945,7 +1945,7 @@ const ATR1000 = {
         this.isConnected = false;
     },
     
-    // 处理接收的消息 (JSON 格式) - V4.4.20 优化：减少日志输出
+    // 处理接收的消息 (JSON 格式)
     handleMessage: function(data) {
         try {
             const msg = JSON.parse(data.trim());
@@ -1954,9 +1954,14 @@ const ATR1000 = {
                 this._msgCount++;
                 this._lastUpdateTime = Date.now();
                 this._processMessage(msg);
+                
+                // 每10条消息打印一次日志确认数据正常
+                if (this._msgCount % 10 === 0) {
+                    console.log(`📊 ATR-1000 #${this._msgCount}: power=${msg.power}W, swr=${msg.swr.toFixed(2)}`);
+                }
             }
         } catch (e) {
-            // 静默处理错误，避免阻塞控制台
+            // 静默处理错误
         }
     },
     
