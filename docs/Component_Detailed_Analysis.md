@@ -1,7 +1,7 @@
-# UHRR 组件详细分析文档
+# MRRC 组件详细分析文档
 
 ## 文档信息
-- **版本**: v4.0.0 (2026-03-01)
+- **版本**: v4.5.1 (2026-03-06)
 - **作者**: Claude Code Analysis
 - **状态**: 基于深度代码分析
 
@@ -10,11 +10,11 @@
 ### 1.1 主服务器 (`UHRR`)
 
 **文件位置**: `/Users/cheenle/UHRR/UHRR_mac/UHRR`
-**代码行数**: 1841 行
+**代码行数**: 1800+ 行
 
 #### 1.1.1 核心类分析
 
-**TRXRIG 类 (796-1318)**
+**TRXRIG 类**
 - **职责**: 电台设备控制核心
 - **关键方法**:
   - `setFreq(frequency)`: 设置频率
@@ -31,7 +31,7 @@
 - 重试机制确保命令可靠性
 - PTT 状态监控和同步
 
-**WS_ControlTRX 类 (1330-1409)**
+**WS_ControlTRX 类**
 - **职责**: 控制 WebSocket 处理器
 - **关键方法**:
   - `sendPTINFOS()`: 发送电台状态信息
@@ -49,7 +49,7 @@
 - PING                    # 心跳
 ```
 
-**WS_AudioTXHandler 类 (373-501)**
+**WS_AudioTXHandler 类**
 - **职责**: TX 音频 WebSocket 处理器
 - **关键方法**:
   - `TX_init(msg)`: 音频 TX 初始化
@@ -58,10 +58,10 @@
 
 **音频处理**:
 - 支持 PyAudio 和 ALSA 两种后端
-- Opus 解码支持
-- PTT 超时保护机制
+- Int16 解码支持
+- PTT 超时保护机制（计数法：10×200ms）
 
-**WS_AudioRXHandler 类 (325-368)**
+**WS_AudioRXHandler 类**
 - **职责**: RX 音频 WebSocket 处理器
 - **关键方法**:
   - `tailstream()`: 音频流发送
@@ -71,35 +71,19 @@
 - 支持 PyAudioCapture 和 ALSA 两种采集方式
 - 实时音频流传输
 
-#### 1.1.2 ATU 集成组件
+#### 1.1.2 ATR-1000 集成组件
 
-**AtuWebSocketClient 类 (507-709)**
-- **职责**: ATU 设备 WebSocket 客户端
-- **关键方法**:
-  - `connect()`: 连接 ATU 设备
-  - `parse_atu_data(data)`: 解析 ATU 数据
-  - `send_sync()`: 发送同步命令
-  - `broadcast_to_clients(message)`: 广播 ATU 数据
-
-**ATU 协议**:
-```python
-# ATU 命令定义
-SCMD_FLAG = 0xFF        # 命令标志
-SCMD_SYNC = 1           # 同步命令
-SCMD_METER_STATUS = 2   # 电表状态
-
-# 数据解析
-- 功率 (fwd_power)
-- SWR 值 (swr)
-- 最大功率 (max_power)
-- 传输效率 (efficiency)
-```
-
-**AtuWebSocketHandler 类 (711-763)**
-- **职责**: ATU 监控 WebSocket 处理器
+**WS_ATR1000Handler 类**
+- **职责**: ATR-1000 WebSocket 端点处理器
 - **关键方法**:
   - `on_message(message)`: 处理客户端消息
-  - `broadcast_to_clients()`: 广播 ATU 状态
+  - `_schedule_broadcast()`: 调度广播（50ms 批量）
+  - `_do_broadcast()`: 执行广播（只发最新数据）
+
+**ATR-1000 桥接特性**:
+- Unix Socket 客户端连接独立代理
+- 线程安全：`IOLoop.add_callback()` 跨线程通信
+- 批量广播：50ms 批次收集，广播最新数据
 
 ### 1.2 音频接口模块
 
@@ -124,6 +108,29 @@ SCMD_METER_STATUS = 2   # 电表状态
   - 命令重试机制
   - 错误处理
 
+### 1.4 ATR-1000 独立代理
+
+**atr1000_proxy.py**
+- **职责**: ATR-1000 设备独立代理
+- **关键特性**:
+  - 独立进程，不阻塞 UHRR 主程序
+  - Unix Socket 通信
+  - 自动重连 ATR-1000 设备
+  - 按需数据请求
+
+**协议解析**:
+- SCMD_METER_STATUS: 功率/SWR 数据
+- SCMD_RELAY_STATUS: 继电器状态
+
+### 1.5 天调存储模块
+
+**atr1000_tuner.py**
+- **职责**: 频率-参数智能存储
+- **关键功能**:
+  - JSON 持久化存储
+  - ±50kHz 容差匹配
+  - 自动保存/加载
+
 ## 2. 前端组件详细分析
 
 ### 2.1 主控制逻辑 (`controls.js`)
@@ -134,12 +141,11 @@ SCMD_METER_STATUS = 2   # 电表状态
 
 **TX 音频编码**:
 ```javascript
-// Opus 编码器配置
-const opusConfig = {
-  sampleRate: 24000,
+// Int16 编码器配置
+const audioConfig = {
+  sampleRate: 16000,
   channels: 1,
-  application: 'voip',
-  frameSize: 60 // ms
+  format: 'int16'
 };
 ```
 
@@ -159,6 +165,7 @@ const workletConfig = {
 - 数字位独立控制
 - 滚轮调节支持
 - 快捷键频段切换
+- 页面加载时从电台获取实际频率
 
 **频段快捷键**:
 ```javascript
@@ -174,9 +181,10 @@ const bandShortcuts = {
 #### 2.1.3 PTT 控制
 
 **PTT 优化特性**:
-- 防抖机制防止重复发送
+- 防抖机制防止重复发送（50ms）
 - 状态确认确保可靠性
 - 移动端触摸优化
+- WebSocket 状态检查
 
 ### 2.2 音频工作线程 (`rx_worklet_processor.js`)
 
@@ -201,6 +209,7 @@ class RxPlayerProcessor extends AudioWorkletProcessor {
 - 动态缓冲区深度控制
 - 抖动抑制算法
 - 音频质量保证
+- 欠载计数器重置
 
 ### 2.3 PTT 按钮优化 (`tx_button_optimized.js`)
 
@@ -219,24 +228,34 @@ let pttState = {
 };
 ```
 
-### 2.4 ATU 监控界面 (`atu.js`)
-
-**实时数据显示**:
-- 功率显示
-- SWR 值计算
-- 效率计算
-
-**连接管理**:
-- WebSocket 连接状态
-- 自动重连机制
-- 错误处理
-
-### 2.5 移动端界面 (`mobile_modern.js`)
+### 2.4 移动端界面 (`mobile_modern.js`)
 
 **响应式设计**:
 - 触摸友好的控件布局
 - 优化的音频处理
 - 专门的 PTT 按钮
+- 频率调整按钮优化布局（上加下减）
+
+**ATR-1000 模块**:
+- 连接预热机制
+- 双重时间保护（500ms 最小间隔）
+- 实时功率/SWR 显示
+- 天调参数存储
+
+### 2.5 TX 均衡器 (`controls.js`)
+
+**三段均衡器**:
+- 低频 (Low): 200Hz, lowshelf
+- 中频 (Mid): 1000Hz, peaking
+- 高频 (High): 2500Hz, highshelf
+
+**预设模式**:
+| 预设 | 低频 | 中频 | 高频 |
+|------|------|------|------|
+| 默认 | 0dB | 0dB | 0dB |
+| 短波语音 | +4dB | +6dB | -3dB |
+| 弱信号 | +6dB | +8dB | -6dB |
+| 比赛模式 | +2dB | +4dB | -2dB |
 
 ## 3. 配置文件分析
 
@@ -246,10 +265,11 @@ let pttState = {
 ```ini
 [SERVER]
 port = 8877
-certfile = certs/fullchain_complete.pem
+certfile = certs/radio.vlsc.net.pem
 keyfile = certs/radio.vlsc.net.key
-auth = 
+auth = FILE
 cookie_secret = L8LwECiNRxq2N0N2eGxx9MZlrpmuMEimlydNX/vt1LM=
+db_users_file = UHRR_users.db
 debug = False
 ```
 
@@ -279,15 +299,6 @@ gain = 10
 fft_window = hamming
 ```
 
-### 3.2 环境配置
-
-**ATU 设备配置**:
-```python
-# 环境变量或硬编码
-ATU_DEVICE_IP = '192.168.1.12'
-ATU_DEVICE_PORT = 60001
-```
-
 ## 4. 数据流分析
 
 ### 4.1 控制数据流
@@ -306,7 +317,7 @@ ATU_DEVICE_PORT = 60001
 
 **TX 音频流**:
 ```
-麦克风 → Web Audio API → Opus 编码 → WebSocket 传输 → 
+麦克风 → Web Audio API → TX EQ → Int16 编码 → WebSocket 传输 → 
 服务器解码 → PyAudio → 电台音频输入
 ```
 
@@ -316,12 +327,17 @@ ATU_DEVICE_PORT = 60001
 浏览器解码 → AudioWorklet → 扬声器
 ```
 
-### 4.3 ATU 数据流
+### 4.3 ATR-1000 数据流
 
-**ATU 监控流**:
+**ATR-1000 功率流**:
 ```
-ATU 设备 → 二进制 WebSocket → 服务器解析 → 
-WebSocket 广播 → 界面显示
+ATR-1000 设备 → 独立代理(atr1000_proxy.py) → Unix Socket → 
+UHRR 桥接 → WebSocket(/WSATR1000) → 移动端显示
+```
+
+**天调存储流**:
+```
+频率变化 → 查找天调参数 → atr1000_tuner.json → 加载参数 → ATR-1000 设备
 ```
 
 ## 5. 性能优化分析
@@ -329,14 +345,19 @@ WebSocket 广播 → 界面显示
 ### 5.1 实时性优化
 
 **PTT 响应优化**:
-- 命令防抖机制
+- 命令防抖机制（50ms）
 - 快速确认机制
 - 重试策略优化
 
 **音频延迟优化**:
-- 缓冲区深度控制
+- 缓冲区深度控制（16/32帧）
 - 网络抖动适应
 - 音频处理优化
+
+**ATR-1000 显示优化**:
+- 批量广播机制（50ms）
+- 线程安全 WebSocket
+- 双重时间保护
 
 ### 5.2 资源优化
 
@@ -360,7 +381,7 @@ WebSocket 广播 → 界面显示
 **连接优化**:
 - 心跳机制
 - 自动重连
-- 连接池管理
+- 连接预热
 
 ## 6. 错误处理机制
 
@@ -373,7 +394,7 @@ WebSocket 广播 → 界面显示
 
 **设备连接**:
 - rigctld 连接检查
-- ATU 设备重连
+- ATR-1000 设备重连
 - 音频设备故障恢复
 
 ### 6.2 数据错误处理
@@ -419,9 +440,9 @@ WebSocket 广播 → 界面显示
 ### 8.1 日志系统
 
 **日志文件**:
-- `uhrr_debug.log`: 详细调试信息
+- `UHRR.log`: 主服务器日志
 - `rigctld.log`: 电台控制日志
-- ATU 相关日志文件
+- `atr1000_proxy.log`: ATR-1000 代理日志
 
 **日志级别**:
 - DEBUG: 开发调试
@@ -436,6 +457,7 @@ WebSocket 广播 → 界面显示
 - 音频延迟测量
 - PTT 成功率
 - 资源使用情况
+- ATR-1000 稳定性
 
 ## 9. 部署和维护
 
@@ -466,5 +488,5 @@ WebSocket 广播 → 界面显示
 
 ---
 
-*本文档提供了 UHRR 项目的详细组件分析，帮助理解系统内部工作机制和优化机会。*
-*更新时间: 2025-10-15*
+*本文档提供了 MRRC 项目的详细组件分析，帮助理解系统内部工作机制和优化机会。*
+*更新时间: 2026-03-06*

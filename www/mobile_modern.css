@@ -1348,18 +1348,18 @@ body {
     padding: 14px 8px;
     border: none;
     border-radius: 10px;
-    background: #1a2a1a;
+    background: #3a3a3a;
     color: #FFF8E7;
-    font-size: 15px;
-    font-weight: 700;
+    font-size: 16px;
+    font-weight: 800;
     font-family: 'Courier New', monospace;
     cursor: pointer;
     transition: all 0.1s ease;
-    border: 1px solid #2a3a2a;
+    border: 1px solid #4a4a4a;
 }
 
 .tune-btn-grid:active {
-    background: #2a3a2a;
+    background: #4a4a4a;
     transform: scale(0.95);
 }
 

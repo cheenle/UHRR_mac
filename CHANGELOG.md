@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [V4.5.1] - 2026-03-06
+### 🎨 频率调整按钮布局优化
+
+**主题：移动端频率调整按钮布局优化**
+
+### 改进内容
+- **布局重设计**：从交叉排列改为上下分离
+  - 上排：+50, +10, +5, +1（增加频率）
+  - 下排：-50, -10, -5, -1（减少频率）
+- **视觉优化**：统一浅灰背景，乳白色加粗文字
+- **操作习惯**：符合"上加下减"的自然认知
+
+### 文件变更
+- `www/mobile_modern.html` - 频率调整按钮HTML结构
+- `www/mobile_modern.css` - 按钮样式优化
+
+---
+
 ## [V4.5.0] - 2026-03-06
 ### 🎉 ATR-1000 实时功率显示稳定版
 
