@@ -166,53 +166,38 @@ class ATR1000Client:
                 logger.error(f"发送同步命令失败: {e}")
     
     def _request_loop(self):
-        """数据请求循环 - 优化版，智能 SYNC 发送策略"""
+        """数据请求循环 - V4.4.21: 移除后台 SYNC，完全依赖前端心跳触发
+        
+        原因：前端每 0.5s 发送 sync 命令，如果代理后台也发送 SYNC，
+        会导致 ATR-1000 设备被双重 SYNC 请求压垮（每秒可能收到 4+ 次 SYNC）。
+        """
         global running, last_data_time
         
-        logger.info("🔄 数据请求线程已启动")
+        logger.info("🔄 数据请求线程已启动（被动模式，依赖前端心跳）")
         
-        last_sync_time = 0
-        sync_interval = 1.0
+        last_check_time = 0
         no_data_count = 0
-        last_power = 0  # 用于检测功率变化
         
         while running and connected:
             try:
                 now = time.time()
                 
-                # 动态计算 SYNC 间隔 - 根据活跃度和数据变化
-                if self.active and len(clients) > 0:
-                    # TX 活跃期间：检查功率是否变化
-                    current_power = meter_data.get("power", 0)
-                    if current_power != last_power:
-                        # 功率变化时，更频繁地请求数据
-                        sync_interval = 0.2  # 200ms
-                    else:
-                        sync_interval = 0.5  # 500ms
-                    last_power = current_power
-                elif len(clients) > 0:
-                    # 有客户端但非 TX：每 2 秒发送 SYNC
-                    sync_interval = 2.0
-                else:
-                    # 无客户端：每 30 秒发送 SYNC 保持连接
-                    sync_interval = 30.0
-                
-                # 检查是否需要发送 SYNC
-                if now - last_sync_time >= sync_interval:
-                    # 检测设备响应状态
-                    if last_data_time > 0 and now - last_data_time > 3.0:
+                # 不再主动发送 SYNC，完全依赖前端心跳触发
+                # 只检测设备响应状态
+                if now - last_check_time >= 5.0:  # 每 5 秒检查一次
+                    if last_data_time > 0 and now - last_data_time > 10.0:
                         no_data_count += 1
                         if no_data_count >= 3:
                             logger.warning(f"⚠️ 设备无响应 {no_data_count} 次，最后数据: {(now - last_data_time):.1f}秒前")
+                            # 尝试发送一次 SYNC 唤醒设备
+                            self._send_sync()
                             no_data_count = 0
                     else:
                         no_data_count = 0
-                    
-                    self._send_sync()
-                    last_sync_time = now
+                    last_check_time = now
                 
-                # 更精细的睡眠间隔，减少CPU占用同时保持响应性
-                if self.active:
+                # 睡眠间隔
+                time.sleep(1.0)  # 每秒检查一次
                     time.sleep(0.05)  # TX期间50ms检查
                 else:
                     time.sleep(0.2)   # 非TX期间200ms检查

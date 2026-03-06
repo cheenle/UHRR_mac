@@ -2292,8 +2292,8 @@ const ATR1000 = {
                     console.log('💓 ATR-1000 sync 发送失败:', e);
                 }
             }
-        }, 500);  // V4.4.17: 每0.5秒发送一次 sync，更快的数据更新
-        console.log('💓 ATR-1000 心跳已启动 (0.5s sync interval)');
+        }, 1000);  // V4.4.21: 每秒发送一次 sync，避免压垮 ATR-1000 设备
+        console.log('💓 ATR-1000 心跳已启动 (1s sync interval)');
     },
     
     // 停止心跳
