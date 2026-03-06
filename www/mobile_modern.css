@@ -1179,6 +1179,15 @@ body {
     padding: 10px 15px;
     margin: 8px 0;
     border: 1px solid #3a5a3a;
+    display: block;
+}
+
+.atr-meter-section-compact.hidden {
+    display: none !important;
+}
+
+.atr-meter-section-compact.visible {
+    display: block !important;
 }
 
 .atr-compact-row {
