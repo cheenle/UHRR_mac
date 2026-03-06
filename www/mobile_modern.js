@@ -1913,7 +1913,8 @@ const ATR1000 = {
             };
             
             this.ws.onmessage = (event) => {
-                console.log('📨 ATR-1000 收到消息:', event.data.substring(0, 100));
+                // V4.4.20: 减少日志输出，避免阻塞控制台
+                // PTT 期间音频编码占用主线程，减少日志有助于性能
                 this.handleMessage(event.data);
             };
         } catch (e) {
@@ -1943,28 +1944,18 @@ const ATR1000 = {
         this.isConnected = false;
     },
     
-    // 处理接收的消息 (JSON 格式) - 简化版，无节流
+    // 处理接收的消息 (JSON 格式) - V4.4.20 优化：减少日志输出
     handleMessage: function(data) {
         try {
-            // 去除末尾的换行符/空白字符（代理发送的消息末尾有\n）
-            const cleanData = data.trim();
-            const msg = JSON.parse(cleanData);
+            const msg = JSON.parse(data.trim());
             
             if (msg.type === 'atr1000_meter') {
-                // 消息计数
                 this._msgCount++;
-                
-                // 直接处理所有消息（不节流）
                 this._lastUpdateTime = Date.now();
                 this._processMessage(msg);
-                
-                // 每10次消息输出一次确认日志
-                if (this._msgCount % 10 === 0) {
-                    console.log(`✅ ATR-1000 已处理 ${this._msgCount} 条消息`);
-                }
             }
         } catch (e) {
-            console.error('❌ 解析 ATR-1000 数据错误:', e, '数据:', data.substring(0, 100));
+            // 静默处理错误，避免阻塞控制台
         }
     },
     
@@ -2086,7 +2077,7 @@ const ATR1000 = {
         this._doUpdateDisplay();
     },
     
-    // 实际执行 DOM 更新 - 优化版，减少日志输出
+    // 实际执行 DOM 更新 - V4.4.20 优化：减少日志输出
     _doUpdateDisplay: function() {
         try {
             const powerEl = document.getElementById('atr-power');
@@ -2094,16 +2085,9 @@ const ATR1000 = {
             const powerBar = document.getElementById('atr-power-bar');
             const swrBar = document.getElementById('atr-swr-bar');
             
-            // 缓存值避免重复计算
             const power = this.lastPower;
             const swr = this.lastSWR;
             const maxPower = this.maxPower;
-            
-            // 每10次更新输出一次日志（减少性能开销）
-            this._updateCount = (this._updateCount || 0) + 1;
-            if (this._updateCount % 10 === 0) {
-                console.log(`🖥️ ATR-1000 DOM更新 #${this._updateCount}: power=${power}W, swr=${swr.toFixed(2)}`);
-            }
             
             if (powerEl) {
                 // 直接更新文本

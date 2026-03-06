@@ -111,8 +111,16 @@ async function TXControl(action) {
                 window.updatePTTStatus(true);
             }
             
-            // V4.4.19: 移除 ATR-1000 相关调用，PTT 和 TUNE 使用相同的机制
-            // ATR-1000 数据通过心跳自动更新，无需手动触发
+            // V4.4.20: 立即发送 ATR-1000 sync 请求，确保 PTT 期间数据更新
+            // PTT 发送音频数据可能阻塞事件循环，所以立即请求一次数据
+            if (typeof window.ATR1000 !== 'undefined' && window.ATR1000.ws && window.ATR1000.ws.readyState === WebSocket.OPEN) {
+                try {
+                    window.ATR1000.ws.send(JSON.stringify({action: 'sync'}));
+                    console.log(`[${timestamp}] 📻 PTT 开始，立即请求 ATR-1000 数据`);
+                } catch (e) {
+                    console.log(`[${timestamp}] 📻 发送 ATR-1000 sync 失败:`, e);
+                }
+            }
             
             console.log(`[${timestamp}] ✅ TX开始成功`);
             return true;
