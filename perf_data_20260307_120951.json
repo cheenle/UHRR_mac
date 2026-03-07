@@ -1,0 +1,650 @@
+[
+  {
+    "time": "2026-03-07T12:09:41.623360",
+    "mrrc": {
+      "time": "2026-03-07T12:09:41.626400",
+      "pid": 19696,
+      "cpu_percent": 12.3,
+      "mem_percent": 0.7,
+      "rss_mb": 56.0,
+      "vsz_mb": 425239.984375,
+      "threads": 0,
+      "state": "S+",
+      "network_connections": 81,
+      "disk_read_mb": 0,
+      "disk_write_mb": 0
+    },
+    "atr1000": {
+      "time": "2026-03-07T12:09:42.115329",
+      "pid": 18009,
+      "cpu_percent": 1.1,
+      "mem_percent": 0.2,
+      "rss_mb": 15.109375,
+      "vsz_mb": 425158.90625,
+      "threads": 0,
+      "state": "S+",
+      "network_connections": 81,
+      "disk_read_mb": 0,
+      "disk_write_mb": 0
+    },
+    "rigctld": {
+      "time": "2026-03-07T12:09:42.216519",
+      "pid": 15291,
+      "cpu_percent": 0.0,
+      "mem_percent": 0.1,
+      "rss_mb": 5.65625,
+      "vsz_mb": 425122.09375,
+      "threads": 0,
+      "state": "S",
+      "network_connections": 81,
+      "disk_read_mb": 0,
+      "disk_write_mb": 0
+    },
+    "network": {
+      "time": "2026-03-07T12:09:42.297432",
+      "total_in_mb": 18347.194338798523,
+      "total_out_mb": 36382.46569156647,
+      "rate_in_kbps": 0,
+      "rate_out_kbps": 0
+    },
+    "logs": {
+      "mrrc": {
+        "time": "2026-03-07T12:09:42.297496",
+        "size_mb": 0.0736246109008789,
+        "growth_rate_kbps": 0
+      },
+      "atr1000": {
+        "time": "2026-03-07T12:09:42.297506",
+        "size_mb": 0.004202842712402344,
+        "growth_rate_kbps": 0
+      },
+      "debug": {
+        "time": "2026-03-07T12:09:42.297513",
+        "size_mb": 0.10845279693603516,
+        "growth_rate_kbps": 0
+      }
+    },
+    "atr1000_device": {
+      "time": "2026-03-07T12:09:43.149663",
+      "device_ip": "192.168.1.63",
+      "device_port": 60001,
+      "connected": true,
+      "ping_ms": 33.196,
+      "network_ok": true,
+      "port_ok": true,
+      "request_count": 6,
+      "response_count": 6,
+      "timeout_count": 12,
+      "reconnect_count": 1,
+      "response_rate": 100.0,
+      "pressure_score": 24.285714285714285
+    }
+  },
+  {
+    "time": "2026-03-07T12:09:44.151031",
+    "mrrc": {
+      "time": "2026-03-07T12:09:44.169110",
+      "pid": 19696,
+      "cpu_percent": 16.9,
+      "mem_percent": 0.7,
+      "rss_mb": 55.0625,
+      "vsz_mb": 425239.984375,
+      "threads": 0,
+      "state": "S+",
+      "network_connections": 84,
+      "disk_read_mb": 0,
+      "disk_write_mb": 0
+    },
+    "atr1000": {
+      "time": "2026-03-07T12:09:44.265551",
+      "pid": 18009,
+      "cpu_percent": 1.2,
+      "mem_percent": 0.2,
+      "rss_mb": 15.09375,
+      "vsz_mb": 425158.90625,
+      "threads": 0,
+      "state": "S+",
+      "network_connections": 83,
+      "disk_read_mb": 0,
+      "disk_write_mb": 0
+    },
+    "rigctld": {
+      "time": "2026-03-07T12:09:44.335503",
+      "pid": 15291,
+      "cpu_percent": 0.0,
+      "mem_percent": 0.1,
+      "rss_mb": 5.65625,
+      "vsz_mb": 425122.09375,
+      "threads": 0,
+      "state": "S",
+      "network_connections": 83,
+      "disk_read_mb": 0,
+      "disk_write_mb": 0
+    },
+    "network": {
+      "time": "2026-03-07T12:09:44.415478",
+      "total_in_mb": 18347.583822250366,
+      "total_out_mb": 36382.68642425537,
+      "rate_in_kbps": 398.8310546875,
+      "rate_out_kbps": 226.0302734375
+    },
+    "logs": {
+      "mrrc": {
+        "time": "2026-03-07T12:09:44.415527",
+        "size_mb": 0.0736246109008789,
+        "growth_rate_kbps": 0.0
+      },
+      "atr1000": {
+        "time": "2026-03-07T12:09:44.415539",
+        "size_mb": 0.004202842712402344,
+        "growth_rate_kbps": 0.0
+      },
+      "debug": {
+        "time": "2026-03-07T12:09:44.415546",
+        "size_mb": 0.10845279693603516,
+        "growth_rate_kbps": 0.0
+      }
+    },
+    "atr1000_device": {
+      "time": "2026-03-07T12:09:44.415558",
+      "device_ip": "192.168.1.63",
+      "device_port": 60001,
+      "connected": true,
+      "ping_ms": 33.196,
+      "network_ok": true,
+      "port_ok": true,
+      "request_count": 6,
+      "response_count": 6,
+      "timeout_count": 12,
+      "reconnect_count": 1,
+      "response_rate": 100.0,
+      "pressure_score": 24.285714285714285
+    }
+  },
+  {
+    "time": "2026-03-07T12:09:45.416614",
+    "mrrc": {
+      "time": "2026-03-07T12:09:45.425005",
+      "pid": 19696,
+      "cpu_percent": 10.5,
+      "mem_percent": 0.5,
+      "rss_mb": 41.546875,
+      "vsz_mb": 425239.984375,
+      "threads": 0,
+      "state": "S+",
+      "network_connections": 83,
+      "disk_read_mb": 0,
+      "disk_write_mb": 0
+    },
+    "atr1000": {
+      "time": "2026-03-07T12:09:45.515863",
+      "pid": 18009,
+      "cpu_percent": 0.7,
+      "mem_percent": 0.2,
+      "rss_mb": 14.765625,
+      "vsz_mb": 425158.90625,
+      "threads": 0,
+      "state": "S+",
+      "network_connections": 82,
+      "disk_read_mb": 0,
+      "disk_write_mb": 0
+    },
+    "rigctld": {
+      "time": "2026-03-07T12:09:45.585529",
+      "pid": 15291,
+      "cpu_percent": 0.0,
+      "mem_percent": 0.1,
+      "rss_mb": 5.609375,
+      "vsz_mb": 425122.09375,
+      "threads": 0,
+      "state": "S",
+      "network_connections": 82,
+      "disk_read_mb": 0,
+      "disk_write_mb": 0
+    },
+    "network": {
+      "time": "2026-03-07T12:09:45.663498",
+      "total_in_mb": 18347.77406692505,
+      "total_out_mb": 36384.40754890442,
+      "rate_in_kbps": 194.810546875,
+      "rate_out_kbps": 1762.431640625
+    },
+    "logs": {
+      "mrrc": {
+        "time": "2026-03-07T12:09:45.663544",
+        "size_mb": 0.0736246109008789,
+        "growth_rate_kbps": 0.0
+      },
+      "atr1000": {
+        "time": "2026-03-07T12:09:45.663552",
+        "size_mb": 0.004202842712402344,
+        "growth_rate_kbps": 0.0
+      },
+      "debug": {
+        "time": "2026-03-07T12:09:45.663558",
+        "size_mb": 0.10845279693603516,
+        "growth_rate_kbps": 0.0
+      }
+    },
+    "atr1000_device": {
+      "time": "2026-03-07T12:09:45.663567",
+      "device_ip": "192.168.1.63",
+      "device_port": 60001,
+      "connected": true,
+      "ping_ms": 33.196,
+      "network_ok": true,
+      "port_ok": true,
+      "request_count": 6,
+      "response_count": 6,
+      "timeout_count": 12,
+      "reconnect_count": 1,
+      "response_rate": 100.0,
+      "pressure_score": 24.285714285714285
+    }
+  },
+  {
+    "time": "2026-03-07T12:09:46.667661",
+    "mrrc": {
+      "time": "2026-03-07T12:09:46.675448",
+      "pid": 19696,
+      "cpu_percent": 11.2,
+      "mem_percent": 0.5,
+      "rss_mb": 41.140625,
+      "vsz_mb": 425239.984375,
+      "threads": 0,
+      "state": "S+",
+      "network_connections": 82,
+      "disk_read_mb": 0,
+      "disk_write_mb": 0
+    },
+    "atr1000": {
+      "time": "2026-03-07T12:09:46.763914",
+      "pid": 18009,
+      "cpu_percent": 1.0,
+      "mem_percent": 0.2,
+      "rss_mb": 14.765625,
+      "vsz_mb": 425158.90625,
+      "threads": 0,
+      "state": "S+",
+      "network_connections": 82,
+      "disk_read_mb": 0,
+      "disk_write_mb": 0
+    },
+    "rigctld": {
+      "time": "2026-03-07T12:09:46.834673",
+      "pid": 15291,
+      "cpu_percent": 0.0,
+      "mem_percent": 0.1,
+      "rss_mb": 5.609375,
+      "vsz_mb": 425122.09375,
+      "threads": 0,
+      "state": "S",
+      "network_connections": 82,
+      "disk_read_mb": 0,
+      "disk_write_mb": 0
+    },
+    "network": {
+      "time": "2026-03-07T12:09:46.912085",
+      "total_in_mb": 18347.955260276794,
+      "total_out_mb": 36385.798835754395,
+      "rate_in_kbps": 185.5419921875,
+      "rate_out_kbps": 1424.677734375
+    },
+    "logs": {
+      "mrrc": {
+        "time": "2026-03-07T12:09:46.912129",
+        "size_mb": 0.0736246109008789,
+        "growth_rate_kbps": 0.0
+      },
+      "atr1000": {
+        "time": "2026-03-07T12:09:46.912137",
+        "size_mb": 0.004202842712402344,
+        "growth_rate_kbps": 0.0
+      },
+      "debug": {
+        "time": "2026-03-07T12:09:46.912143",
+        "size_mb": 0.10845279693603516,
+        "growth_rate_kbps": 0.0
+      }
+    },
+    "atr1000_device": {
+      "time": "2026-03-07T12:09:46.912152",
+      "device_ip": "192.168.1.63",
+      "device_port": 60001,
+      "connected": true,
+      "ping_ms": 33.196,
+      "network_ok": true,
+      "port_ok": true,
+      "request_count": 6,
+      "response_count": 6,
+      "timeout_count": 12,
+      "reconnect_count": 1,
+      "response_rate": 100.0,
+      "pressure_score": 24.285714285714285
+    }
+  },
+  {
+    "time": "2026-03-07T12:09:47.916352",
+    "mrrc": {
+      "time": "2026-03-07T12:09:47.923692",
+      "pid": 19696,
+      "cpu_percent": 8.7,
+      "mem_percent": 0.5,
+      "rss_mb": 41.171875,
+      "vsz_mb": 425239.984375,
+      "threads": 0,
+      "state": "S+",
+      "network_connections": 82,
+      "disk_read_mb": 0,
+      "disk_write_mb": 0
+    },
+    "atr1000": {
+      "time": "2026-03-07T12:09:48.007497",
+      "pid": 18009,
+      "cpu_percent": 0.7,
+      "mem_percent": 0.2,
+      "rss_mb": 14.765625,
+      "vsz_mb": 425158.90625,
+      "threads": 0,
+      "state": "S+",
+      "network_connections": 82,
+      "disk_read_mb": 0,
+      "disk_write_mb": 0
+    },
+    "rigctld": {
+      "time": "2026-03-07T12:09:48.076942",
+      "pid": 15291,
+      "cpu_percent": 0.0,
+      "mem_percent": 0.1,
+      "rss_mb": 5.609375,
+      "vsz_mb": 425122.09375,
+      "threads": 0,
+      "state": "S",
+      "network_connections": 82,
+      "disk_read_mb": 0,
+      "disk_write_mb": 0
+    },
+    "network": {
+      "time": "2026-03-07T12:09:48.157650",
+      "total_in_mb": 18348.178526878357,
+      "total_out_mb": 36385.91903114319,
+      "rate_in_kbps": 228.625,
+      "rate_out_kbps": 123.080078125
+    },
+    "logs": {
+      "mrrc": {
+        "time": "2026-03-07T12:09:48.157700",
+        "size_mb": 0.0736246109008789,
+        "growth_rate_kbps": 0.0
+      },
+      "atr1000": {
+        "time": "2026-03-07T12:09:48.157708",
+        "size_mb": 0.004202842712402344,
+        "growth_rate_kbps": 0.0
+      },
+      "debug": {
+        "time": "2026-03-07T12:09:48.157714",
+        "size_mb": 0.10845279693603516,
+        "growth_rate_kbps": 0.0
+      }
+    },
+    "atr1000_device": {
+      "time": "2026-03-07T12:09:48.254895",
+      "device_ip": "192.168.1.63",
+      "device_port": 60001,
+      "connected": true,
+      "ping_ms": 64.601,
+      "network_ok": true,
+      "port_ok": true,
+      "request_count": 6,
+      "response_count": 6,
+      "timeout_count": 12,
+      "reconnect_count": 1,
+      "response_rate": 100.0,
+      "pressure_score": 24.285714285714285
+    }
+  },
+  {
+    "time": "2026-03-07T12:09:49.260013",
+    "mrrc": {
+      "time": "2026-03-07T12:09:49.269929",
+      "pid": 19696,
+      "cpu_percent": 6.9,
+      "mem_percent": 0.5,
+      "rss_mb": 41.078125,
+      "vsz_mb": 425239.984375,
+      "threads": 0,
+      "state": "S+",
+      "network_connections": 82,
+      "disk_read_mb": 0,
+      "disk_write_mb": 0
+    },
+    "atr1000": {
+      "time": "2026-03-07T12:09:49.359924",
+      "pid": 18009,
+      "cpu_percent": 0.1,
+      "mem_percent": 0.2,
+      "rss_mb": 14.765625,
+      "vsz_mb": 425158.90625,
+      "threads": 0,
+      "state": "S+",
+      "network_connections": 82,
+      "disk_read_mb": 0,
+      "disk_write_mb": 0
+    },
+    "rigctld": {
+      "time": "2026-03-07T12:09:49.427593",
+      "pid": 15291,
+      "cpu_percent": 0.0,
+      "mem_percent": 0.1,
+      "rss_mb": 5.609375,
+      "vsz_mb": 425122.09375,
+      "threads": 0,
+      "state": "S",
+      "network_connections": 82,
+      "disk_read_mb": 0,
+      "disk_write_mb": 0
+    },
+    "network": {
+      "time": "2026-03-07T12:09:49.507518",
+      "total_in_mb": 18348.27970123291,
+      "total_out_mb": 36385.98555660248,
+      "rate_in_kbps": 103.6025390625,
+      "rate_out_kbps": 68.1220703125
+    },
+    "logs": {
+      "mrrc": {
+        "time": "2026-03-07T12:09:49.507564",
+        "size_mb": 0.0736246109008789,
+        "growth_rate_kbps": 0.0
+      },
+      "atr1000": {
+        "time": "2026-03-07T12:09:49.507571",
+        "size_mb": 0.004202842712402344,
+        "growth_rate_kbps": 0.0
+      },
+      "debug": {
+        "time": "2026-03-07T12:09:49.507577",
+        "size_mb": 0.10845279693603516,
+        "growth_rate_kbps": 0.0
+      }
+    },
+    "atr1000_device": {
+      "time": "2026-03-07T12:09:49.507585",
+      "device_ip": "192.168.1.63",
+      "device_port": 60001,
+      "connected": true,
+      "ping_ms": 64.601,
+      "network_ok": true,
+      "port_ok": true,
+      "request_count": 6,
+      "response_count": 6,
+      "timeout_count": 12,
+      "reconnect_count": 1,
+      "response_rate": 100.0,
+      "pressure_score": 24.285714285714285
+    }
+  },
+  {
+    "time": "2026-03-07T12:09:50.511917",
+    "mrrc": {
+      "time": "2026-03-07T12:09:50.522560",
+      "pid": 19696,
+      "cpu_percent": 9.4,
+      "mem_percent": 0.5,
+      "rss_mb": 41.078125,
+      "vsz_mb": 425239.984375,
+      "threads": 0,
+      "state": "R+",
+      "network_connections": 82,
+      "disk_read_mb": 0,
+      "disk_write_mb": 0
+    },
+    "atr1000": {
+      "time": "2026-03-07T12:09:50.609504",
+      "pid": 18009,
+      "cpu_percent": 0.0,
+      "mem_percent": 0.2,
+      "rss_mb": 14.765625,
+      "vsz_mb": 425158.90625,
+      "threads": 0,
+      "state": "S+",
+      "network_connections": 82,
+      "disk_read_mb": 0,
+      "disk_write_mb": 0
+    },
+    "rigctld": {
+      "time": "2026-03-07T12:09:50.673640",
+      "pid": 15291,
+      "cpu_percent": 0.0,
+      "mem_percent": 0.1,
+      "rss_mb": 5.609375,
+      "vsz_mb": 425122.09375,
+      "threads": 0,
+      "state": "S",
+      "network_connections": 82,
+      "disk_read_mb": 0,
+      "disk_write_mb": 0
+    },
+    "network": {
+      "time": "2026-03-07T12:09:50.748837",
+      "total_in_mb": 18348.328707695007,
+      "total_out_mb": 36386.028487205505,
+      "rate_in_kbps": 50.1826171875,
+      "rate_out_kbps": 43.9609375
+    },
+    "logs": {
+      "mrrc": {
+        "time": "2026-03-07T12:09:50.748880",
+        "size_mb": 0.0736246109008789,
+        "growth_rate_kbps": 0.0
+      },
+      "atr1000": {
+        "time": "2026-03-07T12:09:50.748890",
+        "size_mb": 0.004202842712402344,
+        "growth_rate_kbps": 0.0
+      },
+      "debug": {
+        "time": "2026-03-07T12:09:50.748898",
+        "size_mb": 0.10845279693603516,
+        "growth_rate_kbps": 0.0
+      }
+    },
+    "atr1000_device": {
+      "time": "2026-03-07T12:09:50.748909",
+      "device_ip": "192.168.1.63",
+      "device_port": 60001,
+      "connected": true,
+      "ping_ms": 64.601,
+      "network_ok": true,
+      "port_ok": true,
+      "request_count": 6,
+      "response_count": 6,
+      "timeout_count": 12,
+      "reconnect_count": 1,
+      "response_rate": 100.0,
+      "pressure_score": 24.285714285714285
+    }
+  },
+  {
+    "time": "2026-03-07T12:09:51.749491",
+    "mrrc": {
+      "time": "2026-03-07T12:09:51.756703",
+      "pid": 19696,
+      "cpu_percent": 6.7,
+      "mem_percent": 0.5,
+      "rss_mb": 41.078125,
+      "vsz_mb": 425239.984375,
+      "threads": 0,
+      "state": "S+",
+      "network_connections": 82,
+      "disk_read_mb": 0,
+      "disk_write_mb": 0
+    },
+    "atr1000": {
+      "time": "2026-03-07T12:09:51.836721",
+      "pid": 18009,
+      "cpu_percent": 0.0,
+      "mem_percent": 0.2,
+      "rss_mb": 14.734375,
+      "vsz_mb": 425158.90625,
+      "threads": 0,
+      "state": "S+",
+      "network_connections": 82,
+      "disk_read_mb": 0,
+      "disk_write_mb": 0
+    },
+    "rigctld": {
+      "time": "2026-03-07T12:09:51.901165",
+      "pid": 15291,
+      "cpu_percent": 0.0,
+      "mem_percent": 0.1,
+      "rss_mb": 5.609375,
+      "vsz_mb": 425122.09375,
+      "threads": 0,
+      "state": "S",
+      "network_connections": 82,
+      "disk_read_mb": 0,
+      "disk_write_mb": 0
+    },
+    "network": {
+      "time": "2026-03-07T12:09:51.980343",
+      "total_in_mb": 18348.374353408813,
+      "total_out_mb": 36386.07260799408,
+      "rate_in_kbps": 46.7412109375,
+      "rate_out_kbps": 45.1796875
+    },
+    "logs": {
+      "mrrc": {
+        "time": "2026-03-07T12:09:51.980391",
+        "size_mb": 0.0736246109008789,
+        "growth_rate_kbps": 0.0
+      },
+      "atr1000": {
+        "time": "2026-03-07T12:09:51.980401",
+        "size_mb": 0.004202842712402344,
+        "growth_rate_kbps": 0.0
+      },
+      "debug": {
+        "time": "2026-03-07T12:09:51.980407",
+        "size_mb": 0.10845279693603516,
+        "growth_rate_kbps": 0.0
+      }
+    },
+    "atr1000_device": {
+      "time": "2026-03-07T12:09:51.980417",
+      "device_ip": "192.168.1.63",
+      "device_port": 60001,
+      "connected": true,
+      "ping_ms": 64.601,
+      "network_ok": true,
+      "port_ok": true,
+      "request_count": 6,
+      "response_count": 6,
+      "timeout_count": 12,
+      "reconnect_count": 1,
+      "response_rate": 100.0,
+      "pressure_score": 24.285714285714285
+    }
+  }
+]

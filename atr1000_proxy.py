@@ -166,41 +166,47 @@ class ATR1000Client:
                 logger.error(f"发送同步命令失败: {e}")
     
     def _request_loop(self):
-        """数据请求循环 - V4.4.21: 移除后台 SYNC，完全依赖前端心跳触发
+        """数据请求循环 - V4.5.12: 主动轮询模式
         
-        原因：前端每 0.5s 发送 sync 命令，如果代理后台也发送 SYNC，
-        会导致 ATR-1000 设备被双重 SYNC 请求压垮（每秒可能收到 4+ 次 SYNC）。
+        有客户端连接时，主动定时发送 SYNC 保持数据流活跃。
+        前端 sync 命令仍然会立即广播缓存数据。
         """
-        global running, last_data_time, clients
+        global running, last_data_time, clients, connected, meter_data
         
-        logger.info("🔄 数据请求线程已启动（被动模式，依赖前端心跳）")
+        logger.info("🔄 数据请求线程已启动（主动轮询模式，SYNC 间隔 2 秒）")
         
         last_check_time = 0
-        no_data_count = 0
+        last_sync_time = 0
+        sync_interval = 2.0  # V4.5.12: 每 2 秒发送一次 SYNC（降低设备压力）
         
         while running and connected:
             try:
                 now = time.time()
+                client_count = len(clients)
                 
-                # 不再主动发送 SYNC，完全依赖前端心跳触发
-                # 只检测设备响应状态
-                if now - last_check_time >= 5.0:  # 每 5 秒检查一次
-                    # V4.5.8: 只有在有客户端连接时才检查设备响应
-                    # 如果没有客户端，设备本来就不会响应，不应该报警
-                    client_count = len(clients)
+                # V4.5.12: 有客户端时主动发送 SYNC 保持数据流
+                if client_count > 0 and now - last_sync_time >= sync_interval:
+                    self._send_sync()
+                    last_sync_time = now
+                
+                # 检查设备响应状态 - 每 2 秒检查一次
+                if now - last_check_time >= 2.0:
                     if client_count > 0 and last_data_time > 0 and now - last_data_time > 10.0:
-                        no_data_count += 1
-                        if no_data_count >= 3:
-                            logger.warning(f"⚠️ 设备无响应 {no_data_count} 次，最后数据: {(now - last_data_time):.1f}秒前 (客户端: {client_count})")
-                            # 尝试发送一次 SYNC 唤醒设备
-                            self._send_sync()
-                            no_data_count = 0
-                    else:
-                        no_data_count = 0
+                        # V4.5.12: 10 秒无响应直接重连
+                        logger.error(f"❌ 设备 10 秒无响应，WebSocket 假死，主动重连 (客户端: {client_count})")
+                        # 标记断开
+                        connected = False
+                        meter_data["connected"] = False
+                        # 主动关闭 WebSocket，触发重连
+                        try:
+                            self.ws.close()
+                        except:
+                            pass
+                        break
                     last_check_time = now
                 
                 # 睡眠间隔
-                time.sleep(1.0)  # 每秒检查一次
+                time.sleep(0.2)  # 200ms 检查一次，更快响应
                 
             except Exception as e:
                 logger.error(f"请求循环错误: {e}")
