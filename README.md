@@ -61,6 +61,33 @@ A modern web-based remote control system optimized for mobile devices, enabling 
 | 🔒 **Secure Connection** | TLS encrypted HTTPS/WSS |
 | ⚡ **Ultra Low Latency** | TX→RX switching < 100ms |
 | 🎯 **One-Hand Operation** | PTT button optimized for mobile thumb reach |
+| 🔧 **ATR-1000 Integration** | Smart tuner learning & quick tune |
+
+---
+
+## 🔧 ATR-1000 Smart Tuner / 天调智能学习
+
+MRRC integrates with ATR-1000 antenna tuner for intelligent operation:
+
+| Feature | Description |
+|---------|-------------|
+| 📊 **Real-time Monitor** | Power (0-200W) and SWR display |
+| 🧠 **Smart Learning** | Auto-learn frequency-tuner mapping during TX |
+| ⚡ **Quick Tune** | Auto-apply tuner params when frequency changes |
+| 💾 **Persistence** | Tuner records saved in JSON file |
+
+**How it works**:
+1. When TX with good SWR (≤1.5), system auto-records frequency + tuner params
+2. When you change frequency, system auto-applies matching tuner params
+3. No manual tuning needed for previously learned frequencies!
+
+```
+Learning Flow:
+TX Start → Sample SWR → SWR ≤ 1.5? → Record params → Save to JSON
+                    ↓
+Quick Tune Flow:
+Freq Change → Lookup JSON → Found? → Apply params → Ready to TX!
+```
 
 ---
 

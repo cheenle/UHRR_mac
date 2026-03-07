@@ -36,6 +36,29 @@ MRRC is a modern web-based remote control system optimized for mobile devices, e
 - **Real-time S-Meter**: Accurate S0-S9+60dB signal strength display
 - **Audio Filters**: Multiple filter configurations available
 
+### ATR-1000 Smart Tuner ⭐ Core Feature
+- **Real-time Power Display**: Forward power (0-200W) during TX, latency <200ms
+- **SWR Monitoring**: Real-time SWR display (1.0-9.99)
+- **Smart Learning**: Auto-learn frequency-tuner (SW/IND/CAP) mapping during TX
+- **Quick Tune**: Auto-apply learned tuner params when frequency changes
+- **Persistence**: Tuner records saved in JSON file, auto-loaded on restart
+- **Connection Preheat**: Pre-establish connection on page load for fast PTT response
+
+**How it Works**:
+```
+Learning Flow:
+TX Start → Sample SWR → SWR ≤ 1.5? → Record params → Save to JSON
+
+Quick Tune Flow:
+Freq Change → Lookup JSON → Found? → Apply params → Ready to TX!
+```
+
+**Supported Parameters**:
+| Frequency | SW | L | C | SWR |
+|-----------|-----|------|------|------|
+| 7.050MHz | CL | 0.3uH | 270pF | 1.08 |
+| 14.270MHz | LC | 0.1uH | 90pF | 1.22 |
+
 ### Security & Connection
 - **TLS/Certificates**: Support for custom certificate chain (fullchain + private key)
 - **User Authentication**: FILE-based authentication to protect your station

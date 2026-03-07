@@ -1,6 +1,6 @@
 {
   "version": "2.0",
-  "updated": "2026-03-08T01:38:15.055401",
+  "updated": "2026-03-08T01:56:16.698061",
   "records": [
     {
       "freq": 7060000,
@@ -18,22 +18,22 @@
       "sw": 1,
       "ind": 30,
       "cap": 27,
-      "swr_avg": 1.07915187376726,
+      "swr_avg": 1.0777288732394352,
       "swr_min": 1.04,
       "swr_max": 1.5,
-      "sample_count": 507,
-      "last_update": 1772905076.260708
+      "sample_count": 568,
+      "last_update": 1772905817.641357
     },
     {
       "freq": 7070000,
       "sw": 1,
       "ind": 30,
       "cap": 27,
-      "swr_avg": 1.1224705882352917,
+      "swr_avg": 1.1223161764705862,
       "swr_min": 1.07,
       "swr_max": 1.46,
-      "sample_count": 255,
-      "last_update": 1772902054.644158
+      "sample_count": 272,
+      "last_update": 1772905824.32909
     },
     {
       "freq": 7080000,
@@ -62,11 +62,11 @@
       "sw": 0,
       "ind": 90,
       "cap": 3,
-      "swr_avg": 1.077307692307693,
+      "swr_avg": 1.0783928571428578,
       "swr_min": 1.04,
       "swr_max": 1.31,
-      "sample_count": 156,
-      "last_update": 1772905090.5807989
+      "sample_count": 168,
+      "last_update": 1772905706.86319
     },
     {
       "freq": 18142500,
@@ -106,22 +106,22 @@
       "sw": 1,
       "ind": 90,
       "cap": 51,
-      "swr_avg": 1.1927500000000015,
+      "swr_avg": 1.1733333333333364,
       "swr_min": 1.04,
       "swr_max": 1.48,
-      "sample_count": 120,
-      "last_update": 1772905081.3526762
+      "sample_count": 144,
+      "last_update": 1772906176.698057
     },
     {
       "freq": 14270000,
       "sw": 0,
       "ind": 10,
       "cap": 9,
-      "swr_avg": 1.1997653958944343,
+      "swr_avg": 1.1955898876404556,
       "swr_min": 1.05,
       "swr_max": 1.44,
-      "sample_count": 341,
-      "last_update": 1772905086.927876
+      "sample_count": 356,
+      "last_update": 1772905703.80951
     },
     {
       "freq": 14280000,
@@ -282,11 +282,11 @@
       "sw": 1,
       "ind": 30,
       "cap": 13,
-      "swr_avg": 1.463316326530625,
+      "swr_avg": 1.4639016393442754,
       "swr_min": 1.27,
       "swr_max": 1.5,
-      "sample_count": 588,
-      "last_update": 1772905095.055397
+      "sample_count": 610,
+      "last_update": 1772905713.234283
     },
     {
       "freq": 21350000,
@@ -381,33 +381,44 @@
       "sw": 1,
       "ind": 0,
       "cap": 24,
-      "swr_avg": 1.3014705882352944,
+      "swr_avg": 1.3038271604938265,
       "swr_min": 1.26,
       "swr_max": 1.42,
-      "sample_count": 68,
-      "last_update": 1772904836.940162
+      "sample_count": 81,
+      "last_update": 1772905716.7005482
     },
     {
       "freq": 28450000,
       "sw": 0,
       "ind": 30,
       "cap": 7,
-      "swr_avg": 1.1858000000000002,
+      "swr_avg": 1.1728070175438596,
       "swr_min": 1.08,
       "swr_max": 1.21,
-      "sample_count": 50,
-      "last_update": 1772904840.788791
+      "sample_count": 57,
+      "last_update": 1772905719.432083
     },
     {
       "freq": 3850000,
       "sw": 0,
-      "ind": 204,
+      "ind": 470,
       "cap": 85,
       "swr_avg": 1.44,
       "swr_min": 1.44,
       "swr_max": 1.44,
       "sample_count": 1,
       "last_update": 1772904578.714405
+    },
+    {
+      "freq": 7100000,
+      "sw": 1,
+      "ind": 30,
+      "cap": 27,
+      "swr_avg": 1.2111764705882355,
+      "swr_min": 1.21,
+      "swr_max": 1.22,
+      "sample_count": 17,
+      "last_update": 1772905810.161762
     }
   ]
 }
