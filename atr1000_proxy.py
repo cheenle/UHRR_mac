@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-ATR-1000 天调代理程序 - V4.5.14 简化版
+ATR-1000 天调代理程序 - V4.5.15 增强版
 
-设计理念：主动轮询 + 缓存广播
+设计理念：主动轮询 + 缓存广播 + 智能学习
 1. 每 0.5 秒主动向 ATR-1000 发送 SYNC 获取数据
 2. 数据缓存在本地
 3. 客户端请求时直接返回缓存数据（不再请求设备）
-
-这样设计简单、高效、可靠。
+4. 自动学习 SWR 1.0-1.5 的天调参数
+5. 支持快速调谐到指定频率
 
 使用方法：
     python3 atr1000_proxy.py --device 192.168.1.63 --port 60001
@@ -26,6 +26,9 @@ import socket
 import os
 import signal
 import sys
+
+# 导入天调存储模块
+from atr1000_tuner import get_storage
 
 # 配置日志
 logging.basicConfig(
@@ -58,7 +61,8 @@ cache = {
     "ind": 0,       # 电感索引
     "cap": 0,       # 电容索引
     "ind_uh": 0.0,  # 电感值 (uH)
-    "cap_pf": 0     # 电容值 (pF)
+    "cap_pf": 0,    # 电容值 (pF)
+    "freq": 0       # 当前频率 (Hz) - 用于学习
 }
 cache_lock = threading.Lock()
 
@@ -222,6 +226,23 @@ class ATR1000Client:
                 
                 cache["power"] = power
                 
+                # V4.5.15: 自动学习天调参数
+                # 当有功率且 SWR 在 1.0-1.5 时记录
+                if power > 0 and 1.0 <= cache["swr"] <= 1.5:
+                    freq = cache.get("freq", 0)
+                    if freq > 0:
+                        try:
+                            tuner = get_storage()
+                            tuner.learn(
+                                freq=freq,
+                                sw=cache["sw"],
+                                ind=cache["ind"],
+                                cap=cache["cap"],
+                                swr=cache["swr"]
+                            )
+                        except Exception as e:
+                            logger.debug(f"学习天调参数失败: {e}")
+                
             elif cmd == SCMD_RELAY_STATUS and len(data) >= 11:
                 # 继电器状态
                 cache["sw"] = data[3]      # 网络类型
@@ -300,9 +321,15 @@ class ATR1000Client:
 
 
 def handle_unix_client(conn, addr, atr1000):
-    """处理 Unix Socket 客户端 - V4.5.14 简化版
+    """处理 Unix Socket 客户端 - V4.5.15 增强版
     
-    直接返回缓存数据，不再请求设备。
+    支持命令：
+    - sync/get_data: 获取缓存数据
+    - set_freq: 设置当前频率（用于学习）
+    - quick_tune: 快速调谐到指定频率
+    - get_tune_records: 获取所有天调记录
+    - set_relay: 设置继电器参数
+    - tune: 启动自动调谐
     """
     global clients, cache
     
@@ -333,15 +360,87 @@ def handle_unix_client(conn, addr, atr1000):
                                 "ind": cache["ind"],
                                 "cap": cache["cap"],
                                 "ind_uh": cache["ind_uh"],
-                                "cap_pf": cache["cap_pf"]
+                                "cap_pf": cache["cap_pf"],
+                                "freq": cache.get("freq", 0)
                             }) + "\n"
                         conn.send(response.encode())
+                    
+                    elif action == "set_freq":
+                        # 设置当前频率（用于学习）
+                        freq = msg.get("freq", 0)
+                        with cache_lock:
+                            cache["freq"] = freq
+                        logger.info(f"设置频率: {freq}Hz")
+                        conn.send(json.dumps({"type": "ack", "action": "set_freq", "freq": freq}).encode())
+                    
+                    elif action == "quick_tune":
+                        # V4.5.15: 快速调谐到指定频率
+                        freq = msg.get("freq", 0)
+                        if freq > 0:
+                            tuner = get_storage()
+                            params = tuner.get_tune_params(freq)
+                            if params:
+                                sw, ind, cap = params
+                                atr1000.set_relay(sw, ind, cap)
+                                response = json.dumps({
+                                    "type": "quick_tune_result",
+                                    "success": True,
+                                    "freq": freq,
+                                    "sw": sw,
+                                    "ind": ind,
+                                    "cap": cap
+                                }) + "\n"
+                                logger.info(f"🎯 快速调谐: {freq/1000:.1f}kHz -> SW={'CL' if sw else 'LC'}, L={ind}, C={cap}")
+                            else:
+                                response = json.dumps({
+                                    "type": "quick_tune_result",
+                                    "success": False,
+                                    "freq": freq,
+                                    "message": "未找到匹配的天调参数"
+                                }) + "\n"
+                                logger.info(f"快速调谐失败: {freq/1000:.1f}kHz 无匹配参数")
+                        else:
+                            response = json.dumps({
+                                "type": "quick_tune_result",
+                                "success": False,
+                                "message": "频率参数无效"
+                            }) + "\n"
+                        conn.send(response.encode())
+                    
+                    elif action == "get_tune_records":
+                        # 获取所有天调记录
+                        tuner = get_storage()
+                        records = tuner.get_all()
+                        response = json.dumps({
+                            "type": "tune_records",
+                            "count": len(records),
+                            "records": records
+                        }) + "\n"
+                        conn.send(response.encode())
+                    
+                    elif action == "delete_tune_record":
+                        # 删除天调记录
+                        freq = msg.get("freq", 0)
+                        if freq > 0:
+                            tuner = get_storage()
+                            deleted = tuner.delete(freq)
+                            response = json.dumps({
+                                "type": "delete_result",
+                                "success": deleted,
+                                "freq": freq
+                            }) + "\n"
+                            conn.send(response.encode())
                     
                     elif action == "start":
                         logger.info("客户端请求启动数据流")
                     
                     elif action == "stop":
                         logger.info("客户端请求停止数据流")
+                    
+                    elif action == "set_relay":
+                        # 设置继电器参数
+                        sw = msg.get("sw", 0)
+                        ind = msg.get("ind", 0)
                         cap = msg.get("cap", 0)
                         atr1000.set_relay(sw, ind, cap)
                         logger.info(f"设置继电器: SW={sw}, IND={ind}, CAP={cap}")
