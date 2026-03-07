@@ -2322,16 +2322,16 @@ const ATR1000 = {
     },
     
     // 启动心跳保活 - 发送 sync 请求最新数据
-    // V4.5.9: 动态 sync 间隔 - 平时 500ms，PTT/TUNE 期间 200ms
-    _syncInterval: 500,  // 默认 500ms（降低设备压力）
+    // V4.5.12: sync 间隔调整为 1 秒，与代理 SYNC 节流匹配
+    _syncInterval: 1000,  // 默认 1 秒（减少设备压力）
     _startHeartbeat: function() {
         this._stopHeartbeat();  // 先停止旧的心跳
         this._lastSyncTime = 0;  // 初始化上次同步时间
-        this._syncInterval = 500;  // 默认 500ms
+        this._syncInterval = 1000;  // 默认 1 秒
         this._heartbeatInterval = setInterval(() => {
             if (this.ws && this.ws.readyState === WebSocket.OPEN) {
                 const now = Date.now();
-                // V4.5.9: 动态 sync 间隔
+                // V4.5.12: 动态 sync 间隔
                 if (now - this._lastSyncTime >= this._syncInterval) {
                     try {
                         this.ws.send(JSON.stringify({action: 'sync'}));
@@ -2341,7 +2341,7 @@ const ATR1000 = {
                     }
                 }
             }
-        }, 50);  // 检查间隔 50ms（更快响应）
+        }, 100);  // 检查间隔 100ms
         console.log('💓 ATR-1000 心跳已启动 (' + this._syncInterval + 'ms sync)');
     },
     
@@ -2412,7 +2412,7 @@ const ATR1000 = {
         }
     },
     
-    // TX 开始时调用 - V4.5.9: PTT 期间加快 sync 频率
+    // TX 开始时调用 - V4.5.12: PTT 期间加快 sync 频率
     onTXStart: function() {
         // 防抖：如果已经启动则跳过
         if (this._txActive) {
@@ -2421,15 +2421,15 @@ const ATR1000 = {
         }
         this._txActive = true;
         
-        // V4.5.9: PTT/TUNE 期间使用 200ms sync，刷新更快
-        this._syncInterval = 200;
-        console.log('📻 TX 开始 (sync: 200ms)');
+        // V4.5.12: PTT/TUNE 期间使用 500ms sync，平衡刷新速度和设备压力
+        this._syncInterval = 500;
+        console.log('📻 TX 开始 (sync: 500ms)');
         
         // 重置消息计数
         this._msgCount = 0;
     },
     
-    // TX 结束时调用 - V4.5.9: 恢复 sync 间隔
+    // TX 结束时调用 - V4.5.12: 恢复 sync 间隔
     onTXStop: function() {
         console.log('🛑 ATR-1000 onTXStop 被调用, _txActive=', this._txActive);
         
@@ -2440,9 +2440,9 @@ const ATR1000 = {
         }
         this._txActive = false;
         
-        // V4.5.9: 恢复平时 sync 间隔 500ms（降低设备压力）
-        this._syncInterval = 500;
-        console.log('📻 TX 结束 (sync: 500ms)');
+        // V4.5.12: 恢复平时 sync 间隔 1 秒（降低设备压力）
+        this._syncInterval = 1000;
+        console.log('📻 TX 结束 (sync: 1000ms)');
         
         // 清理重试定时器
         if (this._startRetryTimer) {

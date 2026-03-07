@@ -371,6 +371,8 @@ class ATR1000Client:
 # 全局变量用于数据去重
 _last_broadcast_data = None
 _last_broadcast_time = 0
+_last_sync_time = 0  # V4.5.12: 上次发送 SYNC 的时间
+SYNC_MIN_INTERVAL = 1.0  # V4.5.12: SYNC 最小间隔（秒），保护设备
 
 def broadcast_to_clients():
     """广播数据到所有 Unix Socket 客户端 - V4.5.11: 降低去重间隔"""
@@ -476,8 +478,8 @@ def handle_unix_client(conn, addr, atr1000):
                         logger.info("客户端请求停止数据流")
                     
                     elif action == "sync":
-                        # V4.5.11: sync 命令立即广播当前缓存数据，同时发送 SYNC 到设备
-                        # 这样即使设备响应慢，前端也能立即看到当前状态
+                        # V4.5.11: sync 命令立即广播当前缓存数据
+                        # V4.5.12: 添加 SYNC 节流保护，避免频繁发送到设备
                         atr1000.set_active(True)
                         
                         # 立即广播当前缓存的数据（不等待设备响应）
@@ -495,8 +497,15 @@ def handle_unix_client(conn, addr, atr1000):
                             }) + "\n"
                         conn.send(response.encode())
                         
-                        # 同时发送 SYNC 到设备获取最新数据
-                        atr1000._send_sync()
+                        # V4.5.12: 节流保护，SYNC 最小间隔 1 秒
+                        global _last_sync_time
+                        now = time.time()
+                        if now - _last_sync_time >= SYNC_MIN_INTERVAL:
+                            logger.info(f"📤 发送 SYNC 到设备 (间隔: {now - _last_sync_time:.1f}s)")
+                            atr1000._send_sync()
+                            _last_sync_time = now
+                        # else:
+                        #     logger.debug(f"SYNC 节流中，跳过 (间隔: {now - _last_sync_time:.1f}s)")
                     
                     elif action == "get_data":
                         # 立即发送当前数据
