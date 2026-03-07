@@ -2197,6 +2197,11 @@ function startTune() {
 
         isTuning = true;
 
+        // V4.5.8: 启动 ATR-1000 数据流
+        if (typeof ATR1000 !== 'undefined' && ATR1000.onTXStart) {
+            ATR1000.onTXStart();
+        }
+
         // 更新状态显示
         var tuneStatus = document.getElementById('tune-status');
         if (tuneStatus) {
@@ -2245,6 +2250,15 @@ function stopTune() {
         if (tuneBtn) {
             tuneBtn.className = 'button_unpressed';
             tuneBtn.style.background = '#FF9800';
+        }
+
+        // V4.5.8: 停止 ATR-1000 数据流并清零功率显示
+        if (typeof ATR1000 !== 'undefined' && ATR1000.onTXStop) {
+            ATR1000.onTXStop();
+        }
+        // 清零功率/SWR 显示
+        if (typeof ATR1000 !== 'undefined' && ATR1000.clearDisplay) {
+            ATR1000.clearDisplay();
         }
 
         console.log('🛑 Tune停止');

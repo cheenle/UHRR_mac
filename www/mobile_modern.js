@@ -1797,9 +1797,8 @@ const ATR1000Monitor = {
 // ATR1000Monitor.showStats();
 
 ////////////////////////////////////////////////////////////
-// ATR-1000 天调功率/驻波显示模块
-// 仅在 TX 发射期间获取并显示数据，3秒更新一次
-// 通过后端 MRRC 代理获取数据，解决 HTTPS 混合内容问题
+// ATR-1000 功率/SWR 显示模块
+// V4.5.10: 稳定性增强 - 超时检测、数据平滑、状态指示
 ////////////////////////////////////////////////////////////
 
 const ATR1000 = {
@@ -1812,6 +1811,12 @@ const ATR1000 = {
     _pollInterval: null,  // 数据轮询定时器引用
     _pendingStart: false,  // 待发送的 start 命令标志
     _msgCount: 0,  // 收到的消息计数
+    _ignoreDataUntil: 0,  // V4.5.8: 忽略数据截止时间
+    _lastDataTime: 0,  // V4.5.10: 上次收到数据的时间
+    _dataTimeout: 3000,  // V4.5.10: 数据超时阈值 3秒
+    _deviceOnline: false,  // V4.5.10: 设备在线状态
+    _smoothPower: 0,  // V4.5.10: 平滑后的功率
+    _smoothSWR: 1.0,  // V4.5.10: 平滑后的SWR
     // 继电器状态
     relayStatus: {
         sw: 0,        // 网络类型: 0=LC, 1=CL
@@ -1834,6 +1839,9 @@ const ATR1000 = {
             section.classList.remove('hidden');
             section.classList.add('visible');
         }
+        
+        // V4.5.10: 启动数据超时检测
+        this._startDataTimeoutCheck();
         
         // 预连接WebSocket
         this.connect();
@@ -1960,9 +1968,9 @@ const ATR1000 = {
                 this._lastUpdateTime = Date.now();
                 this._processMessage(msg);
                 
-                // 每10条消息打印一次日志确认数据正常
-                if (this._msgCount % 10 === 0) {
-                    console.log(`📊 ATR-1000 #${this._msgCount}: power=${msg.power}W, swr=${msg.swr.toFixed(2)}`);
+                // 每20条消息打印一次日志（减少控制台输出）
+                if (this._msgCount % 20 === 0) {
+                    console.log(`📊 ATR-1000 #${this._msgCount}: power=${msg.power}W`);
                 }
             }
         } catch (e) {
@@ -1970,11 +1978,33 @@ const ATR1000 = {
         }
     },
     
-    // 实际处理消息数据 - 简化版，专注于快速 DOM 更新
+    // 实际处理消息数据 - V4.5.10: 数据平滑和状态检测
     _processMessage: function(msg) {
-        // 更新值
-        this.lastPower = msg.power || 0;
-        this.lastSWR = msg.swr || 0;
+        // V4.5.8: 检查是否在忽略数据期间
+        if (Date.now() < this._ignoreDataUntil) {
+            console.log('🚫 ATR-1000 忽略数据（清零保护期）');
+            return;
+        }
+        
+        // V4.5.10: 更新数据时间和设备状态
+        this._lastDataTime = Date.now();
+        if (!this._deviceOnline) {
+            this._deviceOnline = true;
+            this._updateDeviceStatus(true);
+        }
+        
+        // V4.5.10: 数据平滑处理（避免数值跳动）
+        const rawPower = msg.power || 0;
+        const rawSWR = msg.swr || 1.0;
+        
+        // 平滑系数 0.3（新数据权重 30%，旧数据权重 70%）
+        const smoothFactor = 0.3;
+        this._smoothPower = this._smoothPower * (1 - smoothFactor) + rawPower * smoothFactor;
+        this._smoothSWR = this._smoothSWR * (1 - smoothFactor) + rawSWR * smoothFactor;
+        
+        // 使用平滑后的值
+        this.lastPower = Math.round(this._smoothPower);
+        this.lastSWR = Math.round(this._smoothSWR * 100) / 100;  // 保留两位小数
         
         // 更新继电器状态
         if (msg.sw !== undefined) {
@@ -1985,7 +2015,7 @@ const ATR1000 = {
             this.relayStatus.cap_pf = msg.cap_pf || 0;
         }
         
-        // 直接更新 DOM（不经过其他逻辑）
+        // 直接更新 DOM
         this._doUpdateDisplay();
     },
     
@@ -2088,7 +2118,7 @@ const ATR1000 = {
         this._doUpdateDisplay();
     },
     
-    // 实际执行 DOM 更新 - V4.4.20 优化：减少日志输出
+    // 实际执行 DOM 更新 - V4.5.6: 减少 UI 日志
     _doUpdateDisplay: function() {
         try {
             const powerEl = document.getElementById('atr-power');
@@ -2292,24 +2322,27 @@ const ATR1000 = {
     },
     
     // 启动心跳保活 - 发送 sync 请求最新数据
+    // V4.5.9: 动态 sync 间隔 - 平时 500ms，PTT/TUNE 期间 200ms
+    _syncInterval: 500,  // 默认 500ms（降低设备压力）
     _startHeartbeat: function() {
         this._stopHeartbeat();  // 先停止旧的心跳
         this._lastSyncTime = 0;  // 初始化上次同步时间
+        this._syncInterval = 500;  // 默认 500ms
         this._heartbeatInterval = setInterval(() => {
             if (this.ws && this.ws.readyState === WebSocket.OPEN) {
                 const now = Date.now();
-                // V4.4.22c: 双重保护 - 确保最小间隔 500ms
-                if (now - this._lastSyncTime >= 500) {
+                // V4.5.9: 动态 sync 间隔
+                if (now - this._lastSyncTime >= this._syncInterval) {
                     try {
                         this.ws.send(JSON.stringify({action: 'sync'}));
                         this._lastSyncTime = now;
                     } catch (e) {
-                        console.log('💓 ATR-1000 sync 发送失败:', e);
+                        // 静默处理
                     }
                 }
             }
-        }, 500);  // 每0.5秒检查一次
-        console.log('💓 ATR-1000 心跳已启动 (0.5s sync interval, 双重保护)');
+        }, 50);  // 检查间隔 50ms（更快响应）
+        console.log('💓 ATR-1000 心跳已启动 (' + this._syncInterval + 'ms sync)');
     },
     
     // 停止心跳
@@ -2318,6 +2351,49 @@ const ATR1000 = {
             clearInterval(this._heartbeatInterval);
             this._heartbeatInterval = null;
             console.log('💓 ATR-1000 心跳已停止');
+        }
+    },
+    
+    // V4.5.10: 启动数据超时检测
+    _startDataTimeoutCheck: function() {
+        if (this._timeoutCheckInterval) return;
+        
+        this._timeoutCheckInterval = setInterval(() => {
+            const now = Date.now();
+            
+            // 检查数据超时
+            if (this._lastDataTime > 0 && now - this._lastDataTime > this._dataTimeout) {
+                // 数据超时，标记设备离线
+                if (this._deviceOnline) {
+                    this._deviceOnline = false;
+                    console.log('⚠️ ATR-1000 数据超时，设备离线');
+                    this._updateDeviceStatus(false);
+                }
+            }
+        }, 1000);  // 每秒检查一次
+    },
+    
+    // V4.5.10: 停止数据超时检测
+    _stopDataTimeoutCheck: function() {
+        if (this._timeoutCheckInterval) {
+            clearInterval(this._timeoutCheckInterval);
+            this._timeoutCheckInterval = null;
+        }
+    },
+    
+    // V4.5.10: 更新设备状态指示
+    _updateDeviceStatus: function(online) {
+        const statusEl = document.getElementById('atr-device-status');
+        if (statusEl) {
+            if (online) {
+                statusEl.textContent = '●';
+                statusEl.style.color = '#4CAF50';
+                statusEl.title = '设备在线';
+            } else {
+                statusEl.textContent = '○';
+                statusEl.style.color = '#f44336';
+                statusEl.title = '设备离线';
+            }
         }
     },
     
@@ -2336,7 +2412,7 @@ const ATR1000 = {
         }
     },
     
-    // TX 开始时调用 - V4.4.16: 不发送 start/stop 命令，使用与 TUNE 相同的方式
+    // TX 开始时调用 - V4.5.9: PTT 期间加快 sync 频率
     onTXStart: function() {
         // 防抖：如果已经启动则跳过
         if (this._txActive) {
@@ -2345,15 +2421,15 @@ const ATR1000 = {
         }
         this._txActive = true;
         
-        console.log('📻 TX 开始（不发送 start 命令，依赖心跳同步）');
+        // V4.5.9: PTT/TUNE 期间使用 200ms sync，刷新更快
+        this._syncInterval = 200;
+        console.log('📻 TX 开始 (sync: 200ms)');
         
-        // V4.4.16: 不再发送 start 命令，让数据通过心跳机制自然流动
-        // 这与 TUNE 模式一致
         // 重置消息计数
         this._msgCount = 0;
     },
     
-    // TX 结束时调用 - V4.4.16: 不发送 start/stop 命令，与 TUNE 方式一致
+    // TX 结束时调用 - V4.5.9: 恢复 sync 间隔
     onTXStop: function() {
         console.log('🛑 ATR-1000 onTXStop 被调用, _txActive=', this._txActive);
         
@@ -2364,7 +2440,9 @@ const ATR1000 = {
         }
         this._txActive = false;
         
-        console.log('📻 TX 结束（不发送 stop 命令，依赖心跳同步）');
+        // V4.5.9: 恢复平时 sync 间隔 500ms（降低设备压力）
+        this._syncInterval = 500;
+        console.log('📻 TX 结束 (sync: 500ms)');
         
         // 清理重试定时器
         if (this._startRetryTimer) {
@@ -2379,11 +2457,47 @@ const ATR1000 = {
         }
         this._pendingUpdate = null;
         
-        // V4.4.16: 不再发送 stop 命令，保持数据流持续
-        // 心跳机制会持续同步数据
-        
         // 面板保持显示（精简版始终可见）
-        console.log('✅ ATR-1000 面板保持显示（精简版）');
+    },
+    
+    // V4.5.10: 清零功率/SWR 显示（PTT/TUNE 释放时调用）
+    clearDisplay: function() {
+        console.log('🧹 ATR-1000 清零显示');
+        
+        // 设置忽略数据保护期（500ms 内忽略新数据）
+        this._ignoreDataUntil = Date.now() + 500;
+        
+        // 清零内部状态
+        this.lastPower = 0;
+        this.lastSWR = 0;
+        this._smoothPower = 0;  // V4.5.10: 重置平滑值
+        this._smoothSWR = 1.0;  // V4.5.10: 重置平滑值
+        
+        // 清零 DOM 显示
+        const powerEl = document.getElementById('atr-power-value');
+        const swrEl = document.getElementById('atr-swr-value');
+        const powerBar = document.getElementById('atr-power-bar');
+        const swrBar = document.getElementById('atr-swr-bar');
+        
+        if (powerEl) {
+            powerEl.textContent = '0';
+            powerEl.style.color = '#4CAF50';
+        }
+        
+        if (swrEl) {
+            swrEl.textContent = '1.00';
+            swrEl.style.color = '#4CAF50';
+        }
+        
+        if (powerBar) {
+            powerBar.style.width = '0%';
+            powerBar.style.background = '#4CAF50';
+        }
+        
+        if (swrBar) {
+            swrBar.style.width = '0%';
+            swrBar.style.background = '#4CAF50';
+        }
     }
 };
 

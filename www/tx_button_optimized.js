@@ -201,8 +201,15 @@ async function TXControl(action) {
                     window.updatePTTStatus(false);
                 }
                 
-                // V4.4.19: 移除 ATR-1000 相关调用，PTT 和 TUNE 使用相同的机制
-                // ATR-1000 数据通过心跳自动更新，无需手动触发
+                // V4.5.8: PTT 释放时清零 ATR-1000 功率显示
+                if (typeof window.ATR1000 !== 'undefined') {
+                    if (window.ATR1000.onTXStop) {
+                        window.ATR1000.onTXStop();
+                    }
+                    if (window.ATR1000.clearDisplay) {
+                        window.ATR1000.clearDisplay();
+                    }
+                }
             }, 0);
             
             console.log(`[${timestamp}] ✅ TX停止成功 - 切换延迟最小化`);

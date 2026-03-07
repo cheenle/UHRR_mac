@@ -171,7 +171,7 @@ class ATR1000Client:
         原因：前端每 0.5s 发送 sync 命令，如果代理后台也发送 SYNC，
         会导致 ATR-1000 设备被双重 SYNC 请求压垮（每秒可能收到 4+ 次 SYNC）。
         """
-        global running, last_data_time
+        global running, last_data_time, clients
         
         logger.info("🔄 数据请求线程已启动（被动模式，依赖前端心跳）")
         
@@ -185,10 +185,13 @@ class ATR1000Client:
                 # 不再主动发送 SYNC，完全依赖前端心跳触发
                 # 只检测设备响应状态
                 if now - last_check_time >= 5.0:  # 每 5 秒检查一次
-                    if last_data_time > 0 and now - last_data_time > 10.0:
+                    # V4.5.8: 只有在有客户端连接时才检查设备响应
+                    # 如果没有客户端，设备本来就不会响应，不应该报警
+                    client_count = len(clients)
+                    if client_count > 0 and last_data_time > 0 and now - last_data_time > 10.0:
                         no_data_count += 1
                         if no_data_count >= 3:
-                            logger.warning(f"⚠️ 设备无响应 {no_data_count} 次，最后数据: {(now - last_data_time):.1f}秒前")
+                            logger.warning(f"⚠️ 设备无响应 {no_data_count} 次，最后数据: {(now - last_data_time):.1f}秒前 (客户端: {client_count})")
                             # 尝试发送一次 SYNC 唤醒设备
                             self._send_sync()
                             no_data_count = 0
@@ -244,9 +247,13 @@ class ATR1000Client:
                         meter_data["swr"] = swr_value
                     meter_data["connected"] = True
                 
-                # 只在功率 > 0 且数据变化时打印日志
+                # V4.5.6: 只在功率 > 0 且数据变化时，每5次打印一次日志
                 if fwd > 0 and data_changed:
-                    logger.info(f"📊 功率={fwd}W, SWR={swr_value:.2f}")
+                    if not hasattr(self, '_meter_log_count'):
+                        self._meter_log_count = 0
+                    self._meter_log_count += 1
+                    if self._meter_log_count % 5 == 0:
+                        logger.info(f"📊 功率={fwd}W, SWR={swr_value:.2f}")
                 
                 # 更新最后数据时间
                 last_data_time = time.time()
@@ -362,7 +369,7 @@ _last_broadcast_data = None
 _last_broadcast_time = 0
 
 def broadcast_to_clients():
-    """广播数据到所有 Unix Socket 客户端 - 优化版，带数据去重"""
+    """广播数据到所有 Unix Socket 客户端 - V4.5.11: 降低去重间隔"""
     global meter_data, clients, _last_broadcast_data, _last_broadcast_time
     
     client_count = len(clients)
@@ -379,9 +386,10 @@ def broadcast_to_clients():
             meter_data.get("cap", 0)
         )
     
-    # 如果数据与上次相同，跳过广播（但每500ms至少广播一次以保持连接活跃）
+    # V4.5.11: 数据去重间隔从 1.3 秒降低到 0.2 秒
+    # 即使数据相同，也至少每 0.2 秒广播一次
     now = time.time()
-    if _last_broadcast_data == current_data_tuple and (now - _last_broadcast_time) < 0.5:
+    if _last_broadcast_data == current_data_tuple and (now - _last_broadcast_time) < 0.2:
         return
     
     _last_broadcast_data = current_data_tuple
@@ -401,9 +409,13 @@ def broadcast_to_clients():
             "cap_pf": meter_data.get("cap_pf", 0)
         }) + "\n"  # 添加换行符，以便MRRC按行解析
     
-    # 打印广播日志（只在有实际功率且数据变化时）
+    # 打印广播日志（V4.5.6: 只在有实际功率且数据变化时，每5次打印一次）
     if meter_data["power"] > 0:
-        logger.info(f"📤 广播: 功率={meter_data['power']}W, SWR={meter_data['swr']:.2f}, 客户端={client_count}")
+        if not hasattr(broadcast_to_clients, '_log_count'):
+            broadcast_to_clients._log_count = 0
+        broadcast_to_clients._log_count += 1
+        if broadcast_to_clients._log_count % 5 == 0:
+            logger.info(f"📤 广播: 功率={meter_data['power']}W, SWR={meter_data['swr']:.2f}")
     
     # 复制客户端列表以避免在迭代时修改
     clients_copy = clients[:]
@@ -460,16 +472,27 @@ def handle_unix_client(conn, addr, atr1000):
                         logger.info("客户端请求停止数据流")
                     
                     elif action == "sync":
-                        # V4.4.18: sync 命令也触发活跃状态，保持高频率数据更新
+                        # V4.5.11: sync 命令立即广播当前缓存数据，同时发送 SYNC 到设备
+                        # 这样即使设备响应慢，前端也能立即看到当前状态
                         atr1000.set_active(True)
+                        
+                        # 立即广播当前缓存的数据（不等待设备响应）
+                        with data_lock:
+                            response = json.dumps({
+                                "type": "atr1000_meter",
+                                "power": meter_data["power"],
+                                "swr": meter_data["swr"],
+                                "connected": meter_data["connected"],
+                                "sw": meter_data.get("sw", 0),
+                                "ind": meter_data.get("ind", 0),
+                                "cap": meter_data.get("cap", 0),
+                                "ind_uh": meter_data.get("ind_uh", 0.0),
+                                "cap_pf": meter_data.get("cap_pf", 0)
+                            }) + "\n"
+                        conn.send(response.encode())
+                        
+                        # 同时发送 SYNC 到设备获取最新数据
                         atr1000._send_sync()
-                        # 设置一个短定时器来重置活跃状态（如果 1 秒内没有新的 sync）
-                        if hasattr(atr1000, '_sync_active_timer'):
-                            atr1000._sync_active_timer.cancel()
-                        import threading
-                        atr1000._sync_active_timer = threading.Timer(1.0, lambda: atr1000.set_active(False) if len(clients) > 0 else None)
-                        atr1000._sync_active_timer.daemon = True
-                        atr1000._sync_active_timer.start()
                     
                     elif action == "get_data":
                         # 立即发送当前数据
