@@ -120,24 +120,37 @@ class ATR1000Client:
                 time.sleep(5)
     
     def _on_open(self, ws):
-        """WebSocket 打开"""
+        """WebSocket 打开 - V4.5.13: SYNC 触发模式
+        
+        设备需要发送 SYNC 命令才会返回数据。
+        连接后立即发送 SYNC 获取初始状态。
+        后续由前端 sync 命令触发更新（有节流保护）。
+        """
         global connected, last_data_time
         connected = True
         meter_data["connected"] = True
-        last_data_time = 0  # V4.5.12: 重置数据时间，避免刚连接就判断为无响应
+        last_data_time = time.time()  # 记录连接时间
         logger.info("✅ ATR-1000 已连接")
         
-        # 发送同步命令
-        self._send_sync()
+        # 连接后立即发送 SYNC 获取初始数据
+        def send_initial_sync():
+            time.sleep(0.3)  # 等待连接稳定
+            if connected:
+                logger.info("📤 发送初始 SYNC")
+                self._send_sync()
+                global _last_sync_time
+                _last_sync_time = time.time()
         
-        # 启动数据请求线程
+        threading.Thread(target=send_initial_sync, daemon=True).start()
+        
+        # 启动健康检查线程
         threading.Thread(target=self._request_loop, daemon=True).start()
     
     def _on_message(self, ws, data):
         """收到消息"""
         global last_data_time
         last_data_time = time.time()  # 记录收到数据的时间
-        # logger.debug(f"📥 收到数据: 类型={type(data).__name__}, 长度={len(data)}")
+        
         if isinstance(data, bytes):
             self._parse_meter_data(data)
         else:
@@ -168,14 +181,13 @@ class ATR1000Client:
                 logger.error(f"发送同步命令失败: {e}")
     
     def _request_loop(self):
-        """数据请求循环 - V4.5.12: 主动轮询模式
+        """健康检查循环 - V4.5.13
         
-        有客户端连接时，主动定时发送 SYNC 保持数据流活跃。
-        前端 sync 命令仍然会立即广播缓存数据。
+        监控设备响应状态，如果长时间无响应则触发重连。
         """
         global running, last_data_time, clients, connected, meter_data
         
-        logger.info("🔄 数据请求线程已启动（被动模式，依赖前端 sync 命令）")
+        logger.info("🔄 健康检查线程已启动")
         
         last_check_time = 0
         
@@ -184,18 +196,12 @@ class ATR1000Client:
                 now = time.time()
                 client_count = len(clients)
                 
-                # V4.5.12: 移除主动 SYNC，完全依赖前端 sync 命令
-                # 前端每 500ms 发送 sync，代理收到后发送 SYNC 到设备
-                
-                # 检查设备响应状态 - 每 2 秒检查一次
+                # 健康检查 - 每 2 秒检查一次
                 if now - last_check_time >= 2.0:
-                    if client_count > 0 and last_data_time > 0 and now - last_data_time > 10.0:
-                        # V4.5.12: 10 秒无响应直接重连
-                        logger.error(f"❌ 设备 10 秒无响应，WebSocket 假死，主动重连 (客户端: {client_count})")
-                        # 标记断开
+                    if last_data_time > 0 and now - last_data_time > 10.0:
+                        logger.error(f"❌ 设备 10 秒无响应，连接可能断开 (客户端: {client_count})")
                         connected = False
                         meter_data["connected"] = False
-                        # 主动关闭 WebSocket，触发重连
                         try:
                             self.ws.close()
                         except:
@@ -203,11 +209,10 @@ class ATR1000Client:
                         break
                     last_check_time = now
                 
-                # 睡眠间隔
-                time.sleep(0.5)  # 500ms 检查一次
+                time.sleep(0.5)
                 
             except Exception as e:
-                logger.error(f"请求循环错误: {e}")
+                logger.error(f"健康检查错误: {e}")
     
     def _parse_meter_data(self, data):
         """解析 ATR-1000 数据 - 优化版，带数据变化检测"""
@@ -372,7 +377,7 @@ class ATR1000Client:
 _last_broadcast_data = None
 _last_broadcast_time = 0
 _last_sync_time = 0  # V4.5.12: 上次发送 SYNC 的时间
-SYNC_MIN_INTERVAL = 1.0  # V4.5.12: SYNC 最小间隔（秒），保护设备
+SYNC_MIN_INTERVAL = 0.5  # V4.5.13: SYNC 最小间隔（秒），设备响应快可降低
 
 def broadcast_to_clients():
     """广播数据到所有 Unix Socket 客户端 - V4.5.11: 降低去重间隔"""
@@ -478,11 +483,10 @@ def handle_unix_client(conn, addr, atr1000):
                         logger.info("客户端请求停止数据流")
                     
                     elif action == "sync":
-                        # V4.5.11: sync 命令立即广播当前缓存数据
-                        # V4.5.12: 添加 SYNC 节流保护，避免频繁发送到设备
+                        # V4.5.13: sync 命令广播缓存数据并发送 SYNC 到设备
                         atr1000.set_active(True)
                         
-                        # 立即广播当前缓存的数据（不等待设备响应）
+                        # 立即广播当前缓存的数据
                         with data_lock:
                             response = json.dumps({
                                 "type": "atr1000_meter",
@@ -497,15 +501,12 @@ def handle_unix_client(conn, addr, atr1000):
                             }) + "\n"
                         conn.send(response.encode())
                         
-                        # V4.5.12: 节流保护，SYNC 最小间隔 1 秒
+                        # 发送 SYNC 到设备（有节流保护）
                         global _last_sync_time
                         now = time.time()
                         if now - _last_sync_time >= SYNC_MIN_INTERVAL:
-                            logger.info(f"📤 发送 SYNC 到设备 (间隔: {now - _last_sync_time:.1f}s)")
                             atr1000._send_sync()
                             _last_sync_time = now
-                        # else:
-                        #     logger.debug(f"SYNC 节流中，跳过 (间隔: {now - _last_sync_time:.1f}s)")
                     
                     elif action == "get_data":
                         # 立即发送当前数据
