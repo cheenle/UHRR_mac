@@ -121,9 +121,10 @@ class ATR1000Client:
     
     def _on_open(self, ws):
         """WebSocket 打开"""
-        global connected
+        global connected, last_data_time
         connected = True
         meter_data["connected"] = True
+        last_data_time = 0  # V4.5.12: 重置数据时间，避免刚连接就判断为无响应
         logger.info("✅ ATR-1000 已连接")
         
         # 发送同步命令
@@ -136,7 +137,7 @@ class ATR1000Client:
         """收到消息"""
         global last_data_time
         last_data_time = time.time()  # 记录收到数据的时间
-        logger.debug(f"_on_message 被调用, 数据类型: {type(data)}")
+        # logger.debug(f"📥 收到数据: 类型={type(data).__name__}, 长度={len(data)}")
         if isinstance(data, bytes):
             self._parse_meter_data(data)
         else:
@@ -162,6 +163,7 @@ class ATR1000Client:
             try:
                 cmd = bytes([SCMD_FLAG, SCMD_SYNC, 0])
                 self.ws.send(cmd, opcode=0x02)
+                # logger.debug(f"📤 发送 SYNC")
             except Exception as e:
                 logger.error(f"发送同步命令失败: {e}")
     
@@ -173,21 +175,17 @@ class ATR1000Client:
         """
         global running, last_data_time, clients, connected, meter_data
         
-        logger.info("🔄 数据请求线程已启动（主动轮询模式，SYNC 间隔 2 秒）")
+        logger.info("🔄 数据请求线程已启动（被动模式，依赖前端 sync 命令）")
         
         last_check_time = 0
-        last_sync_time = 0
-        sync_interval = 2.0  # V4.5.12: 每 2 秒发送一次 SYNC（降低设备压力）
         
         while running and connected:
             try:
                 now = time.time()
                 client_count = len(clients)
                 
-                # V4.5.12: 有客户端时主动发送 SYNC 保持数据流
-                if client_count > 0 and now - last_sync_time >= sync_interval:
-                    self._send_sync()
-                    last_sync_time = now
+                # V4.5.12: 移除主动 SYNC，完全依赖前端 sync 命令
+                # 前端每 500ms 发送 sync，代理收到后发送 SYNC 到设备
                 
                 # 检查设备响应状态 - 每 2 秒检查一次
                 if now - last_check_time >= 2.0:
@@ -206,7 +204,7 @@ class ATR1000Client:
                     last_check_time = now
                 
                 # 睡眠间隔
-                time.sleep(0.2)  # 200ms 检查一次，更快响应
+                time.sleep(0.5)  # 500ms 检查一次
                 
             except Exception as e:
                 logger.error(f"请求循环错误: {e}")
