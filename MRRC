@@ -1047,6 +1047,22 @@ def update_current_frequency(freq):
     current_frequency = freq
     logger.info(f"📡 当前频率更新为: {freq/1000000:.3f} MHz")
 
+# 同步频率给 ATR-1000 代理
+def sync_freq_to_atr1000(freq):
+    """同步频率给 ATR-1000 代理（用于天调自动学习）"""
+    import socket
+    import json
+    try:
+        sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        sock.settimeout(0.5)  # 短超时，不阻塞主程序
+        sock.connect("/tmp/atr1000_proxy.sock")
+        sock.sendall(json.dumps({"action": "set_freq", "freq": freq}).encode())
+        sock.close()
+        logger.info(f"📤 频率同步给ATR-1000: {freq/1000:.1f}kHz")
+    except Exception as e:
+        # 静默失败，不影响主程序
+        logger.debug(f"频率同步失败: {e}")
+
 # 在程序启动时加载配置
 load_optimized_configs()
 
@@ -2206,10 +2222,14 @@ class WS_ControlTRX(tornado.websocket.WebSocketHandler):
 		elif(action == "getFreq"):
 			freq = CTRX.getFreq()
 			yield self.send_to_all_clients("getFreq:"+str(freq))
+			# 同步频率给 ATR-1000 代理
+			sync_freq_to_atr1000(freq)
 			pass
 		elif(action == "setFreq"):
 			freq = CTRX.setFreq(datato)
 			yield self.send_to_all_clients("getFreq:"+str(freq))
+			# 同步频率给 ATR-1000 代理
+			sync_freq_to_atr1000(freq)
 			pass
 		elif(action == "getMode"):
 			yield self.send_to_all_clients("getMode:"+str(CTRX.getMode()))

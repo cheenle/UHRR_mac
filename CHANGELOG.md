@@ -5,6 +5,59 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [V4.5.16] - 2026-03-08
+
+### 🎯 ATR-1000 天调智能学习与快速调谐
+
+#### 核心功能
+- **智能学习**：发射时自动记录频率与天调参数（SW、IND、CAP）的对应关系
+- **快速调谐**：切换频率时自动应用已学习的天调参数
+- **频率同步**：MRRC 主程序实时同步频率给 ATR 代理
+- **参数持久化**：学习记录保存在 `atr1000_tuner.json`，重启后自动加载
+
+#### 协议修正
+通过实际测试修正了 ATR-1000 协议解析：
+
+| 项目 | 修正前 | 修正后 |
+|------|--------|--------|
+| SW 字段位置 | data[4] | data[3] |
+| SW 映射 | 0=CL, 1=LC | 0=LC, 1=CL |
+| IND 发送值 | 直接发送 | 原值÷10 |
+| CAP 发送值 | 原值×10 | 直接发送 |
+
+#### 继电器状态帧解析
+```
+原始数据: ff050701031b1e000e01
+         │  │  │  │  │  │
+         │  │  │  │  │  └─ data[6] = IND (电感)
+         │  │  │  │  └──── data[5] = CAP (电容)
+         │  │  │  └─────── data[4] = 保留
+         │  │  └────────── data[3] = SW (网络类型)
+         │  └───────────── LEN
+         └──────────────── CMD
+```
+
+#### 值转换示例
+
+| 频率 | SW | IND存储 | IND发送 | L显示 | CAP存储 | CAP发送 | C显示 |
+|------|-----|---------|---------|-------|---------|---------|-------|
+| 7MHz | CL | 30 | 3 | 0.3uH | 27 | 27 | 270pF |
+| 14MHz | LC | 10 | 1 | 0.1uH | 9 | 9 | 90pF |
+
+#### 节流保护
+- 相同参数不重复发送
+- 最小发送间隔 5 秒
+- 防止设备频繁重启
+
+#### 文件变更
+- `atr1000_proxy.py` - 修正协议解析，添加频率同步接口
+- `atr1000_tuner.py` - 天调存储模块
+- `atr1000_tuner.json` - 学习记录存储
+- `MRRC` - 添加 `sync_freq_to_atr1000()` 频率同步函数
+- `docs/ATR1000_Tuner_Auto_Learning.md` - 完整技术文档
+
+---
+
 ## [V4.5.5] - 2026-03-06
 
 ### 🚀 部署配置优化

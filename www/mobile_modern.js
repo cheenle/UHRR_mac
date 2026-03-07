@@ -864,7 +864,13 @@ function updateTXStatus(isTX) {
 function updateFrequencyDisplay() {
     // 从 controls.js 的全局变量获取频率
     if (typeof TRXfrequency !== 'undefined') {
+        const prevFreq = mobileState.currentFrequency;
         mobileState.currentFrequency = TRXfrequency;
+        
+        // 频率变化时同步给 ATR1000 代理（用于天调学习）
+        if (prevFreq !== TRXfrequency && typeof ATR1000 !== 'undefined' && ATR1000.isConnected) {
+            ATR1000.setFreq(TRXfrequency);
+        }
     }
     
     // 频率格式：kHz 单位，显示 5 位数字（如 07053 = 7053 kHz）
@@ -910,6 +916,9 @@ function tuneFrequency(step) {
     
     // 自动加载天调参数（如果存在）
     if (typeof ATR1000 !== 'undefined' && ATR1000.isConnected) {
+        // 同步频率给代理（用于天调学习）
+        ATR1000.setFreq(mobileState.currentFrequency);
+        
         const tunerRecord = ATR1000.loadTunerForFreq(mobileState.currentFrequency);
         if (tunerRecord) {
             console.log(`🎵 自动加载天调: ${(mobileState.currentFrequency/1000).toFixed(1)}kHz`);
@@ -2029,6 +2038,16 @@ const ATR1000 = {
                 cap: cap
             }));
             console.log(`🎛️ 设置继电器: SW=${sw}, IND=${ind}, CAP=${cap}`);
+        }
+    },
+    
+    // 设置当前频率（用于天调学习）
+    setFreq: function(freq) {
+        if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+            this.ws.send(JSON.stringify({
+                action: 'set_freq',
+                freq: freq
+            }));
         }
     },
     

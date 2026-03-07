@@ -108,6 +108,11 @@ class TunerStorage:
         if swr < SWR_LEARN_MIN or swr > SWR_LEARN_MAX:
             return False
         
+        # 检查参数有效性 - ind 和 cap 必须有实际值
+        if ind == 0 and cap == 0:
+            logger.debug(f"忽略无效参数: ind=0, cap=0")
+            return False
+        
         with self.lock:
             key = self._freq_key(freq)
             
@@ -191,11 +196,16 @@ class TunerStorage:
             freq: 目标频率
         
         Returns:
-            (sw, ind, cap) 或 None
+            (sw, ind, cap) 或 None（如果参数无效）
         """
         record = self.find_best(freq)
         if record:
-            return (record['sw'], record['ind'], record['cap'])
+            # 检查参数有效性
+            ind = record.get('ind', 0)
+            cap = record.get('cap', 0)
+            if ind == 0 and cap == 0:
+                return None  # 无效参数
+            return (record['sw'], ind, cap)
         return None
     
     def get_all(self) -> List[dict]:

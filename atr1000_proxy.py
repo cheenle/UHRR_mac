@@ -66,6 +66,27 @@ cache = {
 }
 cache_lock = threading.Lock()
 
+# 上次设置的继电器参数（用于节流）
+last_relay_params = None
+relay_throttle_time = 0
+
+def set_relay_with_throttle(atr1000, sw, ind, cap):
+    """带节流的继电器设置，避免频繁操作设备"""
+    global last_relay_params, relay_throttle_time
+    import time
+    
+    current_params = (sw, ind, cap)
+    current_time = time.time()
+    
+    # 只在参数变化或超过5秒时才发送
+    if current_params != last_relay_params or current_time - relay_throttle_time > 5:
+        atr1000.set_relay(sw, ind, cap)
+        last_relay_params = current_params
+        relay_throttle_time = current_time
+        return True
+    return False
+
+
 clients = []  # Unix Socket 客户端列表
 
 # Unix Socket 路径
@@ -150,6 +171,10 @@ class ATR1000Client:
         last_data_time = time.time()
         
         if isinstance(data, bytes) and len(data) >= 3:
+            # 调试：显示收到的命令类型
+            cmd = data[1] if len(data) > 1 else 0
+            if cmd in [2, 5]:  # METER_STATUS=2, RELAY_STATUS=5
+                logger.info(f"📥 收到设备数据: cmd={cmd}, len={len(data)}")
             self._parse_data(data)
     
     def _poll_loop(self):
@@ -201,9 +226,10 @@ class ATR1000Client:
                 logger.error(f"发送 SYNC 失败: {e}")
     
     def _parse_data(self, data):
-        """解析 ATR-1000 数据 - V4.5.14 简化版
+        """解析 ATR-1000 数据 - V4.5.16 智能学习版
         
         只解析功率/SWR 和继电器状态，更新缓存。
+        自动学习：当功率 > 0 且 SWR 在 1.0-1.5 且参数有效时记录
         """
         global cache
         
@@ -213,8 +239,9 @@ class ATR1000Client:
         cmd = data[1]
         
         with cache_lock:
-            if cmd == SCMD_METER_STATUS and len(data) >= 10:
+            if cmd == SCMD_METER_STATUS and len(data) >= 8:
                 # 功率/SWR
+                # 数据格式: FF 02 07 00 SWR_L SWR_H P_L P_H ...
                 swr_raw = struct.unpack('<H', data[4:6])[0]
                 power = struct.unpack('<H', data[6:8])[0]
 
@@ -226,34 +253,47 @@ class ATR1000Client:
                 
                 cache["power"] = power
                 
-                # V4.5.15: 自动学习天调参数
-                # 当有功率且 SWR 在 1.0-1.5 时记录
+                # 调试日志
+                if power > 0:
+                    logger.info(f"📊 功率/SWR: {power}W, SWR={cache['swr']:.2f} (raw={swr_raw})")
+                
+                # V4.5.16: 智能学习天调参数
+                # 条件：功率 > 0, SWR 1.0-1.5, 参数有效（ind>0 或 cap>0）, 频率 > 0
                 if power > 0 and 1.0 <= cache["swr"] <= 1.5:
                     freq = cache.get("freq", 0)
-                    if freq > 0:
+                    ind = cache.get("ind", 0)
+                    cap = cache.get("cap", 0)
+                    
+                    # 检查参数有效性
+                    if freq > 0 and (ind > 0 or cap > 0):
                         try:
                             tuner = get_storage()
-                            tuner.learn(
+                            if tuner.learn(
                                 freq=freq,
                                 sw=cache["sw"],
-                                ind=cache["ind"],
-                                cap=cache["cap"],
+                                ind=ind,
+                                cap=cap,
                                 swr=cache["swr"]
-                            )
+                            ):
+                                logger.info(f"📝 学习成功: {freq/1000:.1f}kHz, SWR={cache['swr']:.2f}, {'CL' if cache['sw'] else 'LC'}, L={ind}, C={cap}")
                         except Exception as e:
-                            logger.debug(f"学习天调参数失败: {e}")
+                            logger.error(f"学习天调参数失败: {e}")
                 
-            elif cmd == SCMD_RELAY_STATUS and len(data) >= 11:
+            elif cmd == SCMD_RELAY_STATUS and len(data) >= 7:
                 # 继电器状态
-                cache["sw"] = data[3]      # 网络类型
-                cache["ind"] = data[4]     # 电感索引
-                cache["cap"] = data[5]     # 电容索引
+                # 数据格式: FF 05 07 00 SW IND CAP L_L L_H C_L C_H
+                cache["sw"] = data[3]      # 网络类型 (data[3])
+                cache["cap"] = data[5]     # 电感索引 (data[5])
+                cache["ind"] = data[6]     # 电容索引 (data[6])
                 
-                # 计算实际值
-                L = struct.unpack('<H', data[6:8])[0]
-                C = struct.unpack('<H', data[8:10])[0]
-                cache["ind_uh"] = L / 100.0
-                cache["cap_pf"] = C
+                # 计算实际值（如果有足够数据）
+                if len(data) >= 11:
+                    L = struct.unpack('<H', data[7:9])[0]
+                    C = struct.unpack('<H', data[9:11])[0]
+                    cache["ind_uh"] = L / 100.0
+                    cache["cap_pf"] = C
+                
+                logger.info(f"🎛️ 继电器原始: {data.hex()} | SW={'CL' if cache['sw'] else 'LC'}, L={cache['ind']}, C={cache['cap']}")
     
     def close(self):
         """关闭连接"""
@@ -366,12 +406,35 @@ def handle_unix_client(conn, addr, atr1000):
                         conn.send(response.encode())
                     
                     elif action == "set_freq":
-                        # 设置当前频率（用于学习）
+                        # 设置当前频率并自动调谐（如果有匹配参数）
                         freq = msg.get("freq", 0)
                         with cache_lock:
                             cache["freq"] = freq
-                        logger.info(f"设置频率: {freq}Hz")
-                        conn.send(json.dumps({"type": "ack", "action": "set_freq", "freq": freq}).encode())
+                        
+                        # 查找并应用天调参数
+                        tune_result = None
+                        if freq > 0:
+                            tuner = get_storage()
+                            params = tuner.get_tune_params(freq)
+                            if params:
+                                sw, ind, cap = params
+                                set_relay_with_throttle(atr1000, sw, ind//10, cap)  # SW直接发送, IND除以10, CAP直接发送
+                                tune_result = {
+                                    "sw": sw,
+                                    "ind": ind,
+                                    "cap": cap,
+                                    "sw_name": "LC" if sw else "CL"
+                                }
+                                logger.info(f"🎯 自动调谐: {freq/1000:.1f}kHz -> {'CL' if sw else 'LC'}, L={ind}, C={cap}")
+                        
+                        response = json.dumps({
+                            "type": "ack",
+                            "action": "set_freq",
+                            "freq": freq,
+                            "auto_tuned": tune_result is not None,
+                            "tune_params": tune_result
+                        }) + "\n"
+                        conn.send(response.encode())
                     
                     elif action == "quick_tune":
                         # V4.5.15: 快速调谐到指定频率
@@ -381,7 +444,7 @@ def handle_unix_client(conn, addr, atr1000):
                             params = tuner.get_tune_params(freq)
                             if params:
                                 sw, ind, cap = params
-                                atr1000.set_relay(sw, ind, cap)
+                                set_relay_with_throttle(atr1000, sw, ind//10, cap)  # SW直接发送, IND除以10, CAP直接发送
                                 response = json.dumps({
                                     "type": "quick_tune_result",
                                     "success": True,
@@ -442,7 +505,7 @@ def handle_unix_client(conn, addr, atr1000):
                         sw = msg.get("sw", 0)
                         ind = msg.get("ind", 0)
                         cap = msg.get("cap", 0)
-                        atr1000.set_relay(sw, ind, cap)
+                        set_relay_with_throttle(atr1000, sw, ind//10, cap)  # SW直接发送, IND除以10, CAP直接发送
                         logger.info(f"设置继电器: SW={sw}, IND={ind}, CAP={cap}")
                     
                     elif action == "tune":
