@@ -712,6 +712,57 @@ function setupEventListeners() {
             }
         });
     }
+    
+    // TUNE 天调按钮 - 长按发射1kHz单音
+    if (domElements.tuneButton) {
+        // 触摸开始
+        domElements.tuneButton.addEventListener('touchstart', function(e) {
+            e.preventDefault();
+            this.classList.add('active');
+            if (typeof startTune === 'function') {
+                startTune();
+            }
+        });
+        
+        // 触摸结束
+        domElements.tuneButton.addEventListener('touchend', function(e) {
+            e.preventDefault();
+            this.classList.remove('active');
+            if (typeof stopTune === 'function') {
+                stopTune();
+            }
+        });
+        
+        // 鼠标按下
+        domElements.tuneButton.addEventListener('mousedown', function(e) {
+            e.preventDefault();
+            this.classList.add('active');
+            if (typeof startTune === 'function') {
+                startTune();
+            }
+        });
+        
+        // 鼠标释放
+        domElements.tuneButton.addEventListener('mouseup', function(e) {
+            e.preventDefault();
+            this.classList.remove('active');
+            if (typeof stopTune === 'function') {
+                stopTune();
+            }
+        });
+        
+        // 鼠标离开按钮
+        domElements.tuneButton.addEventListener('mouseleave', function(e) {
+            if (this.classList.contains('active')) {
+                this.classList.remove('active');
+                if (typeof stopTune === 'function') {
+                    stopTune();
+                }
+            }
+        });
+        
+        console.log('🎵 TUNE 天调按钮已初始化');
+    }
 }
 
 function closeMenu() {
