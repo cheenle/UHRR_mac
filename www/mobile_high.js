@@ -813,11 +813,109 @@ function cycleBand() {
 var filters = ['WIDE', 'MID', 'NAR'];
 var currentFilterIndex = 1;
 
+// 滤波器设置：使用 lowshelf + highshelf 组合实现带通效果
+// lowshelf: 衰减低于截止频率的低频
+// highshelf: 衰减高于截止频率的高频
+var filterSettings = {
+    'MID': {
+        name: 'MID',
+        lowCut: 200,    // 低截止频率
+        highCut: 2700,  // 高截止频率
+        attenuation: -40 // 衰减量 (dB)
+    },
+    'WIDE': {
+        name: 'WIDE',
+        lowCut: 200,
+        highCut: 3000,
+        attenuation: -40
+    },
+    'NAR': {
+        name: 'NAR',
+        lowCut: 300,
+        highCut: 2100,
+        attenuation: -40
+    }
+};
+
+// 高品质模式滤波器节点（额外创建）
+var HQ_RX_lowFilter = null;   // 低频切除
+var HQ_RX_highFilter = null;  // 高频切除
+
 function cycleFilter() {
     currentFilterIndex = (currentFilterIndex + 1) % filters.length;
     var filter = filters[currentFilterIndex];
     var filterBtn = document.getElementById('filter-btn');
     if (filterBtn) filterBtn.textContent = filter;
+    
+    // 应用滤波器设置
+    applyRXFilter(filter);
+}
+
+function applyRXFilter(filterName) {
+    var settings = filterSettings[filterName];
+    if (!settings) return;
+    
+    console.log('📻 设置 RX 滤波器:', filterName, settings);
+    
+    // 检查 AudioRX_context 是否存在
+    if (typeof AudioRX_context === 'undefined' || !AudioRX_context) {
+        console.warn('AudioRX_context 不存在，无法设置滤波器');
+        return;
+    }
+    
+    // 创建滤波器节点（如果还没有）
+    if (!HQ_RX_lowFilter) {
+        try {
+            HQ_RX_lowFilter = AudioRX_context.createBiquadFilter();
+            HQ_RX_lowFilter.type = 'highshelf';  // 高架滤波器衰减低频
+            console.log('✅ HQ_RX_lowFilter 已创建');
+        } catch (e) {
+            console.error('创建 HQ_RX_lowFilter 失败:', e);
+        }
+    }
+    
+    if (!HQ_RX_highFilter) {
+        try {
+            HQ_RX_highFilter = AudioRX_context.createBiquadFilter();
+            HQ_RX_highFilter.type = 'lowshelf';  // 低架滤波器衰减高频
+            console.log('✅ HQ_RX_highFilter 已创建');
+        } catch (e) {
+            console.error('创建 HQ_RX_highFilter 失败:', e);
+        }
+    }
+    
+    // 设置滤波器参数
+    if (HQ_RX_lowFilter) {
+        HQ_RX_lowFilter.frequency.setValueAtTime(settings.lowCut, AudioRX_context.currentTime);
+        HQ_RX_lowFilter.gain.setValueAtTime(settings.attenuation, AudioRX_context.currentTime);
+    }
+    
+    if (HQ_RX_highFilter) {
+        HQ_RX_highFilter.frequency.setValueAtTime(settings.highCut, AudioRX_context.currentTime);
+        HQ_RX_highFilter.gain.setValueAtTime(settings.attenuation, AudioRX_context.currentTime);
+    }
+    
+    // 将滤波器插入音频链（在 AudioRX_biquadFilter_node 之后）
+    try {
+        if (typeof AudioRX_biquadFilter_node !== 'undefined' && AudioRX_biquadFilter_node && 
+            typeof AudioRX_gain_node !== 'undefined' && AudioRX_gain_node &&
+            HQ_RX_lowFilter && HQ_RX_highFilter) {
+            
+            // 断开原有连接
+            try {
+                AudioRX_biquadFilter_node.disconnect(AudioRX_gain_node);
+            } catch (e) {}
+            
+            // 重新连接：biquadFilter → lowFilter → highFilter → gain_node
+            AudioRX_biquadFilter_node.connect(HQ_RX_lowFilter);
+            HQ_RX_lowFilter.connect(HQ_RX_highFilter);
+            HQ_RX_highFilter.connect(AudioRX_gain_node);
+            
+            console.log('✅ RX 滤波器链已插入:', filterName);
+        }
+    } catch (e) {
+        console.error('插入滤波器链失败:', e);
+    }
 }
 
 function adjustFrequency(step) {
