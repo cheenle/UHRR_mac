@@ -827,19 +827,19 @@ var filterSettings = {
         name: 'MID',
         lowCut: 200,    // 低截止频率
         highCut: 2700,  // 高截止频率
-        attenuation: -20 // 衰减量 (dB) - 降低到 -20dB 避免过度衰减
+        attenuation: -30 // 衰减量 (dB)
     },
     'WIDE': {
         name: 'WIDE',
         lowCut: 200,
         highCut: 3000,
-        attenuation: -20
+        attenuation: -30
     },
     'NAR': {
         name: 'NAR',
         lowCut: 300,
         highCut: 2100,
-        attenuation: -20
+        attenuation: -30
     }
 };
 

@@ -8,6 +8,9 @@ Replaces the ALSA-specific implementation in the original code
 支持 Opus 端到端编解码:
 - TX: 前端 Opus 编码 → 后端 Opus 解码 → 电台
 - RX: 电台 → 后端 Opus 编码 → 前端 Opus 解码
+
+支持 RNNoise 神经网络降噪:
+- RX: 电台 → RNNoise 降噪 → Opus/Int16 编码 → 前端
 """
 
 import pyaudio
@@ -17,6 +20,16 @@ import gc
 import numpy as np
 from opus.decoder import Decoder as OpusDecoder
 from opus.encoder import Encoder as OpusEncoder
+
+# RNNoise 可选导入（需要 pip install pyrnnoise）
+RNNOISE_AVAILABLE = False
+RNNoise = None
+try:
+    from pyrnnoise import RNNoise
+    RNNOISE_AVAILABLE = True
+    print("✅ RNNoise 神经网络降噪可用")
+except ImportError:
+    print("⚠️ RNNoise 不可用，如需降噪功能请运行: pip install pyrnnoise")
 
 
 def enumerate_audio_devices():
@@ -81,6 +94,10 @@ class PyAudioCapture(threading.Thread):
     rx_opus_frame_dur = 20  # Opus 帧时长 (ms)
     rx_opus_encoder = None  # Opus 编码器实例
     
+    # RNNoise 降噪设置
+    rnnoise_enabled = False
+    rnnoise_suppress_level = 50
+    
     # 帧序号（用于FEC丢包检测）
     _frame_sequence = 0
     _sequence_lock = threading.Lock()
@@ -92,6 +109,16 @@ class PyAudioCapture(threading.Thread):
         # Opus 编码器实例（延迟初始化）
         self.rx_opus_encoder = None
         self.rx_opus_encoder_rate = 0  # 用于检测参数变化
+        
+        # RNNoise 降噪器实例（延迟初始化）
+        self.rnnoise_denoiser = None
+        
+        # 读取 RNNoise 配置
+        if 'RNNOISE' in config:
+            PyAudioCapture.rnnoise_enabled = config['RNNOISE'].getboolean('enabled', False)
+            PyAudioCapture.rnnoise_suppress_level = config['RNNOISE'].getint('suppress_level', 50)
+            if PyAudioCapture.rnnoise_enabled and RNNOISE_AVAILABLE:
+                print(f"🔇 RNNoise 降噪已启用，强度: {PyAudioCapture.rnnoise_suppress_level}")
         
         # Initialize PyAudio
         self.p = pyaudio.PyAudio()
@@ -243,6 +270,56 @@ class PyAudioCapture(threading.Thread):
                     float32_data = np.clip(float32_data, -0.95, 0.95)
                     
                     int16_data = (float32_data * 32767).astype(np.int16)
+                    
+                    # ========== RNNoise 神经网络降噪 ==========
+                    # 在 Int16 转换后、发送前进行降噪
+                    if PyAudioCapture.rnnoise_enabled and RNNOISE_AVAILABLE:
+                        try:
+                            # 延迟初始化降噪器
+                            if self.rnnoise_denoiser is None:
+                                self.rnnoise_denoiser = RNNoise(sample_rate=48000)
+                                print("🔇 RNNoise 降噪器已初始化 (48kHz)")
+                            
+                            # RNNoise 要求帧大小为 480 的整数倍
+                            # 48kHz * 10ms = 480 samples
+                            frame_size = 480
+                            audio_len = len(int16_data)
+                            
+                            # 累积足够的样本进行处理
+                            if audio_len >= frame_size:
+                                # 调整到帧大小的整数倍
+                                process_len = (audio_len // frame_size) * frame_size
+                                audio_to_process = int16_data[:process_len]
+                                
+                                # 重塑为 (channels, samples) 格式 - 单声道
+                                audio_reshaped = audio_to_process.reshape(1, -1)
+                                
+                                # 处理每一帧
+                                denoised_frames = []
+                                for speech_prob, denoised_frame in self.rnnoise_denoiser.denoise_chunk(audio_reshaped):
+                                    # 根据语音概率和抑制级别决定是否保留
+                                    suppress_threshold = (100 - PyAudioCapture.rnnoise_suppress_level) / 100.0
+                                    
+                                    if speech_prob[0] >= suppress_threshold:
+                                        # 语音帧：保留降噪后的音频
+                                        denoised_frames.append(denoised_frame)
+                                    else:
+                                        # 非语音帧：根据抑制级别衰减
+                                        # 不完全静音，保留一些背景音避免突兀
+                                        attenuation = 0.1  # 衰减到 10%
+                                        denoised_frames.append((denoised_frame * attenuation).astype(np.int16))
+                                
+                                if denoised_frames:
+                                    # 合并所有帧
+                                    int16_data = np.concatenate(denoised_frames).flatten()
+                                    
+                                    # 如果原始数据更长，保留剩余部分
+                                    if audio_len > process_len:
+                                        int16_data = np.concatenate([int16_data, int16_data[process_len:]])
+                        
+                        except Exception as e:
+                            if frame_count % 100 == 0:
+                                print(f"⚠️ RNNoise 处理错误: {e}")
                     
                     # 发送到客户端队列
                     try:
