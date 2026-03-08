@@ -1273,7 +1273,7 @@ cat certs/fullchain.pem | openssl x509 -text -noout
 
 ### V4.5.17 ATU 天调系统修复与优化 (2026-03-08)
 
-**主题：数据解析修正、参数统一、微调改存储调谐**
+**主题：数据解析修正、参数统一、微调改存储调谐、第三方软件联动**
 
 #### 数据解析修复
 通过用户实际测试数据修正 RELAY_STATUS 解析：
@@ -1305,10 +1305,28 @@ cat certs/fullchain.pem | openssl x509 -text -noout
 - 学习逻辑排除 SWR=1.0 假数据（阈值 1.01）
 - 保存结果限制 SWR 在 1.01-2.0 范围内
 
+#### 第三方软件联动支持（JTDX/flrig等）
+**功能**：支持通过 rigctld 与 JTDX、flrig、wfview 等第三方软件联动
+
+**实现原理**：
+- MRRC 定期（每 0.5 秒）从 rigctld 读取当前频率
+- 同步频率给 ATR-1000 代理，触发天调快速调谐
+- 无需打开 MRRC 网页界面，频率变更自动同步
+
+**使用场景**：
+- JTDX 自动模式切换频率时，天调自动跟随
+- flrig 手动调整频率时，天调自动跟随
+- wfview 控制电台时，天调自动跟随
+
+**配置要求**：
+- 所有软件连接同一个 rigctld 实例
+- MRRC 保持运行状态（后台即可）
+
 #### 文件变更
 - `atr1000_proxy.py` - 修正 RELAY_STATUS 解析，统一 set_relay 调用
 - `atr1000_tuner.json` - 清理脏数据
 - `atu_auto_tuner.py` - 微调改存储调谐
+- `MRRC` - 添加定期频率同步给 ATR-1000 代理
 - `CHANGELOG.md` - 版本发布说明
 
 ---

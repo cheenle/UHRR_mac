@@ -33,6 +33,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 学习逻辑排除 SWR=1.0 假数据（阈值改为 1.01）
 - 保存结果限制 SWR 在 1.01-2.0 范围内
 
+#### 第三方软件联动支持
+- 支持 JTDX、flrig、wfview 等通过 rigctld 联动
+- MRRC 定期从 rigctld 读取频率并同步给 ATR-1000 代理
+- 无需打开网页界面，频率变更自动触发天调
+
 ## [V4.5.16] - 2026-03-08
 
 ### 🎯 ATR-1000 天调智能学习与快速调谐
