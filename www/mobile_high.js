@@ -828,6 +828,52 @@ function initializeSMeter() {
     drawSMeter(ctx, 0);
 }
 
+// S 表更新函数 - controls.js 的 drawRXSmeter() 会调用这个函数
+function updateSMeter(level) {
+    var canvas = domElements.sMeterCanvas;
+    if (!canvas) return;
+    
+    var ctx = canvas.getContext('2d');
+    var value = parseInt(level) || 0;
+    drawSMeter(ctx, value);
+    
+    // 更新信号强度文字显示
+    var signalText = document.querySelector('.signal-text');
+    if (signalText) {
+        var res = "S0";
+        if (value > 9) {
+            res = "S9+" + value;
+        } else {
+            res = "S" + value;
+        }
+        // 添加dB显示（使用 controls.js 中的 RIG_LEVEL_STRENGTH）
+        if (typeof RIG_LEVEL_STRENGTH !== 'undefined' && RIG_LEVEL_STRENGTH[value] !== undefined) {
+            res += " (" + RIG_LEVEL_STRENGTH[value] + "dB)";
+        }
+        signalText.textContent = res;
+    }
+    
+    // 更新信号条显示
+    updateSignalBars(value);
+}
+
+// 更新信号条显示
+function updateSignalBars(level) {
+    var bars = document.querySelectorAll('.signal-bar');
+    if (!bars || bars.length === 0) return;
+    
+    var activeCount = Math.min(5, Math.ceil(level / 2));  // S0-S2=1条, S3-S4=2条, ... S9+=5条
+    if (level > 9) activeCount = 5;
+    
+    bars.forEach(function(bar, index) {
+        if (index < activeCount) {
+            bar.classList.add('active');
+        } else {
+            bar.classList.remove('active');
+        }
+    });
+}
+
 function drawSMeter(ctx, level) {
     var width = ctx.canvas.width;
     var height = ctx.canvas.height;
