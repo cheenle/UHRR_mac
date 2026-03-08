@@ -298,8 +298,8 @@ class ATR1000Client:
                 last_log_swr = cache["swr"]
                 
                 # V4.5.16: 智能学习天调参数
-                # 条件：功率 > 0, SWR 1.0-1.5, 参数有效（ind>0 或 cap>0）, 频率 > 0
-                if power > 0 and 1.0 <= cache["swr"] <= 1.5:
+                # 条件：功率 > 0, SWR 1.01-1.5 (排除SWR=1.0的假数据), 参数有效（ind>0 或 cap>0）, 频率 > 0
+                if power > 0 and 1.01 <= cache["swr"] <= 1.5:
                     freq = cache.get("freq", 0)
                     ind = cache.get("ind", 0)
                     cap = cache.get("cap", 0)
@@ -324,10 +324,15 @@ class ATR1000Client:
                 
             elif cmd == SCMD_RELAY_STATUS and len(data) >= 7:
                 # 继电器状态
-                # 数据格式: FF 05 07 00 SW IND CAP L_L L_H C_L C_H
-                cache["sw"] = data[3]      # 网络类型 (data[3])
-                cache["cap"] = data[5]     # 电感索引 (data[5])
-                cache["ind"] = data[6]     # 电容索引 (data[6])
+                # 实际数据格式（根据实验结果修正）:
+                # data[3] = SW (网络类型 0=LC, 1=CL)
+                # data[4] = IND (电感值，如 47 = 4.7uH)
+                # data[5] = CAP (电容值，如 79 = 790pF)
+                # data[6] = 其他值（如 213，可能是SWR或其他）
+                # 注意：实际观测发现字段位置与文档不符
+                cache["sw"] = data[3]      # 网络类型在 data[3]
+                cache["ind"] = data[4]     # 电感值在 data[4] (如 47 = 4.7uH)
+                cache["cap"] = data[5]     # 电容值在 data[5] (如 79 = 790pF)
                 
                 # 计算实际值（如果有足够数据）
                 if len(data) >= 11:
@@ -466,7 +471,8 @@ def handle_unix_client(conn, addr, atr1000):
                             params = tuner.get_tune_params(freq)
                             if params:
                                 sw, ind, cap = params
-                                set_relay_with_throttle(atr1000, sw, ind//10, cap)  # SW直接发送, IND除以10, CAP直接发送
+                                # 统一参数顺序: (sw, ind, cap)
+                                set_relay_with_throttle(atr1000, sw, ind, cap)
                                 tune_result = {
                                     "sw": sw,
                                     "ind": ind,
@@ -492,7 +498,8 @@ def handle_unix_client(conn, addr, atr1000):
                             params = tuner.get_tune_params(freq)
                             if params:
                                 sw, ind, cap = params
-                                set_relay_with_throttle(atr1000, sw, ind//10, cap)  # SW直接发送, IND除以10, CAP直接发送
+                                # 统一参数顺序: (sw, ind, cap)
+                                set_relay_with_throttle(atr1000, sw, ind, cap)
                                 response = json.dumps({
                                     "type": "quick_tune_result",
                                     "success": True,
@@ -592,7 +599,8 @@ def handle_unix_client(conn, addr, atr1000):
                         sw = msg.get("sw", 0)
                         ind = msg.get("ind", 0)
                         cap = msg.get("cap", 0)
-                        set_relay_with_throttle(atr1000, sw, ind//10, cap)  # SW直接发送, IND除以10, CAP直接发送
+                        # 统一参数顺序: (sw, ind, cap)
+                        set_relay_with_throttle(atr1000, sw, ind, cap)
                         logger.info(f"设置继电器: SW={sw}, IND={ind}, CAP={cap}")
                     
                     elif action == "tune":

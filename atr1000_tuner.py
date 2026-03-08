@@ -42,6 +42,7 @@ STORAGE_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'atr1000
 # SWR 学习阈值
 SWR_LEARN_MIN = 1.0   # 最小 SWR 阈值
 SWR_LEARN_MAX = 1.5   # 最大 SWR 阈值
+SWR_OPTIMAL_MIN = 1.01  # 最优值最小阈值，排除 SWR=1.0 的假数据
 
 # 频率匹配容差
 FREQ_TOLERANCE = 5000  # ±5kHz
@@ -130,14 +131,14 @@ class TunerStorage:
                 record['swr_max'] = max(record['swr_max'], swr)
                 record['last_update'] = time.time()
                 
-                # 如果新参数 SWR 更好，更新参数
-                if swr < record['swr_avg']:
+                # 如果新参数 SWR 更好，且不是假数据（SWR=1.0 可能是坏点）
+                if swr < record['swr_avg'] and swr >= SWR_OPTIMAL_MIN:
                     record['sw'] = sw
                     record['ind'] = ind
                     record['cap'] = cap
                     
             else:
-                # 新记录
+                # 新记录 - SWR=1.0 可能是假数据，标记为待验证
                 self.data[key] = {
                     'freq': freq,
                     'sw': sw,
@@ -147,7 +148,8 @@ class TunerStorage:
                     'swr_min': swr,
                     'swr_max': swr,
                     'sample_count': 1,
-                    'last_update': time.time()
+                    'last_update': time.time(),
+                    'needs_verify': swr < SWR_OPTIMAL_MIN  # SWR=1.0 需要验证
                 }
             
             self._save()

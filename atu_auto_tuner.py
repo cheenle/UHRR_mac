@@ -530,113 +530,57 @@ class ATUAutoTuner:
     
     def _fine_tune(self, freq: int, initial_sw: int, initial_ind: int, initial_cap: int) -> TuneResult:
         """
-        微调优化 - 分步优化策略（快速版）
+        存储调谐 - 从映射表获取最佳参数并应用
         
         策略：
-        1. 固定L，扫描C（±10%，步进1%，约21个值）
-        2. 固定最佳C，扫描L（±10%，步进1%，约21个值）
-        3. 固定最佳L，再扫描C（±10%，步进1%，约21个值）
-        
-        总计约63次测试
+        1. 尝试从存储中获取该频率的参数
+        2. 如果找到，直接应用存储的参数
+        3. 如果没有，使用初始参数
         """
-        best_swr = 99.0
-        best_sw = initial_sw
-        best_ind = initial_ind
-        best_cap = initial_cap
-        test_count = 0
+        logger.info(f"  存储调谐: 尝试从映射表获取 {freq/1000:.1f}kHz 的参数")
         
-        # 计算调整范围
-        cap_range = max(3, int(initial_cap * self.fine_tune_range))
-        ind_range = max(3, int(initial_ind * self.fine_tune_range))
+        # 尝试从存储中获取参数
+        stored_params = self.atr.quick_tune(freq)
         
-        logger.info(f"  初始: SW={'CL' if initial_sw else 'LC'} L={initial_ind} C={initial_cap} 范围: L±{ind_range} C±{cap_range}")
-        
-        # 先测试初始参数
-        self.atr.set_relay(initial_sw, initial_ind, initial_cap)
-        time.sleep(0.05)
-        best_swr = self._read_swr()
-        test_count += 1
-        
-        if best_swr < 1.3:
-            logger.info(f"  ✅ 初始SWR={best_swr:.2f} 已达标")
-            return TuneResult(freq, best_swr, best_sw, best_ind, best_cap, True, f"SWR={best_swr:.2f}")
-        
-        # ========== 第一步：固定L，扫描C ==========
-        for c_offset in range(-cap_range, cap_range + 1):
-            if self.stop_flag:
-                return TuneResult(freq, best_swr, best_sw, best_ind, best_cap, False, "用户中断")
+        if stored_params:
+            sw, ind, cap = stored_params
+            logger.info(f"  找到存储参数: SW={'CL' if sw else 'LC'} L={ind} C={cap}")
             
-            cap = initial_cap + c_offset
-            cap = max(0, min(127, cap))
+            # 应用存储的参数
+            self.atr.set_relay(sw, ind, cap)
+            time.sleep(0.05)
             
-            self.atr.set_relay(best_sw, best_ind, cap)
-            time.sleep(0.02)  # 快速等待
+            # 读取 SWR 确认
+            swr = self._read_swr()
             
-            current_swr = self._read_swr()
-            test_count += 1
+            if swr < self.swr_threshold:
+                logger.info(f"  ✅ 存储调谐成功: SWR={swr:.2f}")
+                return TuneResult(freq, swr, sw, ind, cap, True, f"存储调谐 SWR={swr:.2f}")
+            else:
+                logger.warning(f"  ⚠️ 存储参数 SWR={swr:.2f} 不达标，回退到初始参数")
+                # 回退到初始参数
+                self.atr.set_relay(initial_sw, initial_ind, initial_cap)
+                time.sleep(0.05)
+                swr = self._read_swr()
+                return TuneResult(freq, swr, initial_sw, initial_ind, initial_cap, 
+                                 swr < self.swr_threshold, f"回退初始 SWR={swr:.2f}")
+        else:
+            logger.info(f"  未找到存储参数，使用初始参数: SW={'CL' if initial_sw else 'LC'} L={initial_ind} C={initial_cap}")
             
-            if current_swr < best_swr:
-                best_swr = current_swr
-                best_cap = cap
-        
-        # ========== 第二步：固定C，扫描L ==========
-        for l_offset in range(-ind_range, ind_range + 1):
-            if self.stop_flag:
-                return TuneResult(freq, best_swr, best_sw, best_ind, best_cap, False, "用户中断")
+            # 使用初始参数
+            self.atr.set_relay(initial_sw, initial_ind, initial_cap)
+            time.sleep(0.05)
+            swr = self._read_swr()
             
-            ind = best_ind + l_offset
-            ind = max(0, min(127, ind))
+            success = swr < self.swr_threshold
+            message = f"初始参数 SWR={swr:.2f}" if success else f"SWR={swr:.2f} 不达标"
             
-            self.atr.set_relay(best_sw, ind, best_cap)
-            time.sleep(0.02)
-            
-            current_swr = self._read_swr()
-            test_count += 1
-            
-            if current_swr < best_swr:
-                best_swr = current_swr
-                best_ind = ind
-        
-        # ========== 第三步：固定L，再扫描C ==========
-        for c_offset in range(-cap_range, cap_range + 1):
-            if self.stop_flag:
-                return TuneResult(freq, best_swr, best_sw, best_ind, best_cap, False, "用户中断")
-            
-            cap = best_cap + c_offset
-            cap = max(0, min(127, cap))
-            
-            self.atr.set_relay(best_sw, best_ind, cap)
-            time.sleep(0.02)
-            
-            current_swr = self._read_swr()
-            test_count += 1
-            
-            if current_swr < best_swr:
-                best_swr = current_swr
-                best_cap = cap
-        
-        # ========== 尝试另一种网络类型（仅当SWR>2.0时）==========
-        if best_swr > 2.0:
-            other_sw = 1 - best_sw
-            self.atr.set_relay(other_sw, best_ind, best_cap)
-            time.sleep(0.03)
-            current_swr = self._read_swr()
-            test_count += 1
-            
-            if current_swr < best_swr:
-                best_swr = current_swr
-                best_sw = other_sw
-        
-        success = best_swr < self.swr_threshold and best_swr < 99.0
-        message = f"SWR={best_swr:.2f}" if success else f"SWR无效"
-        
-        logger.info(f"  ✅ {'CL' if best_sw else 'LC'} L={best_ind} C={best_cap} SWR={best_swr:.2f} ({test_count}次)")
-        
-        return TuneResult(freq, best_swr, best_sw, best_ind, best_cap, success, message)
+            return TuneResult(freq, swr, initial_sw, initial_ind, initial_cap, success, message)
     
     def _save_result(self, result: TuneResult):
         """保存结果到映射表"""
-        if result.success and result.swr < 3.0:
+        # 过滤假阳性：SWR=1.0 是假数据，SWR>2.0 也不保存
+        if result.success and 1.01 <= result.swr < 2.0:
             # 通过 ATR-1000 代理保存
             self.atr._send_command({
                 "action": "learn",

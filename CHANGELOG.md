@@ -5,6 +5,34 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [V4.5.17] - 2026-03-08
+
+### 🔧 ATU 天调系统修复与优化
+
+#### 数据解析修复
+- **RELAY_STATUS 字段位置修正**：根据实际测试修正数据解析位置
+  - `data[3]` → SW（网络类型：0=LC, 1=CL）
+  - `data[4]` → IND（电感索引，如 47=4.7uH）
+  - `data[5]` → CAP（电容索引，如 79=790pF）
+
+#### 数据清理
+- 清理 JSON 中 6 条脏数据（sw=3/sw=47 等无效值）
+- 保留 136 条有效学习记录
+
+#### 参数调用统一
+- 统一 `set_relay()` 调用参数顺序为 `(sw, ind, cap)`
+- 修复三处调用点：自动调谐、快速调谐、手动设置
+
+#### 微调模式改为存储调谐
+- `_fine_tune()` 方法从扫描模式改为存储调谐模式
+- 优先从映射表获取已学习的参数直接应用
+- 存储参数不达标时回退到初始参数
+- 大幅减少调谐时间（从~63次测试减少到1-2次）
+
+#### SWR 过滤增强
+- 学习逻辑排除 SWR=1.0 假数据（阈值改为 1.01）
+- 保存结果限制 SWR 在 1.01-2.0 范围内
+
 ## [V4.5.16] - 2026-03-08
 
 ### 🎯 ATR-1000 天调智能学习与快速调谐
