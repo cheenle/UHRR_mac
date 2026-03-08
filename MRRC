@@ -682,18 +682,18 @@ def play_tone():
                         output=True,
                         output_device_index=get_device_index(output_device, output=True))
 
-        logger.info(f"🎵 开始播放tune.wav到声卡输出: {output_device}（音量20%）")
+        logger.info(f"🎵 开始播放tune.wav到声卡输出: {output_device}（音量5%）")
 
-        # 循环播放（音量20%，提高音量确保电台检测到信号）
+        # 循环播放（音量5%，低功率调谐）
         import struct
         loop_count = 0
         data = wf.readframes(1024)
         while tune_playing and len(data) > 0:
-            # 将16位PCM数据调整音量到20%
+            # 将16位PCM数据调整音量到5%
             # 将bytes转换为int16数组
             samples = struct.unpack(f'<{len(data)//2}h', data)
-            # 将每个采样点乘以0.20
-            reduced_samples = [int(sample * 0.20) for sample in samples]
+            # 将每个采样点乘以0.05
+            reduced_samples = [int(sample * 0.05) for sample in samples]
             # 转换回bytes
             reduced_data = struct.pack(f'<{len(reduced_samples)}h', *reduced_samples)
 
