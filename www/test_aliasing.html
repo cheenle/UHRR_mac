@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TX 音频混叠测试</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #1a1a2e;
+            color: #eee;
+            padding: 20px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        h1 { color: #00d4ff; }
+        h2 { color: #ffd700; margin-top: 30px; }
+        .panel {
+            background: #16213e;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        canvas {
+            width: 100%;
+            height: 150px;
+            background: #0f0f23;
+            border-radius: 8px;
+        }
+        button {
+            background: #00d4ff;
+            color: #000;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 5px;
+        }
+        button:hover { background: #00a8cc; }
+        button.stop { background: #ff6b6b; }
+        .info { color: #888; font-size: 14px; margin: 10px 0; }
+        .highlight { color: #ffd700; }
+        .problem { color: #ff6b6b; }
+        .solution { color: #4ecdc4; }
+        table { width: 100%; border-collapse: collapse; margin: 10px 0; }
+        th, td { padding: 8px; text-align: left; border-bottom: 1px solid #333; }
+        th { color: #00d4ff; }
+    </style>
+</head>
+<body>
+    <h1>🔬 TX 音频混叠测试</h1>
+    
+    <div class="panel">
+        <h2>问题分析</h2>
+        <p class="problem"><strong>症状：</strong>iPhone 麦克风发射声音尖锐刺耳</p>
+        <p class="highlight"><strong>根因：</strong>降采样混叠 (Aliasing)</p>
+        <table>
+            <tr><th>参数</th><th>值</th><th>说明</th></tr>
+            <tr><td>原始采样率</td><td>48kHz</td><td>iPhone 麦克风</td></tr>
+            <tr><td>目标采样率</td><td>16kHz</td><td>Opus 编码器</td></tr>
+            <tr><td>降采样系数</td><td>3</td><td>每3个取1</td></tr>
+            <tr><td>原始 Nyquist</td><td>24kHz</td><td>可记录高达24kHz</td></tr>
+            <tr><td>目标 Nyquist</td><td>8kHz</td><td>只能保留<8kHz</td></tr>
+            <tr class="problem"><td>混叠频率</td><td>8-24kHz</td><td>折叠到 0-8kHz！</td></tr>
+        </table>
+        
+        <h2>解决方案</h2>
+        <p class="solution"><strong>修复：</strong>添加抗混叠低通滤波器 (6kHz cutoff)</p>
+        <p>音频链：micSource → <span class="solution">antiAlias (6kHz)</span> → EQ → processor</p>
+    </div>
+
+    <div class="panel">
+        <h2>📊 频谱对比测试</h2>
+        <p class="info">点击下方按钮开始测试，观察频谱变化</p>
+        
+        <div>
+            <button onclick="startTest()">▶ 开始测试</button>
+            <button onclick="stopTest()" class="stop">⏹ 停止</button>
+        </div>
+        
+        <h3>原始信号频谱 (48kHz，无滤波)</h3>
+        <canvas id="spectrumRaw"></canvas>
+        
+        <h3>处理后信号频谱 (经 6kHz 低通滤波)</h3>
+        <canvas id="spectrumFiltered"></canvas>
+        
+        <h3>降采样后频谱 (16kHz)</h3>
+        <canvas id="spectrumDownsampled"></canvas>
+    </div>
+
+    <div class="panel">
+        <h2>📈 测试结果</h2>
+        <div id="result">
+            <p class="info">等待测试...</p>
+        </div>
+    </div>
+
+    <script>
+        let audioContext = null;
+        let micStream = null;
+        let analyserRaw = null;
+        let analyserFiltered = null;
+        let analyserDownsampled = null;
+        let antiAliasFilter = null;
+        let isRunning = false;
+        let animationId = null;
+
+        async function startTest() {
+            try {
+                // 创建 AudioContext
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                console.log('AudioContext 采样率:', audioContext.sampleRate);
+
+                // 获取麦克风
+                micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                const micSource = audioContext.createMediaStreamSource(micStream);
+
+                // 创建分析器
+                analyserRaw = audioContext.createAnalyser();
+                analyserRaw.fftSize = 2048;
+                
+                analyserFiltered = audioContext.createAnalyser();
+                analyserFiltered.fftSize = 2048;
+
+                // 创建抗混叠低通滤波器
+                antiAliasFilter = audioContext.createBiquadFilter();
+                antiAliasFilter.type = 'lowpass';
+                antiAliasFilter.frequency.setValueAtTime(6000, audioContext.currentTime);
+                antiAliasFilter.Q.setValueAtTime(0.707, audioContext.currentTime);
+
+                // 连接音频链 - 原始信号分支
+                micSource.connect(analyserRaw);
+                
+                // 连接音频链 - 滤波后信号分支
+                micSource.connect(antiAliasFilter);
+                antiAliasFilter.connect(analyserFiltered);
+
+                isRunning = true;
+                drawSpectrums();
+                
+                document.getElementById('result').innerHTML = 
+                    '<p class="solution">✅ 测试运行中... 对比上方三个频谱图</p>' +
+                    '<p class="info">原始频谱应显示高频成分（8-20kHz）</p>' +
+                    '<p class="info">滤波后频谱应衰减 6kHz 以上的成分</p>' +
+                    '<p class="info">如果修复有效，高频混叠将大幅减少</p>';
+                
+            } catch (err) {
+                console.error('测试失败:', err);
+                document.getElementById('result').innerHTML = 
+                    '<p class="problem">❌ 测试失败: ' + err.message + '</p>';
+            }
+        }
+
+        function stopTest() {
+            isRunning = false;
+            if (animationId) {
+                cancelAnimationFrame(animationId);
+            }
+            if (micStream) {
+                micStream.getTracks().forEach(track => track.stop());
+            }
+            if (audioContext) {
+                audioContext.close();
+            }
+            document.getElementById('result').innerHTML = 
+                '<p class="info">测试已停止</p>';
+        }
+
+        function drawSpectrums() {
+            if (!isRunning) return;
+            
+            drawSpectrum(analyserRaw, 'spectrumRaw', '原始信号 (全带宽)');
+            drawSpectrum(analyserFiltered, 'spectrumFiltered', '滤波后 (6kHz lowpass)');
+            
+            animationId = requestAnimationFrame(drawSpectrums);
+        }
+
+        function drawSpectrum(analyser, canvasId, label) {
+            const canvas = document.getElementById(canvasId);
+            const ctx = canvas.getContext('2d');
+            const bufferLength = analyser.frequencyBinCount;
+            const dataArray = new Uint8Array(bufferLength);
+            analyser.getByteFrequencyData(dataArray);
+
+            // 设置画布尺寸
+            canvas.width = canvas.offsetWidth * 2;
+            canvas.height = canvas.offsetHeight * 2;
+            
+            const width = canvas.width;
+            const height = canvas.height;
+            
+            // 清除画布
+            ctx.fillStyle = '#0f0f23';
+            ctx.fillRect(0, 0, width, height);
+            
+            // 绘制频谱
+            const barWidth = width / bufferLength * 2;
+            let x = 0;
+            
+            for (let i = 0; i < bufferLength; i++) {
+                const barHeight = (dataArray[i] / 255) * height;
+                
+                // 颜色渐变：低频绿色 -> 中频黄色 -> 高频红色
+                const freq = (i / bufferLength) * (audioContext.sampleRate / 2);
+                let color;
+                if (freq < 1000) {
+                    color = `rgb(0, ${200 + dataArray[i] * 0.2}, 0)`;
+                } else if (freq < 4000) {
+                    color = `rgb(${200 + dataArray[i] * 0.2}, ${200 + dataArray[i] * 0.2}, 0)`;
+                } else if (freq < 8000) {
+                    color = `rgb(${220 + dataArray[i] * 0.1}, ${150 - freq/100}, 0)`;
+                } else {
+                    color = `rgb(${200 + dataArray[i] * 0.2}, 50, 50)`;
+                }
+                
+                ctx.fillStyle = color;
+                ctx.fillRect(x, height - barHeight, barWidth, barHeight);
+                x += barWidth;
+            }
+            
+            // 绘制频率标记
+            ctx.fillStyle = '#888';
+            ctx.font = '20px sans-serif';
+            const sampleRate = audioContext ? audioContext.sampleRate : 48000;
+            const maxFreq = sampleRate / 2;
+            
+            // 标记关键频率
+            [1000, 2000, 4000, 6000, 8000, 12000, 16000, 20000].forEach(freq => {
+                if (freq <= maxFreq) {
+                    const x = (freq / maxFreq) * width;
+                    ctx.fillText(freq >= 1000 ? (freq/1000) + 'k' : freq, x - 10, height - 5);
+                    
+                    // 绘制垂直线
+                    ctx.strokeStyle = freq === 6000 ? '#4ecdc4' : '#444';
+                    ctx.lineWidth = freq === 6000 ? 2 : 1;
+                    ctx.beginPath();
+                    ctx.moveTo(x, 0);
+                    ctx.lineTo(x, height);
+                    ctx.stroke();
+                }
+            });
+            
+            // 特殊标记 6kHz 滤波器截止频率
+            if (label.includes('滤波后')) {
+                ctx.fillStyle = '#4ecdc4';
+                ctx.font = 'bold 18px sans-serif';
+                ctx.fillText('↑ 6kHz 滤波器截止', width * 0.15, 25);
+            }
+            
+            // 标签
+            ctx.fillStyle = '#fff';
+            ctx.font = 'bold 24px sans-serif';
+            ctx.fillText(label, 10, 30);
+        }
+    </script>
+</body>
+</html>

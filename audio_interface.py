@@ -254,6 +254,19 @@ class PyAudioCapture(threading.Thread):
                             client_count = len(AudioRXHandlerClients)
 
                             if client_count > 0:
+                                # 半双工优化：TX 时停止发送 RX 音频数据
+                                # 避免 Echo 和节省带宽
+                                is_ptt_on = False
+                                try:
+                                    if hasattr(main_module, 'CTRX') and main_module.CTRX:
+                                        is_ptt_on = main_module.CTRX.infos.get("PTT", False)
+                                except Exception:
+                                    pass
+                                
+                                if is_ptt_on:
+                                    # TX 时跳过 RX 数据发送，但保持连接
+                                    continue
+                                
                                 # 动态读取类变量，支持运行时切换编码模式
                                 current_opus_mode = PyAudioCapture.rx_opus_encode
                                 current_opus_rate = PyAudioCapture.rx_opus_rate
@@ -351,6 +364,17 @@ class PyAudioCapture(threading.Thread):
                                                 print(f"Opus 编码错误: {e}")
                                 else:
                                     # Int16 PCM 模式（默认）
+                                    # 支持 48kHz → 目标采样率 降采样
+                                    source_rate = 48000  # PyAudio 捕获采样率
+                                    target_rate = PyAudioCapture.rx_opus_rate  # 目标采样率
+                                    if target_rate < source_rate and target_rate > 0:
+                                        downsample_ratio = source_rate // target_rate
+                                        if downsample_ratio > 1 and len(int16_data) >= downsample_ratio:
+                                            # 平均降采样
+                                            trimmed_len = (len(int16_data) // downsample_ratio) * downsample_ratio
+                                            reshaped = int16_data[:trimmed_len].reshape(-1, downsample_ratio)
+                                            int16_data = reshaped.mean(axis=1).astype(np.int16)
+                                    
                                     compressed_data = int16_data.tobytes()
                                     # 弱网优化：智能队列管理
                                     for c in AudioRXHandlerClients:

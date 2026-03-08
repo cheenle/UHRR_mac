@@ -63,6 +63,24 @@ SCMD_FLAG = 0xFF
 SCMD_SYNC = 1
 SCMD_METER_STATUS = 2
 
+# ATU 自动调谐模块
+try:
+    from atu_auto_tuner import get_auto_tuner, handle_auto_tune_command
+    ATU_AUTO_TUNER_AVAILABLE = True
+    logger.info("ATU 自动调谐模块已加载")
+    
+    # 设置 MRRC 回调函数（在 start_tune/stop_tune 函数定义后设置）
+    def setup_atu_callbacks():
+        tuner = get_auto_tuner()
+        tuner.mrrc_start_tune = start_tune
+        tuner.mrrc_stop_tune = stop_tune
+        tuner.mrrc_set_freq = lambda f: CTRX.setFreq(str(f))
+        logger.info("ATU 自动调谐回调函数已设置")
+        
+except ImportError as e:
+    ATU_AUTO_TUNER_AVAILABLE = False
+    logger.warning(f"ATU 自动调谐模块不可用: {e}")
+
 ############ Global functions ##################################
 def writte_log(logmsg):
 	logfile = open(config['SERVER']['log_file'],"a") 
@@ -664,17 +682,18 @@ def play_tone():
                         output=True,
                         output_device_index=get_device_index(output_device, output=True))
 
-        logger.info(f"🎵 开始播放tune.wav到声卡输出: {output_device}（音量6%）")
+        logger.info(f"🎵 开始播放tune.wav到声卡输出: {output_device}（音量20%）")
 
-        # 循环播放（音量6%）
+        # 循环播放（音量20%，提高音量确保电台检测到信号）
         import struct
+        loop_count = 0
         data = wf.readframes(1024)
         while tune_playing and len(data) > 0:
-            # 将16位PCM数据降低音量到6%
+            # 将16位PCM数据调整音量到20%
             # 将bytes转换为int16数组
             samples = struct.unpack(f'<{len(data)//2}h', data)
-            # 将每个采样点乘以0.06
-            reduced_samples = [int(sample * 0.06) for sample in samples]
+            # 将每个采样点乘以0.20
+            reduced_samples = [int(sample * 0.20) for sample in samples]
             # 转换回bytes
             reduced_data = struct.pack(f'<{len(reduced_samples)}h', *reduced_samples)
 
@@ -683,6 +702,9 @@ def play_tone():
 
             # 如果播放完了，重新开始
             if len(data) == 0 and tune_playing:
+                loop_count += 1
+                if loop_count % 10 == 0:  # 每10次循环记录一次
+                    logger.info(f"🎵 tune.wav 循环播放中... (第{loop_count}次)")
                 wf.rewind()
                 data = wf.readframes(1024)
 
@@ -1580,6 +1602,105 @@ class WS_ATR1000Handler(tornado.websocket.WebSocketHandler):
         if self in ATR1000HandlerClients:
             ATR1000HandlerClients.remove(self)
         logger.info(f"🔌 ATR-1000 客户端断开，剩余 {len(ATR1000HandlerClients)} 个")
+
+
+class WS_ATUAutoTunerHandler(tornado.websocket.WebSocketHandler):
+    """
+    ATU 自动调谐 WebSocket 处理器
+    
+    提供以下功能：
+    - 波段选择自动调谐
+    - 自定义频率范围调谐
+    - 实时进度和曲线数据
+    - 调谐数据管理
+    """
+    
+    clients = []
+    
+    def check_origin(self, origin):
+        return True
+    
+    def open(self):
+        if self not in WS_ATUAutoTunerHandler.clients:
+            WS_ATUAutoTunerHandler.clients.append(self)
+        logger.info(f"🔌 ATU 自动调谐客户端连接，当前 {len(WS_ATUAutoTunerHandler.clients)} 个")
+        
+        # 发送当前状态
+        if ATU_AUTO_TUNER_AVAILABLE:
+            tuner = get_auto_tuner()
+            self.write_message(json.dumps({
+                "type": "connected",
+                "bands": tuner.get_bands()
+            }))
+        else:
+            self.write_message(json.dumps({
+                "type": "error",
+                "message": "ATU 自动调谐模块不可用"
+            }))
+    
+    def on_message(self, message):
+        """处理前端命令"""
+        if not ATU_AUTO_TUNER_AVAILABLE:
+            self.write_message(json.dumps({
+                "type": "error",
+                "message": "ATU 自动调谐模块不可用"
+            }))
+            return
+        
+        try:
+            command = json.loads(message)
+            action = command.get("action", "")
+            
+            logger.info(f"📨 ATU 自动调谐命令: {action}")
+            
+            # 特殊处理：获取天调记录需要通过 ATR-1000 代理
+            if action == "get_tune_records":
+                # 转发到 ATR-1000 代理
+                result = atr1000_proxy_manager.send_to_proxy(json.dumps({
+                    "action": "get_tune_records"
+                }))
+                # 代理会直接回复，我们需要从代理获取数据
+                # 这里使用 atr1000_tuner 模块直接获取
+                from atr1000_tuner import get_storage
+                storage = get_storage()
+                records = storage.get_all()
+                self.write_message(json.dumps({
+                    "type": "tune_records",
+                    "count": len(records),
+                    "records": records
+                }))
+                return
+            
+            # 处理自动调谐命令
+            response = handle_auto_tune_command(command)
+            self.write_message(json.dumps(response))
+            
+        except json.JSONDecodeError:
+            self.write_message(json.dumps({
+                "type": "error",
+                "message": "无效的 JSON 格式"
+            }))
+        except Exception as e:
+            logger.error(f"处理 ATU 命令错误: {e}")
+            self.write_message(json.dumps({
+                "type": "error",
+                "message": str(e)
+            }))
+    
+    def on_close(self):
+        if self in WS_ATUAutoTunerHandler.clients:
+            WS_ATUAutoTunerHandler.clients.remove(self)
+        logger.info(f"🔌 ATU 自动调谐客户端断开，剩余 {len(WS_ATUAutoTunerHandler.clients)} 个")
+    
+    @classmethod
+    def broadcast_progress(cls, data):
+        """广播调谐进度到所有客户端"""
+        message = json.dumps(data)
+        for client in cls.clients:
+            try:
+                client.write_message(message)
+            except:
+                pass
 
 class TRXRIG:
 	def __init__(self):
@@ -2654,6 +2775,13 @@ if __name__ == "__main__":
 		
 		CTRX = TRXRIG()
 		
+		# 设置 ATU 自动调谐回调函数
+		if ATU_AUTO_TUNER_AVAILABLE:
+			try:
+				setup_atu_callbacks()
+			except Exception as e:
+				logger.error(f"设置 ATU 回调函数失败: {e}")
+		
 		threadticksTRXRIG = ticksTRXRIG()
 		threadticksTRXRIG.start()
 		
@@ -2671,6 +2799,7 @@ if __name__ == "__main__":
 			(r'/WSCTRX', WS_ControlTRX),
 			(r'/WSpanFFT', WS_panFFTHandler),
 			(r'/WSATR1000', WS_ATR1000Handler),  # ATR-1000 天调 WebSocket
+			(r'/WSATU', WS_ATUAutoTunerHandler),  # ATU 自动调谐 WebSocket
 			
 			(r'/(panfft.*)', tornado.web.StaticFileHandler, { 'path' : './www/panadapter' }),
 			(r'/CONFIG', ConfigHandler),

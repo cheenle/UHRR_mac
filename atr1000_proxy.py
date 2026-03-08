@@ -268,19 +268,34 @@ class ATR1000Client:
                 swr_raw = struct.unpack('<H', data[4:6])[0]
                 power = struct.unpack('<H', data[6:8])[0]
 
-                # SWR 处理：>=100 时除以 100
+                # SWR 处理：
+                # >= 100: 除以 100 (如 147 → 1.47)
+                # 1-99: 直接使用 (整数 SWR)
+                # 0: 功率>0 时设为 1.0 (完美匹配)，否则保持 1.0
                 if swr_raw >= 100:
                     cache["swr"] = swr_raw / 100.0
+                elif swr_raw > 0:
+                    cache["swr"] = float(swr_raw)
                 else:
-                    cache["swr"] = swr_raw
+                    # swr_raw = 0，可能意味着反射功率为 0 (完美匹配)
+                    # 或者设备未就绪。有功率时假设完美匹配
+                    cache["swr"] = 1.0 if power > 0 else 1.0
                 
                 cache["power"] = power
                 
-                # 只在功率或SWR变化时记录日志（减少日志频率）
-                if power > 0 and (abs(power - last_log_power) > 1 or abs(cache["swr"] - last_log_swr) > 0.1):
+                # 日志记录：TX 模式下每次都记录，非 TX 模式只记录变化
+                if is_tx:
+                    # TX 模式：总是记录（调试用）
+                    if power > 0:
+                        logger.info(f"📊 功率/SWR: {power}W, SWR={cache['swr']:.2f}")
+                    else:
+                        logger.warning(f"📊 功率为 0！SWR={cache['swr']:.2f}")
+                elif power > 0 and (abs(power - last_log_power) > 1 or abs(cache["swr"] - last_log_swr) > 0.1):
+                    # 非 TX 模式：只记录变化
                     logger.info(f"📊 功率/SWR: {power}W, SWR={cache['swr']:.2f}")
-                    last_log_power = power
-                    last_log_swr = cache["swr"]
+                
+                last_log_power = power
+                last_log_swr = cache["swr"]
                 
                 # V4.5.16: 智能学习天调参数
                 # 条件：功率 > 0, SWR 1.0-1.5, 参数有效（ind>0 或 cap>0）, 频率 > 0
@@ -514,6 +529,43 @@ def handle_unix_client(conn, addr, atr1000):
                         }) + "\n"
                         conn.send(response.encode())
                     
+                    elif action == "get_best_in_band":
+                        # 获取波段内 SWR 最低的记录
+                        band_start = msg.get("band_start", 0)
+                        band_end = msg.get("band_end", 0)
+                        
+                        tuner = get_storage()
+                        records = tuner.get_all()
+                        
+                        best_record = None
+                        best_swr = 99.0
+                        
+                        for record in records:
+                            freq = record.get("freq", 0)
+                            swr = record.get("swr_avg") or record.get("swr", 99.0)
+                            
+                            if band_start <= freq <= band_end:
+                                if swr < best_swr:
+                                    best_swr = swr
+                                    best_record = record
+                        
+                        if best_record:
+                            response = json.dumps({
+                                "type": "best_in_band",
+                                "found": True,
+                                "freq": best_record.get("freq"),
+                                "sw": best_record.get("sw", 0),
+                                "ind": best_record.get("ind", 64),
+                                "cap": best_record.get("cap", 64),
+                                "swr": best_swr
+                            }) + "\n"
+                        else:
+                            response = json.dumps({
+                                "type": "best_in_band",
+                                "found": False
+                            }) + "\n"
+                        conn.send(response.encode())
+                    
                     elif action == "delete_tune_record":
                         # 删除天调记录
                         freq = msg.get("freq", 0)
@@ -548,6 +600,18 @@ def handle_unix_client(conn, addr, atr1000):
                         mode = msg.get("mode", 2)  # 默认完整调谐
                         atr1000.start_tune(mode)
                         logger.info(f"启动自动调谐: mode={mode}")
+                    
+                    elif action == "learn":
+                        # 手动学习（保存调谐结果）
+                        freq = msg.get("freq", 0)
+                        sw = msg.get("sw", 0)
+                        ind = msg.get("ind", 0)
+                        cap = msg.get("cap", 0)
+                        swr = msg.get("swr", 99.0)
+                        if freq > 0:
+                            tuner = get_storage()
+                            tuner.learn(freq=freq, sw=sw, ind=ind, cap=cap, swr=swr)
+                            logger.info(f"📝 手动学习: {freq/1000:.1f}kHz SWR={swr:.2f}")
                         
                 except json.JSONDecodeError:
                     pass

@@ -246,6 +246,29 @@ function loadAudioSettingsFromCookies() {
         if (micValue) micValue.textContent = micCookie + '%';
     }
     
+    // 移动端 TX EQ 预设自动设置
+    // 如果用户未设置过 TX EQ 预设，自动使用"手机优化"预设
+    var savedTX_EQ = '';
+    try {
+        if (typeof getCookie === 'function') {
+            savedTX_EQ = getCookie('TX_EQ_Preset');
+        }
+    } catch (e) {
+        console.warn('获取TX_EQ_Preset设置失败:', e);
+    }
+    
+    // 检测是否为移动设备
+    var isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) 
+                         || (navigator.maxTouchPoints && navigator.maxTouchPoints > 2);
+    
+    if (!savedTX_EQ && isMobileDevice) {
+        // 移动设备首次使用，自动设置"手机优化"预设
+        console.log('📱 检测到移动设备，自动设置"手机优化" TX EQ 预设');
+        if (typeof setTX_EQ_Preset === 'function') {
+            setTX_EQ_Preset('MOBILE');
+        }
+    }
+    
     console.log('🔊 用户音频设置已加载');
 }
 
@@ -1567,13 +1590,14 @@ function showTXEQPanel() {
     const currentPreset = typeof getTX_EQ_Preset === 'function' ? getTX_EQ_Preset() : 'DEFAULT';
     const presets = typeof getTX_EQ_Presets === 'function' ? getTX_EQ_Presets() : {
         'DEFAULT': { name: '默认', low: 0, mid: 0, high: 0, desc: '无EQ处理' },
-        'HF_VOICE': { name: '短波语音', low: 4, mid: 6, high: -3, desc: '增强中低频' },
-        'DX_WEAK': { name: '弱信号', low: 6, mid: 8, high: -6, desc: '强调中低频' },
-        'CONTEST': { name: '比赛模式', low: 2, mid: 4, high: -2, desc: '均衡处理' }
+        'HF_VOICE': { name: '短波语音', low: -20, mid: 6, high: -20, desc: '100-2700Hz 带通' },
+        'MOBILE': { name: '手机优化', low: -15, mid: 8, high: -24, desc: '强力高频衰减' },
+        'DX_WEAK': { name: '弱信号', low: -20, mid: 10, high: -25, desc: '最大化可读性' },
+        'CONTEST': { name: '比赛模式', low: -15, mid: 6, high: -15, desc: '均衡处理' }
     };
     
     let html = '<div class="modal-panel"><h3>🎙️ 发射均衡器</h3>';
-    html += '<p style="font-size:12px;color:#888;margin-bottom:15px;">短波通信语音优化</p>';
+    html += '<p style="font-size:12px;color:#888;margin-bottom:15px;">短波通信 100-2700Hz 语音频段</p>';
     html += '<div class="txeq-grid">';
     
     Object.keys(presets).forEach(key => {
@@ -1584,7 +1608,10 @@ function showTXEQPanel() {
         html += `<strong>${preset.name}</strong>`;
         html += `<br><span style="font-size:11px;color:#aaa;">${preset.desc}</span>`;
         if (key !== 'DEFAULT') {
-            html += `<br><span style="font-size:10px;color:#666;">低+${preset.low} 中+${preset.mid} 高${preset.high}</span>`;
+            // 显示格式：低频衰减 / 中频增益 / 高频衰减
+            const lowStr = preset.low < 0 ? preset.low : '+' + preset.low;
+            const highStr = preset.high < 0 ? preset.high : '+' + preset.high;
+            html += `<br><span style="font-size:10px;color:#666;">低${lowStr} 中+${preset.mid} 高${highStr} dB</span>`;
         }
         html += '</button>';
     });
@@ -1592,8 +1619,10 @@ function showTXEQPanel() {
     html += '</div>';
     html += '<div style="margin-top:15px;padding:10px;background:#222;border-radius:8px;">';
     html += '<p style="font-size:12px;color:#aaa;margin:0;">';
-    html += '<strong>说明：</strong>短波通信中，高频信号容易过强导致声音刺耳。';
-    html += '选择合适的预设可以增强中低频，提高语音清晰度和舒适度。';
+    html += '<strong>短波通信滤波策略：</strong>核心语音频段 100-2700Hz';
+    html += '<br>• 低频 <100Hz：衰减，减少超低频噪声';
+    html += '<br>• 中频 1500Hz：增强，提高语音清晰度';
+    html += '<br>• 高频 >2700Hz：衰减，减少尖锐音';
     html += '</p></div>';
     html += '<button class="close-panel-btn" onclick="closeModalPanel()">关闭</button></div>';
     showModalPanel(html);

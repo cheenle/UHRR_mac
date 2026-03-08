@@ -1,0 +1,1307 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ATU 自动调谐 - MRRC</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: #0a0a0a;
+            color: #e0e0e0;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #333;
+        }
+        
+        h1 {
+            color: #4CAF50;
+            font-size: 24px;
+        }
+        
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+        
+        .btn-primary {
+            background: #4CAF50;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #45a049;
+        }
+        
+        .btn-danger {
+            background: #f44336;
+            color: white;
+        }
+        
+        .btn-danger:hover {
+            background: #da190b;
+        }
+        
+        .btn-secondary {
+            background: #333;
+            color: #e0e0e0;
+        }
+        
+        .btn-secondary:hover {
+            background: #444;
+        }
+        
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .main-grid {
+            display: grid;
+            grid-template-columns: 280px 1fr;
+            gap: 20px;
+        }
+        
+        @media (max-width: 900px) {
+            .main-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        .panel {
+            background: #1a1a1a;
+            border-radius: 12px;
+            padding: 20px;
+            border: 1px solid #333;
+        }
+        
+        .panel-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: #4CAF50;
+        }
+        
+        /* 波段选择 */
+        .band-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        
+        .band-option {
+            display: flex;
+            align-items: center;
+            padding: 10px 12px;
+            background: #222;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .band-option:hover {
+            background: #2a2a2a;
+        }
+        
+        .band-option.selected {
+            background: #4CAF50;
+            color: white;
+        }
+        
+        .band-option input {
+            margin-right: 10px;
+        }
+        
+        .band-option label {
+            cursor: pointer;
+            flex: 1;
+        }
+        
+        /* 自定义频率输入 */
+        .custom-freq {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #333;
+        }
+        
+        .freq-inputs {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        .freq-inputs label {
+            font-size: 12px;
+            color: #888;
+            display: block;
+            margin-bottom: 5px;
+        }
+        
+        .freq-inputs input, .freq-inputs select {
+            width: 100%;
+            padding: 8px 12px;
+            background: #222;
+            border: 1px solid #333;
+            border-radius: 6px;
+            color: #e0e0e0;
+            font-size: 14px;
+        }
+        
+        .freq-inputs input:focus, .freq-inputs select:focus {
+            outline: none;
+            border-color: #4CAF50;
+        }
+        
+        /* 按钮组 */
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        
+        .button-group .btn {
+            flex: 1;
+        }
+        
+        /* 曲线图区域 */
+        .chart-container {
+            height: 300px;
+            background: #0f0f0f;
+            border-radius: 8px;
+            position: relative;
+            margin-bottom: 15px;
+        }
+        
+        #swrChart {
+            width: 100%;
+            height: 100%;
+        }
+        
+        /* 进度面板 */
+        .progress-panel {
+            background: #222;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+        
+        .progress-bar-container {
+            background: #333;
+            border-radius: 4px;
+            height: 20px;
+            margin: 10px 0;
+            overflow: hidden;
+        }
+        
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #4CAF50, #8BC34A);
+            transition: width 0.3s;
+            border-radius: 4px;
+        }
+        
+        .progress-text {
+            display: flex;
+            justify-content: space-between;
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+        
+        .progress-stats {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            margin-top: 15px;
+        }
+        
+        @media (max-width: 600px) {
+            .progress-stats {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+        
+        .stat-item {
+            text-align: center;
+        }
+        
+        .stat-label {
+            font-size: 12px;
+            color: #888;
+        }
+        
+        .stat-value {
+            font-size: 18px;
+            font-weight: 600;
+            margin-top: 5px;
+        }
+        
+        .stat-value.good { color: #4CAF50; }
+        .stat-value.warning { color: #FF9800; }
+        .stat-value.bad { color: #f44336; }
+        
+        /* 数据表格 */
+        .data-panel {
+            margin-top: 20px;
+        }
+        
+        .data-toggle {
+            width: 100%;
+            padding: 12px;
+            background: #222;
+            border: none;
+            border-radius: 8px;
+            color: #e0e0e0;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .data-toggle:hover {
+            background: #2a2a2a;
+        }
+        
+        .data-content {
+            display: none;
+            margin-top: 10px;
+        }
+        
+        .data-content.show {
+            display: block;
+        }
+        
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+        
+        .data-table th, .data-table td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid #333;
+        }
+        
+        .data-table th {
+            background: #222;
+            font-weight: 600;
+            color: #888;
+        }
+        
+        .data-table tr:hover {
+            background: #1a1a1a;
+        }
+        
+        .swr-badge {
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+        
+        .swr-good { background: #2e7d32; }
+        .swr-ok { background: #f57c00; }
+        .swr-bad { background: #c62828; }
+        
+        /* 状态指示 */
+        .status-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+        
+        .status-dot.idle { background: #666; }
+        .status-dot.tuning { background: #4CAF50; animation: pulse 1s infinite; }
+        .status-dot.completed { background: #2196F3; }
+        .status-dot.error { background: #f44336; }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        /* 日志面板 */
+        .log-panel {
+            margin-top: 15px;
+        }
+        
+        .log-content {
+            background: #0f0f0f;
+            border-radius: 8px;
+            padding: 10px;
+            max-height: 150px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+            color: #888;
+        }
+        
+        .log-entry {
+            padding: 2px 0;
+        }
+        
+        .log-entry.info { color: #4CAF50; }
+        .log-entry.warn { color: #FF9800; }
+        .log-entry.error { color: #f44336; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📡 ATU 自动调谐</h1>
+            <div class="status-indicator">
+                <span class="status-dot idle" id="statusDot"></span>
+                <span id="statusText">空闲</span>
+            </div>
+        </header>
+        
+        <div class="main-grid">
+            <!-- 左侧：波段选择 -->
+            <div class="panel">
+                <div class="panel-title">波段选择</div>
+                <div class="band-list" id="bandList">
+                    <!-- 动态生成 -->
+                </div>
+                
+                <div class="custom-freq">
+                    <div class="band-option" id="customOption">
+                        <input type="radio" name="band" id="customRadio" value="custom">
+                        <label for="customRadio">自定义范围</label>
+                    </div>
+                    <div class="freq-inputs" id="freqInputs" style="display: none;">
+                        <div>
+                            <label>起始频率 (kHz)</label>
+                            <input type="number" id="freqStart" value="7000" min="1000" max="60000">
+                        </div>
+                        <div>
+                            <label>结束频率 (kHz)</label>
+                            <input type="number" id="freqEnd" value="7200" min="1000" max="60000">
+                        </div>
+                        <div>
+                            <label>步进 (kHz)</label>
+                            <select id="stepSelect">
+                                <option value="1">1 kHz</option>
+                                <option value="5">5 kHz</option>
+                                <option value="10">10 kHz</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="button-group">
+                    <button class="btn btn-primary" id="startBtn" onclick="startTune()">开始调谐</button>
+                    <button class="btn btn-secondary" id="scanBtn" onclick="startSwrScan()">SWR扫描</button>
+                    <button class="btn btn-danger" id="stopBtn" onclick="stopTune()" disabled>停止</button>
+                </div>
+                
+                <div class="button-group" style="margin-top: 10px;">
+                    <label style="font-size: 12px; color: #888;">
+                        步进:
+                        <select id="stepSelect" style="margin-left: 5px; padding: 2px 5px; background: #333; color: #e0e0e0; border: 1px solid #555; border-radius: 4px;">
+                            <option value="1000">1 kHz</option>
+                            <option value="5000" selected>5 kHz</option>
+                            <option value="10000">10 kHz</option>
+                            <option value="25000">25 kHz</option>
+                        </select>
+                    </label>
+                </div>
+                
+                <div class="button-group">
+                    <button class="btn btn-secondary" onclick="exportData()">导出数据</button>
+                    <button class="btn btn-secondary" onclick="refreshData()">刷新数据</button>
+                </div>
+            </div>
+            
+            <!-- 右侧：曲线图和进度 -->
+            <div>
+                <div class="panel">
+                    <div class="panel-title" style="display: flex; justify-content: space-between; align-items: center;">
+                        <span>频率-SWR 曲线</span>
+                        <div style="display: flex; gap: 8px;">
+                            <button class="btn btn-secondary" style="padding: 4px 10px; font-size: 12px;" onclick="showHistoryChart()">历史数据</button>
+                            <button class="btn btn-secondary" style="padding: 4px 10px; font-size: 12px;" onclick="showTuneChart()">调谐曲线</button>
+                        </div>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="swrChart"></canvas>
+                    </div>
+                    
+                    <div class="progress-panel">
+                        <div class="progress-text">
+                            <span id="progressText">准备就绪</span>
+                            <span id="progressPercent">0%</span>
+                        </div>
+                        <div class="progress-bar-container">
+                            <div class="progress-bar" id="progressBar" style="width: 0%"></div>
+                        </div>
+                        
+                        <div class="progress-stats">
+                            <div class="stat-item">
+                                <div class="stat-label">当前频率</div>
+                                <div class="stat-value" id="currentFreq">-- kHz</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-label">当前 SWR</div>
+                                <div class="stat-value" id="currentSWR">--</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-label">最佳频率</div>
+                                <div class="stat-value good" id="bestFreq">-- kHz</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-label">最佳 SWR</div>
+                                <div class="stat-value good" id="bestSWR">--</div>
+                            </div>
+                        </div>
+                        
+                        <div class="progress-stats" style="margin-top: 10px;">
+                            <div class="stat-item">
+                                <div class="stat-label">已用时间</div>
+                                <div class="stat-value" id="elapsedTime">--:--</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-label">剩余时间</div>
+                                <div class="stat-value" id="remainingTime">--:--</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 日志面板 -->
+                <div class="panel log-panel">
+                    <div class="panel-title">调谐日志</div>
+                    <div class="log-content" id="logContent">
+                        <div class="log-entry info">系统就绪，请选择波段开始调谐</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 数据面板 -->
+        <div class="panel data-panel">
+            <button class="data-toggle" onclick="toggleData()">
+                <span>📊 调谐数据 (<span id="dataCount">0</span> 条记录)</span>
+                <span id="dataArrow">▼</span>
+            </button>
+            <div class="data-content" id="dataContent">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>频率 (kHz)</th>
+                            <th>SWR</th>
+                            <th>网络</th>
+                            <th>L</th>
+                            <th>C</th>
+                            <th>状态</th>
+                        </tr>
+                    </thead>
+                    <tbody id="dataBody">
+                        <!-- 动态生成 -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // ========== 全局变量 ==========
+        let ws = null;
+        let chart = null;
+        let curveData = [];
+        let tuneRecords = [];
+        let statusInterval = null;
+        let currentChartMode = 'history'; // 'history' 或 'tune'
+        
+        // 曲线切换
+        function showHistoryChart() {
+            currentChartMode = 'history';
+            drawHistoryChart();
+        }
+        
+        function showTuneChart() {
+            currentChartMode = 'tune';
+            updateChart();
+        }
+        
+        // 业余无线电波段
+        const HAM_BANDS = {
+            '160m': { start: 1800, end: 2000, name: '160m (1.8-2.0 MHz)' },
+            '80m':  { start: 3500, end: 3900, name: '80m (3.5-3.9 MHz)' },
+            '60m':  { start: 5351.5, end: 5366.5, name: '60m (5.35-5.37 MHz)' },
+            '40m':  { start: 7000, end: 7200, name: '40m (7.0-7.2 MHz)' },
+            '30m':  { start: 10100, end: 10150, name: '30m (10.1-10.15 MHz)' },
+            '20m':  { start: 14000, end: 14350, name: '20m (14.0-14.35 MHz)' },
+            '17m':  { start: 18068, end: 18168, name: '17m (18.07-18.17 MHz)' },
+            '15m':  { start: 21000, end: 21450, name: '15m (21.0-21.45 MHz)' },
+            '12m':  { start: 24890, end: 24990, name: '12m (24.89-24.99 MHz)' },
+            '10m':  { start: 28000, end: 29700, name: '10m (28.0-29.7 MHz)' }
+        };
+        
+        // ========== 初始化 ==========
+        document.addEventListener('DOMContentLoaded', function() {
+            initBandList();
+            initChart();
+            connectWebSocket();
+        });
+        
+        function initBandList() {
+            const bandList = document.getElementById('bandList');
+            bandList.innerHTML = '';
+            
+            Object.entries(HAM_BANDS).forEach(([key, info]) => {
+                const div = document.createElement('div');
+                div.className = 'band-option';
+                div.innerHTML = `
+                    <input type="radio" name="band" id="band_${key}" value="${key}">
+                    <label for="band_${key}">${info.name}</label>
+                `;
+                div.onclick = () => selectBand(key);
+                bandList.appendChild(div);
+            });
+        }
+        
+        function selectBand(band) {
+            // 清除自定义选择
+            document.getElementById('customRadio').checked = false;
+            document.getElementById('freqInputs').style.display = 'none';
+            
+            // 更新频率输入
+            if (band && HAM_BANDS[band]) {
+                document.getElementById('freqStart').value = HAM_BANDS[band].start;
+                document.getElementById('freqEnd').value = HAM_BANDS[band].end;
+            }
+            
+            // 更新选中样式
+            document.querySelectorAll('.band-option').forEach(el => el.classList.remove('selected'));
+            document.getElementById('band_' + band)?.parentElement?.classList.add('selected');
+        }
+        
+        // 自定义频率选择
+        document.getElementById('customOption').onclick = function() {
+            document.getElementById('customRadio').checked = true;
+            document.getElementById('freqInputs').style.display = 'grid';
+            document.querySelectorAll('.band-option').forEach(el => el.classList.remove('selected'));
+            this.classList.add('selected');
+        };
+        
+        // ========== WebSocket 连接 ==========
+        function connectWebSocket() {
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${protocol}//${window.location.host}/WSATU`;
+            
+            addLog('连接到服务器...', 'info');
+            
+            ws = new WebSocket(wsUrl);
+            
+            ws.onopen = function() {
+                addLog('已连接到服务器', 'info');
+                // 获取已有数据
+                ws.send(JSON.stringify({ action: 'get_tune_records' }));
+            };
+            
+            ws.onmessage = function(event) {
+                try {
+                    const data = JSON.parse(event.data);
+                    handleMessage(data);
+                } catch (e) {
+                    console.error('解析消息失败:', e);
+                }
+            };
+            
+            ws.onerror = function(error) {
+                addLog('连接错误', 'error');
+            };
+            
+            ws.onclose = function() {
+                addLog('连接已断开', 'warn');
+            };
+        }
+        
+        function handleMessage(data) {
+            switch (data.type) {
+                case 'tune_records':
+                    tuneRecords = data.records || [];
+                    updateDataTable();
+                    document.getElementById('dataCount').textContent = tuneRecords.length;
+                    // 自动绘制历史曲线
+                    drawHistoryChart();
+                    break;
+                    
+                case 'auto_tune_status':
+                    updateProgress(data);
+                    break;
+                    
+                case 'auto_tune_start':
+                    if (data.success) {
+                        addLog('调谐已启动', 'info');
+                        startStatusPolling();
+                    } else {
+                        addLog('启动失败: ' + data.message, 'error');
+                    }
+                    break;
+                    
+                case 'swr_scan_start':
+                    if (data.success) {
+                        addLog('SWR扫描已启动', 'info');
+                        startStatusPolling();
+                    } else {
+                        addLog('启动失败: ' + data.message, 'error');
+                    }
+                    break;
+                    
+                case 'auto_tune_stop':
+                    addLog('已停止', 'warn');
+                    stopStatusPolling();
+                    break;
+                    
+                case 'auto_tune_results':
+                    tuneRecords = data.results || [];
+                    updateDataTable();
+                    break;
+            }
+        }
+        
+        // ========== 调谐控制 ==========
+        function startTune() {
+            const customRadio = document.getElementById('customRadio');
+            let params = {};
+            
+            const step = parseInt(document.getElementById('stepSelect').value);
+            
+            if (customRadio.checked) {
+                params = {
+                    action: 'auto_tune_start',
+                    freq_start: parseInt(document.getElementById('freqStart').value) * 1000,
+                    freq_end: parseInt(document.getElementById('freqEnd').value) * 1000,
+                    step: step * 1000
+                };
+            } else {
+                const selectedBand = document.querySelector('input[name="band"]:checked');
+                if (!selectedBand || selectedBand.value === 'custom') {
+                    addLog('请选择波段', 'error');
+                    return;
+                }
+                params = {
+                    action: 'auto_tune_start',
+                    band: selectedBand.value,
+                    step: step * 1000
+                };
+            }
+            
+            // 重置状态
+            curveData = [];
+            updateChart();
+            
+            // 更新 UI
+            document.getElementById('startBtn').disabled = true;
+            document.getElementById('scanBtn').disabled = true;
+            document.getElementById('stopBtn').disabled = false;
+            updateStatus('tuning', '调谐中');
+            
+            ws.send(JSON.stringify(params));
+        }
+        
+        function startSwrScan() {
+            // SWR 扫描模式（不调谐，只测量）
+            const customRadio = document.getElementById('customRadio');
+            let params = {};
+            
+            const step = parseInt(document.getElementById('stepSelect').value);
+            
+            if (customRadio.checked) {
+                params = {
+                    action: 'swr_scan_start',
+                    freq_start: parseInt(document.getElementById('freqStart').value) * 1000,
+                    freq_end: parseInt(document.getElementById('freqEnd').value) * 1000,
+                    step: step * 1000
+                };
+            } else {
+                const selectedBand = document.querySelector('input[name="band"]:checked');
+                if (!selectedBand || selectedBand.value === 'custom') {
+                    addLog('请选择波段', 'error');
+                    return;
+                }
+                params = {
+                    action: 'swr_scan_start',
+                    band: selectedBand.value,
+                    step: step * 1000
+                };
+            }
+            
+            // 重置状态
+            curveData = [];
+            updateChart();
+            
+            // 更新 UI
+            document.getElementById('startBtn').disabled = true;
+            document.getElementById('scanBtn').disabled = true;
+            document.getElementById('stopBtn').disabled = false;
+            updateStatus('tuning', 'SWR扫描中');
+            
+            addLog('开始 SWR 扫描（不调谐）...', 'info');
+            ws.send(JSON.stringify(params));
+        }
+        
+        function stopTune() {
+            ws.send(JSON.stringify({ action: 'auto_tune_stop' }));
+            document.getElementById('startBtn').disabled = false;
+            document.getElementById('scanBtn').disabled = false;
+            document.getElementById('stopBtn').disabled = true;
+        }
+        
+        function startStatusPolling() {
+            if (statusInterval) clearInterval(statusInterval);
+            statusInterval = setInterval(() => {
+                if (ws && ws.readyState === WebSocket.OPEN) {
+                    ws.send(JSON.stringify({ action: 'auto_tune_status' }));
+                }
+            }, 500);
+        }
+        
+        function stopStatusPolling() {
+            if (statusInterval) {
+                clearInterval(statusInterval);
+                statusInterval = null;
+            }
+        }
+        
+        // ========== 进度更新 ==========
+        function updateProgress(data) {
+            const percent = data.total_points > 0 
+                ? Math.round(data.completed_points / data.total_points * 100) 
+                : 0;
+            
+            document.getElementById('progressBar').style.width = percent + '%';
+            document.getElementById('progressPercent').textContent = percent + '%';
+            document.getElementById('progressText').textContent = 
+                `${data.completed_points} / ${data.total_points} 个频点`;
+            
+            // 频率
+            if (data.current_freq > 0) {
+                document.getElementById('currentFreq').textContent = 
+                    (data.current_freq / 1000).toFixed(1) + ' kHz';
+            }
+            
+            // SWR
+            document.getElementById('currentSWR').textContent = 
+                data.current_swr > 0 ? data.current_swr.toFixed(2) : '--';
+            document.getElementById('currentSWR').className = 
+                'stat-value ' + getSwrClass(data.current_swr);
+            
+            // 最佳
+            if (data.best_freq > 0) {
+                document.getElementById('bestFreq').textContent = 
+                    (data.best_freq / 1000).toFixed(1) + ' kHz';
+            }
+            document.getElementById('bestSWR').textContent = 
+                data.best_swr < 99 ? data.best_swr.toFixed(2) : '--';
+            
+            // 时间
+            document.getElementById('elapsedTime').textContent = formatTime(data.elapsed_time);
+            document.getElementById('remainingTime').textContent = formatTime(data.estimated_remaining);
+            
+            // 状态
+            if (data.state === 'completed') {
+                updateStatus('completed', '已完成');
+                document.getElementById('startBtn').disabled = false;
+                document.getElementById('scanBtn').disabled = false;
+                document.getElementById('stopBtn').disabled = true;
+                stopStatusPolling();
+                addLog('扫描完成！', 'info');
+                // 调谐完成后刷新历史数据并显示历史曲线
+                setTimeout(() => {
+                    ws.send(JSON.stringify({ action: 'get_tune_records' }));
+                }, 500);
+            } else if (data.state === 'error') {
+                updateStatus('error', '错误');
+                document.getElementById('startBtn').disabled = false;
+                document.getElementById('scanBtn').disabled = false;
+                document.getElementById('stopBtn').disabled = true;
+                stopStatusPolling();
+                addLog('扫描出错', 'error');
+            }
+            
+            // 更新曲线（调谐过程中显示调谐曲线）
+            if (data.curve_data && data.curve_data.length > 0) {
+                currentChartMode = 'tune';
+                curveData = data.curve_data;
+                updateChart();
+            }
+        }
+        
+        function updateStatus(state, text) {
+            const dot = document.getElementById('statusDot');
+            const textEl = document.getElementById('statusText');
+            
+            dot.className = 'status-dot ' + state;
+            textEl.textContent = text;
+        }
+        
+        // ========== 曲线图 ==========
+        function initChart() {
+            const canvas = document.getElementById('swrChart');
+            const ctx = canvas.getContext('2d');
+            
+            // 设置 canvas 大小
+            function resize() {
+                const rect = canvas.parentElement.getBoundingClientRect();
+                canvas.width = rect.width;
+                canvas.height = rect.height;
+                updateChart();
+            }
+            
+            window.addEventListener('resize', resize);
+            resize();
+        }
+        
+        function updateChart() {
+            const canvas = document.getElementById('swrChart');
+            const ctx = canvas.getContext('2d');
+            const width = canvas.width;
+            const height = canvas.height;
+            
+            // 清空
+            ctx.fillStyle = '#0f0f0f';
+            ctx.fillRect(0, 0, width, height);
+            
+            if (curveData.length === 0) {
+                // 显示提示
+                ctx.fillStyle = '#666';
+                ctx.font = '14px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('点击"开始调谐"或"SWR扫描"后显示曲线', width / 2, height / 2);
+                return;
+            }
+            
+            // 标题
+            ctx.fillStyle = '#e0e0e0';
+            ctx.font = 'bold 14px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText(`SWR 曲线 (${curveData.length} 个频率点)`, width / 2, 15);
+            
+            // 边距
+            const margin = { top: 30, right: 20, bottom: 40, left: 50 };
+            const chartWidth = width - margin.left - margin.right;
+            const chartHeight = height - margin.top - margin.bottom;
+            
+            // 数据范围
+            const freqs = curveData.map(d => d.freq / 1000);
+            const swrs = curveData.map(d => d.swr);
+            
+            const minFreq = Math.min(...freqs);
+            const maxFreq = Math.max(...freqs);
+            const minSwr = 1.0;
+            const maxSwr = Math.min(3.0, Math.max(...swrs, 1.5));
+            
+            // 坐标转换
+            function x(freq) {
+                return margin.left + (freq - minFreq) / (maxFreq - minFreq || 1) * chartWidth;
+            }
+            
+            function y(swr) {
+                return margin.top + (1 - (swr - minSwr) / (maxSwr - minSwr)) * chartHeight;
+            }
+            
+            // 绘制网格
+            ctx.strokeStyle = '#333';
+            ctx.lineWidth = 1;
+            
+            // 水平网格线 (SWR)
+            for (let swr = minSwr; swr <= maxSwr; swr += 0.5) {
+                const yPos = y(swr);
+                ctx.beginPath();
+                ctx.moveTo(margin.left, yPos);
+                ctx.lineTo(width - margin.right, yPos);
+                ctx.stroke();
+                
+                // 标签
+                ctx.fillStyle = '#888';
+                ctx.font = '11px sans-serif';
+                ctx.textAlign = 'right';
+                ctx.fillText(swr.toFixed(1), margin.left - 5, yPos + 4);
+            }
+            
+            // 垂直网格线 (频率)
+            const freqStep = (maxFreq - minFreq) > 200 ? 50 : (maxFreq - minFreq) > 50 ? 10 : 5;
+            for (let freq = Math.ceil(minFreq / freqStep) * freqStep; freq <= maxFreq; freq += freqStep) {
+                const xPos = x(freq);
+                ctx.beginPath();
+                ctx.moveTo(xPos, margin.top);
+                ctx.lineTo(xPos, height - margin.bottom);
+                ctx.stroke();
+                
+                // 标签
+                ctx.fillStyle = '#888';
+                ctx.font = '11px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText(freq.toFixed(0), xPos, height - margin.bottom + 15);
+            }
+            
+            // 绘制曲线
+            ctx.beginPath();
+            ctx.strokeStyle = '#4CAF50';
+            ctx.lineWidth = 2;
+            
+            curveData.forEach((d, i) => {
+                const xPos = x(d.freq / 1000);
+                const yPos = y(Math.min(d.swr, maxSwr));
+                
+                if (i === 0) {
+                    ctx.moveTo(xPos, yPos);
+                } else {
+                    ctx.lineTo(xPos, yPos);
+                }
+            });
+            ctx.stroke();
+            
+            // 绘制数据点
+            curveData.forEach(d => {
+                const xPos = x(d.freq / 1000);
+                const yPos = y(Math.min(d.swr, maxSwr));
+                
+                ctx.beginPath();
+                ctx.fillStyle = d.swr < 1.5 ? '#4CAF50' : (d.swr < 2.0 ? '#FF9800' : '#f44336');
+                ctx.arc(xPos, yPos, 3, 0, Math.PI * 2);
+                ctx.fill();
+            });
+            
+            // 标注最佳点
+            const best = curveData.reduce((a, b) => a.swr < b.swr ? a : b);
+            if (best) {
+                const xPos = x(best.freq / 1000);
+                const yPos = y(Math.min(best.swr, maxSwr));
+                
+                ctx.beginPath();
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 2;
+                ctx.arc(xPos, yPos, 6, 0, Math.PI * 2);
+                ctx.stroke();
+                
+                ctx.fillStyle = '#fff';
+                ctx.font = 'bold 11px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText(`最佳: ${(best.freq/1000).toFixed(1)}kHz SWR=${best.swr.toFixed(2)}`, xPos, yPos - 12);
+            }
+            
+            // 轴标签
+            ctx.fillStyle = '#888';
+            ctx.font = '12px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('频率 (kHz)', width / 2, height - 5);
+            
+            ctx.save();
+            ctx.translate(12, height / 2);
+            ctx.rotate(-Math.PI / 2);
+            ctx.fillText('SWR', 0, 0);
+            ctx.restore();
+        }
+        
+        // ========== 历史数据曲线 ==========
+        function drawHistoryChart() {
+            const canvas = document.getElementById('swrChart');
+            const ctx = canvas.getContext('2d');
+            const width = canvas.width;
+            const height = canvas.height;
+            
+            // 清空画布
+            ctx.fillStyle = '#1a1a1a';
+            ctx.fillRect(0, 0, width, height);
+            
+            if (tuneRecords.length === 0) {
+                ctx.fillStyle = '#666';
+                ctx.font = '14px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('暂无历史数据', width / 2, height / 2);
+                return;
+            }
+            
+            // 按频率排序
+            const sortedData = [...tuneRecords].sort((a, b) => a.freq - b.freq);
+            
+            // 边距
+            const margin = { top: 20, right: 20, bottom: 40, left: 50 };
+            const chartWidth = width - margin.left - margin.right;
+            const chartHeight = height - margin.top - margin.bottom;
+            
+            // 数据范围
+            const freqs = sortedData.map(d => d.freq / 1000);
+            const swrs = sortedData.map(d => d.swr_avg || d.swr || 99);
+            
+            const minFreq = Math.min(...freqs);
+            const maxFreq = Math.max(...freqs);
+            const minSwr = 1.0;
+            const maxSwr = 3.0;
+            
+            // 坐标转换
+            function x(freq) {
+                return margin.left + (freq - minFreq) / (maxFreq - minFreq || 1) * chartWidth;
+            }
+            
+            function y(swr) {
+                return margin.top + (1 - (swr - minSwr) / (maxSwr - minSwr)) * chartHeight;
+            }
+            
+            // 绘制网格
+            ctx.strokeStyle = '#333';
+            ctx.lineWidth = 1;
+            
+            // 水平网格线 (SWR)
+            for (let swr = minSwr; swr <= maxSwr; swr += 0.5) {
+                const yPos = y(swr);
+                ctx.beginPath();
+                ctx.moveTo(margin.left, yPos);
+                ctx.lineTo(width - margin.right, yPos);
+                ctx.stroke();
+                
+                ctx.fillStyle = '#888';
+                ctx.font = '11px sans-serif';
+                ctx.textAlign = 'right';
+                ctx.fillText(swr.toFixed(1), margin.left - 5, yPos + 4);
+            }
+            
+            // 垂直网格线 (频率) - 按波段划分
+            const bandMarkers = [
+                { freq: 1800, label: '160m' },
+                { freq: 3500, label: '80m' },
+                { freq: 7000, label: '40m' },
+                { freq: 10100, label: '30m' },
+                { freq: 14000, label: '20m' },
+                { freq: 18068, label: '17m' },
+                { freq: 21000, label: '15m' },
+                { freq: 24890, label: '12m' },
+                { freq: 28000, label: '10m' }
+            ];
+            
+            bandMarkers.forEach(band => {
+                if (band.freq >= minFreq && band.freq <= maxFreq) {
+                    const xPos = x(band.freq);
+                    ctx.strokeStyle = '#444';
+                    ctx.beginPath();
+                    ctx.moveTo(xPos, margin.top);
+                    ctx.lineTo(xPos, height - margin.bottom);
+                    ctx.stroke();
+                    
+                    ctx.fillStyle = '#666';
+                    ctx.font = '10px sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(band.label, xPos, margin.top - 5);
+                }
+            });
+            
+            // 绘制 SWR=1.5 参考线（良好匹配）
+            ctx.strokeStyle = '#4CAF50';
+            ctx.lineWidth = 1;
+            ctx.setLineDash([5, 5]);
+            ctx.beginPath();
+            ctx.moveTo(margin.left, y(1.5));
+            ctx.lineTo(width - margin.right, y(1.5));
+            ctx.stroke();
+            ctx.setLineDash([]);
+            
+            // 绘制 SWR=2.0 参考线（可接受）
+            ctx.strokeStyle = '#FF9800';
+            ctx.beginPath();
+            ctx.moveTo(margin.left, y(2.0));
+            ctx.lineTo(width - margin.right, y(2.0));
+            ctx.stroke();
+            
+            // 绘制数据点
+            sortedData.forEach(d => {
+                const freq = d.freq / 1000;
+                const swr = d.swr_avg || d.swr || 99;
+                const xPos = x(freq);
+                const yPos = y(Math.min(swr, maxSwr));
+                
+                ctx.beginPath();
+                // SWR < 1.5 绿色, 1.5-2.0 橙色, >2.0 红色
+                ctx.fillStyle = swr < 1.5 ? '#4CAF50' : (swr < 2.0 ? '#FF9800' : '#f44336');
+                ctx.arc(xPos, yPos, 4, 0, Math.PI * 2);
+                ctx.fill();
+            });
+            
+            // 连接相邻波段内的点
+            ctx.beginPath();
+            ctx.strokeStyle = 'rgba(76, 175, 80, 0.3)';
+            ctx.lineWidth = 1;
+            
+            let lastFreq = 0;
+            sortedData.forEach((d, i) => {
+                const freq = d.freq / 1000;
+                const swr = Math.min(d.swr_avg || d.swr || 99, maxSwr);
+                const xPos = x(freq);
+                const yPos = y(swr);
+                
+                // 如果频率间隔超过 500kHz，断开线条
+                if (i === 0 || freq - lastFreq > 500) {
+                    ctx.moveTo(xPos, yPos);
+                } else {
+                    ctx.lineTo(xPos, yPos);
+                }
+                lastFreq = freq;
+            });
+            ctx.stroke();
+            
+            // 标题
+            ctx.fillStyle = '#e0e0e0';
+            ctx.font = 'bold 14px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText(`天线匹配情况 (${sortedData.length} 个频率点)`, width / 2, 15);
+            
+            // 轴标签
+            ctx.fillStyle = '#888';
+            ctx.font = '12px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('频率 (kHz)', width / 2, height - 5);
+            
+            ctx.save();
+            ctx.translate(12, height / 2);
+            ctx.rotate(-Math.PI / 2);
+            ctx.fillText('SWR', 0, 0);
+            ctx.restore();
+            
+            // 图例
+            ctx.font = '11px sans-serif';
+            ctx.textAlign = 'left';
+            
+            ctx.fillStyle = '#4CAF50';
+            ctx.beginPath();
+            ctx.arc(width - 150, 15, 4, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#888';
+            ctx.fillText('SWR<1.5', width - 140, 18);
+            
+            ctx.fillStyle = '#FF9800';
+            ctx.beginPath();
+            ctx.arc(width - 90, 15, 4, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#888';
+            ctx.fillText('1.5-2.0', width - 80, 18);
+            
+            ctx.fillStyle = '#f44336';
+            ctx.beginPath();
+            ctx.arc(width - 30, 15, 4, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        
+        // ========== 数据表格 ==========
+        function updateDataTable() {
+            const tbody = document.getElementById('dataBody');
+            tbody.innerHTML = '';
+            
+            const sorted = [...tuneRecords].sort((a, b) => a.freq - b.freq);
+            
+            sorted.forEach(record => {
+                const swrClass = record.swr_avg < 1.5 ? 'swr-good' : 
+                                 (record.swr_avg < 2.0 ? 'swr-ok' : 'swr-bad');
+                
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${(record.freq / 1000).toFixed(1)}</td>
+                    <td><span class="swr-badge ${swrClass}">${record.swr_avg.toFixed(2)}</span></td>
+                    <td>${record.sw ? 'CL' : 'LC'}</td>
+                    <td>${record.ind}</td>
+                    <td>${record.cap}</td>
+                    <td>${record.swr_avg < 1.5 ? '✅' : (record.swr_avg < 2.0 ? '⚠️' : '❌')}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+        
+        function toggleData() {
+            const content = document.getElementById('dataContent');
+            const arrow = document.getElementById('dataArrow');
+            
+            if (content.classList.contains('show')) {
+                content.classList.remove('show');
+                arrow.textContent = '▼';
+            } else {
+                content.classList.add('show');
+                arrow.textContent = '▲';
+            }
+        }
+        
+        // ========== 工具函数 ==========
+        function getSwrClass(swr) {
+            if (swr <= 0) return 'stat-value';
+            if (swr < 1.5) return 'stat-value good';
+            if (swr < 2.0) return 'stat-value warning';
+            return 'stat-value bad';
+        }
+        
+        function formatTime(seconds) {
+            if (seconds <= 0) return '--:--';
+            const mins = Math.floor(seconds / 60);
+            const secs = Math.floor(seconds % 60);
+            return `${mins}:${secs.toString().padStart(2, '0')}`;
+        }
+        
+        function addLog(message, level = 'info') {
+            const logContent = document.getElementById('logContent');
+            const entry = document.createElement('div');
+            entry.className = 'log-entry ' + level;
+            entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            logContent.appendChild(entry);
+            logContent.scrollTop = logContent.scrollHeight;
+        }
+        
+        function exportData() {
+            if (tuneRecords.length === 0) {
+                addLog('没有数据可导出', 'warn');
+                return;
+            }
+            
+            const data = {
+                exported: new Date().toISOString(),
+                count: tuneRecords.length,
+                records: tuneRecords
+            };
+            
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `atu_tune_data_${new Date().toISOString().slice(0, 10)}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+            
+            addLog('数据已导出', 'info');
+        }
+        
+        function refreshData() {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ action: 'get_tune_records' }));
+                addLog('刷新数据...', 'info');
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="HamRadio HQ">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#1a1a1a">
+    <title>Ham Radio High Quality (48kHz TX)</title>
+    <link rel="apple-touch-icon" href="favicon.png">
+    <link rel="manifest" href="manifest.json">
+    <link rel="stylesheet" type="text/css" href="mobile_modern.css">
+    <style>
+        /* 高品质模式标识 */
+        .hq-badge {
+            background: linear-gradient(135deg, #00c853, #00e676);
+            color: #000;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 10px;
+            font-weight: bold;
+            margin-left: 8px;
+        }
+        .status-item.hq-indicator {
+            background: linear-gradient(135deg, #00c853, #00e676);
+            color: #000;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <!-- Safe area insets for iPhone X+ -->
+    <div class="safe-area-top"></div>
+    
+    <!-- 隐藏的桌面版兼容元素（controls.js 需要） -->
+    <canvas id="canRXsmeter" width="250" height="50" style="display:none;"></canvas>
+    <meter id="RXinstant" style="display:none;"><meter></meter></meter>
+    <meter id="Txinstant" style="display:none;"><meter></meter></meter>
+    <div id="div-filtershortcut" style="display:none;"></div>
+    <div id="div-mode_menu" style="display:none;"></div>
+    <div id="ombre-body" style="display:none;"></div>
+    <div id="pop-upspinner" style="display:none;"></div>
+    <div id="div-latencymeter" style="display:none;"></div>
+    <div id="div-smeterdigitRX" style="display:none;"></div>
+    <div id="div-bitrates" style="display:none;"></div>
+    <span id="callsign" style="display:none;"></span>
+    <!-- 音频增益和静噪隐藏元素 -->
+    <input type="range" id="C_af" min="0" max="1000" value="1000" style="display:none;">
+    <input type="range" id="SQUELCH" min="0" max="100" value="0" style="display:none;">
+    <!-- 高品质模式：不使用 Opus 编码，直接发送 48kHz PCM -->
+    <input type="checkbox" id="encode" class="none" alt="Encode TX with opus codec" style="display:none;">
+    <!-- 高品质模式标识 -->
+    <input type="hidden" id="hq-mode" value="true">
+    
+    <!-- Main container with bottom navigation -->
+    <div class="mobile-modern-container">
+        <!-- Header with essential controls -->
+        <header class="app-header">
+            <div class="header-main">
+                <button id="menu-toggle" class="header-btn menu-btn" aria-label="Menu">
+                    <span class="hamburger"></span>
+                </button>
+                
+                <div class="frequency-display-large">
+                    <div class="freq-main" id="freq-main-display">
+                        <span class="freq-digit" id="freq-10mhz">0</span>
+                        <span class="freq-digit" id="freq-1mhz">7</span>
+                        <span class="freq-digit" id="freq-100khz">0</span>
+                        <span class="freq-digit" id="freq-10khz">5</span>
+                        <span class="freq-digit" id="freq-1khz">3</span>
+                    </div>
+                    <!-- 频率输入框（默认隐藏） -->
+                    <input type="text" id="freq-input" class="freq-input-hidden" placeholder="输入频率 (kHz)" inputmode="numeric" pattern="[0-9]*">
+                    <div class="freq-sub">
+                        <span class="vfo-indicator" id="vfo-indicator">VFO-A</span>
+                        <span class="mode-indicator" id="mode-indicator">USB</span>
+                        <span class="hq-badge">48kHz TX</span>
+                    </div>
+                </div>
+                
+                <button id="power-btn" class="header-btn power-btn" aria-label="Power">
+                    <span class="power-icon">⏻</span>
+                </button>
+            </div>
+            
+            <!-- Status indicators -->
+            <div class="status-bar">
+                <div class="status-item connected" id="status-ctrl">CTRL</div>
+                <div class="status-item" id="status-rx">RX</div>
+                <div class="status-item" id="status-tx">TX</div>
+                <!-- 高品质模式指示 -->
+                <div class="status-item hq-indicator" id="status-hq" title="高品质 48kHz TX 模式">HQ</div>
+                <!-- Audio connection status indicators -->
+                <div class="status-item" id="indwsControlTRX" style="display:none;"><img src="img/critsred.png">wsCtrl</div>
+                <div class="status-item" id="indwsAudioRX"><img src="img/critsred.png">wsRX</div>
+                <div class="status-item" id="indwsAudioTX"><img src="img/critsred.png">wsTX</div>
+                <div class="signal-strength">
+                    <div class="signal-bars">
+                        <div class="signal-bar"></div>
+                        <div class="signal-bar"></div>
+                        <div class="signal-bar"></div>
+                        <div class="signal-bar"></div>
+                        <div class="signal-bar"></div>
+                    </div>
+                    <span class="signal-text">S9</span>
+                </div>
+            </div>
+        </header>
+        
+        <!-- Main content area -->
+        <main class="main-content">
+            <!-- S-Meter visualization -->
+            <section class="s-meter-section">
+                <canvas id="s-meter-canvas" width="350" height="100"></canvas>
+                <div class="s-meter-labels">
+                    <span>S1</span>
+                    <span>S3</span>
+                    <span>S5</span>
+                    <span>S7</span>
+                    <span>S9</span>
+                    <span>+20</span>
+                    <span>+40</span>
+                    <span>+60</span>
+                </div>
+            </section>
+            
+            <!-- Quick controls - 精简版 -->
+            <section class="quick-controls">
+                <div class="control-row">
+                    <button class="quick-btn mode-btn" id="mode-btn">USB</button>
+                    <button class="quick-btn band-btn" id="band-btn">20m</button>
+                    <button class="quick-btn filter-btn" id="filter-btn">MID</button>
+                </div>
+            </section>
+            
+            <!-- ATR-1000 Power/SWR Display (精简版，始终显示) -->
+            <section class="atr-meter-section-compact" id="atr-meter-section">
+                <div class="atr-compact-row">
+                    <div class="atr-compact-item">
+                        <span class="atr-compact-label">
+                            <span id="atr-device-status" style="font-size: 0.8em; margin-right: 4px;" title="设备状态">○</span>
+                            功率
+                        </span>
+                        <div class="atr-compact-value-row">
+                            <span class="atr-compact-value" id="atr-power">--</span>
+                            <span class="atr-compact-unit">W</span>
+                        </div>
+                        <div class="atr-bar-compact">
+                            <div class="atr-power-bar-compact" id="atr-power-bar"></div>
+                        </div>
+                    </div>
+                    <div class="atr-compact-item">
+                        <span class="atr-compact-label">驻波</span>
+                        <div class="atr-compact-value-row">
+                            <span class="atr-compact-value" id="atr-swr">--</span>
+                        </div>
+                        <div class="atr-bar-compact">
+                            <div class="atr-swr-bar-compact" id="atr-swr-bar"></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- Volume Control - 精简版 -->
+            <section class="volume-control-compact">
+                <div class="volume-row-compact">
+                    <span class="volume-icon-small">🔊</span>
+                    <input type="range" id="main-af-gain" class="volume-slider-compact" min="0" max="100" value="100" oninput="setMainAFGain(this.value)">
+                    <span class="volume-value-small" id="main-af-value">100%</span>
+                </div>
+            </section>
+            
+            <!-- Frequency tuning - 两排布局（上加下减） -->
+            <section class="frequency-tuning-grid">
+                <div class="tuning-row">
+                    <button class="tune-btn-grid tune-btn-plus" data-step="50000">+50</button>
+                    <button class="tune-btn-grid tune-btn-plus" data-step="10000">+10</button>
+                    <button class="tune-btn-grid tune-btn-plus" data-step="5000">+5</button>
+                    <button class="tune-btn-grid tune-btn-plus" data-step="1000">+1</button>
+                </div>
+                <div class="tuning-row">
+                    <button class="tune-btn-grid tune-btn-minus" data-step="-50000">-50</button>
+                    <button class="tune-btn-grid tune-btn-minus" data-step="-10000">-10</button>
+                    <button class="tune-btn-grid tune-btn-minus" data-step="-5000">-5</button>
+                    <button class="tune-btn-grid tune-btn-minus" data-step="-1000">-1</button>
+                </div>
+            </section>
+        </main>
+        
+        <!-- PTT Section - 底部PTT/TUNE按钮区域 -->
+        <footer class="ptt-section">
+            <div class="ptt-container">
+                <!-- TUNE 按钮 -->
+                <button id="tune-btn" class="tune-button-footer" aria-label="Tune">
+                    <span class="tune-label">TUNE</span>
+                </button>
+                <!-- PTT 按钮 -->
+                <button id="ptt-btn" class="ptt-button" aria-label="Push to Talk">
+                    <span class="ptt-label">PTT</span>
+                </button>
+            </div>
+        </footer>
+    </div>
+    
+    <!-- Off-canvas menu -->
+    <div class="off-canvas-menu" id="main-menu">
+        <div class="menu-header">
+            <h2>Menu <span class="hq-badge">HQ Mode</span></h2>
+            <button id="menu-close" class="menu-close-btn">×</button>
+        </div>
+        <div class="menu-content">
+            <ul class="menu-list">
+                <li><a href="#" class="menu-item" data-action="bands">Band Selection</a></li>
+                <li><a href="#" class="menu-item" data-action="modes">Mode Selection</a></li>
+                <li><a href="#" class="menu-item" data-action="memory">Memory Management</a></li>
+                <li><a href="#" class="menu-item" data-action="settings">Radio Settings</a></li>
+                <li><a href="#" class="menu-item" data-action="audio">Audio Controls</a></li>
+                <li><a href="#" class="menu-item" data-action="txeq">TX Equalizer</a></li>
+                <li><a href="#" class="menu-item" data-action="digital">Digital Modes</a></li>
+                <li><a href="#" class="menu-item" data-action="logbook">Logbook</a></li>
+                <li><a href="#" class="menu-item" data-action="about">About</a></li>
+            </ul>
+        </div>
+    </div>
+    
+    <!-- Overlay for off-canvas menu -->
+    <div class="menu-overlay" id="menu-overlay"></div>
+    
+    <!-- Safe area insets for iPhone X+ -->
+    <div class="safe-area-bottom"></div>
+    
+    <!-- 核心脚本加载顺序重要 -->
+    <script src="ui_utils.js"></script>
+    <script src="controls.js"></script>
+    <script src="tx_button_optimized.js"></script>
+    <script src="mobile_high.js?v=1.8.0"></script>
+</body>
+</html>

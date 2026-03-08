@@ -1878,34 +1878,51 @@ var AudioTX_analyser = "";
 // 针对短波语音通信，增强中低频，补偿高频过强问题
 ////////////////////////////////////////////////////////////
 
-// TX EQ 节点
-var AudioTX_eqLow = null;      // 低频增益 (100-300Hz)
-var AudioTX_eqMid = null;      // 中频增益 (500-2000Hz)
-var AudioTX_eqHigh = null;     // 高频衰减 (3000Hz以上)
+// TX EQ 节点 - 针对短波通信优化 (100Hz - 2700Hz 语音频段)
+var AudioTX_eqLow = null;      // 低频衰减 @ 100Hz (切除超低频噪声)
+var AudioTX_eqMid = null;      // 中频增强 @ 1500Hz (语音中心频率)
+var AudioTX_eqHigh = null;     // 高频衰减 @ 2700Hz (切除高频噪声)
+var AudioTX_antiAlias = null;  // 抗混叠低通滤波器 (降采样前滤波)
 
 // TX EQ 预设 - 针对短波通信优化
+// 参数说明：
+//   low:  低频 (<100Hz) 衰减量，负值衰减 (如 -20dB 切除超低频噪声)
+//   mid:  中频 (1500Hz) 增益量，正值增强 (如 +6dB 增强语音清晰度)
+//   high: 高频 (>2700Hz) 衰减量，负值衰减 (如 -20dB 切除高频噪声)
+// 短波通信核心频段：100Hz - 2700Hz (保留语音厚度)
 var TX_EQ_PRESETS = {
-    'DEFAULT': { name: '默认', low: 0, mid: 0, high: 0, desc: '无EQ处理' },
+    'DEFAULT': { 
+        name: '默认', 
+        low: 0, mid: 0, high: 0, 
+        desc: '无EQ处理，原始音频' 
+    },
     'HF_VOICE': { 
         name: '短波语音', 
-        low: 4,      // 增强低频 100-300Hz，增加声音厚度
-        mid: 6,      // 增强中频 500-2000Hz，提高语音清晰度
-        high: -3,    // 衰减高频 3000Hz+，减少刺耳感
-        desc: '增强中低频，适合短波语音通信'
+        low: -20,    // 切除 100Hz 以下超低频噪声
+        mid: 6,      // 增强 1500Hz 语音中心频率
+        high: -20,   // 切除 2700Hz 以上高频噪声
+        desc: '短波通信标准：100-2700Hz 带通，语音厚实'
+    },
+    'MOBILE': { 
+        name: '手机优化', 
+        low: -15,    // 切除超低频噪声 (手机低频较弱，衰减少一点)
+        mid: 8,      // 较强中频增强，补偿手机麦克风
+        high: -24,   // 更强高频衰减，解决手机麦克风"尖"的问题
+        desc: '手机专用：强力高频衰减，语音圆润'
     },
     'DX_WEAK': { 
         name: '弱信号', 
-        low: 6,      // 更强低频增强
-        mid: 8,      // 强调中频（语音主频段）
-        high: -6,    // 更多衰减高频，减少噪音
-        desc: '强调中低频，适合弱信号通信'
+        low: -20,    // 低频切除，减少低频噪声
+        mid: 10,     // 强调中频，提高可读性
+        high: -25,   // 更强高频切除，减少高频噪声
+        desc: 'DX通信：强调语音，最大化可读性'
     },
     'CONTEST': { 
         name: '比赛模式', 
-        low: 2,      // 轻微低频增强
-        mid: 4,      // 中等中频增强
-        high: -2,    // 轻微高频衰减
-        desc: '均衡处理，适合快速通联'
+        low: -15,    // 适度低频切除
+        mid: 6,      // 中频增强
+        high: -15,   // 适度高频切除
+        desc: '比赛：均衡处理，快速通联'
     }
 };
 
@@ -1915,28 +1932,46 @@ var currentTX_EQ_Preset = 'DEFAULT';
 function initTX_EQ(context) {
     if (!context) return;
     
-    // 创建三个BiquadFilter节点
+    // ========== 抗混叠低通滤波器 ==========
+    // 目的：在降采样前滤除高于目标 Nyquist 频率的成分
+    // 降采样 48kHz → 16kHz，目标 Nyquist = 8kHz
+    // 设置截止频率 6kHz，留有一定余量避免混叠
+    AudioTX_antiAlias = context.createBiquadFilter();
+    AudioTX_antiAlias.type = 'lowpass';
+    AudioTX_antiAlias.frequency.setValueAtTime(6000, context.currentTime);
+    AudioTX_antiAlias.Q.setValueAtTime(0.707, context.currentTime); // Butterworth Q值
+    
+    // 创建三个BiquadFilter节点 - 针对短波通信优化
     AudioTX_eqLow = context.createBiquadFilter();
     AudioTX_eqMid = context.createBiquadFilter();
     AudioTX_eqHigh = context.createBiquadFilter();
     
-    // 低频增强 - lowshelf (100Hz以下)
+    // ========== 短波通信语音滤波策略 ==========
+    // 核心频段：100Hz - 2700Hz (SSB 语音优化)
+    // <100Hz: 超低频噪声 (衰减)
+    // 100-2700Hz: 语音主频段 (保持/增强)
+    // >2700Hz: 高频噪声/尖锐音 (衰减)
+    
+    // 低频衰减 - lowshelf @ 100Hz
+    // low 参数: 衰减量 (dB)，0 = 不衰减，-20 = 切除低频噪声
     AudioTX_eqLow.type = 'lowshelf';
-    AudioTX_eqLow.frequency.setValueAtTime(200, context.currentTime);
+    AudioTX_eqLow.frequency.setValueAtTime(100, context.currentTime);
     AudioTX_eqLow.gain.setValueAtTime(0, context.currentTime);
     
-    // 中频增强 - peaking (300-3000Hz，语音主频段)
+    // 中频增强 - 语音中心频率 (1500Hz)
+    // mid 参数: 增益量 (dB)，正值增强语音清晰度
     AudioTX_eqMid.type = 'peaking';
-    AudioTX_eqMid.frequency.setValueAtTime(1000, context.currentTime);
-    AudioTX_eqMid.Q.setValueAtTime(1.0, context.currentTime);
+    AudioTX_eqMid.frequency.setValueAtTime(1500, context.currentTime);
+    AudioTX_eqMid.Q.setValueAtTime(1.4, context.currentTime); // 较宽的 Q 值，覆盖 800-2200Hz
     AudioTX_eqMid.gain.setValueAtTime(0, context.currentTime);
     
-    // 高频衰减 - highshelf (3000Hz以上)
+    // 高频衰减 - highshelf @ 2700Hz
+    // high 参数: 衰减量 (dB)，0 = 不衰减，-20 = 切除高频噪声
     AudioTX_eqHigh.type = 'highshelf';
-    AudioTX_eqHigh.frequency.setValueAtTime(2500, context.currentTime);
+    AudioTX_eqHigh.frequency.setValueAtTime(2700, context.currentTime);
     AudioTX_eqHigh.gain.setValueAtTime(0, context.currentTime);
     
-    console.log('✅ TX EQ 初始化完成');
+    console.log('✅ TX EQ 初始化完成 (短波语音 100-2700Hz 带通 + 抗混叠 6kHz)');
 }
 
 // 应用 TX EQ 预设
@@ -2005,8 +2040,10 @@ MediaHandler.prototype.callback = function( stream )
     // 初始化 TX EQ
     initTX_EQ(this.context);
     
-    // 音频链: micSource → eqLow → eqMid → eqHigh → gain_node → processor
-    this.micSource.connect(AudioTX_eqLow);
+    // 音频链: micSource → antiAlias → eqLow → eqMid → eqHigh → gain_node → processor
+    // 抗混叠滤波器在最前面，滤除高于6kHz的成分，防止降采样混叠
+    this.micSource.connect(AudioTX_antiAlias);
+    AudioTX_antiAlias.connect(AudioTX_eqLow);
     AudioTX_eqLow.connect(AudioTX_eqMid);
     AudioTX_eqMid.connect(AudioTX_eqHigh);
     AudioTX_eqHigh.connect(this.gain_node);
