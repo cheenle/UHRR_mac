@@ -10,28 +10,39 @@ ATR-1000 是一款自动天调设备，MRRC 系统实现了与其的深度集成
 ## 通信架构
 
 ```
-┌─────────────────┐
-│  移动端浏览器    │
-│ mobile_modern.js│
-└────────┬────────┘
-         │ WebSocket (/WSATR1000)
-         ▼
-┌─────────────────┐
-│   MRRC 主程序    │
-│ 频率同步接口     │
-└────────┬────────┘
-         │ Unix Socket (/tmp/atr1000_proxy.sock)
-         ▼
-┌─────────────────┐
-│ ATR-1000 代理    │
-│ atr1000_proxy.py │
-└────────┬────────┘
-         │ WebSocket (192.168.1.63:60001)
-         ▼
-┌─────────────────┐
-│  ATR-1000 设备   │
-└─────────────────┘
+┌─────────────────┐     ┌─────────────────┐
+│  移动端浏览器    │     │   外部软件/API   │
+│ mobile_modern.js│     │  Python/SDR/等   │
+└────────┬────────┘     └────────┬────────┘
+         │ WebSocket             │ HTTP REST
+         │ /WSATR1000            │ :8080
+         ▼                       ▼
+┌─────────────────┐     ┌─────────────────┐
+│   MRRC 主程序    │     │  API Server     │
+│ 频率同步接口     │     │ atr1000_api_    │
+└────────┬────────┘     │ server.py V2    │
+         │              └────────┬────────┘
+         │ Unix Socket            │ Unix Socket
+         │ /tmp/atr1000_proxy.sock│
+         └──────────┬─────────────┘
+                    ▼
+         ┌─────────────────┐
+         │ ATR-1000 代理    │
+         │ atr1000_proxy.py │
+         └────────┬────────┘
+                  │ WebSocket (192.168.1.63:60001)
+                  ▼
+         ┌─────────────────┐
+         │  ATR-1000 设备   │
+         └─────────────────┘
 ```
+
+**注意**：MRRC 主程序同时直接控制电台设备（通过 rigctld 控制频率，通过 PyAudio 处理音频 TX/RX），ATR-1000 Proxy 只负责与 ATR-1000 天调设备通信。
+
+**架构说明**：
+- **Proxy 是唯一 ATR-1000 设备连接**：所有天调请求通过 Unix Socket 汇聚到 Proxy
+- **API Server V2**：不再直接连接设备，改为通过 Proxy 通信
+- **减少设备压力**：避免多进程同时连接 ATR-1000 导致挂起
 
 ## 通信协议
 
@@ -293,6 +304,35 @@ elif(action == "setFreq"):
     sync_freq_to_atr1000(freq)  # 同步频率
 ```
 
+## 动态轮询间隔
+
+为避免设备因频繁 SYNC 请求而挂起，实现了动态轮询机制：
+
+| 状态 | 轮询间隔 | 说明 |
+|------|----------|------|
+| 空闲 | 15秒 | 无客户端连接时 |
+| 活跃 | 5秒 | 有客户端连接，保持连接活跃 |
+| TX 发射 | 0.5秒 | 发射期间快速更新功率/SWR |
+
+```python
+# 动态轮询逻辑
+def _poll_loop(self):
+    while running and connected:
+        if is_tx:
+            interval = 0.5      # TX 期间：快速更新
+        elif client_count > 0:
+            interval = 5.0      # 有客户端：保持连接
+        else:
+            interval = 15.0     # 空闲：降低压力
+        time.sleep(interval)
+        self._send_sync()
+```
+
+**优化效果**：
+- 空闲时设备压力降低 **97%**（从 0.5s → 15s）
+- 有客户端时保持连接响应
+- TX 期间实时更新不受影响
+
 ## 节流保护机制
 
 为防止频繁操作导致设备重启，实现了节流保护：
@@ -409,8 +449,215 @@ A: 检查是否频繁发送继电器命令。节流保护机制：
 
 ## 版本历史
 
+- **V2.0** (2026-03-08): API Server V2 架构重构
+  - API Server 改为通过 Unix Socket 调用 Proxy
+  - 避免 API Server 和 Proxy 同时连接设备
+  - 实现动态轮询间隔（空闲15s/活跃5s/TX 0.5s）
+  - 减少日志输出频率（只在数据变化时记录）
+  - 添加 `/api/v1/freq` 端点
+
 - **V1.0** (2026-03-08): 初始版本，完成智能学习和快速调谐功能
   - 修正 SW 字段位置：data[4] → data[3]
   - 修正 IND 发送值：需要除以 10
   - 修正 CAP 发送值：直接发送
   - 修正 SW 映射：sw=0 是 LC，sw=1 是 CL
+
+---
+
+## 独立 API 服务
+
+ATR-1000 提供独立的 RESTful API 服务，供外部软件调用天调功能。
+
+### V2 架构改进
+
+**V1 问题**：API Server 直接连接设备，与 Proxy 冲突导致设备压力过大
+
+**V2 解决**：API Server 通过 Unix Socket 调用 Proxy，Proxy 作为唯一设备连接
+
+```
+V1 (有问题):                    V2 (推荐):
+┌──────────┐                   ┌──────────┐
+│API Server│──┐                │API Server│──┐
+└──────────┘  │    ┌───────┐   └──────────┘  │
+              ├───▶│设备   │                ▼ Unix Socket
+┌──────────┐  │    └───────┘          ┌──────────┐
+│  Proxy   │──┘                       │  Proxy   │──▶ 设备
+└──────────┘                          └──────────┘
+(两个进程同时连接)                     (唯一设备连接)
+```
+
+### 启动方式
+
+```bash
+# 前置条件：确保 Proxy 已启动
+./mrrc_control.sh start-atr1000
+
+# 启动 API Server（默认端口 8080）
+nohup python3 atr1000_api_server.py > atr1000_api.log 2>&1 &
+
+# 自定义端口
+python3 atr1000_api_server.py --port 9000
+
+# 自定义 Proxy Socket 路径
+python3 atr1000_api_server.py --proxy-socket /tmp/atr1000_proxy.sock
+```
+
+### API 端点
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | `/health` | 健康检查，包含 Proxy 连接状态 |
+| GET | `/api/v1/status` | 获取当前状态（功率、SWR、继电器） |
+| GET | `/api/v1/relay` | 获取继电器参数 |
+| POST | `/api/v1/relay` | 设置继电器参数 |
+| GET | `/api/v1/tuner` | 获取学习记录列表 |
+| POST | `/api/v1/tuner` | 手动添加学习记录 |
+| DELETE | `/api/v1/tuner` | 删除学习记录 |
+| GET | `/api/v1/tuner/lookup` | 根据频率查找参数 |
+| POST | `/api/v1/tune` | 执行快速调谐（查找+应用） |
+| POST | `/api/v1/freq` | 设置频率（触发自动调谐） |
+
+### 使用示例
+
+**健康检查**
+```bash
+curl http://localhost:8080/health
+# 返回: {"status":"ok","proxy_connected":true,"proxy_socket":"/tmp/atr1000_proxy.sock"}
+```
+
+**获取当前状态**
+```bash
+curl http://localhost:8080/api/v1/status
+# 返回: {"success":true,"data":{"power":100,"swr":1.25,"relay":{"sw":1,"ind":30,"cap":27},...}}
+```
+
+**设置继电器参数**
+```bash
+# sw: 0=LC, 1=CL; ind: 电感索引; cap: 电容索引
+curl -X POST -H "Content-Type: application/json" \
+     -d '{"sw":1,"ind":30,"cap":27}' \
+     http://localhost:8080/api/v1/relay
+```
+
+**查找天调参数**
+```bash
+curl "http://localhost:8080/api/v1/tuner/lookup?freq=7050"
+# 返回: {"success":true,"found":true,"data":{"sw":1,"sw_name":"CL","ind":30,"cap":28}}
+```
+
+**执行快速调谐**
+```bash
+# 自动查找 7050 kHz 的参数并应用到设备
+curl -X POST -H "Content-Type: application/json" \
+     -d '{"freq_khz":7050}' \
+     http://localhost:8080/api/v1/tune
+```
+
+**设置频率**
+```bash
+# 设置频率（触发自动调谐）
+curl -X POST -H "Content-Type: application/json" \
+     -d '{"freq_khz":14270}' \
+     http://localhost:8080/api/v1/freq
+```
+
+**获取学习记录**
+```bash
+# 所有记录
+curl http://localhost:8080/api/v1/tuner
+
+# 按频率筛选
+curl "http://localhost:8080/api/v1/tuner?freq=7050&limit=10"
+```
+
+**添加学习记录**
+```bash
+curl -X POST -H "Content-Type: application/json" \
+     -d '{"freq_khz":14270,"sw":0,"ind":30,"cap":7,"swr":1.18}' \
+     http://localhost:8080/api/v1/tuner
+```
+
+**删除学习记录**
+```bash
+curl -X DELETE "http://localhost:8080/api/v1/tuner?freq=14270"
+```
+
+### 响应格式
+
+所有 API 返回 JSON 格式：
+
+**成功响应**
+```json
+{
+  "success": true,
+  "data": { ... }
+}
+```
+
+**错误响应**
+```json
+{
+  "success": false,
+  "error": "错误描述"
+}
+```
+
+### 外部软件集成
+
+API 服务支持 CORS，可从任意域名调用。适合：
+
+- **SDR 软件**：自动获取/设置天调参数
+- **日志软件**：记录 SWR 和功率数据
+- **自动化脚本**：批量管理天调记录
+- **移动应用**：独立控制界面
+
+### Python 调用示例
+
+```python
+import requests
+
+API_URL = "http://localhost:8080"
+
+# 健康检查
+resp = requests.get(f"{API_URL}/health")
+print(resp.json())
+# {'status': 'ok', 'proxy_connected': True, ...}
+
+# 获取状态
+resp = requests.get(f"{API_URL}/api/v1/status")
+print(resp.json())
+# {'success': True, 'data': {'power': 0, 'swr': 1.0, ...}}
+
+# 快速调谐
+resp = requests.post(f"{API_URL}/api/v1/tune", json={"freq_khz": 7050})
+print(resp.json())
+# {'success': True, 'found': True, 'applied': True, ...}
+
+# 设置继电器
+resp = requests.post(f"{API_URL}/api/v1/relay", json={
+    "sw": 1,   # CL
+    "ind": 30, # 存储30，显示0.3uH
+    "cap": 27  # 存储27，显示270pF
+})
+print(resp.json())
+```
+
+### 命令行工具集成
+
+```bash
+#!/bin/bash
+# quick_tune.sh - 快速调谐脚本
+
+FREQ=$1
+API="http://localhost:8080"
+
+if [ -z "$FREQ" ]; then
+    echo "用法: $0 <频率kHz>"
+    exit 1
+fi
+
+echo "调谐到 ${FREQ} kHz..."
+curl -s -X POST -H "Content-Type: application/json" \
+     -d "{\"freq_khz\":$FREQ}" \
+     "$API/api/v1/tune" | python3 -m json.tool
+```

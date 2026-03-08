@@ -15,6 +15,54 @@ A modern web-based remote control system optimized for mobile devices, enabling 
 
 ---
 
+## 🏗️ System Architecture / 系统架构
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                        Client Layer / 客户端层                           │
+├───────────────────────────┬─────────────────────────────────────────────┤
+│      Mobile Browser       │         External Software / API             │
+│      移动端浏览器          │         外部软件 / API                       │
+└─────────────┬─────────────┴──────────────────────┬──────────────────────┘
+              │ HTTPS / WebSocket                  │ HTTP REST
+              ▼                                    ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│                       Service Layer / 服务层                             │
+├───────────────────────────┬─────────────────────────────────────────────┤
+│      MRRC Main Program    │         ATR-1000 API Server                 │
+│      MRRC 主程序           │         RESTful API (:8080)                 │
+│                           │                                             │
+│  • Radio Control          │  • /api/v1/status    Status query          │
+│  • Audio TX/RX            │  • /api/v1/relay     Relay control         │
+│  • User Auth              │  • /api/v1/tune      Quick tune            │
+└─────────────┬─────────────┴──────────────────────┬──────────────────────┘
+              │                                    │
+              │ rigctld + Audio                    │ Unix Socket
+              ▼                                    ▼
+┌───────────────────────────┐         ┌─────────────────────────────────────┐
+│       Radio Device        │         │     ATR-1000 Proxy / 天调代理        │
+│       电台设备             │         │       atr1000_proxy.py              │
+│                           │         │                                     │
+│  • Freq/Mode (rigctld)    │         │  • Single device connection         │
+│  • PTT Control            │         │  • Dynamic polling: 15s/5s/0.5s     │
+│  • Audio TX/RX            │         │  • Smart Learning + Quick Tune      │
+└───────────────────────────┘         └──────────────┬──────────────────────┘
+                                                     │ WebSocket
+                                                     ▼
+                                     ┌─────────────────────────────────────┐
+                                     │       ATR-1000 Tuner / 天调设备      │
+                                     │                                     │
+                                     │  • Power/SWR Display                │
+                                     │  • Relay Params (SW/IND/CAP)        │
+                                     └─────────────────────────────────────┘
+```
+
+**Key Points / 关键说明**:
+- MRRC directly controls radio via rigctld + audio / MRRC 直接控制电台设备
+- ATR-1000 Proxy only connects to tuner / 代理只连接天调设备
+
+---
+
 ## 🏠 System Environment / 系统环境
 
 <img src="screenshots/whole_env.png" alt="System Environment" width="700">
@@ -62,6 +110,7 @@ A modern web-based remote control system optimized for mobile devices, enabling 
 | ⚡ **Ultra Low Latency** | TX→RX switching < 100ms |
 | 🎯 **One-Hand Operation** | PTT button optimized for mobile thumb reach |
 | 🔧 **ATR-1000 Integration** | Smart tuner learning & quick tune |
+| 🔌 **REST API** | Standalone API for external software integration |
 
 ---
 
@@ -75,18 +124,24 @@ MRRC integrates with ATR-1000 antenna tuner for intelligent operation:
 | 🧠 **Smart Learning** | Auto-learn frequency-tuner mapping during TX |
 | ⚡ **Quick Tune** | Auto-apply tuner params when frequency changes |
 | 💾 **Persistence** | Tuner records saved in JSON file |
+| 🔌 **REST API** | External software can query/control tuner |
 
 **How it works**:
-1. When TX with good SWR (≤1.5), system auto-records frequency + tuner params
-2. When you change frequency, system auto-applies matching tuner params
-3. No manual tuning needed for previously learned frequencies!
-
 ```
 Learning Flow:
 TX Start → Sample SWR → SWR ≤ 1.5? → Record params → Save to JSON
-                    ↓
+
 Quick Tune Flow:
 Freq Change → Lookup JSON → Found? → Apply params → Ready to TX!
+```
+
+**API Example**:
+```bash
+# Quick tune to 7050 kHz
+curl -X POST -d '{"freq_khz":7050}' http://localhost:8080/api/v1/tune
+
+# Get current status
+curl http://localhost:8080/api/v1/status
 ```
 
 ---
@@ -99,6 +154,9 @@ Freq Change → Lookup JSON → Found? → Apply params → Ready to TX!
 | RX Latency | ~51ms |
 | TX→RX Switch | <100ms |
 | PTT Reliability | 99%+ |
+| ATR-1000 Polling (Idle) | 15s |
+| ATR-1000 Polling (Active) | 5s |
+| ATR-1000 Polling (TX) | 0.5s |
 
 ---
 
@@ -108,11 +166,14 @@ Freq Change → Lookup JSON → Found? → Apply params → Ready to TX!
 # 1. Start rigctld
 rigctld -m 335 -r /dev/cu.usbserial-230 -s 4800
 
-# 2. Start MRRC Server
-python ./MRRC
+# 2. Start all services
+./mrrc_control.sh start
 
 # 3. Access from mobile browser
 # https://your-domain/mobile_modern.html
+
+# 4. (Optional) Start API Server
+nohup python3 atr1000_api_server.py > atr1000_api.log 2>&1 &
 ```
 
 ---
@@ -121,15 +182,21 @@ python ./MRRC
 
 ```
 MRRC/
-├── www/           # Frontend (HTML5/JS/CSS)
-│   ├── mobile_modern.html   # Mobile interface
-│   ├── controls.js          # Audio & control logic
-│   └── tx_button_optimized.js
-├── MRRC           # Backend (Tornado + WebSocket)
-├── certs/         # TLS certificates
-├── docs/          # Documentation
-├── dev_tools/     # Test utilities
-└── nanovna/       # NanoVNA integration
+├── MRRC                    # Backend main program
+├── MRRC.conf               # Configuration file
+├── audio_interface.py      # PyAudio wrapper
+├── hamlib_wrapper.py       # rigctld communication
+├── atr1000_proxy.py        # ATR-1000 proxy ⭐
+├── atr1000_api_server.py   # REST API server ⭐
+├── atr1000_tuner.py        # Tuner storage module
+├── mrrc_control.sh         # Control script
+├── www/                    # Frontend
+│   ├── mobile_modern.html  # Mobile UI
+│   ├── controls.js         # Audio & control
+│   └── atu.js              # ATU display
+├── certs/                  # TLS certificates
+├── docs/                   # Documentation
+└── dev_tools/              # Test utilities
 ```
 
 ---
@@ -148,3 +215,4 @@ Based on [F4HTB/Universal_HamRadio_Remote_HTML5](https://github.com/F4HTB/Univer
 - [中文文档](README_CN.md)
 - [Changelog](CHANGELOG.md)
 - [System Architecture](docs/System_Architecture_Design.md)
+- [ATR-1000 Tuner Documentation](docs/ATR1000_Tuner_Auto_Learning.md)

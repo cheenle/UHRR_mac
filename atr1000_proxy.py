@@ -1,10 +1,13 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-ATR-1000 天调代理程序 - V4.5.15 增强版
+ATR-1000 天调代理程序 - V4.5.17 动态轮询版
 
-设计理念：主动轮询 + 缓存广播 + 智能学习
-1. 每 0.5 秒主动向 ATR-1000 发送 SYNC 获取数据
+设计理念：动态轮询 + 缓存广播 + 智能学习
+1. 动态轮询间隔，防止设备过载：
+   - 空闲时：3秒
+   - 有客户端：1秒
+   - TX期间：0.5秒
 2. 数据缓存在本地
 3. 客户端请求时直接返回缓存数据（不再请求设备）
 4. 自动学习 SWR 1.0-1.5 的天调参数
@@ -51,6 +54,8 @@ SCMD_MEMORY_INFO = 7       # 存储信息
 running = True
 connected = False
 last_data_time = 0
+client_count = 0      # 当前连接的客户端数量
+is_tx = False         # 是否正在发射
 
 # 缓存数据（主动轮询更新，客户端直接读取）
 cache = {
@@ -69,6 +74,12 @@ cache_lock = threading.Lock()
 # 上次设置的继电器参数（用于节流）
 last_relay_params = None
 relay_throttle_time = 0
+
+# 上次日志输出的值（用于减少日志频率）
+last_log_power = 0
+last_log_swr = 1.0
+last_log_relay = None
+last_learn_freq = 0  # 上次学习的频率（用于减少学习日志频率）
 
 def set_relay_with_throttle(atr1000, sw, ind, cap):
     """带节流的继电器设置，避免频繁操作设备"""
@@ -92,8 +103,10 @@ clients = []  # Unix Socket 客户端列表
 # Unix Socket 路径
 UNIX_SOCKET_PATH = "/tmp/atr1000_proxy.sock"
 
-# 轮询间隔（秒）
-POLL_INTERVAL = 0.5
+# 轮询间隔（秒）- 降低频率防止设备过载
+POLL_INTERVAL_IDLE = 15.0    # 空闲时：15秒一次
+POLL_INTERVAL_ACTIVE = 5.0   # 有客户端时：5秒一次
+POLL_INTERVAL_TX = 0.5       # TX期间：0.5秒一次
 
 
 class ATR1000Client:
@@ -149,9 +162,12 @@ class ATR1000Client:
                 time.sleep(5)
     
     def _on_open(self, ws):
-        """WebSocket 打开 - V4.5.14: 主动轮询模式
+        """WebSocket 打开 - V4.5.17: 动态轮询模式
         
-        连接成功后启动主动轮询线程，每 0.5 秒发送 SYNC。
+        连接成功后启动主动轮询线程，动态调整轮询间隔：
+        - 空闲时：3秒
+        - 有客户端：1秒
+        - TX期间：0.5秒
         """
         global connected, last_data_time, cache
         connected = True
@@ -160,37 +176,43 @@ class ATR1000Client:
         with cache_lock:
             cache["connected"] = True
         
-        logger.info("✅ ATR-1000 已连接，启动主动轮询")
+        logger.info("✅ ATR-1000 已连接，启动动态轮询")
         
         # 启动主动轮询线程
         threading.Thread(target=self._poll_loop, daemon=True).start()
     
     def _on_message(self, ws, data):
-        """收到消息 - 更新缓存"""
+        """收到消息 - 更新缓存（V4.5.17: 减少日志输出）"""
         global last_data_time
         last_data_time = time.time()
         
         if isinstance(data, bytes) and len(data) >= 3:
-            # 调试：显示收到的命令类型
-            cmd = data[1] if len(data) > 1 else 0
-            if cmd in [2, 5]:  # METER_STATUS=2, RELAY_STATUS=5
-                logger.info(f"📥 收到设备数据: cmd={cmd}, len={len(data)}")
             self._parse_data(data)
     
     def _poll_loop(self):
-        """主动轮询循环 - 每 0.5 秒发送 SYNC
+        """主动轮询循环 - 动态间隔防止设备过载
         
-        V4.5.14 核心设计：
-        - 主动轮询，不等待客户端请求
-        - 数据缓存，客户端直接读取
+        V4.5.17 改进设计：
+        - 空闲时：3秒轮询一次
+        - 有客户端连接：1秒轮询一次
+        - TX期间：0.5秒轮询一次
         """
-        global connected, cache
+        global connected, cache, client_count, is_tx
         
         # 连接后立即发送第一次 SYNC
         self._send_sync()
         
         while running and connected:
-            time.sleep(POLL_INTERVAL)
+            # 根据状态选择轮询间隔
+            if is_tx:
+                interval = POLL_INTERVAL_TX
+            elif client_count > 0:
+                interval = POLL_INTERVAL_ACTIVE
+            else:
+                interval = POLL_INTERVAL_IDLE
+            
+            time.sleep(interval)
+            
             if connected and self.ws:
                 try:
                     self._send_sync()
@@ -226,12 +248,13 @@ class ATR1000Client:
                 logger.error(f"发送 SYNC 失败: {e}")
     
     def _parse_data(self, data):
-        """解析 ATR-1000 数据 - V4.5.16 智能学习版
+        """解析 ATR-1000 数据 - V4.5.17 动态轮询版
         
         只解析功率/SWR 和继电器状态，更新缓存。
         自动学习：当功率 > 0 且 SWR 在 1.0-1.5 且参数有效时记录
+        只在数据变化时输出日志，减少日志频率
         """
-        global cache
+        global cache, last_log_power, last_log_swr, last_log_relay, last_learn_freq
         
         if len(data) < 3 or data[0] != SCMD_FLAG:
             return
@@ -253,9 +276,11 @@ class ATR1000Client:
                 
                 cache["power"] = power
                 
-                # 调试日志
-                if power > 0:
-                    logger.info(f"📊 功率/SWR: {power}W, SWR={cache['swr']:.2f} (raw={swr_raw})")
+                # 只在功率或SWR变化时记录日志（减少日志频率）
+                if power > 0 and (abs(power - last_log_power) > 1 or abs(cache["swr"] - last_log_swr) > 0.1):
+                    logger.info(f"📊 功率/SWR: {power}W, SWR={cache['swr']:.2f}")
+                    last_log_power = power
+                    last_log_swr = cache["swr"]
                 
                 # V4.5.16: 智能学习天调参数
                 # 条件：功率 > 0, SWR 1.0-1.5, 参数有效（ind>0 或 cap>0）, 频率 > 0
@@ -275,7 +300,10 @@ class ATR1000Client:
                                 cap=cap,
                                 swr=cache["swr"]
                             ):
-                                logger.info(f"📝 学习成功: {freq/1000:.1f}kHz, SWR={cache['swr']:.2f}, {'CL' if cache['sw'] else 'LC'}, L={ind}, C={cap}")
+                                # 只在频率变化时输出学习日志，减少重复
+                                if freq != last_learn_freq:
+                                    logger.info(f"📝 学习成功: {freq/1000:.1f}kHz, SWR={cache['swr']:.2f}, {'CL' if cache['sw'] else 'LC'}, L={ind}, C={cap}")
+                                    last_learn_freq = freq
                         except Exception as e:
                             logger.error(f"学习天调参数失败: {e}")
                 
@@ -293,7 +321,11 @@ class ATR1000Client:
                     cache["ind_uh"] = L / 100.0
                     cache["cap_pf"] = C
                 
-                logger.info(f"🎛️ 继电器原始: {data.hex()} | SW={'CL' if cache['sw'] else 'LC'}, L={cache['ind']}, C={cache['cap']}")
+                # 只在继电器状态变化时记录日志
+                current_relay = (cache["sw"], cache["ind"], cache["cap"])
+                if current_relay != last_log_relay:
+                    logger.info(f"🎛️ 继电器: SW={'CL' if cache['sw'] else 'LC'}, L={cache['ind']}, C={cache['cap']}")
+                    last_log_relay = current_relay
     
     def close(self):
         """关闭连接"""
@@ -371,10 +403,11 @@ def handle_unix_client(conn, addr, atr1000):
     - set_relay: 设置继电器参数
     - tune: 启动自动调谐
     """
-    global clients, cache
+    global clients, cache, client_count, is_tx
     
     clients.append(conn)
-    logger.info(f"新客户端连接，当前 {len(clients)} 个")
+    client_count = len(clients)
+    logger.info(f"新客户端连接，当前 {client_count} 个")
     
     try:
         while running:
@@ -495,10 +528,12 @@ def handle_unix_client(conn, addr, atr1000):
                             conn.send(response.encode())
                     
                     elif action == "start":
-                        logger.info("客户端请求启动数据流")
+                        is_tx = True
+                        logger.info("客户端请求启动数据流 (TX开始)")
                     
                     elif action == "stop":
-                        logger.info("客户端请求停止数据流")
+                        is_tx = False
+                        logger.info("客户端请求停止数据流 (TX结束)")
                     
                     elif action == "set_relay":
                         # 设置继电器参数
@@ -528,8 +563,9 @@ def handle_unix_client(conn, addr, atr1000):
     
     finally:
         clients.remove(conn)
+        client_count = len(clients)
         conn.close()
-        logger.info(f"客户端断开，剩余 {len(clients)} 个")
+        logger.info(f"客户端断开，剩余 {client_count} 个")
 
 
 def run_unix_server(atr1000):
@@ -597,7 +633,7 @@ def main():
     logger.info("=" * 50)
     logger.info("ATR-1000 天调代理程序启动")
     logger.info(f"设备地址: {args.device}:{args.port}")
-    logger.info(f"数据间隔: {args.interval} 秒")
+    logger.info(f"轮询间隔: 空闲{POLL_INTERVAL_IDLE}s / 活跃{POLL_INTERVAL_ACTIVE}s / TX{POLL_INTERVAL_TX}s")
     logger.info("=" * 50)
     
     # 创建 ATR-1000 客户端

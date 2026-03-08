@@ -17,6 +17,82 @@ MRRC is a modern web-based remote control system optimized for mobile devices, e
 - ⚡ **Instant Response**: TX/RX switching <100ms, PTT reliability 99%+
 - 🔒 **Secure Connection**: TLS encryption with user authentication
 
+## 🏗️ System Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                           Client Layer                                   │
+├───────────────────────────┬─────────────────────────────────────────────┤
+│      Mobile Browser       │         External Software / API             │
+│  mobile_modern.html       │        Python / SDR / Loggers               │
+│  (PWA, Touch Optimized)   │                                             │
+└─────────────┬─────────────┴──────────────────────┬──────────────────────┘
+              │ HTTPS / WebSocket                  │ HTTP REST (API)
+              ▼                                    ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│                          Service Layer                                   │
+├───────────────────────────┬─────────────────────────────────────────────┤
+│      MRRC Main Program    │         ATR-1000 API Server                 │
+│   (Tornado WebSocket)     │      (RESTful API, :8080)                   │
+│                           │                                             │
+│  • Radio Control (rigctld)│  • /api/v1/status    Status query          │
+│  • Audio TX/RX (PyAudio)  │  • /api/v1/relay     Relay control         │
+│  • Freq Sync              │  • /api/v1/tune      Quick tune            │
+│  • User Auth              │  • /api/v1/tuner     Learning records      │
+└─────────────┬─────────────┴──────────────────────┬──────────────────────┘
+              │                                    │
+              │ rigctld + Audio                    │ Unix Socket
+              │                                    │ /tmp/atr1000_proxy.sock
+              ▼                                    ▼
+┌───────────────────────────┐         ┌─────────────────────────────────────┐
+│       Radio Device        │         │        ATR-1000 Proxy Layer         │
+│   (IC-M710/IC-7300/etc)   │         │       atr1000_proxy.py              │
+│                           │         │                                     │
+│  • Freq/Mode (rigctld)    │         │  • Single device connection         │
+│  • PTT Control            │         │  • Dynamic polling: 15s/5s/0.5s     │
+│  • Audio TX/RX            │         │  • Smart Learning + Quick Tune      │
+│  • S-Meter Reading        │         └──────────────┬──────────────────────┘
+└───────────────────────────┘                        │ WebSocket
+                                                     ▼
+                                     ┌─────────────────────────────────────┐
+                                     │       ATR-1000 Tuner Device         │
+                                     │      (Power Meter + Auto Tuner)     │
+                                     │                                     │
+                                     │  • Real-time Power/SWR Display      │
+                                     │  • Relay Params (SW/IND/CAP)        │
+                                     └─────────────────────────────────────┘
+```
+
+**Architecture Notes**:
+- **MRRC Main**: Directly controls radio device (Audio TX/RX + rigctld frequency control)
+- **ATR-1000 Proxy**: Standalone proxy, only communicates with ATR-1000 tuner
+- **API Server**: Calls Proxy via Unix Socket, no direct device connection
+
+## 🧩 Core Components
+
+### Backend Components
+
+| Component | File | Function |
+|-----------|------|----------|
+| **MRRC Main** | `MRRC` | Tornado WebSocket server, radio control, audio stream, user auth |
+| **Audio Interface** | `audio_interface.py` | PyAudio wrapper, audio capture and playback |
+| **Hamlib Wrapper** | `hamlib_wrapper.py` | rigctld communication wrapper |
+| **ATR-1000 Proxy** | `atr1000_proxy.py` | Tuner device proxy, smart learning, quick tune |
+| **ATR-1000 API** | `atr1000_api_server.py` | RESTful API service for external software |
+| **Tuner Storage** | `atr1000_tuner.py` | Frequency-parameter mapping storage |
+| **TCI Client** | `tci_client.py` | TCI protocol support (specific radios) |
+
+### Frontend Components
+
+| Component | File | Function |
+|-----------|------|----------|
+| **Mobile UI** | `www/mobile_modern.html` | iPhone 15 optimized, PWA support |
+| **Mobile Logic** | `www/mobile_modern.js` | Mobile WebSocket and UI logic |
+| **Control Core** | `www/controls.js` | Audio processing, PTT control, WebSocket |
+| **TX Optimizer** | `www/tx_button_optimized.js` | TX button timing optimization |
+| **RX Player** | `www/rx_worklet_processor.js` | AudioWorklet low-latency playback |
+| **ATU Display** | `www/atu.js` | Power/SWR real-time display |
+
 ## ✨ Features
 
 ### Mobile Core Features
@@ -35,6 +111,7 @@ MRRC is a modern web-based remote control system optimized for mobile devices, e
 - **Bidirectional Audio**: TX with Int16 encoding, RX with low-jitter AudioWorklet playback, 16kHz sample rate
 - **Real-time S-Meter**: Accurate S0-S9+60dB signal strength display
 - **Audio Filters**: Multiple filter configurations available
+- **TX Equalizer**: 3-band EQ for TX audio, supports SSB voice/weak signal/contest modes
 
 ### ATR-1000 Smart Tuner ⭐ Core Feature
 - **Real-time Power Display**: Forward power (0-200W) during TX, latency <200ms
@@ -42,22 +119,16 @@ MRRC is a modern web-based remote control system optimized for mobile devices, e
 - **Smart Learning**: Auto-learn frequency-tuner (SW/IND/CAP) mapping during TX
 - **Quick Tune**: Auto-apply learned tuner params when frequency changes
 - **Persistence**: Tuner records saved in JSON file, auto-loaded on restart
-- **Connection Preheat**: Pre-establish connection on page load for fast PTT response
+- **Standalone API**: RESTful API for external software integration
 
-**How it Works**:
-```
-Learning Flow:
-TX Start → Sample SWR → SWR ≤ 1.5? → Record params → Save to JSON
+### Dynamic Polling Optimization
+To prevent device hang from excessive requests, implemented dynamic polling:
 
-Quick Tune Flow:
-Freq Change → Lookup JSON → Found? → Apply params → Ready to TX!
-```
-
-**Supported Parameters**:
-| Frequency | SW | L | C | SWR |
-|-----------|-----|------|------|------|
-| 7.050MHz | CL | 0.3uH | 270pF | 1.08 |
-| 14.270MHz | LC | 0.1uH | 90pF | 1.22 |
+| State | Polling Interval | Description |
+|-------|------------------|-------------|
+| Idle | 15 seconds | No client connected, reduced device load |
+| Active | 5 seconds | Client connected, keep connection alive |
+| TX | 0.5 seconds | During TX, fast power/SWR updates |
 
 ### Security & Connection
 - **TLS/Certificates**: Support for custom certificate chain (fullchain + private key)
@@ -92,39 +163,49 @@ keyfile = certs/radio.vlsc.net.key
 auth = FILE
 ```
 
-### 4. Start Service
+### 4. Start Services
 ```bash
-python ./MRRC
+# Using control script (recommended)
+./mrrc_control.sh start
+
+# Or start services individually
+./mrrc_control.sh start-rigctld
+./mrrc_control.sh start-mrrc
+./mrrc_control.sh start-atr1000
 ```
 
 ### 5. Access
 - **Mobile**: `https://<your-domain>/mobile_modern.html` ⭐ Recommended
 - **Desktop**: `https://<your-domain>/`
-
-## 📱 Mobile Interface
-
-| Interface | Purpose | Features |
-|-----------|---------|----------|
-| `mobile_modern.html` | Modern mobile UI | iPhone 15 optimized, PWA support, one-hand operation |
-| `index.html` | Desktop full interface | Full-featured control, suitable for large screens |
+- **ATR-1000 API**: `http://localhost:8080`
 
 ## 📁 Directory Structure
 
 ```
 MRRC/
+├── MRRC                        # Backend main program (Tornado WebSocket server)
+├── MRRC.conf                   # System core configuration file
+├── audio_interface.py          # PyAudio capture/playback wrapper
+├── hamlib_wrapper.py           # rigctld communication helper
+├── tci_client.py               # TCI protocol client implementation
+├── atr1000_proxy.py            # ATR-1000 standalone proxy ⭐
+├── atr1000_api_server.py       # ATR-1000 REST API service ⭐
+├── atr1000_tuner.py            # Tuner storage module
+├── atr1000_tuner.json          # Tuner parameter data file
+├── mrrc_control.sh             # System control script (start/stop/status)
+├── mrrc_monitor.sh             # System monitor script
 ├── www/                        # Frontend pages and scripts
-│   ├── mobile_modern.html      # Mobile main interface ⭐
-│   ├── mobile_modern.js        # Mobile logic
+│   ├── mobile_modern.html      # Modern mobile interface ⭐
+│   ├── mobile_modern.js        # Mobile interface logic
 │   ├── controls.js             # Audio and control main logic
-│   ├── tx_button_optimized.js  # TX button optimization
-│   └── rx_worklet_processor.js # AudioWorklet player
-├── MRRC                        # Backend main program
-├── audio_interface.py          # PyAudio encapsulation
-├── hamlib_wrapper.py           # rigctld communication
-├── certs/                      # TLS certificates
-├── docs/                       # Documentation
-├── dev_tools/                  # Test utilities
-└── nanovna/                    # NanoVNA integration
+│   ├── tx_button_optimized.js  # TX button event and timing optimization
+│   ├── rx_worklet_processor.js # AudioWorklet player
+│   ├── atu.js                  # ATU power and SWR display management
+│   └── panadapter/             # Spectrum display module
+├── certs/                      # TLS certificates directory
+├── docs/                       # Technical documentation
+├── dev_tools/                  # Test/debug scripts
+└── nanovna/                    # NanoVNA vector network analyzer web UI
 ```
 
 ## ⚙️ Key Configuration
@@ -143,10 +224,49 @@ MRRC/
 | RX Latency | ~51ms |
 | TX→RX Switch | <100ms |
 | PTT Reliability | 99%+ |
+| ATR-1000 Power Display Latency | <200ms |
+| Idle Polling Interval | 15 seconds |
+
+## 🔌 ATR-1000 API Usage
+
+### Start API Service
+```bash
+# Ensure Proxy is running
+./mrrc_control.sh start-atr1000
+
+# Start API Server
+nohup python3 atr1000_api_server.py > atr1000_api.log 2>&1 &
+```
+
+### API Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/health` | Health check |
+| GET | `/api/v1/status` | Get current status |
+| GET | `/api/v1/relay` | Get relay parameters |
+| POST | `/api/v1/relay` | Set relay parameters |
+| GET | `/api/v1/tuner/lookup` | Lookup tuner params |
+| POST | `/api/v1/tune` | Quick tune |
+
+### Usage Examples
+```bash
+# Get status
+curl http://localhost:8080/api/v1/status
+
+# Quick tune to 7050 kHz
+curl -X POST -H "Content-Type: application/json" \
+     -d '{"freq_khz":7050}' http://localhost:8080/api/v1/tune
+
+# Set relay
+curl -X POST -H "Content-Type: application/json" \
+     -d '{"sw":1,"ind":30,"cap":27}' http://localhost:8080/api/v1/relay
+```
 
 ## 📚 Documentation
 
 - **[System Architecture Design](docs/System_Architecture_Design.md)**: Complete system architecture
+- **[ATR-1000 Smart Tuner](docs/ATR1000_Tuner_Auto_Learning.md)**: Tuner learning and API detailed docs ⭐
 - **[PTT/Audio Stability](docs/PTT_Audio_Postmortem_and_Best_Practices.md)**: Stability analysis and best practices
 - **[Latency Optimization Guide](docs/latency_optimization_guide.md)**: TX/RX switching optimization details
 - **[Mobile Interface Documentation](docs/mobile_modern_interface.md)**: Mobile UI design specifications
@@ -169,6 +289,11 @@ sed -e 's/\r$//' input.pem > output.pem
 1. Confirm microphone permission is granted
 2. Check WebSocket connection status
 3. Review browser console logs
+
+### ATR-1000 Device Hang
+1. Check if multiple processes are connecting to the device
+2. Ensure V2 API Server is used (communicates via Proxy)
+3. Verify dynamic polling intervals are in effect
 
 ## 📄 License
 

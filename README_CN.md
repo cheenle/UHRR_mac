@@ -17,6 +17,82 @@ MRRC 是一款专为移动端优化的业余电台远程控制系统。无论您
 - ⚡ **即时响应**：TX/RX切换<100ms，PTT可靠性99%+
 - 🔒 **安全连接**：TLS加密，用户认证保护
 
+## 🏗️ 系统架构
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                            客户端层                                      │
+├───────────────────────────┬─────────────────────────────────────────────┤
+│     移动端浏览器           │           外部软件 / API                     │
+│  mobile_modern.html       │        Python / SDR / 日志软件              │
+│  (PWA, 触摸优化)          │                                             │
+└─────────────┬─────────────┴──────────────────────┬──────────────────────┘
+              │ HTTPS / WebSocket                  │ HTTP REST (API)
+              ▼                                    ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│                           服务层                                         │
+├───────────────────────────┬─────────────────────────────────────────────┤
+│      MRRC 主程序           │         ATR-1000 API Server                 │
+│   (Tornado WebSocket)     │      (RESTful API, :8080)                   │
+│                           │                                             │
+│  • 电台控制 (rigctld)      │  • /api/v1/status    状态查询              │
+│  • 音频流 TX/RX (PyAudio)  │  • /api/v1/relay     继电器控制            │
+│  • 频率同步               │  • /api/v1/tune      快速调谐               │
+│  • 用户认证               │  • /api/v1/tuner     学习记录管理           │
+└─────────────┬─────────────┴──────────────────────┬──────────────────────┘
+              │                                    │
+              │ rigctld + Audio                    │ Unix Socket
+              │                                    │ /tmp/atr1000_proxy.sock
+              ▼                                    ▼
+┌───────────────────────────┐         ┌─────────────────────────────────────┐
+│       电台设备             │         │        ATR-1000 代理层              │
+│   (IC-M710/IC-7300/等)    │         │       atr1000_proxy.py              │
+│                           │         │                                     │
+│  • 频率/模式控制 (rigctld)│         │  • 唯一设备连接（避免冲突）          │
+│  • PTT 控制              │         │  • 动态轮询：空闲15s/活跃5s/TX 0.5s │
+│  • 音频 TX/RX            │         │  • 智能学习 + 快速调谐              │
+│  • S表读取               │         └──────────────┬──────────────────────┘
+└───────────────────────────┘                        │ WebSocket
+                                                     ▼
+                                     ┌─────────────────────────────────────┐
+                                     │          ATR-1000 天调设备           │
+                                     │       (功率计 + 自动天调)            │
+                                     │                                     │
+                                     │  • 实时功率/SWR 显示                │
+                                     │  • 继电器参数 (SW/IND/CAP)          │
+                                     └─────────────────────────────────────┘
+```
+
+**架构说明**：
+- **MRRC 主程序**：直接控制电台设备（音频 TX/RX + rigctld 频率控制）
+- **ATR-1000 Proxy**：独立代理，只与 ATR-1000 天调设备通信
+- **API Server**：通过 Unix Socket 调用 Proxy，不直接连接设备
+
+## 🧩 核心组件
+
+### 后端组件
+
+| 组件 | 文件 | 功能 |
+|------|------|------|
+| **MRRC 主程序** | `MRRC` | Tornado WebSocket 服务器，电台控制，音频流，用户认证 |
+| **音频接口** | `audio_interface.py` | PyAudio 封装，音频采集与播放 |
+| **Hamlib 封装** | `hamlib_wrapper.py` | rigctld 通信封装 |
+| **ATR-1000 代理** | `atr1000_proxy.py` | 天调设备代理，智能学习，快速调谐 |
+| **ATR-1000 API** | `atr1000_api_server.py` | RESTful API 服务，供外部软件调用 |
+| **天调存储** | `atr1000_tuner.py` | 频率-参数映射存储与管理 |
+| **TCI 客户端** | `tci_client.py` | TCI 协议支持（特定电台） |
+
+### 前端组件
+
+| 组件 | 文件 | 功能 |
+|------|------|------|
+| **移动端界面** | `www/mobile_modern.html` | iPhone 15 优化，PWA 支持 |
+| **移动端逻辑** | `www/mobile_modern.js` | 移动端 WebSocket 与 UI 逻辑 |
+| **控制核心** | `www/controls.js` | 音频处理，PTT 控制，WebSocket 通信 |
+| **TX 优化** | `www/tx_button_optimized.js` | TX 按钮时序优化 |
+| **RX 播放** | `www/rx_worklet_processor.js` | AudioWorklet 低延迟播放 |
+| **ATU 显示** | `www/atu.js` | 功率/SWR 实时显示 |
+
 ## ✨ 功能特性
 
 ### 移动端核心功能
@@ -43,22 +119,16 @@ MRRC 是一款专为移动端优化的业余电台远程控制系统。无论您
 - **智能学习**：发射时自动记录频率与天调参数（SW/IND/CAP）对应关系
 - **快速调谐**：切换频率时自动应用已学习的天调参数
 - **参数持久化**：学习记录保存在 JSON 文件，重启后自动加载
-- **连接预热**：页面加载时预先建立连接，PTT 响应迅速
+- **独立 API**：RESTful API 供外部软件调用
 
-**工作原理**：
-```
-学习流程：
-发射开始 → 采样SWR → SWR ≤ 1.5? → 记录参数 → 保存到JSON
+### 动态轮询优化
+为避免设备因频繁请求而挂起，实现了动态轮询机制：
 
-快速调谐流程：
-频率变化 → 查找JSON → 找到? → 应用参数 → 准备发射!
-```
-
-**支持的参数**：
-| 频率 | SW | L | C | SWR |
-|------|-----|------|------|------|
-| 7.050MHz | CL | 0.3uH | 270pF | 1.08 |
-| 14.270MHz | LC | 0.1uH | 90pF | 1.22 |
+| 状态 | 轮询间隔 | 说明 |
+|------|----------|------|
+| 空闲 | 15秒 | 无客户端连接时，降低设备压力 |
+| 活跃 | 5秒 | 有客户端连接，保持连接活跃 |
+| TX 发射 | 0.5秒 | 发射期间快速更新功率/SWR |
 
 ### 安全与连接
 - **TLS/证书**：支持自有证书链（fullchain + 私钥）
@@ -95,39 +165,47 @@ auth = FILE
 
 ### 4. 启动服务
 ```bash
-python ./MRRC
+# 使用控制脚本（推荐）
+./mrrc_control.sh start
+
+# 或分别启动各服务
+./mrrc_control.sh start-rigctld
+./mrrc_control.sh start-mrrc
+./mrrc_control.sh start-atr1000
 ```
 
 ### 5. 访问
 - **移动端**：`https://<你的域名>/mobile_modern.html` ⭐ 推荐
 - **桌面端**：`https://<你的域名>/`
-
-## 📱 移动端界面
-
-| 界面 | 用途 | 特点 |
-|------|------|------|
-| `mobile_modern.html` | 现代移动界面 | iPhone 15优化，PWA支持，单手操作 |
-| `index.html` | 桌面完整界面 | 全功能控制，适合大屏幕 |
+- **ATR-1000 API**：`http://localhost:8080`
 
 ## 📁 目录结构
 
 ```
 MRRC/
+├── MRRC                        # 后端主程序 (Tornado WebSocket 服务器)
+├── MRRC.conf                   # 系统核心配置文件
+├── audio_interface.py          # PyAudio 采集/播放封装
+├── hamlib_wrapper.py           # 与 rigctld 通信的辅助逻辑
+├── tci_client.py               # TCI 协议客户端实现
+├── atr1000_proxy.py            # ATR-1000 独立代理程序 ⭐
+├── atr1000_api_server.py       # ATR-1000 REST API 服务 ⭐
+├── atr1000_tuner.py            # 天调存储模块
+├── atr1000_tuner.json          # 天调参数数据文件
+├── mrrc_control.sh             # 系统控制脚本（启动/停止/状态）
+├── mrrc_monitor.sh             # 系统监控脚本
 ├── www/                        # 前端页面与脚本
-│   ├── mobile_modern.html      # 移动端主界面 ⭐
-│   ├── mobile_modern.js        # 移动端逻辑
+│   ├── mobile_modern.html      # 现代移动端界面 ⭐
+│   ├── mobile_modern.js        # 移动端界面逻辑
 │   ├── controls.js             # 音频与控制主逻辑
-│   ├── tx_button_optimized.js  # TX按钮优化
-│   └── rx_worklet_processor.js # AudioWorklet播放器
-├── MRRC                        # 后端主程序
-├── audio_interface.py          # PyAudio封装
-├── hamlib_wrapper.py           # rigctld通信
-├── atr1000_proxy.py            # ATR-1000独立代理 ⭐
-├── atr1000_tuner.py            # 天调存储模块 ⭐
-├── certs/                      # TLS证书
+│   ├── tx_button_optimized.js  # TX 按钮事件与时序优化
+│   ├── rx_worklet_processor.js # AudioWorklet 播放器
+│   ├── atu.js                  # ATU 功率和驻波比显示管理
+│   └── panadapter/             # 频谱显示模块
+├── certs/                      # TLS 证书目录
 ├── docs/                       # 技术文档
-├── dev_tools/                  # 测试工具
-└── nanovna/                    # NanoVNA集成
+├── dev_tools/                  # 测试/调试脚本
+└── nanovna/                    # NanoVNA 矢量网络分析仪 Web 界面
 ```
 
 ## ⚙️ 关键配置
@@ -147,11 +225,48 @@ MRRC/
 | TX→RX切换 | <100ms |
 | PTT可靠性 | 99%+ |
 | ATR-1000 功率显示延迟 | <200ms |
-| Sync 请求间隔 | 稳定 500ms |
+| 空闲轮询间隔 | 15秒 |
+
+## 🔌 ATR-1000 API 使用
+
+### 启动 API 服务
+```bash
+# 确保 Proxy 已启动
+./mrrc_control.sh start-atr1000
+
+# 启动 API Server
+nohup python3 atr1000_api_server.py > atr1000_api.log 2>&1 &
+```
+
+### API 端点
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | `/health` | 健康检查 |
+| GET | `/api/v1/status` | 获取当前状态 |
+| GET | `/api/v1/relay` | 获取继电器参数 |
+| POST | `/api/v1/relay` | 设置继电器参数 |
+| GET | `/api/v1/tuner/lookup` | 查找天调参数 |
+| POST | `/api/v1/tune` | 快速调谐 |
+
+### 使用示例
+```bash
+# 获取状态
+curl http://localhost:8080/api/v1/status
+
+# 快速调谐到 7050 kHz
+curl -X POST -H "Content-Type: application/json" \
+     -d '{"freq_khz":7050}' http://localhost:8080/api/v1/tune
+
+# 设置继电器
+curl -X POST -H "Content-Type: application/json" \
+     -d '{"sw":1,"ind":30,"cap":27}' http://localhost:8080/api/v1/relay
+```
 
 ## 📚 文档
 
 - **[系统架构设计](docs/System_Architecture_Design.md)**：完整的系统架构设计
+- **[ATR-1000 天调智能学习](docs/ATR1000_Tuner_Auto_Learning.md)**：天调学习与 API 详细文档 ⭐
 - **[PTT/音频稳定性](docs/PTT_Audio_Postmortem_and_Best_Practices.md)**：稳定性分析与最佳实践
 - **[延迟优化指南](docs/latency_optimization_guide.md)**：TX/RX切换延迟优化详解
 - **[移动端界面文档](docs/mobile_modern_interface.md)**：移动端界面设计说明
@@ -174,6 +289,11 @@ sed -e 's/\r$//' input.pem > output.pem
 1. 确认麦克风权限已授权
 2. 检查WebSocket连接状态
 3. 查看浏览器控制台日志
+
+### ATR-1000 设备挂起
+1. 检查是否有多个进程同时连接设备
+2. 确认使用 V2 API Server（通过 Proxy 通信）
+3. 查看动态轮询间隔是否生效
 
 ## 📄 许可证
 

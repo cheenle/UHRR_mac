@@ -1,28 +1,28 @@
 {
   "version": "2.0",
-  "updated": "2026-03-08T01:56:16.698061",
+  "updated": "2026-03-08T08:35:14.997864",
   "records": [
     {
       "freq": 7060000,
       "sw": 1,
       "ind": 30,
       "cap": 27,
-      "swr_avg": 1.1134969325153379,
-      "swr_min": 1.07,
+      "swr_avg": 1.0992857142857173,
+      "swr_min": 1.05,
       "swr_max": 1.49,
-      "sample_count": 163,
-      "last_update": 1772902957.105453
+      "sample_count": 210,
+      "last_update": 1772924860.029827
     },
     {
       "freq": 7050000,
       "sw": 1,
       "ind": 30,
-      "cap": 27,
-      "swr_avg": 1.0777288732394352,
+      "cap": 28,
+      "swr_avg": 1.0771593533487211,
       "swr_min": 1.04,
       "swr_max": 1.5,
-      "sample_count": 568,
-      "last_update": 1772905817.641357
+      "sample_count": 866,
+      "last_update": 1772928247.127171
     },
     {
       "freq": 7070000,
@@ -51,22 +51,22 @@
       "sw": 1,
       "ind": 30,
       "cap": 27,
-      "swr_avg": 1.0918750000000002,
+      "swr_avg": 1.083499999999999,
       "swr_min": 1.04,
       "swr_max": 1.29,
-      "sample_count": 32,
-      "last_update": 1772902065.5002282
+      "sample_count": 40,
+      "last_update": 1772924750.074774
     },
     {
       "freq": 18132500,
       "sw": 0,
       "ind": 90,
       "cap": 3,
-      "swr_avg": 1.0783928571428578,
+      "swr_avg": 1.0808284023668646,
       "swr_min": 1.04,
-      "swr_max": 1.31,
-      "sample_count": 168,
-      "last_update": 1772905706.86319
+      "swr_max": 1.49,
+      "sample_count": 169,
+      "last_update": 1772927757.903744
     },
     {
       "freq": 18142500,
@@ -117,11 +117,11 @@
       "sw": 0,
       "ind": 10,
       "cap": 9,
-      "swr_avg": 1.1955898876404556,
+      "swr_avg": 1.1769784172661921,
       "swr_min": 1.05,
       "swr_max": 1.44,
-      "sample_count": 356,
-      "last_update": 1772905703.80951
+      "sample_count": 417,
+      "last_update": 1772928047.259423
     },
     {
       "freq": 14280000,
@@ -150,11 +150,11 @@
       "sw": 1,
       "ind": 30,
       "cap": 27,
-      "swr_avg": 1.0399999999999996,
+      "swr_avg": 1.0912851405622495,
       "swr_min": 1.04,
-      "swr_max": 1.04,
-      "sample_count": 14,
-      "last_update": 1772903641.991671
+      "swr_max": 1.17,
+      "sample_count": 249,
+      "last_update": 1772930114.997859
     },
     {
       "freq": 7063000,
@@ -183,22 +183,22 @@
       "sw": 1,
       "ind": 30,
       "cap": 27,
-      "swr_avg": 1.0968750000000007,
-      "swr_min": 1.08,
-      "swr_max": 1.1,
-      "sample_count": 16,
-      "last_update": 1772903655.694918
+      "swr_avg": 1.0986075949367087,
+      "swr_min": 1.04,
+      "swr_max": 1.17,
+      "sample_count": 316,
+      "last_update": 1772928590.4064991
     },
     {
       "freq": 14260000,
       "sw": 0,
       "ind": 10,
       "cap": 9,
-      "swr_avg": 1.076666666666667,
+      "swr_avg": 1.0773076923076919,
       "swr_min": 1.04,
-      "swr_max": 1.1,
-      "sample_count": 18,
-      "last_update": 1772903718.483871
+      "swr_max": 1.12,
+      "sample_count": 52,
+      "last_update": 1772927738.0595388
     },
     {
       "freq": 14275000,
@@ -381,33 +381,33 @@
       "sw": 1,
       "ind": 0,
       "cap": 24,
-      "swr_avg": 1.3038271604938265,
+      "swr_avg": 1.3148872180451132,
       "swr_min": 1.26,
       "swr_max": 1.42,
-      "sample_count": 81,
-      "last_update": 1772905716.7005482
+      "sample_count": 133,
+      "last_update": 1772928061.129035
     },
     {
       "freq": 28450000,
       "sw": 0,
       "ind": 30,
       "cap": 7,
-      "swr_avg": 1.1728070175438596,
+      "swr_avg": 1.179915966386555,
       "swr_min": 1.08,
       "swr_max": 1.21,
-      "sample_count": 57,
-      "last_update": 1772905719.432083
+      "sample_count": 119,
+      "last_update": 1772928065.7305012
     },
     {
       "freq": 3850000,
       "sw": 0,
       "ind": 470,
       "cap": 85,
-      "swr_avg": 1.44,
+      "swr_avg": 1.47,
       "swr_min": 1.44,
-      "swr_max": 1.44,
-      "sample_count": 1,
-      "last_update": 1772904578.714405
+      "swr_max": 1.5,
+      "sample_count": 2,
+      "last_update": 1772923822.928426
     },
     {
       "freq": 7100000,

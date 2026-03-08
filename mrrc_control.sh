@@ -24,6 +24,8 @@ ATR1000_LOG="$LOG_DIR/atr1000_proxy.log"
 ATR1000_DEVICE="192.168.1.63"
 ATR1000_PORT="60001"
 ATR1000_INTERVAL="1.0"  # 数据请求间隔（秒）
+ATR1000_API_HOST="0.0.0.0"
+ATR1000_API_PORT="8080"
 
 # Colors for output
 RED='\033[0;31m'
@@ -204,6 +206,48 @@ stop_atr1000() {
     rm -f /tmp/atr1000_proxy.sock
 }
 
+# Function to start ATR-1000 API server
+start_atr1000_api() {
+    if is_running "atr1000_api_server.py"; then
+        print_warning "ATR-1000 API server is already running"
+        return 1
+    fi
+    
+    print_status "Starting ATR-1000 API server..."
+    
+    # API log file
+    local API_LOG="$LOG_DIR/atr1000_api.log"
+    > "$API_LOG"
+    
+    # Start API server
+    python3 "$LOG_DIR/atr1000_api_server.py" \
+        --host "$ATR1000_API_HOST" \
+        --port "$ATR1000_API_PORT" \
+        --atr-host "$ATR1000_DEVICE" \
+        --atr-port "$ATR1000_PORT" \
+        > "$API_LOG" 2>&1 &
+    
+    local pid=$!
+    sleep 2
+    
+    if is_running "atr1000_api_server.py"; then
+        print_success "ATR-1000 API server started successfully (PID: $pid)"
+        echo "ATR-1000 API PID: $pid" > "$LOG_DIR/atr1000_api.pid"
+        print_success "API endpoint: http://$ATR1000_API_HOST:$ATR1000_API_PORT"
+        return 0
+    else
+        print_error "Failed to start ATR-1000 API server"
+        print_error "Check $API_LOG for details"
+        return 1
+    fi
+}
+
+# Function to stop ATR-1000 API server
+stop_atr1000_api() {
+    kill_process "atr1000_api_server.py"
+    rm -f "$LOG_DIR/atr1000_api.pid"
+}
+
 # Function to start ATU server
 start_atu_server() {
     if is_running "ATU_SERVER_WEBSOCKET"; then
@@ -378,6 +422,12 @@ case "$1" in
     stop-atr1000)
         stop_atr1000
         ;;
+    start-atr1000-api)
+        start_atr1000_api
+        ;;
+    stop-atr1000-api)
+        stop_atr1000_api
+        ;;
     start-atu)
         start_atu_server
         ;;
@@ -386,7 +436,7 @@ case "$1" in
         ;;
     *)
         echo "MRRC System Control Script"
-        echo "Usage: $0 {start|stop|restart|status|logs [lines] [service]|start-rigctld|stop-rigctld|start-mrrc|stop-mrrc|start-atr1000|stop-atr1000}"
+        echo "Usage: $0 {start|stop|restart|status|logs [lines] [service]|start-rigctld|stop-rigctld|start-mrrc|stop-mrrc|start-atr1000|stop-atr1000|start-atr1000-api|stop-atr1000-api}"
         echo ""
         echo "Commands:"
         echo "  start           - Start rigctld, MRRC and ATR-1000 proxy services"
@@ -400,6 +450,9 @@ case "$1" in
         echo "  start-mrrc      - Start only MRRC service"
         echo "  stop-mrrc       - Stop only MRRC service"
         echo "  start-atr1000   - Start only ATR-1000 proxy service"
+        echo "  stop-atr1000    - Stop only ATR-1000 proxy service"
+        echo "  start-atr1000-api - Start ATR-1000 REST API server"
+        echo "  stop-atr1000-api  - Stop ATR-1000 REST API server"
         echo "  stop-atr1000    - Stop only ATR-1000 proxy service"
         echo ""
         echo "Examples:"
