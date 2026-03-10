@@ -98,6 +98,7 @@ MRRC 是一款专为移动端优化的业余电台远程控制系统。无论您
 ### 移动端核心功能
 - **触摸优化界面**：大按钮、清晰的频率显示、实时S表
 - **单手操作**：PTT按钮位于拇指舒适区域
+- **专业DSP降噪**：集成WDSP库，提供NR2频谱降噪、噪声抑制、自动陷波等功能
 - **PWA支持**：可添加到主屏幕，支持离线访问
 - **音量控制**：主界面直接调节AF增益
 
@@ -186,6 +187,7 @@ MRRC/
 ├── MRRC                        # 后端主程序 (Tornado WebSocket 服务器)
 ├── MRRC.conf                   # 系统核心配置文件
 ├── audio_interface.py          # PyAudio 采集/播放封装
+├── wdsp_wrapper.py             # WDSP数字信号处理库Python封装 ⭐
 ├── hamlib_wrapper.py           # 与 rigctld 通信的辅助逻辑
 ├── tci_client.py               # TCI 协议客户端实现
 ├── atr1000_proxy.py            # ATR-1000 独立代理程序 ⭐
@@ -216,6 +218,30 @@ MRRC/
 - `[AUDIO] inputdevice/outputdevice`：音频设备
 - `[HAMLIB] rig_pathname/rig_model`：电台串口与型号
 
+### WDSP 降噪配置
+
+```ini
+[WDSP]
+# WDSP 数字信号处理（推荐启用）
+enabled = True
+sample_rate = 48000          # 采样率
+buffer_size = 256            # 缓冲区大小
+nr2_enabled = True           # 频谱降噪（推荐）
+nb_enabled = True            # 噪声抑制
+anf_enabled = False          # 自动陷波
+agc_mode = 3                 # AGC模式 (0=OFF, 1=LONG, 2=SLOW, 3=MED, 4=FAST)
+bandpass_low = 300.0         # 低切频率 (Hz)
+bandpass_high = 2700.0       # 高切频率 (Hz)
+```
+
+**安装WDSP库**（必须先安装才能使用）：
+```bash
+cd /tmp && git clone https://github.com/g0orx/wdsp.git
+cd wdsp && make
+sudo cp libwdsp.dylib /usr/local/lib/  # macOS
+# sudo cp libwdsp.so /usr/local/lib/ && sudo ldconfig  # Linux
+```
+
 ## 📊 性能指标
 
 | 指标 | 数值 |
@@ -224,6 +250,8 @@ MRRC/
 | RX延迟 | ~51ms |
 | TX→RX切换 | <100ms |
 | PTT可靠性 | 99%+ |
+| WDSP处理延迟 | <20ms |
+| WDSP降噪增益 | 15-20dB (NR2) |
 | ATR-1000 功率显示延迟 | <200ms |
 | 空闲轮询间隔 | 15秒 |
 
@@ -265,6 +293,7 @@ curl -X POST -H "Content-Type: application/json" \
 
 ## 📚 文档
 
+- **[DSP降噪文档](DSP.md)**：WDSP数字信号处理详细说明 ⭐
 - **[系统架构设计](docs/System_Architecture_Design.md)**：完整的系统架构设计
 - **[ATR-1000 天调智能学习](docs/ATR1000_Tuner_Auto_Learning.md)**：天调学习与 API 详细文档 ⭐
 - **[PTT/音频稳定性](docs/PTT_Audio_Postmortem_and_Best_Practices.md)**：稳定性分析与最佳实践

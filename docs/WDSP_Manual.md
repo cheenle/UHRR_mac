@@ -1,5 +1,8 @@
 # WDSP 数字信号处理详解
 
+**版本**: V4.7.0 (2026-03-10)  
+**更新**: 库路径优化，日志清理
+
 ## 概述
 
 WDSP (Warren Pratt's Digital Signal Processing) 是 OpenHPSDR 项目的高性能 DSP 库，被广泛应用于 Thetis、piHPSDR 等专业业余无线电软件。MRRC 集成了 WDSP，提供专业级的音频降噪和处理能力。
@@ -286,3 +289,13 @@ agc_mode = 0  # OFF
 - WDSP 官方仓库：https://github.com/g0orx/wdsp
 - OpenHPSDR 项目
 - piHPSDR 文档
+
+---
+
+## 版本历史
+
+| 版本 | 日期 | 变更 |
+|------|------|------|
+| V4.7.0 | 2026-03-10 | 添加项目目录库路径支持；清理调试日志；AGC参数优化 |
+| V4.6.1 | 2026-03-10 | 修复初始化BUG，优化PanelGain和NR2参数 |
+| V4.6.0 | 2026-03-09 | 初始WDSP集成 |

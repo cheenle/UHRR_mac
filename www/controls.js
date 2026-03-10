@@ -214,6 +214,12 @@ function AudioRX_start(){
 	// 统一的 Int16 解码函数（带音质优化）
 	function decodeInt16Audio(data) {
 		try {
+			// 检查数据长度是否为 2 的倍数（Int16 需要）
+			if (data.byteLength % 2 !== 0) {
+				// 奇数字节，截断到最近的偶数长度
+				console.warn('音频数据长度异常:', data.byteLength, '字节，截断到', data.byteLength - 1);
+				data = data.slice(0, data.byteLength - 1);
+			}
 			const int16Data = new Int16Array(data);
 			const float32Data = new Float32Array(int16Data.length);
 			const scale = 1.0 / 32767.0;
@@ -754,6 +760,88 @@ function wsControlTRXcrtol( msg ){
 	else if(words[0] == "getPTT"){updatePTTStatus(words[1] === "true");}
 	else if(words[0] == "panfft"){document.getElementById("div-panfft").style.display = "block";}
 	else if(words[0] == "cq"){if(words[1] === "complete"){onCQComplete();}}
+	// WDSP 状态响应 (支持多端同步)
+	else if(words[0] == "wdspStatus" || words[0] == "getWDSPStatus"){
+        console.log('🔧 收到 WDSP 状态消息:', words[1] ? words[1].substring(0, 100) + '...' : 'empty');
+        if(typeof handleWDSPStatus === 'function') {
+            console.log('🔧 调用 handleWDSPStatus');
+            handleWDSPStatus(words[1]);
+        } else {
+            console.warn('⚠️ handleWDSPStatus 函数未定义');
+        }
+    }
+    else if(words[0] == "setWDSPEnabled"){
+        console.log('🔧 WDSP 状态:', words[1]);
+        // 更新 UI
+        if(typeof window.updateWDSPEnabledUI === 'function') {
+            window.updateWDSPEnabledUI(words[1] === 'enabled' || words[1] === 'true');
+        }
+        // 请求最新状态以同步 UI
+        if(wsControlTRX && wsControlTRX.readyState === WebSocket.OPEN) {
+            wsControlTRX.send("getWDSPStatus:");
+        }
+    }
+    else if(words[0] == "setWDSPNR2Level"){
+        console.log('🔧 WDSP NR2 Level 广播:', words[1]);
+        if(typeof window.updateNR2LevelUI === 'function') {
+            console.log('🔧 调用 window.updateNR2LevelUI');
+            window.updateNR2LevelUI(parseInt(words[1]));
+        } else {
+            console.warn('⚠️ window.updateNR2LevelUI 函数未定义');
+        }
+    }
+    else if(words[0] == "setWDSPNR2GainMethod"){
+        console.log('🔧 WDSP NR2 GainMethod:', words[1]);
+    }
+    else if(words[0] == "setWDSPNR2NpeMethod"){
+        console.log('🔧 WDSP NR2 NpeMethod:', words[1]);
+    }
+    else if(words[0] == "setWDSPNR2AeRun"){
+        console.log('🔧 WDSP NR2 AeRun:', words[1]);
+    }
+    else if(words[0] == "setWDSPNB"){
+        console.log('🔧 WDSP NB 广播:', words[1]);
+        if(typeof window.updateNBUI === 'function') {
+            console.log('🔧 调用 window.updateNBUI');
+            window.updateNBUI(words[1] === 'true');
+        } else {
+            console.warn('⚠️ window.updateNBUI 函数未定义');
+        }
+    }
+    else if(words[0] == "setWDSPANF"){
+        console.log('🔧 WDSP ANF:', words[1]);
+        if(typeof window.updateANFUI === 'function') {
+            window.updateANFUI(words[1] === 'true');
+        }
+    }
+    else if(words[0] == "setWDSPAGCMode" || words[0] == "setWDSPAGC"){
+        // console.log('🔧 WDSP AGC:', words[1]);
+        if(typeof window.updateAGCUI === 'function') {
+            window.updateAGCUI(parseInt(words[1]));
+        }
+    }
+    else if(words[0] == "setWDSPBandpass"){
+        console.log('🔧 WDSP Bandpass:', words[1]);
+        if(typeof window.updateBandpassUI === 'function') {
+            const parts = words[1].split(',');
+            if(parts.length === 2) {
+                window.updateBandpassUI(parseFloat(parts[0]), parseFloat(parts[1]));
+            }
+        }
+    }
+    // 录音状态消息处理
+    else if(words[0] == "recordingStatus"){
+        console.log('🔴 录音状态:', words[1]);
+        if(typeof window.handleRecordingStatus === 'function') {
+            window.handleRecordingStatus(words[1]);
+        }
+    }
+    else if(words[0] == "recordingSaved"){
+        console.log('✅ 录音已保存:', words[1]);
+        if(typeof window.handleRecordingSaved === 'function') {
+            window.handleRecordingSaved(words[1]);
+        }
+    }
 }
 
 function ControlTRX_stop()
@@ -780,6 +868,8 @@ function wsControlTRXopen(){
 	// 连接建立后立即查询PTT状态
 	wsControlTRX.send("getPTT:");
 	updatePTTStatus(false);
+	// 查询 WDSP 状态以同步当前设置
+	wsControlTRX.send("getWDSPStatus:");
 	
 	// 启动定期PTT状态检查（每5秒一次，确保状态准确性）
 	if (window.pttStatusCheckInterval) {
@@ -2048,7 +2138,16 @@ MediaHandler.prototype.callback = function( stream )
     AudioTX_eqMid.connect(AudioTX_eqHigh);
     AudioTX_eqHigh.connect(this.gain_node);
 	this.gain_node.connect( this.processor );
-    this.processor.connect( this.context.destination );
+    
+    // 关键：ScriptProcessorNode 需要连接到输出才能触发 onaudioprocess
+    // 但直接连接 destination 会导致回声自激
+    // 解决方案：连接到静音节点（gain=0），再连接到 destination
+    // 这样处理器能工作，但不会有声音输出到扬声器
+    this.muteNode = this.context.createGain();
+    this.muteNode.gain.value = 0;  // 静音
+    this.processor.connect(this.muteNode);
+    this.muteNode.connect(this.context.destination);
+    
 	this.gain_node.connect( AudioTX_analyser );
     
     // 从Cookie恢复EQ预设

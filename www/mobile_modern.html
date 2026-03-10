@@ -204,6 +204,11 @@
         <!-- PTT Section - 底部PTT/TUNE按钮区域 -->
         <footer class="ptt-section">
             <div class="ptt-container">
+                <!-- 录音 按钮 -->
+                <button id="record-btn" class="record-button-footer" aria-label="Record">
+                    <span class="record-icon">●</span>
+                    <span class="record-label">录音</span>
+                </button>
                 <!-- TUNE 按钮 -->
                 <button id="tune-btn" class="tune-button-footer" aria-label="Tune">
                     <span class="tune-label">TUNE</span>
@@ -231,6 +236,7 @@
                 <li><a href="#" class="menu-item" data-action="audio">Audio Controls</a></li>
                 <li><a href="#" class="menu-item" data-action="txeq">TX Equalizer</a></li>
                 <li><a href="#" class="menu-item" data-action="digital">Digital Modes</a></li>
+                <li><a href="recordings.html" class="menu-item">录音列表</a></li>
                 <li><a href="#" class="menu-item" data-action="logbook">Logbook</a></li>
                 <li><a href="#" class="menu-item" data-action="about">About</a></li>
             </ul>
@@ -249,7 +255,7 @@
     <!-- 核心脚本加载顺序重要 -->
     <script src="ui_utils.js"></script>
     <script src="controls.js"></script>
+    <script src="mobile_modern.js?v=4.7.1"></script>
     <script src="tx_button_optimized.js"></script>
-    <script src="mobile_modern.js?v=4.4.24"></script>
 </body>
 </html>

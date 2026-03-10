@@ -119,6 +119,7 @@ const domElements = {
     mainMenu: null,
     pttButton: null,
     tuneButton: null,
+    recordButton: null,
     powerButton: null,
     freqDisplay: null,
     freqInput: null,
@@ -366,6 +367,7 @@ function initializeElements() {
     domElements.mainMenu = document.getElementById('main-menu');
     domElements.pttButton = document.getElementById('ptt-btn');
     domElements.tuneButton = document.getElementById('tune-btn');
+    domElements.recordButton = document.getElementById('record-btn');
     domElements.powerButton = document.getElementById('power-btn');
     domElements.freqDisplay = document.getElementById('freq-main-display');
     domElements.freqInput = document.getElementById('freq-input');
@@ -605,6 +607,21 @@ function setupEventListeners() {
         });
         
         console.log('🎵 底部 TUNE 按钮已初始化');
+    }
+    
+    // 录音按钮
+    if (domElements.recordButton) {
+        domElements.recordButton.addEventListener('click', function(e) {
+            e.preventDefault();
+            toggleRecording();
+        });
+        
+        domElements.recordButton.addEventListener('touchend', function(e) {
+            e.preventDefault();
+            toggleRecording();
+        }, { passive: false });
+        
+        console.log('🔴 录音按钮已初始化');
     }
     
     // 频率显示点击切换到输入模式
@@ -3193,4 +3210,136 @@ window.updateBandpassUI = function(low, high) {
     // 如果有带通 UI 需要更新，在这里处理
     console.log('🔧 Bandpass UI 同步:', low, '-', high);
 };
+
+////////////////////////////////////////////////////////////
+// 录音控制功能
+////////////////////////////////////////////////////////////
+
+let isAudioRecording = false;
+
+/**
+ * 切换录音状态
+ */
+function toggleRecording() {
+    if (!isAudioRecording) {
+        // 开始录音
+        startRecording();
+    } else {
+        // 停止录音
+        stopRecording();
+    }
+}
+
+/**
+ * 开始录音
+ */
+function startRecording() {
+    if (typeof wsControlTRX === 'undefined' || !wsControlTRX || wsControlTRX.readyState !== WebSocket.OPEN) {
+        console.error('❌ WebSocket未连接，无法开始录音');
+        showRecordingStatus('连接失败，无法录音', 'error');
+        return;
+    }
+    
+    // 立即更新UI状态
+    updateRecordingUI(true);
+    wsControlTRX.send('startRecording:');
+    console.log('🔴 开始录音请求已发送');
+}
+
+/**
+ * 停止录音
+ */
+function stopRecording() {
+    if (typeof wsControlTRX === 'undefined' || !wsControlTRX || wsControlTRX.readyState !== WebSocket.OPEN) {
+        console.error('❌ WebSocket未连接，无法停止录音');
+        return;
+    }
+    
+    // 立即更新UI状态
+    updateRecordingUI(false);
+    wsControlTRX.send('stopRecording:');
+    console.log('⏹️ 停止录音请求已发送');
+}
+
+/**
+ * 更新录音按钮UI状态
+ */
+function updateRecordingUI(recording) {
+    isAudioRecording = recording;
+    const btn = domElements.recordButton;
+    if (!btn) return;
+    
+    if (recording) {
+        btn.classList.add('recording');
+        btn.querySelector('.record-label').textContent = '停止';
+        console.log('🔴 录音状态：正在录音');
+    } else {
+        btn.classList.remove('recording');
+        btn.querySelector('.record-label').textContent = '录音';
+        console.log('⏹️ 录音状态：已停止');
+    }
+}
+
+/**
+ * 显示录音状态消息
+ */
+function showRecordingStatus(message, type = 'info') {
+    // 可以在这里添加Toast通知或状态显示
+    console.log(`📢 录音状态 [${type}]: ${message}`);
+    
+    // 简单的视觉反馈
+    const btn = domElements.recordButton;
+    if (btn) {
+        const originalText = btn.querySelector('.record-label').textContent;
+        btn.querySelector('.record-label').textContent = message;
+        setTimeout(() => {
+            btn.querySelector('.record-label').textContent = isAudioRecording ? '停止' : '录音';
+        }, 2000);
+    }
+}
+
+/**
+ * 处理录音状态消息
+ */
+function handleRecordingStatus(status) {
+    console.log('📢 录音状态:', status);
+    
+    // 处理简单字符串状态
+    if (status === 'started' || status === 'started:true') {
+        updateRecordingUI(true);
+    } else if (status === 'stopped' || status === 'stopped:true') {
+        updateRecordingUI(false);
+    } else {
+        // 尝试解析JSON
+        try {
+            const data = JSON.parse(status);
+            if (typeof data.recording !== 'undefined') {
+                updateRecordingUI(data.recording);
+            } else if (data.status === 'started') {
+                updateRecordingUI(true);
+            } else if (data.status === 'stopped') {
+                updateRecordingUI(false);
+            }
+            console.log('📊 录音状态解析:', data);
+        } catch (e) {
+            // 不是JSON格式，忽略
+        }
+    }
+}
+
+/**
+ * 处理录音保存完成
+ */
+function handleRecordingSaved(filename) {
+    console.log('✅ 录音已保存:', filename);
+    showRecordingStatus('已保存!', 'success');
+    updateRecordingUI(false);
+}
+
+// 导出录音控制函数
+window.toggleRecording = toggleRecording;
+window.startRecording = startRecording;
+window.stopRecording = stopRecording;
+window.handleRecordingStatus = handleRecordingStatus;
+window.handleRecordingSaved = handleRecordingSaved;
 

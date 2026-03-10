@@ -121,6 +121,17 @@ async function TXControl(action) {
                     console.log(`[${timestamp}] 📻 发送 ATR-1000 sync 失败:`, e);
                 }
             }
+
+            // V4.7.0: 调用 ATR-1000 onTXStart，与 TUNE 保持一致
+            // 这会设置 _txActive=true 并发送 start 命令到代理
+            if (typeof window.ATR1000 !== 'undefined' && window.ATR1000.onTXStart) {
+                try {
+                    window.ATR1000.onTXStart();
+                    console.log(`[${timestamp}] 📻 ATR-1000 onTXStart 已调用`);
+                } catch (e) {
+                    console.log(`[${timestamp}] 📻 ATR-1000 onTXStart 失败:`, e);
+                }
+            }
             
             console.log(`[${timestamp}] ✅ TX开始成功`);
             return true;

@@ -71,6 +71,7 @@ def _load_wdsp_library():
         "/opt/local/lib",      # macOS Homebrew x86-64
         "/usr/lib",
         "/tmp/wdsp",  # Build directory
+        os.path.join(os.path.dirname(os.path.abspath(__file__)), "DSP", "wdsp"),  # 项目目录
         ".",
     ]
     
@@ -189,9 +190,9 @@ class WDSPProcessor:
             # Set RX mode
             _wdsp.SetRXAMode(ctypes.c_int(self.channel), ctypes.c_int(self.mode))
             
-            # 设置面板增益为 0.2，获得约1.3x的总增益
-            # 测试显示：PanelGain=0.2时，实际增益约0.26x（WDSP内部有约1.3x的衰减）
-            _wdsp.SetRXAPanelGain1(ctypes.c_int(self.channel), ctypes.c_double(0.2))
+            # 设置面板增益为 0.1，减少爆破音和削波失真
+            # 测试显示：PanelGain=0.1时，实际增益约0.13x，更保守稳定
+            _wdsp.SetRXAPanelGain1(ctypes.c_int(self.channel), ctypes.c_double(0.1))
             
             # 注意：暂时禁用带通滤波器，因为测试显示它会导致信号被错误衰减
             # 后续需要进一步调试带通滤波器参数
@@ -398,38 +399,38 @@ class WDSPProcessor:
                 _wdsp.SetRXAAGCDecay(ctypes.c_int(self.channel), ctypes.c_int(0))
                 _wdsp.SetRXAAGCHang(ctypes.c_int(self.channel), ctypes.c_int(0))
                 # 设置 AGC 目标增益为 0dB（无增益）
-                _wdsp.SetRXAAGCTarget(ctypes.c_int(self.channel), ctypes.c_float(0.0))
+                # _wdsp.SetRXAAGCTarget(ctypes.c_int(self.channel), ctypes.c_float(0.0))
                 # 关键：强制设置固定增益为 1.0（无增益），从源头防止削波
                 _wdsp.SetRXAAGCFixed(ctypes.c_int(self.channel), ctypes.c_double(1.0))
-                print(f"🔧 WDSP AGC: OFF (固定增益=1.0, 无放大)")
+                # print(f"🔧 WDSP AGC: OFF (固定增益=1.0, 无放大)")
             elif mode == WDSPAGCMode.MED:
                 _wdsp.SetRXAAGCAttack(ctypes.c_int(self.channel), ctypes.c_int(4))
                 _wdsp.SetRXAAGCDecay(ctypes.c_int(self.channel), ctypes.c_int(250))
                 _wdsp.SetRXAAGCHang(ctypes.c_int(self.channel), ctypes.c_int(250))
-                _wdsp.SetRXAAGCTarget(ctypes.c_int(self.channel), ctypes.c_float(-3.0))  # 默认目标 -3dB
-                print(f"🔧 WDSP AGC: MED")
+                # _wdsp.SetRXAAGCTarget(ctypes.c_int(self.channel), ctypes.c_float(-3.0))  # 默认目标 -3dB
+                # print(f"🔧 WDSP AGC: MED")
             elif mode == WDSPAGCMode.FAST:
                 _wdsp.SetRXAAGCAttack(ctypes.c_int(self.channel), ctypes.c_int(2))
                 _wdsp.SetRXAAGCDecay(ctypes.c_int(self.channel), ctypes.c_int(100))
                 _wdsp.SetRXAAGCHang(ctypes.c_int(self.channel), ctypes.c_int(100))
-                _wdsp.SetRXAAGCTarget(ctypes.c_int(self.channel), ctypes.c_float(-3.0))
-                print(f"🔧 WDSP AGC: FAST")
+                # _wdsp.SetRXAAGCTarget(ctypes.c_int(self.channel), ctypes.c_float(-3.0))
+                # print(f"🔧 WDSP AGC: FAST")
             elif mode == WDSPAGCMode.SLOW:
                 _wdsp.SetRXAAGCAttack(ctypes.c_int(self.channel), ctypes.c_int(4))
                 _wdsp.SetRXAAGCDecay(ctypes.c_int(self.channel), ctypes.c_int(500))
                 _wdsp.SetRXAAGCHang(ctypes.c_int(self.channel), ctypes.c_int(500))
-                _wdsp.SetRXAAGCTarget(ctypes.c_int(self.channel), ctypes.c_float(-3.0))
-                print(f"🔧 WDSP AGC: SLOW")
+                # _wdsp.SetRXAAGCTarget(ctypes.c_int(self.channel), ctypes.c_float(-3.0))
+                # print(f"🔧 WDSP AGC: SLOW")
             elif mode == WDSPAGCMode.LONG:
                 _wdsp.SetRXAAGCAttack(ctypes.c_int(self.channel), ctypes.c_int(6))
                 _wdsp.SetRXAAGCDecay(ctypes.c_int(self.channel), ctypes.c_int(1000))
                 _wdsp.SetRXAAGCHang(ctypes.c_int(self.channel), ctypes.c_int(1000))
-                _wdsp.SetRXAAGCTarget(ctypes.c_int(self.channel), ctypes.c_float(-3.0))
-                print(f"🔧 WDSP AGC: LONG")
+                # _wdsp.SetRXAAGCTarget(ctypes.c_int(self.channel), ctypes.c_float(-3.0))
+                # print(f"🔧 WDSP AGC: LONG")
             
-            # 关键：每次 AGC 模式切换后，重新设置 PanelGain1 = 0.2
-            # 保持与初始化时一致
-            _wdsp.SetRXAPanelGain1(ctypes.c_int(self.channel), ctypes.c_double(0.2))
+            # 关键：每次 AGC 模式切换后，重新设置 PanelGain1 = 0.1
+            # 保持与初始化时一致（保守增益，减少爆破音）
+            _wdsp.SetRXAPanelGain1(ctypes.c_int(self.channel), ctypes.c_double(0.1))
                 
         except Exception as e:
             print(f"⚠️ AGC setup error: {e}")

@@ -1560,6 +1560,55 @@ body {
     font-size: 12px;
 }
 
+/* 底部录音按钮 */
+.record-button-footer {
+    flex: 0.5;
+    height: 47px;
+    border: none;
+    border-radius: 12px;
+    background: linear-gradient(180deg, #5a3a3a, #4a2a2a);
+    color: #aaa;
+    font-size: 11px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    min-width: 50px;
+}
+
+.record-button-footer.recording {
+    background: linear-gradient(180deg, #c62828, #8b1a1a);
+    color: white;
+    animation: pulse-record 1.5s infinite;
+}
+
+@keyframes pulse-record {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.6; }
+}
+
+.record-button-footer:active {
+    transform: scale(0.95);
+}
+
+.record-icon {
+    font-size: 14px;
+    margin-bottom: 1px;
+    color: inherit;
+}
+
+.record-button-footer.recording .record-icon {
+    color: #ff4444;
+}
+
+.record-label {
+    font-size: 10px;
+}
+
 /* 更新 PTT 区域布局 */
 .ptt-container {
     display: flex;

@@ -22,6 +22,9 @@ import threading
 import time
 import gc
 import numpy as np
+import wave
+import os
+from datetime import datetime
 from opus.decoder import Decoder as OpusDecoder
 from opus.encoder import Encoder as OpusEncoder
 
@@ -121,6 +124,14 @@ class PyAudioCapture(threading.Thread):
     # 帧序号（用于FEC丢包检测）
     _frame_sequence = 0
     _sequence_lock = threading.Lock()
+    
+    # 录音功能设置
+    recording_enabled = False  # 是否启用录音
+    recording_buffer = []  # 录音数据缓冲区
+    recording_lock = threading.Lock()  # 录音缓冲区锁
+    recording_start_time = None  # 录音开始时间
+    recording_freq = 0  # 录音时的频率
+    recording_dir = "recordings"  # 录音文件保存目录
     
     def __init__(self, config):
         threading.Thread.__init__(self)
@@ -322,13 +333,21 @@ class PyAudioCapture(threading.Thread):
                     
                     int16_data = (float32_data * 32767).astype(np.int16)
                     
+                    # ========== 录音功能：保存原始音频数据（48kHz，未经WDSP处理）==========
+                    if PyAudioCapture.recording_enabled:
+                        with PyAudioCapture.recording_lock:
+                            # 将48kHz数据降采样到16kHz（与输出一致）
+                            # 简单降采样：每3个取1个（48000/3 = 16000）
+                            downsampled = int16_data[::3]
+                            PyAudioCapture.recording_buffer.append(downsampled)
+                    
                     # ========== WDSP 数字信号处理 ==========
                     # 在 Int16 转换后、Opus编码前进行 WDSP 处理
 
-                    # 调试：定期打印 WDSP 状态
-                    if frame_count % 100 == 0:
-                        cfg = PyAudioCapture.wdsp_config
-                        print(f"🔍 WDSP: enabled={PyAudioCapture.wdsp_enabled}, processor={'存在' if self.wdsp_processor else 'None'}, NR2={cfg.get('nr2_enabled', False)}(L{cfg.get('nr2_level', 0)}), AGC={cfg.get('agc_mode', 0)}")
+                    # 调试：定期打印 WDSP 状态（已禁用）
+                    # if frame_count % 100 == 0:
+                    #     cfg = PyAudioCapture.wdsp_config
+                    #     print(f"🔍 WDSP: enabled={PyAudioCapture.wdsp_enabled}, processor={'存在' if self.wdsp_processor else 'None'}, NR2={cfg.get('nr2_enabled', False)}(L{cfg.get('nr2_level', 0)}), AGC={cfg.get('agc_mode', 0)}")
 
                     # 如果 WDSP 被禁用但处理器还存在，清理它
                     if not PyAudioCapture.wdsp_enabled and self.wdsp_processor is not None:
@@ -392,7 +411,7 @@ class PyAudioCapture(threading.Thread):
                                     
                                     # 只有状态真正变化时才更新
                                     if current_enabled != target_enabled or current_level != target_level:
-                                        print(f"🔄 NR2 更新: 当前={current_level}({'开' if current_enabled else '关'}), 目标={target_level}({'开' if target_enabled else '关'})")
+                                        # print(f"🔄 NR2 更新: 当前={current_level}({'开' if current_enabled else '关'}), 目标={target_level}({'开' if target_enabled else '关'})")
                                         if target_enabled and target_level > 0:
                                             self.wdsp_processor.set_nr2_level(target_level)
                                         else:
@@ -473,11 +492,12 @@ class PyAudioCapture(threading.Thread):
                             if processed_frames:
                                 int16_data = np.concatenate(processed_frames)
                                 # 调试：显示WDSP处理效果（输入vs输出能量对比）
-                                if frame_count % 100 == 0:
-                                    in_energy = np.sum(np.abs(frame.astype(np.float64)))
-                                    out_energy = np.sum(np.abs(int16_data.astype(np.float64)))
-                                    ratio = out_energy / in_energy if in_energy > 0 else 0
-                                    print(f"🔍 WDSP 能量: 输入={in_energy:.0f}, 输出={out_energy:.0f}, 比例={ratio:.2f}")
+                                # 调试：打印能量统计（已禁用）
+                                # if frame_count % 100 == 0:
+                                #     in_energy = np.sum(np.abs(frame.astype(np.float64)))
+                                #     out_energy = np.sum(np.abs(int16_data.astype(np.float64)))
+                                #     ratio = out_energy / in_energy if in_energy > 0 else 0
+                                #     print(f"🔍 WDSP 能量: 输入={in_energy:.0f}, 输出={out_energy:.0f}, 比例={ratio:.2f}")
                             else:
                                 # 没有处理帧（缓冲区未满），使用原始数据
                                 # 这样可以避免 WDSP 启动时的音频丢失
@@ -667,6 +687,104 @@ class PyAudioCapture(threading.Thread):
             self.stream.stop_stream()
         self.stream.close()
         self.p.terminate()
+    
+    # ========== 录音功能静态方法 ==========
+    
+    @staticmethod
+    def start_recording(freq=0):
+        """
+        开始录音
+        
+        Args:
+            freq: 当前频率（Hz），用于文件名
+        
+        Returns:
+            bool: 是否成功开始录音
+        """
+        try:
+            # 确保录音目录存在
+            if not os.path.exists(PyAudioCapture.recording_dir):
+                os.makedirs(PyAudioCapture.recording_dir)
+            
+            with PyAudioCapture.recording_lock:
+                PyAudioCapture.recording_buffer = []
+                PyAudioCapture.recording_start_time = datetime.now()
+                PyAudioCapture.recording_freq = freq
+                PyAudioCapture.recording_enabled = True
+            
+            freq_khz = freq / 1000 if freq > 0 else 0
+            print(f"🔴 开始录音: 频率 {freq_khz:.1f}kHz")
+            return True
+            
+        except Exception as e:
+            print(f"❌ 开始录音失败: {e}")
+            return False
+    
+    @staticmethod
+    def stop_recording():
+        """
+        停止录音并保存文件
+        
+        Returns:
+            str: 保存的文件路径，如果失败返回None
+        """
+        try:
+            with PyAudioCapture.recording_lock:
+                PyAudioCapture.recording_enabled = False
+                
+                if not PyAudioCapture.recording_buffer:
+                    print("⚠️ 录音缓冲区为空")
+                    return None
+                
+                # 合并所有音频数据
+                audio_data = np.concatenate(PyAudioCapture.recording_buffer)
+                PyAudioCapture.recording_buffer = []
+                
+                # 生成文件名: 频率(kHz)_日期_时间.wav
+                freq_khz = int(PyAudioCapture.recording_freq / 1000) if PyAudioCapture.recording_freq > 0 else 0
+                now = datetime.now()
+                date_str = now.strftime('%Y%m%d')
+                time_str = now.strftime('%H%M%S')
+                filename = f"{freq_khz:05d}kHz_{date_str}_{time_str}.wav"
+                filepath = os.path.join(PyAudioCapture.recording_dir, filename)
+                
+                # 保存为 WAV 文件 (16kHz, 16bit, mono)
+                with wave.open(filepath, 'wb') as wf:
+                    wf.setnchannels(1)
+                    wf.setsampwidth(2)  # 16-bit
+                    wf.setframerate(16000)  # 16kHz
+                    wf.writeframes(audio_data.tobytes())
+                
+                duration = len(audio_data) / 16000
+                print(f"✅ 录音已保存: {filename} ({duration:.1f}秒, {os.path.getsize(filepath)} bytes)")
+                return filepath
+                
+        except Exception as e:
+            print(f"❌ 停止录音失败: {e}")
+            import traceback
+            traceback.print_exc()
+            return None
+    
+    @staticmethod
+    def get_recording_status():
+        """
+        获取录音状态
+        
+        Returns:
+            dict: 包含录音状态、频率、开始时间等信息
+        """
+        with PyAudioCapture.recording_lock:
+            duration = 0
+            if PyAudioCapture.recording_enabled and PyAudioCapture.recording_start_time:
+                duration = (datetime.now() - PyAudioCapture.recording_start_time).total_seconds()
+            
+            return {
+                'recording': PyAudioCapture.recording_enabled,
+                'freq': PyAudioCapture.recording_freq,
+                'start_time': PyAudioCapture.recording_start_time.isoformat() if PyAudioCapture.recording_start_time else None,
+                'duration': duration,
+                'buffer_size': sum(len(buf) for buf in PyAudioCapture.recording_buffer) if PyAudioCapture.recording_buffer else 0
+            }
 
 class PyAudioPlayback:
     """PyAudio-based replacement for ALSA playback"""
@@ -762,3 +880,80 @@ class PyAudioPlayback:
             self.stream.stop_stream()
         self.stream.close()
         self.p.terminate()
+
+
+# ========== 录音控制函数 ==========
+
+def start_recording(freq=0):
+    """
+    开始录音
+    
+    Args:
+        freq: 当前频率（Hz），用于文件名
+    
+    Returns:
+        bool: 是否成功开始录音
+    """
+    return PyAudioCapture.start_recording(freq)
+
+def stop_recording():
+    """
+    停止录音并保存文件
+    
+    Returns:
+        str: 保存的文件路径，如果失败返回None
+    """
+    return PyAudioCapture.stop_recording()
+
+def get_recording_status():
+    """
+    获取录音状态
+    
+    Returns:
+        dict: 包含录音状态、频率、开始时间等信息
+    """
+    return PyAudioCapture.get_recording_status()
+
+def get_recordings_list():
+    """
+    获取录音文件列表
+    
+    Returns:
+        list: 录音文件信息列表，按日期排序
+    """
+    recording_dir = PyAudioCapture.recording_dir
+    
+    if not os.path.exists(recording_dir):
+        return []
+    
+    recordings = []
+    try:
+        for filename in os.listdir(recording_dir):
+            if filename.endswith('.wav'):
+                filepath = os.path.join(recording_dir, filename)
+                stat = os.stat(filepath)
+                
+                # 解析文件名获取频率和时间
+                # 格式: 频率(kHz)_日期_时间.wav
+                parts = filename.replace('.wav', '').split('_')
+                freq_str = parts[0] if len(parts) > 0 else "Unknown"
+                date_str = parts[1] if len(parts) > 1 else ""
+                time_str = parts[2] if len(parts) > 2 else ""
+                
+                recordings.append({
+                    'filename': filename,
+                    'filepath': filepath,
+                    'freq': freq_str,
+                    'date': date_str,
+                    'time': time_str,
+                    'size': stat.st_size,
+                    'created': stat.st_mtime
+                })
+        
+        # 按创建时间倒序排列
+        recordings.sort(key=lambda x: x['created'], reverse=True)
+        return recordings
+        
+    except Exception as e:
+        print(f"❌ 获取录音列表失败: {e}")
+        return []

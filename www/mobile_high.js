@@ -14,10 +14,10 @@ const HQ_MODE = {
     rxSampleRate: 16000,    // RX 使用 16kHz PCM（兼容性好）
     useOpus: false,         // 不使用 Opus 编码
     
-    // 16kHz RX 缓冲区参数
-    minBufferFrames: 2,
-    maxBufferFrames: 20,
-    targetBufferFrames: 5,
+    // 16kHz RX 缓冲区参数 - 增大缓冲避免咔咔声
+    minBufferFrames: 4,     // 最小缓冲帧数（增大避免欠载）
+    maxBufferFrames: 30,    // 最大缓冲帧数
+    targetBufferFrames: 8,  // 目标缓冲帧数
     
     // TX 参数
     txFrameSize: 960,       // 48kHz * 20ms = 960 samples
@@ -33,22 +33,25 @@ if (typeof AudioRX_sampleRate !== 'undefined') {
 }
 
 ////////////////////////////////////////////////////////////
-// Wake Lock - 防止屏幕休眠
+// Wake Lock - 防止屏幕休眠 (避免与 mobile_modern.js 冲突)
 ////////////////////////////////////////////////////////////
-let wakeLock = null;
-let wakeLockSupported = null;
+// 使用 window 全局变量避免重复声明
+if (typeof window.wakeLockHQ === 'undefined') {
+    window.wakeLockHQ = null;
+    window.wakeLockSupportedHQ = null;
+}
 
 async function requestWakeLock() {
-    if (wakeLock) return;
-    if (wakeLockSupported === null) {
-        wakeLockSupported = 'wakeLock' in navigator;
+    if (window.wakeLockHQ) return;
+    if (window.wakeLockSupportedHQ === null) {
+        window.wakeLockSupportedHQ = 'wakeLock' in navigator;
     }
-    if (!wakeLockSupported) return;
+    if (!window.wakeLockSupportedHQ) return;
     
     try {
-        wakeLock = await navigator.wakeLock.request('screen');
+        window.wakeLockHQ = await navigator.wakeLock.request('screen');
         console.log('🔒 Wake Lock 已启用 (HQ Mode)');
-        wakeLock.addEventListener('release', () => { wakeLock = null; });
+        window.wakeLockHQ.addEventListener('release', () => { window.wakeLockHQ = null; });
     } catch (err) {
         if (err.name !== 'NotAllowedError') {
             console.log('⚠️ Wake Lock 请求失败:', err.name);
@@ -57,12 +60,12 @@ async function requestWakeLock() {
 }
 
 async function releaseWakeLock() {
-    if (wakeLock) {
+    if (window.wakeLockHQ) {
         try {
-            await wakeLock.release();
-            wakeLock = null;
+            await window.wakeLockHQ.release();
+            window.wakeLockHQ = null;
         } catch (err) {
-            wakeLock = null;
+            window.wakeLockHQ = null;
         }
     }
 }
@@ -347,9 +350,16 @@ HQ_MediaHandlerClass.prototype.callback = function(stream) {
     };
     
     lastNode.connect(this.scriptProcessor);
-    this.scriptProcessor.connect(this.context.destination);
     
-    console.log('✅ HQ_MediaHandler: 音频链已建立 (48kHz)');
+    // 关键：ScriptProcessorNode 需要连接到输出才能触发 onaudioprocess
+    // 但直接连接 destination 会导致回声自激
+    // 解决方案：连接到静音节点（gain=0），再连接到 destination
+    this.muteNode = this.context.createGain();
+    this.muteNode.gain.value = 0;  // 静音
+    this.scriptProcessor.connect(this.muteNode);
+    this.muteNode.connect(this.context.destination);
+    
+    console.log('✅ HQ_MediaHandler: 音频链已建立 (48kHz, 静音输出避免回声)');
 };
 
 HQ_MediaHandlerClass.prototype.error = function(err) {

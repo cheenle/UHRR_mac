@@ -123,33 +123,413 @@ start_rigctld() {
 }
 
 # Function to start MRRC
+
 start_mrrc() {
+
     if is_running "MRRC"; then
+
         print_warning "MRRC is already running"
+
         return 1
+
     fi
+
     
+
     print_status "Starting MRRC server..."
+
     
+
     # Clear log files
+
     > "$MRRC_LOG"
+
     
+
     # Start MRRC server
+
     python3 "$LOG_DIR/MRRC" > "$MRRC_LOG" 2>&1 &
-    
+
     local pid=$!
-    sleep 3
+
     
+
+    sleep 3
+
+    
+
     if is_running "MRRC"; then
+
         print_success "MRRC started successfully (PID: $pid)"
+
         echo "MRRC PID: $pid" > "$LOG_DIR/mrrc.pid"
+
         print_success "MRRC is now accessible at https://localhost:$MRRC_PORT"
+
         return 0
+
     else
+
         print_error "Failed to start MRRC"
+
         print_error "Check $MRRC_LOG for details"
+
         return 1
+
     fi
+
+}
+
+
+
+# Function to start MRRC with GUI session (for remote/SSH access with audio permissions)
+
+
+
+# This uses launchctl to run in the user session context, which has audio device access
+
+
+
+start_mrrc_gui() {
+
+
+
+    if is_running "MRRC"; then
+
+
+
+        print_warning "MRRC is already running"
+
+
+
+        return 1
+
+
+
+    fi
+
+
+
+    
+
+
+
+    print_status "Starting MRRC server with GUI session permissions..."
+
+
+
+    
+
+
+
+    # Clear log files
+
+
+
+    > "$MRRC_LOG"
+
+
+
+    
+
+
+
+    # Method: Use launchctl to start in user session (has audio permissions)
+
+
+
+    # First, ensure the plist file exists and is properly configured
+
+
+
+    local PLIST_PATH="$HOME/Library/LaunchAgents/com.user.mrrc.plist"
+
+
+
+    
+
+
+
+    # Create/update plist file if needed
+
+
+
+    if [ ! -f "$PLIST_PATH" ] || ! grep -q "$SCRIPT_DIR" "$PLIST_PATH" 2>/dev/null; then
+
+
+
+        print_status "Creating launchd plist for GUI session..."
+
+
+
+        mkdir -p "$HOME/Library/LaunchAgents"
+
+
+
+        cat > "$PLIST_PATH" << EOF
+
+
+
+<?xml version="1.0" encoding="UTF-8"?>
+
+
+
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+
+
+
+<plist version="1.0">
+
+
+
+<dict>
+
+
+
+    <key>Label</key>
+
+
+
+    <string>com.user.mrrc</string>
+
+
+
+    <key>ProgramArguments</key>
+
+
+
+    <array>
+
+
+
+        <string>/usr/bin/python3</string>
+
+
+
+        <string>$SCRIPT_DIR/MRRC</string>
+
+
+
+    </array>
+
+
+
+    <key>WorkingDirectory</key>
+
+
+
+    <string>$SCRIPT_DIR</string>
+
+
+
+    <key>StandardOutPath</key>
+
+
+
+    <string>$SCRIPT_DIR/mrrc_service.log</string>
+
+
+
+    <key>StandardErrorPath</key>
+
+
+
+    <string>$SCRIPT_DIR/mrrc_service_error.log</string>
+
+
+
+    <key>ProcessType</key>
+
+
+
+    <string>Interactive</string>
+
+
+
+    <key>EnvironmentVariables</key>
+
+
+
+    <dict>
+
+
+
+        <key>PATH</key>
+
+
+
+        <string>/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+
+
+
+    </dict>
+
+
+
+</dict>
+
+
+
+</plist>
+
+
+
+EOF
+
+
+
+        print_success "Created launchd plist: $PLIST_PATH"
+
+
+
+    fi
+
+
+
+    
+
+
+
+    # Unload if already loaded (to ensure clean start)
+
+
+
+    launchctl unload "$PLIST_PATH" 2>/dev/null || true
+
+
+
+    sleep 1
+
+
+
+    
+
+
+
+    # Load and start the service
+
+
+
+    if launchctl load -w "$PLIST_PATH" 2>/dev/null; then
+
+
+
+        sleep 2
+
+
+
+        if is_running "MRRC"; then
+
+
+
+            local pid=$(get_pid "MRRC")
+
+
+
+            print_success "MRRC started successfully via launchd (PID: $pid)"
+
+
+
+            echo "MRRC PID: $pid" > "$LOG_DIR/mrrc.pid"
+
+
+
+            print_success "MRRC is now accessible at https://localhost:$MRRC_PORT"
+
+
+
+            print_status "Logs: $SCRIPT_DIR/mrrc_service.log"
+
+
+
+            return 0
+
+
+
+        fi
+
+
+
+    fi
+
+
+
+    
+
+
+
+    # Fallback: Try using caffeinate to keep in foreground context
+
+
+
+    print_warning "launchctl method failed, trying alternative..."
+
+
+
+    
+
+
+
+    # Alternative: Use screen/tmux with explicit user context
+
+
+
+    if command -v screen >/dev/null 2>&1; then
+
+
+
+        screen -dmS mrrc bash -c "cd '$SCRIPT_DIR' && python3 MRRC 2>&1 | tee -a '$MRRC_LOG'"
+
+
+
+        sleep 3
+
+
+
+        if is_running "MRRC"; then
+
+
+
+            local pid=$(get_pid "MRRC")
+
+
+
+            print_success "MRRC started via screen (PID: $pid)"
+
+
+
+            print_status "Attach with: screen -r mrrc"
+
+
+
+            return 0
+
+
+
+        fi
+
+
+
+    fi
+
+
+
+    
+
+
+
+    # Last resort: direct start (may not have audio permissions)
+
+
+
+    print_error "GUI session start failed, falling back to direct start (may not have audio)"
+
+
+
+    start_mrrc
+
+
+
 }
 
 # Function to stop rigctld
@@ -413,6 +793,9 @@ case "$1" in
     start-mrrc)
         start_mrrc
         ;;
+    start-mrrc-gui)
+        start_mrrc_gui
+        ;;
     stop-mrrc)
         stop_mrrc
         ;;
@@ -436,7 +819,7 @@ case "$1" in
         ;;
     *)
         echo "MRRC System Control Script"
-        echo "Usage: $0 {start|stop|restart|status|logs [lines] [service]|start-rigctld|stop-rigctld|start-mrrc|stop-mrrc|start-atr1000|stop-atr1000|start-atr1000-api|stop-atr1000-api}"
+        echo "Usage: $0 {start|stop|restart|status|logs [lines] [service]|start-rigctld|stop-rigctld|start-mrrc|start-mrrc-gui|stop-mrrc|start-atr1000|stop-atr1000|start-atr1000-api|stop-atr1000-api}"
         echo ""
         echo "Commands:"
         echo "  start           - Start rigctld, MRRC and ATR-1000 proxy services"
@@ -448,6 +831,7 @@ case "$1" in
         echo "  start-rigctld   - Start only rigctld service"
         echo "  stop-rigctld    - Stop only rigctld service"
         echo "  start-mrrc      - Start only MRRC service"
+        echo "  start-mrrc-gui  - Start MRRC with GUI session (for SSH/remote with audio)"
         echo "  stop-mrrc       - Stop only MRRC service"
         echo "  start-atr1000   - Start only ATR-1000 proxy service"
         echo "  stop-atr1000    - Stop only ATR-1000 proxy service"

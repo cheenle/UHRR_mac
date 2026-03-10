@@ -449,6 +449,13 @@ A: 检查是否频繁发送继电器命令。节流保护机制：
 
 ## 版本历史
 
+- **V4.7.0** (2026-03-10): PTT功率显示修复
+  - 修复PTT按下时功率/SWR不显示的问题
+  - 原因：`tx_button_optimized.js` 未调用 `ATR1000.onTXStart()`
+  - 修复：添加 `ATR1000.onTXStart()` 调用，与TUNE保持一致
+  - 修复：调整脚本加载顺序，`mobile_modern.js` 先于 `tx_button_optimized.js` 加载
+  - 确保ATR1000对象在PTT事件处理前已定义
+
 - **V2.0** (2026-03-08): API Server V2 架构重构
   - API Server 改为通过 Unix Socket 调用 Proxy
   - 避免 API Server 和 Proxy 同时连接设备

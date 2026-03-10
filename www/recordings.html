@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#1a1a1a">
+    <title>录音列表 - MRRC</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(180deg, #1a1a1a 0%, #2d2d2d 100%);
+            color: #ffffff;
+            min-height: 100vh;
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+        
+        /* 头部 */
+        .header {
+            background: linear-gradient(180deg, #2a2a2a 0%, #1a1a1a 100%);
+            padding: 15px 20px;
+            padding-top: calc(15px + env(safe-area-inset-top));
+            border-bottom: 1px solid #3a3a3a;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+        }
+        
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        h1 {
+            font-size: 20px;
+            font-weight: 600;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .back-btn {
+            background: linear-gradient(180deg, #3a3a3a, #2a2a2a);
+            border: 1px solid #4a4a4a;
+            color: #aaa;
+            padding: 8px 15px;
+            border-radius: 8px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .back-btn:hover {
+            background: linear-gradient(180deg, #4a4a4a, #3a3a3a);
+            color: #fff;
+        }
+        
+        /* 主内容 */
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        /* 加载状态 */
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #888;
+        }
+        
+        .loading::after {
+            content: '';
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid #444;
+            border-top-color: #4CAF50;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-left: 10px;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        /* 错误提示 */
+        .error {
+            background: linear-gradient(180deg, #5a2a2a, #4a1a1a);
+            border: 1px solid #6a3a3a;
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            color: #ff8888;
+            margin: 20px 0;
+        }
+        
+        /* 空状态 */
+        .empty {
+            text-align: center;
+            padding: 60px 20px;
+            color: #666;
+        }
+        
+        .empty-icon {
+            font-size: 48px;
+            margin-bottom: 15px;
+            opacity: 0.5;
+        }
+        
+        /* 日期分组 */
+        .date-group {
+            margin-bottom: 25px;
+        }
+        
+        .date-header {
+            font-size: 14px;
+            color: #888;
+            padding: 10px 15px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 8px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .date-header::before {
+            content: '📅';
+        }
+        
+        /* 录音列表 */
+        .recording-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        
+        .recording-item {
+            background: linear-gradient(180deg, #2a2a2a, #252525);
+            border: 1px solid #3a3a3a;
+            border-radius: 12px;
+            padding: 15px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            transition: all 0.2s;
+        }
+        
+        .recording-item:hover {
+            background: linear-gradient(180deg, #323232, #2a2a2a);
+            border-color: #4a4a4a;
+        }
+        
+        /* 录音图标 */
+        .recording-icon {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(180deg, #3a3a3a, #2a2a2a);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            flex-shrink: 0;
+        }
+        
+        /* 录音信息 */
+        .recording-info {
+            flex: 1;
+            min-width: 0;
+        }
+        
+        .recording-freq {
+            font-size: 16px;
+            font-weight: 600;
+            color: #4CAF50;
+            margin-bottom: 4px;
+        }
+        
+        .recording-time {
+            font-size: 13px;
+            color: #888;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .recording-size {
+            font-size: 12px;
+            color: #666;
+            background: rgba(0,0,0,0.3);
+            padding: 2px 8px;
+            border-radius: 4px;
+        }
+        
+        /* 下载按钮 */
+        .download-btn {
+            background: linear-gradient(180deg, #2a5a2a, #1a4a1a);
+            border: 1px solid #3a6a3a;
+            color: #8BC34A;
+            padding: 10px 15px;
+            border-radius: 8px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            flex-shrink: 0;
+        }
+        
+        .download-btn:hover {
+            background: linear-gradient(180deg, #3a6a3a, #2a5a2a);
+            color: #aaff5a;
+        }
+        
+        .download-btn::before {
+            content: '⬇️';
+        }
+        
+        /* 统计信息 */
+        .stats {
+            background: linear-gradient(180deg, #252525, #1a1a1a);
+            border: 1px solid #3a3a3a;
+            border-radius: 12px;
+            padding: 15px 20px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-around;
+            text-align: center;
+        }
+        
+        .stat-item {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        
+        .stat-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: #4CAF50;
+        }
+        
+        .stat-label {
+            font-size: 12px;
+            color: #888;
+        }
+        
+        /* 刷新按钮 */
+        .refresh-btn {
+            background: linear-gradient(180deg, #3a3a3a, #2a2a2a);
+            border: 1px solid #4a4a4a;
+            color: #aaa;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-top: 20px;
+            width: 100%;
+        }
+        
+        .refresh-btn:hover {
+            background: linear-gradient(180deg, #4a4a4a, #3a3a3a);
+            color: #fff;
+        }
+        
+        /* 响应式优化 */
+        @media (max-width: 480px) {
+            .container {
+                padding: 10px;
+            }
+            
+            .recording-item {
+                padding: 12px;
+                gap: 10px;
+            }
+            
+            .recording-icon {
+                width: 35px;
+                height: 35px;
+                font-size: 16px;
+            }
+            
+            .recording-freq {
+                font-size: 14px;
+            }
+            
+            .download-btn {
+                padding: 8px 12px;
+                font-size: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="header-content">
+            <h1>🔴 录音列表</h1>
+            <a href="mobile_modern.html" class="back-btn">← 返回</a>
+        </div>
+    </header>
+    
+    <main class="container">
+        <div id="stats" class="stats" style="display: none;">
+            <div class="stat-item">
+                <span class="stat-value" id="total-count">0</span>
+                <span class="stat-label">录音数量</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-value" id="today-count">0</span>
+                <span class="stat-label">今日</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-value" id="total-size">0MB</span>
+                <span class="stat-label">总大小</span>
+            </div>
+        </div>
+        
+        <div id="content">
+            <div class="loading">正在加载录音列表...</div>
+        </div>
+        
+        <button class="refresh-btn" onclick="loadRecordings()">🔄 刷新列表</button>
+    </main>
+    
+    <script>
+        // 格式化文件大小
+        function formatSize(bytes) {
+            if (bytes === 0) return '0B';
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + sizes[i];
+        }
+        
+        // 格式化日期
+        function formatDate(dateStr) {
+            const year = dateStr.substring(0, 4);
+            const month = dateStr.substring(4, 6);
+            const day = dateStr.substring(6, 8);
+            return `${year}年${parseInt(month)}月${parseInt(day)}日`;
+        }
+        
+        // 格式化时间
+        function formatTime(timeStr) {
+            const hour = timeStr.substring(0, 2);
+            const min = timeStr.substring(2, 4);
+            const sec = timeStr.substring(4, 6);
+            return `${hour}:${min}:${sec}`;
+        }
+        
+        // 按日期分组
+        function groupByDate(recordings) {
+            const groups = {};
+            recordings.forEach(rec => {
+                const date = rec.date;
+                if (!groups[date]) {
+                    groups[date] = [];
+                }
+                groups[date].push(rec);
+            });
+            return groups;
+        }
+        
+        // 加载录音列表
+        async function loadRecordings() {
+            const contentDiv = document.getElementById('content');
+            contentDiv.innerHTML = '<div class="loading">正在加载录音列表...</div>';
+            
+            try {
+                const response = await fetch('/api/recordings');
+                const data = await response.json();
+                
+                if (!data.success) {
+                    throw new Error(data.error || '加载失败');
+                }
+                
+                const recordings = data.recordings || [];
+                
+                if (recordings.length === 0) {
+                    contentDiv.innerHTML = `
+                        <div class="empty">
+                            <div class="empty-icon">🎙️</div>
+                            <p>暂无录音文件</p>
+                            <p style="font-size: 13px; margin-top: 10px;">在电台界面点击"录音"按钮开始录制</p>
+                        </div>
+                    `;
+                    document.getElementById('stats').style.display = 'none';
+                    return;
+                }
+                
+                // 更新统计信息
+                const totalSize = recordings.reduce((sum, rec) => sum + rec.size, 0);
+                const today = new Date().toISOString().slice(0,10).replace(/-/g, '');
+                const todayCount = recordings.filter(rec => rec.date === today).length;
+                
+                document.getElementById('total-count').textContent = recordings.length;
+                document.getElementById('today-count').textContent = todayCount;
+                document.getElementById('total-size').textContent = formatSize(totalSize);
+                document.getElementById('stats').style.display = 'flex';
+                
+                // 按日期分组并渲染
+                const groups = groupByDate(recordings);
+                const sortedDates = Object.keys(groups).sort((a, b) => b.localeCompare(a));
+                
+                let html = '';
+                sortedDates.forEach(date => {
+                    const dateRecordings = groups[date];
+                    html += `
+                        <div class="date-group">
+                            <div class="date-header">${formatDate(date)}</div>
+                            <div class="recording-list">
+                    `;
+                    
+                    dateRecordings.forEach(rec => {
+                        html += `
+                            <div class="recording-item">
+                                <div class="recording-icon">🎵</div>
+                                <div class="recording-info">
+                                    <div class="recording-freq">${rec.freq}</div>
+                                    <div class="recording-time">
+                                        <span>${formatTime(rec.time)}</span>
+                                        <span class="recording-size">${formatSize(rec.size)}</span>
+                                    </div>
+                                </div>
+                                <a href="/recordings/${rec.filename}" class="download-btn" download>下载</a>
+                            </div>
+                        `;
+                    });
+                    
+                    html += `
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                contentDiv.innerHTML = html;
+                
+            } catch (error) {
+                console.error('加载录音列表失败:', error);
+                contentDiv.innerHTML = `
+                    <div class="error">
+                        <p>❌ 加载失败</p>
+                        <p style="font-size: 13px; margin-top: 10px;">${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+        
+        // 页面加载时自动加载
+        document.addEventListener('DOMContentLoaded', loadRecordings);
+    </script>
+</body>
+</html>

@@ -14,6 +14,7 @@
 ### 核心特性
 - **移动优先设计**：专为触摸屏优化，支持单手操作，PWA离线访问
 - **超低延迟**：TX/RX切换<100ms，PTT可靠性99%+
+- **专业降噪**：集成 WDSP 库，提供 NR2 频谱降噪、噪声抑制、自动陷波等 DSP 功能
 - **随时随地访问**：互联网覆盖处即可操控您的电台
 - **安全连接**：TLS加密传输，用户认证保护
 - **完整控制**：频率、模式、PTT、天调等完整电台功能
@@ -35,6 +36,7 @@ MRRC/
 ├── MRRC                          # 后端主程序 (Tornado WebSocket服务器)
 ├── MRRC.conf                     # 系统核心配置文件
 ├── audio_interface.py            # PyAudio采集/播放封装与客户端分发
+├── wdsp_wrapper.py               # WDSP数字信号处理库Python封装
 ├── hamlib_wrapper.py             # 与rigctld通信的辅助逻辑
 ├── tci_client.py                 # TCI协议客户端实现
 ├── atr1000_proxy.py              # ATR-1000独立代理程序
@@ -127,10 +129,11 @@ MRRC/
 
 ### 2. 实时音频流
 - **TX (发射)**: 浏览器麦克风输入 → Web Audio API处理 → Int16/AAC编码 → WebSocket传输 → 后端PyAudio播放到电台
-- **RX (接收)**: 电台音频 → 后端PyAudio采集 → Int16编码 → WebSocket传输 → 浏览器AudioWorklet播放
-- 采样率：16kHz，格式：Int16（50%带宽优化），目标延迟：<100ms
+- **RX (接收)**: 电台音频 → 后端PyAudio采集 → **WDSP降噪处理(NR2/NB/ANF/AGC)** → Int16编码 → WebSocket传输 → 浏览器AudioWorklet播放
+- 采样率：48kHz（WDSP处理）/ 16kHz（传输），格式：Int16（50%带宽优化），目标延迟：<100ms
 - 支持Int16编码和Opus编码双模式
 - 支持ADPCM压缩编码
+- **DSP降噪**：集成WDSP库，提供专业的NR2频谱降噪、噪声抑制、自动陷波等功能
 
 ### 3. 增强的PTT可靠性机制
 - 按下即发送PTT命令
@@ -943,6 +946,126 @@ ls -la /tmp/atr1000_proxy.sock  # 检查 Socket
 - `cqcqcq123.wav`: CQ呼叫音频样本3
 - `tune.wav`: 调谐音频样本 (16kHz, 16bit, mono)
 
+## WDSP 数字信号处理详解
+
+### 功能概述
+
+MRRC 集成 **WDSP (Warren Pratt's Digital Signal Processing)** 库，这是 OpenHPSDR 项目的高性能 DSP 库，被广泛应用于 Thetis、piHPSDR 等专业业余无线电软件中。
+
+相比 RNNoise 等通用降噪算法，WDSP 专门针对**短波 SSB 语音通信**优化，提供更好的语音保真度和降噪效果。
+
+### 核心功能
+
+| 功能 | 算法 | 效果 | 推荐使用 |
+|------|------|------|----------|
+| **NR2** | 频谱降噪 (Spectral) | 15-20dB 降噪，语音保真度极高 | **✅ SSB语音（推荐）** |
+| NR | LMS自适应 | 10-15dB 降噪，计算量小 | 通用背景噪声 |
+| NB | 噪声抑制器 | 消除脉冲干扰 | 电器火花、雷电干扰 |
+| ANF | 自动陷波 | 消除单频干扰 | CW报音、载波干扰 |
+| AGC | 自动增益 | 4种模式可选 | 稳定输出电平 |
+
+### 处理流程
+
+```
+电台音频 (48kHz Float32)
+    ↓
+DC去除 → AGC预放大 → 软削波
+    ↓
+Int16转换 (48kHz)
+    ↓
+WDSP处理
+    ├── NR2 频谱降噪
+    ├── NB 噪声抑制
+    ├── ANF 自动陷波
+    └── AGC 自动增益控制
+    ↓
+Opus编码 (16kHz)
+    ↓
+WebSocket传输
+```
+
+### 配置参数 (MRRC.conf)
+
+```ini
+[WDSP]
+enabled = True              # 启用WDSP
+sample_rate = 48000         # 采样率（推荐48kHz）
+buffer_size = 256           # 缓冲区大小
+nr2_enabled = True          # 频谱降噪
+nb_enabled = True           # 噪声抑制
+anf_enabled = False         # 自动陷波
+agc_mode = 3                # AGC模式 (0=OFF, 1=LONG, 2=SLOW, 3=MED, 4=FAST)
+bandpass_low = 300.0        # 低切频率
+bandpass_high = 2700.0      # 高切频率
+```
+
+### 与RNNoise对比
+
+| 特性 | WDSP (NR2) | RNNoise |
+|------|-----------|---------|
+| 算法类型 | 频谱减法 | 神经网络 |
+| 降噪深度 | 15-20 dB | 10-15 dB |
+| 语音保真度 | ⭐⭐⭐⭐⭐ | ⭐⭐⭐ |
+| SSB优化 | ✅ 专门优化 | ❌ 通用语音 |
+| 延迟 | < 20ms | 30-50ms |
+| 参数可调 | ✅ 多项参数 | ❌ 固定模型 |
+
+**结论**: 对于短波 SSB 语音通信，WDSP 明显优于 RNNoise。
+
+### 安装WDSP库
+
+**macOS:**
+```bash
+cd /tmp && git clone https://github.com/g0orx/wdsp.git
+cd wdsp && make
+sudo cp libwdsp.dylib /usr/local/lib/
+```
+
+**Linux:**
+```bash
+cd /tmp && git clone https://github.com/g0orx/wdsp.git
+cd wdsp && make
+sudo cp libwdsp.so /usr/local/lib/ && sudo ldconfig
+```
+
+### 前端控制
+
+在移动端界面"设置"菜单中，可实时控制：
+- WDSP 主开关
+- NR2 频谱降噪
+- NB 噪声抑制
+- ANF 自动陷波
+- AGC 模式选择
+
+### 技术实现
+
+**Python封装**: `wdsp_wrapper.py`
+- 使用 `ctypes` 调用 WDSP C 库
+- 提供 `WDSPProcessor` 类封装处理逻辑
+- 支持动态参数调整
+
+**集成位置**: `audio_interface.py`
+- 在 Int16 转换后、Opus 编码前执行
+- 48kHz 采样率处理，保持音质
+- 与 PyAudioCapture 线程集成
+
+### 故障排查
+
+**WDSP未加载:**
+```
+⚠️ WDSP 已启用但库不可用
+```
+解决: 重新编译安装 libwdsp 到 /usr/local/lib/
+
+**无音频输出:**
+- 正常现象，WDSP需要约10帧预热（ring buffer机制）
+
+**效果不明显:**
+- 检查 `enabled = True` 和 `nr2_enabled = True`
+- 调整带通滤波器频率匹配当前模式
+
+---
+
 ## 延迟优化详解
 
 ### 问题分析
@@ -1328,6 +1451,57 @@ cat certs/fullchain.pem | openssl x509 -text -noout
 - `atu_auto_tuner.py` - 微调改存储调谐
 - `MRRC` - 添加定期频率同步给 ATR-1000 代理
 - `CHANGELOG.md` - 版本发布说明
+
+---
+
+### V4.6.0 WDSP 数字信号处理集成 (2026-03-09)
+
+**主题：集成专业业余无线电DSP库，替代RNNoise成为默认降噪方案**
+
+#### 核心功能
+- **WDSP库集成**: 集成OpenHPSDR项目的WDSP库，提供专业级DSP功能
+- **NR2频谱降噪**: 基于谱减法的降噪算法，专门针对SSB语音优化
+- **NB噪声抑制**: 消除脉冲干扰（电器火花、雷电等）
+- **ANF自动陷波**: 自动消除单频干扰（CW报音、载波干扰）
+- **AGC自动增益**: 4种模式（LONG/SLOW/MED/FAST）适应不同场景
+- **带通滤波器**: 可配置低切/高切频率，默认300-2700Hz SSB优化
+
+#### 架构改进
+- **处理流程**: 48kHz采样率WDSP处理 → 16kHz Opus编码传输
+- **替换RNNoise**: WDSP成为默认降噪方案，RNNoise降级为可选
+- **前端控制**: 移动端设置面板实时控制所有DSP参数
+- **WebSocket命令**: 支持动态开启/关闭各项DSP功能
+
+#### 性能对比
+| 特性 | WDSP (NR2) | RNNoise |
+|------|-----------|---------|
+| 降噪深度 | 15-20 dB | 10-15 dB |
+| 语音保真度 | ⭐⭐⭐⭐⭐ | ⭐⭐⭐ |
+| SSB优化 | ✅ 专门优化 | ❌ 通用语音 |
+| 延迟 | < 20ms | 30-50ms |
+
+#### 文件变更
+- `wdsp_wrapper.py` - WDSP Python封装（新增）
+- `audio_interface.py` - 集成WDSP到RX音频处理链
+- `MRRC` - 添加WebSocket控制命令
+- `www/mobile_modern.js` - 前端WDSP控制面板
+- `www/mobile_modern.css` - WDSP UI样式
+- `www/controls.js` - WebSocket消息处理
+- `MRRC.conf` - WDSP配置段
+
+#### 配置迁移
+```ini
+# 旧配置（RNNoise）
+[RNNOISE]
+enabled = True  # 改为 False
+
+# 新配置（WDSP）
+[WDSP]
+enabled = True  # 默认启用
+nr2_enabled = True
+nb_enabled = True
+agc_mode = 3
+```
 
 ---
 

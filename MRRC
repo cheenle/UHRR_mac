@@ -45,6 +45,7 @@ import math
 try:
     import pyaudio
     from audio_interface import PyAudioCapture, PyAudioPlayback, enumerate_audio_devices
+    from audio_interface import start_recording, stop_recording, get_recording_status, get_recordings_list
     PYAUDIO_AVAILABLE = True
 except ImportError:
     PYAUDIO_AVAILABLE = False
@@ -1184,6 +1185,60 @@ class AtuStatusHandler(tornado.web.RequestHandler):
             'websocket_clients': 0,
         }))
 
+############ 录音管理处理器 ##############
+class RecordingsListHandler(BaseHandler):
+    """录音列表API处理器"""
+    
+    @tornado.gen.coroutine
+    def get(self):
+        """返回录音文件列表"""
+        try:
+            recordings = get_recordings_list()
+            self.set_header('Content-Type', 'application/json')
+            self.write(json.dumps({
+                'success': True,
+                'recordings': recordings
+            }))
+        except Exception as e:
+            self.set_status(500)
+            self.write(json.dumps({
+                'success': False,
+                'error': str(e)
+            }))
+
+class RecordingsDownloadHandler(BaseHandler):
+    """录音文件下载处理器"""
+    
+    @tornado.gen.coroutine
+    def get(self, filename):
+        """下载指定的录音文件"""
+        try:
+            # 安全检查：防止目录遍历攻击
+            if '..' in filename or '/' in filename:
+                self.set_status(403)
+                self.write("Forbidden")
+                return
+            
+            recording_dir = "recordings"
+            filepath = os.path.join(recording_dir, filename)
+            
+            if not os.path.exists(filepath):
+                self.set_status(404)
+                self.write("File not found")
+                return
+            
+            # 设置下载头
+            self.set_header('Content-Type', 'audio/wav')
+            self.set_header('Content-Disposition', f'attachment; filename="{filename}"')
+            
+            # 读取并发送文件
+            with open(filepath, 'rb') as f:
+                self.write(f.read())
+                
+        except Exception as e:
+            self.set_status(500)
+            self.write(f"Error: {str(e)}")
+
 ############ ATR-1000 天调 WebSocket 处理器 ##############
 ATR1000HandlerClients = []
 
@@ -2280,6 +2335,13 @@ class WS_ControlTRX(tornado.websocket.WebSocketHandler):
 			# 定期发送PTT状态
 			self.write_message("getPTT:"+str(CTRX.infos["PTT"]).lower())
 			
+			# V4.5.18: 定期同步频率给 ATR-1000 代理（支持外部软件控制频率）
+			try:
+				current_freq = CTRX.getFreq()
+				if current_freq and current_freq > 0:
+					sync_freq_to_atr1000(current_freq)
+			except Exception as e:
+				logger.debug(f"同步频率给ATR-1000失败: {e}")
 			
 		except tornado.websocket.WebSocketClosedError:
 			logger.warning("发送PTT状态时客户端已断开")
@@ -2312,10 +2374,11 @@ class WS_ControlTRX(tornado.websocket.WebSocketHandler):
 		
 		try:
 			(action, datato) = data.split(':')
+			datato = datato.strip()  # 清理空白字符和换行符
 			if not is_ping and bool(config['CTRL']['debug']):
 				print(f"📨 解析消息: action={action}, datato={datato}")
 		except ValueError:
-			action = data
+			action = data.strip()
 			datato = ""
 			if not is_ping and bool(config['CTRL']['debug']):
 				print(f"📨 解析消息: action={action}")
@@ -2389,6 +2452,164 @@ class WS_ControlTRX(tornado.websocket.WebSocketHandler):
 		elif(action == "cq_complete"):
 			# CQ播放完成通知
 			yield self.send_to_all_clients("cq:complete")
+		
+		elif(action == "setWDSPEnabled"):
+			# 启用/禁用 WDSP
+			from audio_interface import PyAudioCapture
+			old_value = PyAudioCapture.wdsp_enabled
+			PyAudioCapture.wdsp_enabled = datato.lower() == "true"
+			status = "enabled" if PyAudioCapture.wdsp_enabled else "disabled"
+			print(f"🔧 WDSP {status} (原值={old_value}, 新值={PyAudioCapture.wdsp_enabled})")
+			yield self.send_to_all_clients(f"setWDSPEnabled:{status}")
+			
+		elif(action == "setWDSPNR2"):
+			# 设置 NR2 (频谱降噪)
+			from audio_interface import PyAudioCapture
+			if PyAudioCapture.wdsp_enabled:
+				PyAudioCapture.wdsp_config['nr2_enabled'] = datato.lower() == "true"
+				print(f"🔧 WDSP NR2 {'enabled' if PyAudioCapture.wdsp_config['nr2_enabled'] else 'disabled'}")
+				yield self.send_to_all_clients(f"setWDSPNR2:{datato}")
+			
+		elif(action == "setWDSPNR2Level"):
+			# 设置 NR2 强度级别
+			from audio_interface import PyAudioCapture
+			try:
+				level = int(datato)
+				if 0 <= level <= 4:
+					PyAudioCapture.wdsp_config['nr2_level'] = level
+					PyAudioCapture.wdsp_config['nr2_enabled'] = (level > 0)
+					level_names = {0: "OFF", 1: "MIN(极温和)", 2: "LOW(温和)", 3: "MED(中等)", 4: "HIGH(强力)"}
+					print(f"🔧 WDSP NR2 level: {level_names.get(level, level)}")
+					yield self.send_to_all_clients(f"setWDSPNR2Level:{level}")
+			except ValueError:
+				pass
+			
+		elif(action == "setWDSPNB"):
+			# 设置 NB (噪声抑制器)
+			from audio_interface import PyAudioCapture
+			PyAudioCapture.wdsp_config['nb_enabled'] = datato.lower() == "true"
+			print(f"🔧 WDSP NB {'enabled' if PyAudioCapture.wdsp_config['nb_enabled'] else 'disabled'}")
+			yield self.send_to_all_clients(f"setWDSPNB:{datato}")
+			
+		elif(action == "setWDSPANF"):
+			# 设置 ANF (自动陷波器)
+			from audio_interface import PyAudioCapture
+			PyAudioCapture.wdsp_config['anf_enabled'] = datato.lower() == "true"
+			print(f"🔧 WDSP ANF {'enabled' if PyAudioCapture.wdsp_config['anf_enabled'] else 'disabled'}")
+			yield self.send_to_all_clients(f"setWDSPANF:{datato}")
+			
+		elif(action == "setWDSPAGC"):
+			# 设置 AGC 模式
+			from audio_interface import PyAudioCapture
+			try:
+				agc_mode = int(datato)
+				PyAudioCapture.wdsp_config['agc_mode'] = agc_mode
+				mode_names = {0: "OFF", 1: "LONG", 2: "SLOW", 3: "MED", 4: "FAST"}
+				print(f"🔧 WDSP AGC mode: {mode_names.get(agc_mode, agc_mode)}")
+				yield self.send_to_all_clients(f"setWDSPAGC:{agc_mode}")
+			except ValueError:
+				pass
+		
+		elif(action == "setWDSPAGCMode"):
+			# 设置 AGC 模式 (别名)
+			from audio_interface import PyAudioCapture
+			try:
+				agc_mode = int(datato)
+				PyAudioCapture.wdsp_config['agc_mode'] = agc_mode
+				mode_names = {0: "OFF", 1: "LONG", 2: "SLOW", 3: "MED", 4: "FAST"}
+				print(f"🔧 WDSP AGC mode: {mode_names.get(agc_mode, agc_mode)}")
+				yield self.send_to_all_clients(f"setWDSPAGCMode:{agc_mode}")
+			except ValueError:
+				pass
+		
+		elif(action == "setWDSPNR2GainMethod"):
+			# 设置 NR2 Gain Method
+			from audio_interface import PyAudioCapture
+			try:
+				method = int(datato)
+				if 0 <= method <= 2:
+					PyAudioCapture.wdsp_config['nr2_gain_method'] = method
+					method_names = {0: "Conservative", 1: "Moderate", 2: "Aggressive"}
+					print(f"🔧 WDSP NR2 GainMethod: {method_names.get(method, method)}")
+					yield self.send_to_all_clients(f"setWDSPNR2GainMethod:{method}")
+			except ValueError:
+				pass
+		
+		elif(action == "setWDSPNR2NpeMethod"):
+			# 设置 NR2 NPE Method
+			from audio_interface import PyAudioCapture
+			try:
+				method = int(datato)
+				if 0 <= method <= 1:
+					PyAudioCapture.wdsp_config['nr2_npe_method'] = method
+					method_names = {0: "LambdaD", 1: "LambdaDs"}
+					print(f"🔧 WDSP NR2 NpeMethod: {method_names.get(method, method)}")
+					yield self.send_to_all_clients(f"setWDSPNR2NpeMethod:{method}")
+			except ValueError:
+				pass
+		
+		elif(action == "setWDSPNR2AeRun"):
+			# 设置 NR2 AE Run
+			from audio_interface import PyAudioCapture
+			ae_run = datato in ['1', 'true', 'True']
+			PyAudioCapture.wdsp_config['nr2_ae_run'] = ae_run
+			print(f"🔧 WDSP NR2 AeRun: {'enabled' if ae_run else 'disabled'}")
+			yield self.send_to_all_clients(f"setWDSPNR2AeRun:{ae_run}")
+		
+		elif(action == "setWDSPBandpass"):
+			# 设置带通滤波器
+			from audio_interface import PyAudioCapture
+			try:
+				parts = datato.split(',')
+				if len(parts) == 2:
+					bp_low = float(parts[0])
+					bp_high = float(parts[1])
+					PyAudioCapture.wdsp_config['bandpass_low'] = bp_low
+					PyAudioCapture.wdsp_config['bandpass_high'] = bp_high
+					print(f"🔧 WDSP Bandpass: {bp_low}Hz - {bp_high}Hz")
+					yield self.send_to_all_clients(f"setWDSPBandpass:{bp_low},{bp_high}")
+			except ValueError:
+				pass
+		
+		elif(action == "getWDSPStatus"):
+			# 获取 WDSP 状态
+			from audio_interface import PyAudioCapture
+			status = {
+				'enabled': PyAudioCapture.wdsp_enabled,
+				'nr2Level': PyAudioCapture.wdsp_config.get('nr2_level', 0),
+				'nr2GainMethod': PyAudioCapture.wdsp_config.get('nr2_gain_method', 0),
+				'nr2NpeMethod': PyAudioCapture.wdsp_config.get('nr2_npe_method', 1),
+				'nr2AeRun': PyAudioCapture.wdsp_config.get('nr2_ae_run', False),
+				'nbEnabled': PyAudioCapture.wdsp_config.get('nb_enabled', False),
+				'anfEnabled': PyAudioCapture.wdsp_config.get('anf_enabled', False),
+				'agcMode': PyAudioCapture.wdsp_config.get('agc_mode', 3),
+				'bpLow': PyAudioCapture.wdsp_config.get('bandpass_low', 300),
+				'bpHigh': PyAudioCapture.wdsp_config.get('bandpass_high', 2700),
+				'sampleRate': PyAudioCapture.wdsp_config.get('sample_rate', 48000),
+				'bufferSize': PyAudioCapture.wdsp_config.get('buffer_size', 256)
+			}
+			yield self.send_to_all_clients(f"wdspStatus:{json.dumps(status)}")
+		
+		elif(action == "startRecording"):
+			# 开始录音
+			freq = CTRX.getFreq() if CTRX else 0
+			result = start_recording(freq)
+			status = "started" if result else "failed"
+			yield self.send_to_all_clients(f"recordingStatus:{status}")
+		
+		elif(action == "stopRecording"):
+			# 停止录音
+			filepath = stop_recording()
+			if filepath:
+				filename = os.path.basename(filepath)
+				yield self.send_to_all_clients(f"recordingSaved:{filename}")
+			else:
+				yield self.send_to_all_clients("recordingStatus:failed")
+		
+		elif(action == "getRecordingStatus"):
+			# 获取录音状态
+			status = get_recording_status()
+			yield self.send_to_all_clients(f"recordingStatus:{json.dumps(status)}")
 
 		LastPing = time.time();
 			
@@ -2802,12 +3023,13 @@ if __name__ == "__main__":
 			(r'/WSATU', WS_ATUAutoTunerHandler),  # ATU 自动调谐 WebSocket
 			
 			(r'/(panfft.*)', tornado.web.StaticFileHandler, { 'path' : './www/panadapter' }),
-			(r'/CONFIG', ConfigHandler),
-			(r'/test', TestRadioHandler),
-			(r'/mobile', MobileHandler),
-			(r'/', MainHandler),
-			(r'/(.*)', tornado.web.StaticFileHandler, { 'path' : './www' })
-			],debug=bool(config['SERVER']['debug']), websocket_ping_interval=10, cookie_secret=config['SERVER']['cookie_secret'])
+					(r'/CONFIG', ConfigHandler),
+					(r'/test', TestRadioHandler),
+					(r'/mobile', MobileHandler),
+					(r'/api/recordings', RecordingsListHandler),  # 录音列表API
+					(r'/recordings/([^/]+)', RecordingsDownloadHandler),  # 录音下载
+					(r'/', MainHandler),
+					(r'/(.*)', tornado.web.StaticFileHandler, { 'path' : './www' })			],debug=bool(config['SERVER']['debug']), websocket_ping_interval=10, cookie_secret=config['SERVER']['cookie_secret'])
 	except:
 		e = str(sys.exc_info())
 		print("=== SERVER FALLING BACK TO CONFIG-ONLY MODE ===")
