@@ -1,12 +1,18 @@
-# Mobile Remote Radio Control (MRRC)
+# Mobile Remote Radio Control (MRRC) V4.8.0
 
-[![English](https://img.shields.io/badge/lang-English-blue.svg)](README_en.md) [![中文](https://img.shields.io/badge/lang-中文-red.svg)](README_CN.md)
+[![English](https://img.shields.io/badge/lang-English-blue.svg)](README_en.md) [![中文](https://img.shields.io/badge/lang-中文-red.svg)](README_CN.md) [![版本](https://img.shields.io/badge/版本-V4.8.0-green.svg)](CHANGELOG.md)
 
 **随时随地，畅享业余无线电。**
 
 MRRC 是一款专为移动端优化的业余电台远程控制系统。无论您身在何处，只需一部手机或平板，即可通过现代浏览器完整操控您的业余电台站。前端基于 HTML5/JS，后端基于 Tornado + PyAudio + rigctld（Hamlib）。
 
 > ✅ **核心优势**：移动端优先设计，TX→RX切换延迟<100ms，PWA支持离线访问，专为单手操作优化
+>
+> 🎉 **V4.8.0 更新亮点**：
+> - 🎙️ **音频录制功能**：浏览器内直接录制QSO (WAV/MP3)
+> - 🚀 **远程启动支持**：SSH远程管理服务启动
+> - 🎧 **RX音频重构**：支持多格式解码 (Int16/Float32)
+> - 🎛️ **WDSP优化**：状态同步、库路径改进
 
 ## 🎯 设计理念
 
@@ -108,6 +114,19 @@ MRRC 是一款专为移动端优化的业余电台远程控制系统。无论您
 - **波段选择**：一键切换常用业余频段
 - **天调支持**：TUNE按钮长按发射1kHz单音
 
+### 🎙️ 音频录制 (V4.8.0 新增)
+- **浏览器内录制**：无需额外软件，直接录制QSO音频
+- **双格式支持**：WAV (无损) 或 MP3 (压缩)
+- **自动下载**：录制完成后自动下载到本地
+- **电平指示**：实时显示录音电平
+- **访问地址**：`https://<域名>/recordings.html`
+
+### 🚀 远程启动 (V4.8.0 新增)
+- **SSH远程管理**：通过SSH脚本远程启动/停止服务
+- **服务状态检查**：远程查询服务运行状态
+- **日志查看**：远程查看服务日志
+- **使用脚本**：`./mrrc_remote_start.sh`
+
 ### 音频系统
 - **双向音频**：TX端Int16编码，RX端低抖动播放（AudioWorklet），采样率16kHz
 - **实时S表**：准确显示S0-S9+60dB信号强度
@@ -178,7 +197,20 @@ auth = FILE
 ### 5. 访问
 - **移动端**：`https://<你的域名>/mobile_modern.html` ⭐ 推荐
 - **桌面端**：`https://<你的域名>/`
+- **音频录制**：`https://<你的域名>/recordings.html` 🎙️ V4.8.0
 - **ATR-1000 API**：`http://localhost:8080`
+
+### 6. 远程启动 (V4.8.0)
+```bash
+# 在远程服务器上配置好后，可通过SSH启动
+./mrrc_remote_start.sh start
+
+# 查看远程服务状态
+./mrrc_remote_start.sh status
+
+# 查看远程日志
+./mrrc_remote_start.sh logs
+```
 
 ## 📁 目录结构
 
@@ -186,7 +218,7 @@ auth = FILE
 MRRC/
 ├── MRRC                        # 后端主程序 (Tornado WebSocket 服务器)
 ├── MRRC.conf                   # 系统核心配置文件
-├── audio_interface.py          # PyAudio 采集/播放封装
+├── audio_interface.py          # PyAudio 采集/播放封装 (V4.8.0: 多格式解码)
 ├── wdsp_wrapper.py             # WDSP数字信号处理库Python封装 ⭐
 ├── hamlib_wrapper.py           # 与 rigctld 通信的辅助逻辑
 ├── tci_client.py               # TCI 协议客户端实现
@@ -194,18 +226,22 @@ MRRC/
 ├── atr1000_api_server.py       # ATR-1000 REST API 服务 ⭐
 ├── atr1000_tuner.py            # 天调存储模块
 ├── atr1000_tuner.json          # 天调参数数据文件
-├── mrrc_control.sh             # 系统控制脚本（启动/停止/状态）
+├── mrrc_control.sh             # 系统控制脚本（V4.8.0: 增强功能）
+├── mrrc_remote_start.sh        # SSH远程启动脚本 (V4.8.0: 新增) ⭐
 ├── mrrc_monitor.sh             # 系统监控脚本
 ├── www/                        # 前端页面与脚本
 │   ├── mobile_modern.html      # 现代移动端界面 ⭐
-│   ├── mobile_modern.js        # 移动端界面逻辑
+│   ├── mobile_modern.js        # 移动端界面逻辑 (V4.8.0: WDSP同步)
 │   ├── controls.js             # 音频与控制主逻辑
 │   ├── tx_button_optimized.js  # TX 按钮事件与时序优化
 │   ├── rx_worklet_processor.js # AudioWorklet 播放器
+│   ├── recordings.html         # 音频录制页面 (V4.8.0: 新增) 🎙️
 │   ├── atu.js                  # ATU 功率和驻波比显示管理
 │   └── panadapter/             # 频谱显示模块
 ├── certs/                      # TLS 证书目录
 ├── docs/                       # 技术文档
+├── AOD.md                      # 架构概览文档 (V4.8.0: 新增)
+├── DSP.md                      # DSP处理文档 (V4.8.0: 新增)
 ├── dev_tools/                  # 测试/调试脚本
 └── nanovna/                    # NanoVNA 矢量网络分析仪 Web 界面
 ```
@@ -250,8 +286,10 @@ sudo cp libwdsp.dylib /usr/local/lib/  # macOS
 | RX延迟 | ~51ms |
 | TX→RX切换 | <100ms |
 | PTT可靠性 | 99%+ |
+| 音频录制 | WAV/MP3, 浏览器内录制 |
 | WDSP处理延迟 | <20ms |
 | WDSP降噪增益 | 15-20dB (NR2) |
+| RX解码格式 | Int16/Float32 (自适应) |
 | ATR-1000 功率显示延迟 | <200ms |
 | 空闲轮询间隔 | 15秒 |
 
@@ -293,12 +331,17 @@ curl -X POST -H "Content-Type: application/json" \
 
 ## 📚 文档
 
+- **[架构概览 AOD](AOD.md)**：系统架构快速参考 ⭐ V4.8.0
 - **[DSP降噪文档](DSP.md)**：WDSP数字信号处理详细说明 ⭐
 - **[系统架构设计](docs/System_Architecture_Design.md)**：完整的系统架构设计
 - **[ATR-1000 天调智能学习](docs/ATR1000_Tuner_Auto_Learning.md)**：天调学习与 API 详细文档 ⭐
 - **[PTT/音频稳定性](docs/PTT_Audio_Postmortem_and_Best_Practices.md)**：稳定性分析与最佳实践
 - **[延迟优化指南](docs/latency_optimization_guide.md)**：TX/RX切换延迟优化详解
 - **[移动端界面文档](docs/mobile_modern_interface.md)**：移动端界面设计说明
+
+---
+
+**最新版本: V4.8.0** (2026-03-10) | [查看更新日志](CHANGELOG.md)
 
 ## 🔧 常见问题
 

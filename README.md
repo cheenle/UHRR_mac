@@ -1,7 +1,8 @@
-# Mobile Remote Radio Control (MRRC)
+# Mobile Remote Radio Control (MRRC) V4.8.0
 
 [![English](https://img.shields.io/badge/lang-English-blue.svg)](README_en.md)
 [![中文](https://img.shields.io/badge/lang-中文-red.svg)](README_CN.md)
+[![Version](https://img.shields.io/badge/version-V4.8.0-green.svg)](CHANGELOG.md)
 
 ---
 
@@ -12,6 +13,8 @@
 A modern web-based remote control system optimized for mobile devices, enabling flexible operation of your amateur radio station from anywhere.
 
 基于现代Web技术的远程电台控制系统，专为移动端优化，让您随时随地灵活操控业余电台。
+
+> 🎉 **V4.8.0 更新**: 音频录制功能、远程启动支持、RX音频处理重构、WDSP优化
 
 ---
 
@@ -105,12 +108,14 @@ A modern web-based remote control system optimized for mobile devices, enabling 
 | 📱 **Mobile First** | Optimized for iPhone/Android with touch-friendly UI |
 | 🎛️ **Full Control** | Frequency, mode, PTT - complete station control |
 | 🎤 **Real-time Audio** | Bidirectional TX/RX streaming (16kHz) |
+| 🎙️ **Audio Recording** | Record QSOs directly in browser (WAV/MP3) |
 | 🌍 **Remote Anywhere** | Access your station from anywhere with internet |
 | 🔒 **Secure Connection** | TLS encrypted HTTPS/WSS |
 | ⚡ **Ultra Low Latency** | TX→RX switching < 100ms |
 | 🎯 **One-Hand Operation** | PTT button optimized for mobile thumb reach |
 | 🔧 **ATR-1000 Integration** | Smart tuner learning & quick tune |
 | 🔌 **REST API** | Standalone API for external software integration |
+| 🚀 **Remote Start** | SSH-based remote service management |
 
 ---
 
@@ -154,6 +159,8 @@ curl http://localhost:8080/api/v1/status
 | RX Latency | ~51ms |
 | TX→RX Switch | <100ms |
 | PTT Reliability | 99%+ |
+| Audio Recording | WAV/MP3, Auto-download |
+| WDSP Processing | <20ms, 15-20dB NR2降噪 |
 | ATR-1000 Polling (Idle) | 15s |
 | ATR-1000 Polling (Active) | 5s |
 | ATR-1000 Polling (TX) | 0.5s |
@@ -174,7 +181,23 @@ rigctld -m 335 -r /dev/cu.usbserial-230 -s 4800
 
 # 4. (Optional) Start API Server
 nohup python3 atr1000_api_server.py > atr1000_api.log 2>&1 &
+
+# 5. (Optional) Remote start via SSH
+./mrrc_remote_start.sh start
 ```
+
+### 🎙️ Audio Recording / 音频录制
+
+Access the recording page to record your QSOs:
+```
+https://your-domain/recordings.html
+```
+
+Features:
+- Record RX audio directly in browser
+- WAV format (lossless) or MP3 (compressed)
+- Auto-download after recording
+- Visual recording level indicator
 
 ---
 
@@ -184,18 +207,23 @@ nohup python3 atr1000_api_server.py > atr1000_api.log 2>&1 &
 MRRC/
 ├── MRRC                    # Backend main program
 ├── MRRC.conf               # Configuration file
-├── audio_interface.py      # PyAudio wrapper
+├── audio_interface.py      # PyAudio wrapper (V4.8.0: Multi-format decode)
 ├── hamlib_wrapper.py       # rigctld communication
+├── wdsp_wrapper.py         # WDSP DSP processing
 ├── atr1000_proxy.py        # ATR-1000 proxy ⭐
 ├── atr1000_api_server.py   # REST API server ⭐
 ├── atr1000_tuner.py        # Tuner storage module
-├── mrrc_control.sh         # Control script
+├── mrrc_control.sh         # Control script (V4.8.0: Enhanced)
+├── mrrc_remote_start.sh    # Remote start via SSH (V4.8.0: New)
 ├── www/                    # Frontend
 │   ├── mobile_modern.html  # Mobile UI
-│   ├── controls.js         # Audio & control
+│   ├── controls.js         # Audio & control (V4.8.0: WDSP sync)
+│   ├── recordings.html     # Audio recording page (V4.8.0: New)
 │   └── atu.js              # ATU display
 ├── certs/                  # TLS certificates
 ├── docs/                   # Documentation
+├── AOD.md                  # Architecture Overview (V4.8.0: New)
+├── DSP.md                  # DSP documentation (V4.8.0: New)
 └── dev_tools/              # Test utilities
 ```
 
@@ -214,5 +242,11 @@ Based on [F4HTB/Universal_HamRadio_Remote_HTML5](https://github.com/F4HTB/Univer
 - [English Documentation](README_en.md)
 - [中文文档](README_CN.md)
 - [Changelog](CHANGELOG.md)
+- [Architecture Overview](AOD.md) ⭐ V4.8.0
+- [DSP Documentation](DSP.md) ⭐ V4.8.0
 - [System Architecture](docs/System_Architecture_Design.md)
 - [ATR-1000 Tuner Documentation](docs/ATR1000_Tuner_Auto_Learning.md)
+
+---
+
+**Latest Release: V4.8.0** (2026-03-10) | [View Changelog](CHANGELOG.md)
