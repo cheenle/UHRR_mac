@@ -1,0 +1,1061 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WDSP 高级设置</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #1a1a1a;
+            color: #e0e0e0;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 10px;
+            color: #00e676;
+        }
+        .version-info {
+            text-align: center;
+            color: #888;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+        .card {
+            background: #2a2a2a;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        }
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #444;
+        }
+        .card-title {
+            font-size: 18px;
+            font-weight: 600;
+        }
+        .card-title.nr2 { color: #4fc3f7; }
+        .card-title.nb { color: #ffb74d; }
+        .card-title.anf { color: #81c784; }
+        .card-title.agc { color: #f06292; }
+        .card-title.bandpass { color: #ba68c8; }
+        .card-title.status { color: #00e676; }
+        
+        /* 开关样式 */
+        .switch-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .switch {
+            position: relative;
+            width: 50px;
+            height: 26px;
+        }
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #555;
+            transition: .3s;
+            border-radius: 26px;
+        }
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 20px;
+            width: 20px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .3s;
+            border-radius: 50%;
+        }
+        input:checked + .slider {
+            background-color: #00e676;
+        }
+        input:checked + .slider:before {
+            transform: translateX(24px);
+        }
+        
+        /* 参数行 */
+        .param-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid #333;
+        }
+        .param-row:last-child {
+            border-bottom: none;
+        }
+        .param-label {
+            color: #aaa;
+            font-size: 14px;
+        }
+        .param-value {
+            font-weight: 600;
+            color: #fff;
+        }
+        .param-value.on { color: #00e676; }
+        .param-value.off { color: #f44336; }
+        
+        /* 下拉选择 */
+        select {
+            background: #333;
+            color: #fff;
+            border: 1px solid #555;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 14px;
+            cursor: pointer;
+        }
+        select:focus {
+            outline: none;
+            border-color: #00e676;
+        }
+        
+        /* 范围滑块 */
+        .range-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        input[type="range"] {
+            width: 150px;
+            height: 6px;
+            background: #444;
+            border-radius: 3px;
+            outline: none;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            background: #00e676;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+        .range-value {
+            min-width: 60px;
+            text-align: right;
+            font-family: monospace;
+        }
+        
+        /* 按钮组 */
+        .btn-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-primary {
+            background: #00e676;
+            color: #000;
+        }
+        .btn-primary:hover {
+            background: #00c853;
+        }
+        .btn-secondary {
+            background: #555;
+            color: #fff;
+        }
+        .btn-secondary:hover {
+            background: #666;
+        }
+        
+        /* NR2 级别按钮 */
+        .nr2-level-btn {
+            padding: 10px 20px;
+            border: 2px solid #4fc3f7;
+            background: transparent;
+            color: #4fc3f7;
+            border-radius: 8px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .nr2-level-btn:hover {
+            background: rgba(79, 195, 247, 0.1);
+        }
+        .nr2-level-btn.active {
+            background: #4fc3f7;
+            color: #000;
+        }
+        
+        /* 状态指示 */
+        .status-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+        }
+        .status-item {
+            background: #333;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .status-item .label {
+            font-size: 12px;
+            color: #888;
+            margin-bottom: 5px;
+        }
+        .status-item .value {
+            font-size: 18px;
+            font-weight: 600;
+        }
+        
+        /* 预设按钮 */
+        .preset-btn {
+            padding: 12px 20px;
+            border: 2px solid;
+            background: transparent;
+            border-radius: 8px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: left;
+        }
+        .preset-btn:hover {
+            opacity: 0.8;
+        }
+        .preset-btn .preset-name {
+            font-weight: 600;
+            display: block;
+        }
+        .preset-btn .preset-desc {
+            font-size: 12px;
+            opacity: 0.7;
+        }
+        .preset-ssb { border-color: #4fc3f7; color: #4fc3f7; }
+        .preset-cw { border-color: #ffb74d; color: #ffb74d; }
+        .preset-dx { border-color: #f06292; color: #f06292; }
+        .preset-contest { border-color: #81c784; color: #81c784; }
+        
+        /* 返回按钮 */
+        .back-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 20px;
+            background: #333;
+            color: #fff;
+            text-decoration: none;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            transition: background 0.2s;
+        }
+        .back-btn:hover {
+            background: #444;
+        }
+        
+        /* 说明文字 */
+        .info-text {
+            font-size: 12px;
+            color: #888;
+            margin-top: 10px;
+            line-height: 1.5;
+        }
+        
+        /* 日志面板 */
+        .log-panel {
+            background: #1a1a1a;
+            border: 1px solid #444;
+            border-radius: 8px;
+            padding: 10px;
+            max-height: 200px;
+            overflow-y: auto;
+            font-family: 'Monaco', 'Consolas', monospace;
+            font-size: 12px;
+            line-height: 1.6;
+        }
+        .log-entry {
+            padding: 2px 0;
+            border-bottom: 1px solid #2a2a2a;
+        }
+        .log-entry:last-child {
+            border-bottom: none;
+        }
+        .log-time {
+            color: #666;
+            margin-right: 8px;
+        }
+        .log-send {
+            color: #4fc3f7;
+        }
+        .log-recv {
+            color: #81c784;
+        }
+        .log-info {
+            color: #ffb74d;
+        }
+        .log-error {
+            color: #f44336;
+        }
+        .log-success {
+            color: #00e676;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="mobile_modern.html" class="back-btn">← 返回主界面</a>
+        
+        <h1>🔧 WDSP 高级设置</h1>
+        <div class="version-info">
+            WDSP Library Version: <span id="wdsp-version">-</span> | 
+            Status: <span id="wdsp-status">-</span>
+        </div>
+        
+        <!-- 快速预设 -->
+        <div class="card">
+            <div class="card-header">
+                <span class="card-title">📋 快速预设</span>
+            </div>
+            <div class="btn-group">
+                <button class="preset-btn preset-ssb" onclick="applyPreset('ssb')">
+                    <span class="preset-name">SSB 语音</span>
+                    <span class="preset-desc">标准短波语音通信</span>
+                </button>
+                <button class="preset-btn preset-cw" onclick="applyPreset('cw')">
+                    <span class="preset-name">CW 模式</span>
+                    <span class="preset-desc">电报模式，窄带滤波</span>
+                </button>
+                <button class="preset-btn preset-dx" onclick="applyPreset('dx')">
+                    <span class="preset-name">DX 弱信号</span>
+                    <span class="preset-desc">最大降噪，语音保真</span>
+                </button>
+                <button class="preset-btn preset-contest" onclick="applyPreset('contest')">
+                    <span class="preset-name">比赛模式</span>
+                    <span class="preset-desc">快速AGC，中等降噪</span>
+                </button>
+            </div>
+        </div>
+        
+        <!-- WDSP 主开关 -->
+        <div class="card">
+            <div class="card-header">
+                <span class="card-title">⚡ WDSP 处理器</span>
+                <div class="switch-container">
+                    <span id="wdsp-main-status">关闭</span>
+                    <label class="switch">
+                        <input type="checkbox" id="wdsp-enabled" onchange="toggleWDSP(this.checked)">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+            </div>
+            <div class="info-text">
+                WDSP 是 OpenHPSDR 项目的高性能数字信号处理库，专为业余无线电优化。
+                启用后可在 RX 接收端进行实时降噪、陷波、AGC 等处理。
+            </div>
+        </div>
+        
+        <!-- NR2 频谱降噪 -->
+        <div class="card">
+            <div class="card-header">
+                <span class="card-title nr2">🎤 NR2 频谱降噪 (EMNR)</span>
+                <div class="switch-container">
+                    <span id="nr2-status">关闭</span>
+                </div>
+            </div>
+            
+            <div class="param-row">
+                <span class="param-label">降噪强度</span>
+                <div class="btn-group" id="nr2-level-btns">
+                    <button class="nr2-level-btn" data-level="0" onclick="setNR2Level(0)">关</button>
+                    <button class="nr2-level-btn" data-level="1" onclick="setNR2Level(1)">极</button>
+                    <button class="nr2-level-btn" data-level="2" onclick="setNR2Level(2)">低</button>
+                    <button class="nr2-level-btn" data-level="3" onclick="setNR2Level(3)">中</button>
+                    <button class="nr2-level-btn" data-level="4" onclick="setNR2Level(4)">高</button>
+                </div>
+            </div>
+            
+            <div class="param-row">
+                <span class="param-label">Gain Method</span>
+                <select id="nr2-gain-method" onchange="setNR2GainMethod(this.value)">
+                    <option value="0">保守 (Conservative)</option>
+                    <option value="1">中等 (Moderate)</option>
+                    <option value="2">激进 (Aggressive)</option>
+                </select>
+            </div>
+            
+            <div class="param-row">
+                <span class="param-label">NPE Method</span>
+                <select id="nr2-npe-method" onchange="setNR2NpeMethod(this.value)">
+                    <option value="0">LambdaD</option>
+                    <option value="1">LambdaDs (推荐)</option>
+                </select>
+            </div>
+            
+            <div class="param-row">
+                <span class="param-label">自动均衡 (AE)</span>
+                <div class="switch-container">
+                    <label class="switch">
+                        <input type="checkbox" id="nr2-ae-run" onchange="setNR2AeRun(this.checked)">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+            </div>
+            
+            <div class="info-text">
+                NR2 使用 EMNR (Enhanced Multi-band Noise Reduction) 频谱降噪算法。
+                Gain Method 控制降噪激进程度，NPE Method 控制噪声估计方法。
+            </div>
+        </div>
+        
+        <!-- NB 噪声抑制器 -->
+        <div class="card">
+            <div class="card-header">
+                <span class="card-title nb">💥 NB 噪声抑制器</span>
+                <div class="switch-container">
+                    <span id="nb-status">关闭</span>
+                    <label class="switch">
+                        <input type="checkbox" id="nb-enabled" onchange="toggleNB(this.checked)">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+            </div>
+            <div class="info-text">
+                噪声抑制器 (Noise Blanker) 用于消除脉冲干扰，如雷电、电器火花等。
+                对持续性的背景噪声效果有限，建议与 NR2 配合使用。
+            </div>
+        </div>
+        
+        <!-- ANF 自动陷波 -->
+        <div class="card">
+            <div class="card-header">
+                <span class="card-title anf">🎯 ANF 自动陷波滤波器</span>
+                <div class="switch-container">
+                    <span id="anf-status">关闭</span>
+                    <label class="switch">
+                        <input type="checkbox" id="anf-enabled" onchange="toggleANF(this.checked)">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+            </div>
+            <div class="info-text">
+                自动陷波滤波器 (Auto Notch Filter) 自动检测并消除单频干扰信号，
+                如 CW 载波、广播干扰等。对语音信号影响较小。
+            </div>
+        </div>
+        
+        <!-- AGC 自动增益控制 -->
+        <div class="card">
+            <div class="card-header">
+                <span class="card-title agc">📈 AGC 自动增益控制</span>
+            </div>
+            
+            <div class="param-row">
+                <span class="param-label">AGC 模式</span>
+                <select id="agc-mode" onchange="setAGCMode(this.value)">
+                    <option value="0">OFF (关闭)</option>
+                    <option value="1">LONG (长)</option>
+                    <option value="2">SLOW (慢)</option>
+                    <option value="3">MED (中) - 推荐</option>
+                    <option value="4">FAST (快)</option>
+                </select>
+            </div>
+            
+            <div class="param-row">
+                <span class="param-label">Attack 时间</span>
+                <span class="param-value" id="agc-attack-value">-</span>
+            </div>
+            
+            <div class="param-row">
+                <span class="param-label">Decay 时间</span>
+                <span class="param-value" id="agc-decay-value">-</span>
+            </div>
+            
+            <div class="param-row">
+                <span class="param-label">Hang 时间</span>
+                <span class="param-value" id="agc-hang-value">-</span>
+            </div>
+            
+            <div class="info-text">
+                AGC 自动调整音频增益，保持输出电平稳定。
+                SSB 语音推荐 MED 模式，CW 推荐 FAST 模式。
+            </div>
+        </div>
+        
+        <!-- Bandpass 带通滤波器 -->
+        <div class="card">
+            <div class="card-header">
+                <span class="card-title bandpass">📻 带通滤波器</span>
+            </div>
+            
+            <div class="param-row">
+                <span class="param-label">低切频率 (Low Cut)</span>
+                <div class="range-container">
+                    <input type="range" id="bp-low" min="0" max="500" value="300" 
+                           oninput="updateBandpassDisplay()" onchange="setBandpass()">
+                    <span class="range-value" id="bp-low-value">300 Hz</span>
+                </div>
+            </div>
+            
+            <div class="param-row">
+                <span class="param-label">高切频率 (High Cut)</span>
+                <div class="range-container">
+                    <input type="range" id="bp-high" min="1500" max="4000" value="2700" 
+                           oninput="updateBandpassDisplay()" onchange="setBandpass()">
+                    <span class="range-value" id="bp-high-value">2700 Hz</span>
+                </div>
+            </div>
+            
+            <div class="info-text">
+                带通滤波器限制音频频率范围。SSB 语音推荐 300-2700Hz，
+                CW 模式可缩窄至 400-800Hz。
+            </div>
+        </div>
+        
+        <!-- 实时状态 -->
+        <div class="card">
+            <div class="card-header">
+                <span class="card-title status">📊 实时状态</span>
+                <button class="btn btn-secondary" onclick="refreshStatus()">刷新</button>
+            </div>
+            <div class="status-grid">
+                <div class="status-item">
+                    <div class="label">采样率</div>
+                    <div class="value" id="status-sample-rate">-</div>
+                </div>
+                <div class="status-item">
+                    <div class="label">缓冲区</div>
+                    <div class="value" id="status-buffer-size">-</div>
+                </div>
+                <div class="status-item">
+                    <div class="label">S-Meter</div>
+                    <div class="value" id="status-s-meter">-</div>
+                </div>
+                <div class="status-item">
+                    <div class="label">处理帧数</div>
+                    <div class="value" id="status-frame-count">-</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 交互日志 -->
+        <div class="card">
+            <div class="card-header">
+                <span class="card-title">📋 交互日志</span>
+                <button class="btn btn-secondary" onclick="clearLog()">清空</button>
+            </div>
+            <div id="log-panel" class="log-panel">
+                <div class="log-entry log-info">系统就绪，等待连接...</div>
+            </div>
+        </div>
+        
+        <!-- 高级操作 -->
+        <div class="card">
+            <div class="card-header">
+                <span class="card-title">⚙️ 高级操作</span>
+            </div>
+            <div class="btn-group">
+                <button class="btn btn-primary" onclick="saveSettings()">💾 保存设置</button>
+                <button class="btn btn-secondary" onclick="loadSettings()">📂 加载设置</button>
+                <button class="btn btn-secondary" onclick="resetDefaults()">🔄 恢复默认</button>
+                <button class="btn btn-secondary" onclick="exportSettings()">📤 导出配置</button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // WDSP 设置状态
+        let wdspSettings = {
+            enabled: false,
+            nr2Level: 1,
+            nr2GainMethod: 0,
+            nr2NpeMethod: 1,
+            nr2AeRun: false,
+            nbEnabled: false,
+            anfEnabled: false,
+            agcMode: 3,
+            bpLow: 300,
+            bpHigh: 2700
+        };
+        
+        // WebSocket 连接
+        let wsControl = null;
+        let frameCount = 0;
+        
+        // 预设配置
+        const PRESETS = {
+            ssb: {
+                enabled: true,
+                nr2Level: 2,
+                nr2GainMethod: 0,
+                nr2NpeMethod: 1,
+                nr2AeRun: true,
+                nbEnabled: false,
+                anfEnabled: false,
+                agcMode: 3,
+                bpLow: 300,
+                bpHigh: 2700
+            },
+            cw: {
+                enabled: true,
+                nr2Level: 1,
+                nr2GainMethod: 0,
+                nr2NpeMethod: 0,
+                nr2AeRun: false,
+                nbEnabled: true,
+                anfEnabled: true,
+                agcMode: 4,
+                bpLow: 400,
+                bpHigh: 800
+            },
+            dx: {
+                enabled: true,
+                nr2Level: 3,
+                nr2GainMethod: 1,
+                nr2NpeMethod: 1,
+                nr2AeRun: true,
+                nbEnabled: true,
+                anfEnabled: true,
+                agcMode: 2,
+                bpLow: 200,
+                bpHigh: 2800
+            },
+            contest: {
+                enabled: true,
+                nr2Level: 2,
+                nr2GainMethod: 0,
+                nr2NpeMethod: 1,
+                nr2AeRun: false,
+                nbEnabled: true,
+                anfEnabled: false,
+                agcMode: 4,
+                bpLow: 300,
+                bpHigh: 2500
+            }
+        };
+        
+        // AGC 参数映射
+        const AGC_PARAMS = {
+            0: { attack: '-', decay: '-', hang: '-' },
+            1: { attack: '8ms', decay: '1000ms', hang: '1000ms' },
+            2: { attack: '4ms', decay: '500ms', hang: '500ms' },
+            3: { attack: '4ms', decay: '250ms', hang: '250ms' },
+            4: { attack: '2ms', decay: '100ms', hang: '100ms' }
+        };
+        
+        // 初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            initWebSocket();
+            loadSettingsFromCookie();
+            updateUI();
+        });
+        
+        // 初始化 WebSocket
+        function initWebSocket() {
+            const wsUrl = 'wss://' + window.location.host + '/WSCTRX';
+            logMsg('info', `🔌 连接中: ${wsUrl}`);
+            wsControl = new WebSocket(wsUrl);
+            
+            wsControl.onopen = function() {
+                logMsg('success', '✅ WebSocket 连接成功');
+                console.log('✅ WebSocket 连接成功');
+                // 请求当前状态
+                sendCommand('getWDSPStatus');
+            };
+            
+            wsControl.onmessage = function(event) {
+                handleMessage(event.data);
+            };
+            
+            wsControl.onerror = function(e) {
+                logMsg('error', '❌ WebSocket 连接错误');
+                console.error('WebSocket 错误:', e);
+            };
+            
+            wsControl.onclose = function() {
+                logMsg('info', '🔌 连接已断开，5秒后重连...');
+                console.log('WebSocket 已关闭，5秒后重连...');
+                setTimeout(initWebSocket, 5000);
+            };
+        }
+        
+        // 日志函数
+        function logMsg(type, message) {
+            const logPanel = document.getElementById('log-panel');
+            const time = new Date().toLocaleTimeString();
+            const entry = document.createElement('div');
+            entry.className = `log-entry log-${type}`;
+            entry.innerHTML = `<span class="log-time">[${time}]</span>${message}`;
+            logPanel.appendChild(entry);
+            // 自动滚动到底部
+            logPanel.scrollTop = logPanel.scrollHeight;
+            // 限制日志条数
+            while (logPanel.children.length > 100) {
+                logPanel.removeChild(logPanel.firstChild);
+            }
+        }
+        
+        function clearLog() {
+            document.getElementById('log-panel').innerHTML = '<div class="log-entry log-info">日志已清空</div>';
+        }
+        
+        // 发送命令
+        function sendCommand(action, data) {
+            const msg = data ? `${action}:${data}` : action;
+            if (wsControl && wsControl.readyState === WebSocket.OPEN) {
+                wsControl.send(msg);
+                logMsg('send', `📤 发送: <b>${msg}</b>`);
+                console.log('📤 发送:', msg);
+            } else {
+                logMsg('error', `❌ 发送失败 (WebSocket未连接): ${msg}`);
+                console.warn('WebSocket 未连接');
+            }
+        }
+        
+        // 处理消息
+        function handleMessage(data) {
+            // 解析消息类型
+            if (data.startsWith('wdspStatus:') || data.startsWith('getWDSPStatus:')) {
+                // 提取 JSON 部分
+                const jsonStr = data.substring(data.indexOf(':') + 1);
+                try {
+                    const status = JSON.parse(jsonStr);
+                    wdspSettings = { ...wdspSettings, ...status };
+                    updateUI();
+                    logMsg('recv', `📥 状态同步: WDSP=${status.enabled ? '开启' : '关闭'}, NR2=${status.nr2Level || 0}, NB=${status.nbEnabled ? '开' : '关'}, AGC=${status.agcMode || 3}`);
+                    console.log('🔧 WDSP 状态已同步:', status);
+                } catch (e) {
+                    logMsg('error', `❌ 状态解析失败: ${e.message}`);
+                    console.error('解析状态失败:', e);
+                }
+            }
+            // 处理单项设置变更广播
+            else if (data.startsWith('setWDSPEnabled:')) {
+                const enabled = data.split(':')[1] === 'true' || data.split(':')[1] === 'enabled';
+                wdspSettings.enabled = enabled;
+                updateUI();
+                logMsg('success', `✅ WDSP 主开关: ${enabled ? '已开启' : '已关闭'}`);
+                console.log('🔧 WDSP 主开关同步:', enabled);
+            }
+            else if (data.startsWith('setWDSPNR2Level:')) {
+                wdspSettings.nr2Level = parseInt(data.split(':')[1]);
+                updateUI();
+                logMsg('success', `✅ NR2 降噪级别: ${wdspSettings.nr2Level}`);
+                console.log('🔧 NR2 级别同步:', wdspSettings.nr2Level);
+            }
+            else if (data.startsWith('setWDSPNR2GainMethod:')) {
+                wdspSettings.nr2GainMethod = parseInt(data.split(':')[1]);
+                updateUI();
+                const names = {0: '保守', 1: '中等', 2: '激进'};
+                logMsg('success', `✅ NR2 GainMethod: ${names[wdspSettings.nr2GainMethod] || wdspSettings.nr2GainMethod}`);
+            }
+            else if (data.startsWith('setWDSPNR2NpeMethod:')) {
+                wdspSettings.nr2NpeMethod = parseInt(data.split(':')[1]);
+                updateUI();
+                const names = {0: 'LambdaD', 1: 'LambdaDs'};
+                logMsg('success', `✅ NR2 NpeMethod: ${names[wdspSettings.nr2NpeMethod] || wdspSettings.nr2NpeMethod}`);
+            }
+            else if (data.startsWith('setWDSPNR2AeRun:')) {
+                wdspSettings.nr2AeRun = data.split(':')[1] === 'true';
+                updateUI();
+                logMsg('success', `✅ NR2 自动均衡: ${wdspSettings.nr2AeRun ? '开启' : '关闭'}`);
+            }
+            else if (data.startsWith('setWDSPNB:')) {
+                wdspSettings.nbEnabled = data.split(':')[1] === 'true';
+                updateUI();
+                logMsg('success', `✅ NB 噪声抑制: ${wdspSettings.nbEnabled ? '已开启' : '已关闭'}`);
+            }
+            else if (data.startsWith('setWDSPANF:')) {
+                wdspSettings.anfEnabled = data.split(':')[1] === 'true';
+                updateUI();
+                logMsg('success', `✅ ANF 自动陷波: ${wdspSettings.anfEnabled ? '已开启' : '已关闭'}`);
+            }
+            else if (data.startsWith('setWDSPAGCMode:') || data.startsWith('setWDSPAGC:')) {
+                wdspSettings.agcMode = parseInt(data.split(':')[1]);
+                updateUI();
+                const names = {0: '关', 1: '长', 2: '慢', 3: '中', 4: '快'};
+                logMsg('success', `✅ AGC 模式: ${names[wdspSettings.agcMode] || wdspSettings.agcMode}`);
+            }
+            else if (data.startsWith('setWDSPBandpass:')) {
+                const parts = data.split(':')[1].split(',');
+                if (parts.length === 2) {
+                    wdspSettings.bpLow = parseFloat(parts[0]);
+                    wdspSettings.bpHigh = parseFloat(parts[1]);
+                    updateUI();
+                    logMsg('success', `✅ 带通滤波: ${wdspSettings.bpLow}Hz - ${wdspSettings.bpHigh}Hz`);
+                }
+            }
+        }
+        
+        // 全局 UI 更新函数 (供 controls.js 调用)
+        window.updateNR2LevelUI = function(level) {
+            wdspSettings.nr2Level = level;
+            updateUI();
+        };
+        window.updateNBUI = function(enabled) {
+            wdspSettings.nbEnabled = enabled;
+            updateUI();
+        };
+        window.updateANFUI = function(enabled) {
+            wdspSettings.anfEnabled = enabled;
+            updateUI();
+        };
+        window.updateAGCUI = function(mode) {
+            wdspSettings.agcMode = mode;
+            updateUI();
+        };
+        window.updateBandpassUI = function(low, high) {
+            wdspSettings.bpLow = low;
+            wdspSettings.bpHigh = high;
+            updateUI();
+        };
+        window.handleWDSPStatus = function(status) {
+            try {
+                const data = JSON.parse(status);
+                wdspSettings = { ...wdspSettings, ...data };
+                updateUI();
+            } catch (e) {
+                console.error('WDSP 状态解析错误:', e);
+            }
+        };
+        
+        // 应用预设
+        function applyPreset(name) {
+            const preset = PRESETS[name];
+            if (preset) {
+                const presetNames = {ssb: 'SSB语音', cw: 'CW模式', dx: 'DX弱信号', contest: '比赛模式'};
+                logMsg('info', `📋 应用预设: <b>${presetNames[name] || name}</b>`);
+                wdspSettings = { ...preset };
+                applyAllSettings();
+                updateUI();
+                console.log('✅ 应用预设:', name);
+            }
+        }
+        
+        // 应用所有设置
+        function applyAllSettings() {
+            logMsg('info', '📤 批量发送设置到后台...');
+            sendCommand('setWDSPEnabled', wdspSettings.enabled ? 'true' : 'false');
+            sendCommand('setWDSPNR2Level', wdspSettings.nr2Level.toString());
+            sendCommand('setWDSPNB', wdspSettings.nbEnabled ? 'true' : 'false');
+            sendCommand('setWDSPANF', wdspSettings.anfEnabled ? 'true' : 'false');
+            sendCommand('setWDSPAGCMode', wdspSettings.agcMode.toString());
+            sendCommand('setWDSPBandpass', `${wdspSettings.bpLow},${wdspSettings.bpHigh}`);
+        }
+        
+        // WDSP 主开关
+        function toggleWDSP(enabled) {
+            wdspSettings.enabled = enabled;
+            sendCommand('setWDSPEnabled', enabled ? 'true' : 'false');
+            updateUI();
+        }
+        
+        // NR2 级别
+        function setNR2Level(level) {
+            wdspSettings.nr2Level = level;
+            sendCommand('setWDSPNR2Level', level.toString());
+            updateUI();
+        }
+        
+        // NR2 Gain Method
+        function setNR2GainMethod(method) {
+            wdspSettings.nr2GainMethod = parseInt(method);
+            sendCommand('setWDSPNR2GainMethod', method);
+        }
+        
+        // NR2 NPE Method
+        function setNR2NpeMethod(method) {
+            wdspSettings.nr2NpeMethod = parseInt(method);
+            sendCommand('setWDSPNR2NpeMethod', method);
+        }
+        
+        // NR2 AE Run
+        function setNR2AeRun(enabled) {
+            wdspSettings.nr2AeRun = enabled;
+            sendCommand('setWDSPNR2AeRun', enabled ? 'true' : 'false');
+        }
+        
+        // NB 开关
+        function toggleNB(enabled) {
+            wdspSettings.nbEnabled = enabled;
+            sendCommand('setWDSPNB', enabled ? 'true' : 'false');
+            updateUI();
+        }
+        
+        // ANF 开关
+        function toggleANF(enabled) {
+            wdspSettings.anfEnabled = enabled;
+            sendCommand('setWDSPANF', enabled ? 'true' : 'false');
+            updateUI();
+        }
+        
+        // AGC 模式
+        function setAGCMode(mode) {
+            wdspSettings.agcMode = parseInt(mode);
+            sendCommand('setWDSPAGCMode', mode.toString());
+            updateAGCDisplay();
+        }
+        
+        // 带通滤波器
+        function updateBandpassDisplay() {
+            document.getElementById('bp-low-value').textContent = 
+                document.getElementById('bp-low').value + ' Hz';
+            document.getElementById('bp-high-value').textContent = 
+                document.getElementById('bp-high').value + ' Hz';
+        }
+        
+        function setBandpass() {
+            wdspSettings.bpLow = parseInt(document.getElementById('bp-low').value);
+            wdspSettings.bpHigh = parseInt(document.getElementById('bp-high').value);
+            sendCommand('setWDSPBandpass', `${wdspSettings.bpLow},${wdspSettings.bpHigh}`);
+        }
+        
+        // 更新 UI
+        function updateUI() {
+            // 主开关
+            document.getElementById('wdsp-enabled').checked = wdspSettings.enabled;
+            document.getElementById('wdsp-main-status').textContent = 
+                wdspSettings.enabled ? '已启用' : '关闭';
+            document.getElementById('wdsp-status').textContent = 
+                wdspSettings.enabled ? '✅ 运行中' : '⏹️ 已停止';
+            
+            // NR2
+            const nr2Enabled = wdspSettings.nr2Level > 0;
+            document.getElementById('nr2-status').textContent = 
+                nr2Enabled ? `级别 ${wdspSettings.nr2Level}` : '关闭';
+            
+            // NR2 级别按钮
+            document.querySelectorAll('.nr2-level-btn').forEach(btn => {
+                btn.classList.toggle('active', 
+                    parseInt(btn.dataset.level) === wdspSettings.nr2Level);
+            });
+            
+            document.getElementById('nr2-gain-method').value = wdspSettings.nr2GainMethod;
+            document.getElementById('nr2-npe-method').value = wdspSettings.nr2NpeMethod;
+            document.getElementById('nr2-ae-run').checked = wdspSettings.nr2AeRun;
+            
+            // NB
+            document.getElementById('nb-enabled').checked = wdspSettings.nbEnabled;
+            document.getElementById('nb-status').textContent = 
+                wdspSettings.nbEnabled ? '已启用' : '关闭';
+            
+            // ANF
+            document.getElementById('anf-enabled').checked = wdspSettings.anfEnabled;
+            document.getElementById('anf-status').textContent = 
+                wdspSettings.anfEnabled ? '已启用' : '关闭';
+            
+            // AGC
+            document.getElementById('agc-mode').value = wdspSettings.agcMode;
+            updateAGCDisplay();
+            
+            // 带通
+            document.getElementById('bp-low').value = wdspSettings.bpLow;
+            document.getElementById('bp-high').value = wdspSettings.bpHigh;
+            updateBandpassDisplay();
+        }
+        
+        // 更新 AGC 显示
+        function updateAGCDisplay() {
+            const params = AGC_PARAMS[wdspSettings.agcMode];
+            document.getElementById('agc-attack-value').textContent = params.attack;
+            document.getElementById('agc-decay-value').textContent = params.decay;
+            document.getElementById('agc-hang-value').textContent = params.hang;
+        }
+        
+        // 刷新状态
+        function refreshStatus() {
+            sendCommand('getWDSPStatus');
+            frameCount++;
+            document.getElementById('status-frame-count').textContent = frameCount;
+        }
+        
+        // 保存设置
+        function saveSettings() {
+            localStorage.setItem('wdspSettings', JSON.stringify(wdspSettings));
+            logMsg('success', '💾 设置已保存到本地存储');
+        }
+        
+        // 从 Cookie 加载设置
+        function loadSettingsFromCookie() {
+            const saved = localStorage.getItem('wdspSettings');
+            if (saved) {
+                try {
+                    wdspSettings = { ...wdspSettings, ...JSON.parse(saved) };
+                    console.log('✅ 已加载保存的设置');
+                } catch (e) {
+                    console.error('加载设置失败:', e);
+                }
+            }
+        }
+        
+        // 加载设置
+        function loadSettings() {
+            loadSettingsFromCookie();
+            logMsg('info', '📂 从本地存储加载设置...');
+            applyAllSettings();
+            updateUI();
+        }
+        
+        // 恢复默认
+        function resetDefaults() {
+            if (confirm('确定要恢复默认设置吗？')) {
+                logMsg('info', '🔄 恢复默认设置...');
+                wdspSettings = {
+                    enabled: true,
+                    nr2Level: 1,
+                    nr2GainMethod: 0,
+                    nr2NpeMethod: 1,
+                    nr2AeRun: false,
+                    nbEnabled: true,
+                    anfEnabled: false,
+                    agcMode: 3,
+                    bpLow: 300,
+                    bpHigh: 2700
+                };
+                applyAllSettings();
+                updateUI();
+            }
+        }
+        
+        // 导出配置
+        function exportSettings() {
+            const config = JSON.stringify(wdspSettings, null, 2);
+            const blob = new Blob([config], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'wdsp_settings.json';
+            a.click();
+            URL.revokeObjectURL(url);
+            logMsg('success', '📤 配置已导出为 wdsp_settings.json');
+        }
+    </script>
+</body>
+</html>

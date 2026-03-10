@@ -330,18 +330,21 @@ body {
     -webkit-overflow-scrolling: touch;
 }
 
-/* S-Meter Section - 紧凑 */
+/* S-Meter Section - 超紧凑 */
 .s-meter-section {
     text-align: center;
-    padding: 5px 0;
+    padding: 1px 0;
+    margin: 0;
+    line-height: 0;
 }
 
 #s-meter-canvas {
     width: 100%;
     max-width: 320px;
-    height: 60px;
+    height: 18px;
     background-color: #111;
-    border-radius: 8px;
+    border-radius: 2px;
+    display: block;
 }
 
 .s-meter-labels {
@@ -352,7 +355,8 @@ body {
 .quick-controls {
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 6px;
+    margin: 4px 0;
 }
 
 .control-row {
@@ -629,6 +633,21 @@ body {
 
 .menu-item:active {
     background-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Menu Footer - Version Display */
+.menu-footer {
+    padding: 16px;
+    text-align: center;
+    border-top: 1px solid #2a2a2a;
+    margin-top: auto;
+}
+
+.version-text {
+    font-size: 12px;
+    color: #666;
+    font-weight: 500;
+    letter-spacing: 0.5px;
 }
 
 /* Menu Overlay */
@@ -1172,12 +1191,157 @@ body {
 // V4.4 精简布局样式
 ////////////////////////////////////////////////////////////
 
+/* DSP 控制区域 - 显式WDSP控制面板（纯文字亮/暗风格） */
+.dsp-controls-section {
+    background: rgba(20, 20, 20, 0.8);
+    border-radius: 8px;
+    padding: 6px 10px;
+    margin: 4px 0;
+    border: 1px solid #333;
+}
+
+.dsp-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 4px;
+    padding-bottom: 3px;
+    border-bottom: 1px solid #333;
+}
+
+.dsp-title {
+    font-size: 12px;
+    font-weight: 500;
+    color: #888;
+    letter-spacing: 0.5px;
+}
+
+/* DSP 主开关 - 简洁样式 */
+.dsp-switch {
+    position: relative;
+    display: inline-block;
+    width: 36px;
+    height: 20px;
+}
+
+.dsp-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.dsp-slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #333;
+    transition: .2s;
+    border-radius: 20px;
+}
+
+.dsp-slider:before {
+    position: absolute;
+    content: "";
+    height: 14px;
+    width: 14px;
+    left: 3px;
+    bottom: 3px;
+    background-color: #666;
+    transition: .2s;
+    border-radius: 50%;
+}
+
+.dsp-switch input:checked + .dsp-slider {
+    background-color: #2a4a3a;
+}
+
+.dsp-switch input:checked + .dsp-slider:before {
+    background-color: #4CAF50;
+    transform: translateX(16px);
+}
+
+/* DSP 按钮行 - 纯文字亮/暗风格 */
+.dsp-buttons-row {
+    display: flex;
+    gap: 4px;
+    justify-content: space-between;
+}
+
+.dsp-btn {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 4px 2px;
+    background: transparent;
+    border: none;
+    border-radius: 4px;
+    color: #555;
+    font-size: 10px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    min-height: 40px;
+}
+
+.dsp-btn:active {
+    transform: scale(0.95);
+}
+
+/* 开启状态 - 明亮 */
+.dsp-btn.active {
+    background: transparent;
+    color: #fff;
+    text-shadow: 0 0 8px rgba(255, 255, 255, 0.5);
+}
+
+/* 禁用状态 - 更暗 */
+.dsp-btn.disabled {
+    opacity: 0.2;
+    pointer-events: none;
+}
+
+.dsp-btn-icon {
+    font-size: 14px;
+    margin-bottom: 1px;
+    opacity: 0.4;
+    transition: opacity 0.2s ease;
+}
+
+/* 开启状态图标亮 */
+.dsp-btn.active .dsp-btn-icon {
+    opacity: 1;
+}
+
+.dsp-btn-label {
+    font-weight: 500;
+    margin-bottom: 1px;
+    font-size: 10px;
+    letter-spacing: 0.5px;
+}
+
+.dsp-btn-status {
+    font-size: 8px;
+    padding: 0;
+    background: transparent;
+    color: #444;
+    transition: color 0.2s ease;
+}
+
+/* 开启状态文字显示"开" */
+.dsp-btn.active .dsp-btn-status {
+    background: transparent;
+    color: #4CAF50;
+}
+
 /* 功率/驻波精简显示 - 始终可见 */
 .atr-meter-section-compact {
     background: rgba(30, 40, 30, 0.9);
-    border-radius: 10px;
-    padding: 10px 15px;
-    margin: 8px 0;
+    border-radius: 8px;
+    padding: 6px 12px;
+    margin: 4px 0;
     border: 1px solid #3a5a3a;
     display: block;
 }
@@ -1251,47 +1415,52 @@ body {
     transition: width 0.2s ease, background 0.2s ease;
 }
 
-/* 音量控制精简版 */
+/* 音量控制精简版 - 无边框极简 */
 .volume-control-compact {
-    padding: 5px 10px;
-    margin: 5px 0;
+    padding: 2px 8px;
+    margin: 0;
 }
 
 .volume-row-compact {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
 }
 
 .volume-icon-small {
-    font-size: 16px;
+    font-size: 12px;
+    opacity: 0.6;
 }
 
 .volume-slider-compact {
     flex: 1;
-    height: 4px;
+    height: 2px;
     -webkit-appearance: none;
     appearance: none;
-    background: linear-gradient(90deg, #333, #555);
-    border-radius: 2px;
+    background: #333;
+    border-radius: 1px;
     outline: none;
+    border: none;
 }
 
 .volume-slider-compact::-webkit-slider-thumb {
     -webkit-appearance: none;
     appearance: none;
-    width: 18px;
-    height: 18px;
+    width: 12px;
+    height: 12px;
     border-radius: 50%;
-    background: #4CAF50;
+    background: #666;
     cursor: pointer;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+}
+
+.volume-slider-compact::-webkit-slider-thumb:active {
+    background: #888;
 }
 
 .volume-value-small {
-    font-size: 12px;
-    color: #888;
-    min-width: 35px;
+    font-size: 10px;
+    color: #555;
+    min-width: 28px;
 }
 
 /* 频率调谐精简版 */
@@ -1327,15 +1496,15 @@ body {
 
 /* 频率调谐网格布局 - 两排 */
 .frequency-tuning-grid {
-    padding: 8px 10px;
-    margin: 5px 0;
+    padding: 4px 10px;
+    margin: 2px 0;
 }
 
 .tuning-row {
     display: flex;
     gap: 6px;
     justify-content: center;
-    margin-bottom: 6px;
+    margin-bottom: 4px;
 }
 
 .tuning-row:last-child {
@@ -1345,12 +1514,12 @@ body {
 .tune-btn-grid {
     flex: 1;
     max-width: 75px;
-    padding: 14px 8px;
+    padding: 10px 6px;
     border: none;
-    border-radius: 10px;
+    border-radius: 8px;
     background: #3a3a3a;
     color: #FFF8E7;
-    font-size: 16px;
+    font-size: 15px;
     font-weight: 800;
     font-family: 'Courier New', monospace;
     cursor: pointer;
@@ -1366,12 +1535,12 @@ body {
 /* 底部 TUNE 按钮 */
 .tune-button-footer {
     flex: 0.6;
-    height: 70px;
+    height: 47px;
     border: none;
-    border-radius: 16px;
+    border-radius: 12px;
     background: linear-gradient(180deg, #3a5a3a, #2a4a2a);
     color: #8BC34A;
-    font-size: 16px;
+    font-size: 14px;
     font-weight: bold;
     cursor: pointer;
     transition: all 0.2s ease;
@@ -1388,28 +1557,28 @@ body {
 }
 
 .tune-label {
-    font-size: 14px;
+    font-size: 12px;
 }
 
 /* 更新 PTT 区域布局 */
 .ptt-container {
     display: flex;
-    gap: 12px;
+    gap: 10px;
     justify-content: center;
     align-items: stretch;
-    padding: 10px;
-    padding-bottom: calc(10px + env(safe-area-inset-bottom));
+    padding: 6px;
+    padding-bottom: calc(6px + env(safe-area-inset-bottom));
 }
 
 /* PTT 按钮调整 */
 .ptt-button {
     flex: 1.4;
-    height: 70px;
+    height: 47px;
     border: none;
-    border-radius: 16px;
+    border-radius: 12px;
     background: linear-gradient(180deg, #c62828, #8b1a1a);
     color: white;
-    font-size: 20px;
+    font-size: 16px;
     font-weight: bold;
     cursor: pointer;
     transition: all 0.2s ease;
@@ -1417,18 +1586,121 @@ body {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 4px 12px rgba(198, 40, 40, 0.4);
+    box-shadow: 0 3px 10px rgba(198, 40, 40, 0.4);
 }
 
 .ptt-button.active {
     background: linear-gradient(180deg, #4CAF50, #388E3C);
-    box-shadow: 0 4px 12px rgba(76, 175, 80, 0.4);
+    box-shadow: 0 3px 10px rgba(76, 175, 80, 0.4);
 }
 
 .ptt-label {
-    font-size: 22px;
+    font-size: 18px;
 }
 
 .ptt-sublabel {
     display: none;  /* 隐藏子标签，更简洁 */
+}
+
+/* ========== WDSP 数字处理样式 ========== */
+.wdsp-settings {
+    background: #1a1a2e;
+    border-radius: 12px;
+    padding: 15px;
+    margin-top: 20px;
+    border: 1px solid #333;
+}
+
+.wdsp-settings h4 {
+    margin: 0 0 15px 0;
+    color: #4CAF50;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.wdsp-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 0;
+    border-bottom: 1px solid #333;
+}
+
+.wdsp-item:last-child {
+    border-bottom: none;
+}
+
+.switch-label {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    cursor: pointer;
+}
+
+.switch-label span:first-child {
+    color: #ddd;
+    font-size: 14px;
+}
+
+/* 开关滑块样式 */
+.switch-slider {
+    position: relative;
+    width: 50px;
+    height: 28px;
+    background: #444;
+    border-radius: 14px;
+    transition: background 0.3s;
+    flex-shrink: 0;
+}
+
+.switch-slider::before {
+    content: '';
+    position: absolute;
+    width: 24px;
+    height: 24px;
+    background: #fff;
+    border-radius: 50%;
+    top: 2px;
+    left: 2px;
+    transition: transform 0.3s;
+}
+
+.wdsp-settings input[type="checkbox"] {
+    display: none;
+}
+
+.wdsp-settings input[type="checkbox"]:checked + .switch-slider {
+    background: #4CAF50;
+}
+
+.wdsp-settings input[type="checkbox"]:checked + .switch-slider::before {
+    transform: translateX(22px);
+}
+
+.wdsp-settings input[type="checkbox"]:disabled + .switch-slider {
+    background: #222;
+    opacity: 0.5;
+}
+
+.wdsp-settings input[type="checkbox"]:disabled + .switch-slider::before {
+    background: #666;
+}
+
+.wdsp-item select {
+    background: #333;
+    color: #fff;
+    border: 1px solid #555;
+    border-radius: 6px;
+    padding: 8px 12px;
+    font-size: 13px;
+    min-width: 100px;
+}
+
+.wdsp-item select:disabled {
+    background: #222;
+    color: #666;
+    border-color: #333;
 }

@@ -11,6 +11,10 @@ Replaces the ALSA-specific implementation in the original code
 
 支持 RNNoise 神经网络降噪:
 - RX: 电台 → RNNoise 降噪 → Opus/Int16 编码 → 前端
+
+支持 WDSP 数字信号处理:
+- RX: 电台 → WDSP(NR2/NB/ANF/AGC) → Opus/Int16 编码 → 前端
+- WDSP 提供专业的业余无线电音频处理
 """
 
 import pyaudio
@@ -30,6 +34,18 @@ try:
     print("✅ RNNoise 神经网络降噪可用")
 except ImportError:
     print("⚠️ RNNoise 不可用，如需降噪功能请运行: pip install pyrnnoise")
+
+# WDSP 可选导入
+WDSP_AVAILABLE = False
+WDSPProcessor = None
+try:
+    from wdsp_wrapper import WDSPProcessor, WDSPMode, WDSPAGCMode, WDSPMeterType, WDSP_AVAILABLE as WDSP_LIB_AVAILABLE
+    WDSP_AVAILABLE = WDSP_LIB_AVAILABLE
+    if WDSP_AVAILABLE:
+        print("✅ WDSP 数字信号处理库可用")
+except ImportError as e:
+    print(f"⚠️ WDSP 不可用: {e}")
+    print("   如需 WDSP 功能，请先编译安装: cd /tmp && git clone https://github.com/g0orx/wdsp.git && cd wdsp && make")
 
 
 def enumerate_audio_devices():
@@ -98,6 +114,10 @@ class PyAudioCapture(threading.Thread):
     rnnoise_enabled = False
     rnnoise_suppress_level = 50
     
+    # WDSP 设置
+    wdsp_enabled = False
+    wdsp_config = {}
+    
     # 帧序号（用于FEC丢包检测）
     _frame_sequence = 0
     _sequence_lock = threading.Lock()
@@ -113,12 +133,43 @@ class PyAudioCapture(threading.Thread):
         # RNNoise 降噪器实例（延迟初始化）
         self.rnnoise_denoiser = None
         
-        # 读取 RNNoise 配置
+        # WDSP 处理器实例（延迟初始化）
+        self.wdsp_processor = None
+        self.wdsp_resample_buffer = np.array([], dtype=np.int16)
+        
+        # 读取 RNNoise 配置（已弃用，推荐使用 WDSP）
         if 'RNNOISE' in config:
             PyAudioCapture.rnnoise_enabled = config['RNNOISE'].getboolean('enabled', False)
             PyAudioCapture.rnnoise_suppress_level = config['RNNOISE'].getint('suppress_level', 50)
             if PyAudioCapture.rnnoise_enabled and RNNOISE_AVAILABLE:
-                print(f"🔇 RNNoise 降噪已启用，强度: {PyAudioCapture.rnnoise_suppress_level}")
+                print(f"🔇 RNNoise 降噪已启用（已弃用，建议改用 WDSP），强度: {PyAudioCapture.rnnoise_suppress_level}")
+        
+        # 读取 WDSP 配置（推荐使用 WDSP 替代 RNNoise）
+        if 'WDSP' in config:
+            PyAudioCapture.wdsp_enabled = config['WDSP'].getboolean('enabled', True)  # 默认启用
+            if PyAudioCapture.wdsp_enabled and WDSP_AVAILABLE:
+                PyAudioCapture.wdsp_config = {
+                    'sample_rate': config['WDSP'].getint('sample_rate', 48000),
+                    'buffer_size': config['WDSP'].getint('buffer_size', 256),
+                    'nr2_enabled': config['WDSP'].getboolean('nr2_enabled', True),
+                    'nr2_level': config['WDSP'].getint('nr2_level', 1),  # 默认低强度
+                    'nr2_gain_method': config['WDSP'].getint('nr2_gain_method', 0),  # NR2 Gain Method
+                    'nr2_npe_method': config['WDSP'].getint('nr2_npe_method', 1),  # NR2 NPE Method
+                    'nr2_ae_run': config['WDSP'].getboolean('nr2_ae_run', True),  # NR2 AE Run (默认开启)
+                    'nr_enabled': config['WDSP'].getboolean('nr_enabled', False),
+                    'nb_enabled': config['WDSP'].getboolean('nb_enabled', True),
+                    'nb2_enabled': config['WDSP'].getboolean('nb2_enabled', False),
+                    'anf_enabled': config['WDSP'].getboolean('anf_enabled', False),
+                    'agc_mode': config['WDSP'].getint('agc_mode', 3),
+                    'bandpass_low': config['WDSP'].getfloat('bandpass_low', 300.0),
+                    'bandpass_high': config['WDSP'].getfloat('bandpass_high', 2700.0),
+                }
+                cfg = PyAudioCapture.wdsp_config
+                print(f"🔧 WDSP DSP 已启用（替代 RNNoise）")
+                print(f"   配置: {cfg['sample_rate']}Hz, NR2={cfg['nr2_enabled']}(level={cfg['nr2_level']}), NB={cfg['nb_enabled']}, AGC={cfg['agc_mode']}")
+            elif PyAudioCapture.wdsp_enabled and not WDSP_AVAILABLE:
+                print(f"⚠️ WDSP 已启用但库不可用，请先编译安装 libwdsp")
+                print(f"   安装命令: cd /tmp && git clone https://github.com/g0orx/wdsp.git && cd wdsp && make")
         
         # Initialize PyAudio
         self.p = pyaudio.PyAudio()
@@ -271,55 +322,178 @@ class PyAudioCapture(threading.Thread):
                     
                     int16_data = (float32_data * 32767).astype(np.int16)
                     
-                    # ========== RNNoise 神经网络降噪 ==========
-                    # 在 Int16 转换后、发送前进行降噪
-                    if PyAudioCapture.rnnoise_enabled and RNNOISE_AVAILABLE:
+                    # ========== WDSP 数字信号处理 ==========
+                    # 在 Int16 转换后、Opus编码前进行 WDSP 处理
+
+                    # 调试：定期打印 WDSP 状态
+                    if frame_count % 100 == 0:
+                        cfg = PyAudioCapture.wdsp_config
+                        print(f"🔍 WDSP: enabled={PyAudioCapture.wdsp_enabled}, processor={'存在' if self.wdsp_processor else 'None'}, NR2={cfg.get('nr2_enabled', False)}(L{cfg.get('nr2_level', 0)}), AGC={cfg.get('agc_mode', 0)}")
+
+                    # 如果 WDSP 被禁用但处理器还存在，清理它
+                    if not PyAudioCapture.wdsp_enabled and self.wdsp_processor is not None:
                         try:
-                            # 延迟初始化降噪器
-                            if self.rnnoise_denoiser is None:
-                                self.rnnoise_denoiser = RNNoise(sample_rate=48000)
-                                print("🔇 RNNoise 降噪器已初始化 (48kHz)")
-                            
-                            # RNNoise 要求帧大小为 480 的整数倍
-                            # 48kHz * 10ms = 480 samples
-                            frame_size = 480
-                            audio_len = len(int16_data)
-                            
-                            # 累积足够的样本进行处理
-                            if audio_len >= frame_size:
-                                # 调整到帧大小的整数倍
-                                process_len = (audio_len // frame_size) * frame_size
-                                audio_to_process = int16_data[:process_len]
+                            print("🔧 WDSP 已禁用，关闭处理器")
+                            self.wdsp_processor.close()
+                            self.wdsp_processor = None
+                            self.wdsp_resample_buffer = np.array([], dtype=np.int16)
+                            # 强制垃圾回收，确保资源释放
+                            import gc
+                            gc.collect()
+                            print("🔧 WDSP 处理器已完全关闭")
+                        except Exception as e:
+                            print(f"⚠️ 关闭 WDSP 处理器错误: {e}")
+                    
+                    if PyAudioCapture.wdsp_enabled and WDSP_AVAILABLE:
+                        try:
+                            # 延迟初始化 WDSP 处理器
+                            if self.wdsp_processor is None:
+                                cfg = PyAudioCapture.wdsp_config
+                                # 强制使用 48000Hz，与 PyAudio 捕获采样率一致
+                                # 避免采样率转换导致的音质劣化
+                                wdsp_sr = 48000
+                                wdsp_bs = cfg.get('buffer_size', 256)
+                                self.wdsp_processor = WDSPProcessor(
+                                    sample_rate=wdsp_sr,
+                                    buffer_size=wdsp_bs,
+                                    mode=WDSPMode.USB,
+                                    enable_nr2=cfg['nr2_enabled'],
+                                    enable_nb=cfg['nb_enabled'],
+                                    enable_anf=cfg['anf_enabled'],
+                                    agc_mode=cfg['agc_mode']
+                                )
+                                # 设置带通滤波器
+                                self.wdsp_processor.set_bandpass(
+                                    cfg['bandpass_low'],
+                                    cfg['bandpass_high']
+                                )
+                                # 设置 NR2 强度级别
+                                if cfg['nr2_enabled'] and 'nr2_level' in cfg:
+                                    self.wdsp_processor.set_nr2_level(cfg['nr2_level'])
+                                # 设置 NR2 自动均衡（必须开启以消除音乐噪音）
+                                if cfg['nr2_enabled'] and 'nr2_ae_run' in cfg:
+                                    self.wdsp_processor.set_nr2_ae_run(cfg['nr2_ae_run'])
+                                print(f"🔧 WDSP 处理器已初始化: {wdsp_sr}Hz, NR2={cfg['nr2_enabled']}(level={cfg.get('nr2_level', 1)}, ae={cfg.get('nr2_ae_run', True)}), NB={cfg['nb_enabled']}")
+                            else:
+                                # 动态同步配置参数
+                                cfg = PyAudioCapture.wdsp_config
                                 
-                                # 重塑为 (channels, samples) 格式 - 单声道
-                                audio_reshaped = audio_to_process.reshape(1, -1)
-                                
-                                # 处理每一帧
-                                denoised_frames = []
-                                for speech_prob, denoised_frame in self.rnnoise_denoiser.denoise_chunk(audio_reshaped):
-                                    # 根据语音概率和抑制级别决定是否保留
-                                    suppress_threshold = (100 - PyAudioCapture.rnnoise_suppress_level) / 100.0
+                                # 检查并更新 NR2 级别
+                                if hasattr(self.wdsp_processor, '_nr2_level') and \
+                                   hasattr(self.wdsp_processor, '_nr2_enabled'):
+                                    # 获取目标状态
+                                    target_level = cfg.get('nr2_level', 1)
+                                    # 关键：level > 0 时 enabled 必须为 True
+                                    target_enabled = target_level > 0
                                     
-                                    if speech_prob[0] >= suppress_threshold:
-                                        # 语音帧：保留降噪后的音频
-                                        denoised_frames.append(denoised_frame)
-                                    else:
-                                        # 非语音帧：根据抑制级别衰减
-                                        # 不完全静音，保留一些背景音避免突兀
-                                        attenuation = 0.1  # 衰减到 10%
-                                        denoised_frames.append((denoised_frame * attenuation).astype(np.int16))
-                                
-                                if denoised_frames:
-                                    # 合并所有帧
-                                    int16_data = np.concatenate(denoised_frames).flatten()
+                                    # 获取当前状态
+                                    current_enabled = self.wdsp_processor._nr2_enabled
+                                    current_level = getattr(self.wdsp_processor, '_nr2_level', -1)
                                     
-                                    # 如果原始数据更长，保留剩余部分
-                                    if audio_len > process_len:
-                                        int16_data = np.concatenate([int16_data, int16_data[process_len:]])
-                        
+                                    # 只有状态真正变化时才更新
+                                    if current_enabled != target_enabled or current_level != target_level:
+                                        print(f"🔄 NR2 更新: 当前={current_level}({'开' if current_enabled else '关'}), 目标={target_level}({'开' if target_enabled else '关'})")
+                                        if target_enabled and target_level > 0:
+                                            self.wdsp_processor.set_nr2_level(target_level)
+                                        else:
+                                            self.wdsp_processor.set_nr2_level(0)
+                                
+                                # 检查并更新 NR2 高级设置
+                                if hasattr(self.wdsp_processor, 'set_nr2_gain_method'):
+                                    target_gain_method = cfg.get('nr2_gain_method', 0)
+                                    current_gain_method = getattr(self.wdsp_processor, '_nr2_gain_method', -1)
+                                    if current_gain_method != target_gain_method:
+                                        self.wdsp_processor.set_nr2_gain_method(target_gain_method)
+                                
+                                if hasattr(self.wdsp_processor, 'set_nr2_npe_method'):
+                                    target_npe_method = cfg.get('nr2_npe_method', 1)
+                                    current_npe_method = getattr(self.wdsp_processor, '_nr2_npe_method', -1)
+                                    if current_npe_method != target_npe_method:
+                                        self.wdsp_processor.set_nr2_npe_method(target_npe_method)
+                                
+                                if hasattr(self.wdsp_processor, 'set_nr2_ae_run'):
+                                    target_ae_run = cfg.get('nr2_ae_run', False)
+                                    current_ae_run = getattr(self.wdsp_processor, '_nr2_ae_run', None)
+                                    if current_ae_run != target_ae_run:
+                                        self.wdsp_processor.set_nr2_ae_run(target_ae_run)
+                                
+                                # 检查并更新 NB
+                                if hasattr(self.wdsp_processor, '_nb_enabled') and \
+                                   self.wdsp_processor._nb_enabled != cfg['nb_enabled']:
+                                    self.wdsp_processor.set_nb_enabled(cfg['nb_enabled'])
+                                
+                                # 检查并更新 ANF
+                                if hasattr(self.wdsp_processor, '_anf_enabled') and \
+                                   self.wdsp_processor._anf_enabled != cfg['anf_enabled']:
+                                    self.wdsp_processor.set_anf_enabled(cfg['anf_enabled'])
+                                
+                                # 检查并更新 AGC
+                                if hasattr(self.wdsp_processor, '_agc_mode') and \
+                                   self.wdsp_processor._agc_mode != cfg['agc_mode']:
+                                    self.wdsp_processor.set_agc_mode(cfg['agc_mode'])
+                                
+                                # 检查并更新带通滤波器
+                                if hasattr(self.wdsp_processor, 'set_bandpass'):
+                                    target_low = cfg.get('bandpass_low', 300)
+                                    target_high = cfg.get('bandpass_high', 2700)
+                                    current_low = getattr(self.wdsp_processor, '_bandpass_low', -1)
+                                    current_high = getattr(self.wdsp_processor, '_bandpass_high', -1)
+                                    if current_low != target_low or current_high != target_high:
+                                        self.wdsp_processor.set_bandpass(target_low, target_high)
+                            
+                            # WDSP 直接处理 48kHz 数据，无需降采样/升采样
+                            # 避免重复采样导致的音质劣化
+                            cfg = PyAudioCapture.wdsp_config
+                            wdsp_buffer_size = cfg['buffer_size']
+                            # 强制使用 48kHz，与 PyAudio 捕获采样率一致
+                            wdsp_sample_rate = 48000
+                            
+                            # 累积到 WDSP 缓冲区
+                            self.wdsp_resample_buffer = np.concatenate([self.wdsp_resample_buffer, int16_data])
+                            
+                            # 处理完整缓冲区
+                            processed_frames = []
+                            while len(self.wdsp_resample_buffer) >= wdsp_buffer_size:
+                                # 取出一帧
+                                frame = self.wdsp_resample_buffer[:wdsp_buffer_size]
+                                self.wdsp_resample_buffer = self.wdsp_resample_buffer[wdsp_buffer_size:]
+                                
+                                # 通过 WDSP 处理
+                                processed = self.wdsp_processor.process(frame)
+                                # 只使用有效输出（WDSP 启动时可能有 -2 错误，返回原始数据）
+                                if processed is not None and len(processed) > 0:
+                                    # 验证输出长度与输入一致
+                                    if len(processed) != len(frame):
+                                        if frame_count % 100 == 0:
+                                            print(f"⚠️ WDSP 输出长度不一致: in={len(frame)}, out={len(processed)}")
+                                        processed = frame  # 使用原始数据
+                                    processed_frames.append(processed)
+                            
+                            # 合并处理后的帧
+                            if processed_frames:
+                                int16_data = np.concatenate(processed_frames)
+                                # 调试：显示WDSP处理效果（输入vs输出能量对比）
+                                if frame_count % 100 == 0:
+                                    in_energy = np.sum(np.abs(frame.astype(np.float64)))
+                                    out_energy = np.sum(np.abs(int16_data.astype(np.float64)))
+                                    ratio = out_energy / in_energy if in_energy > 0 else 0
+                                    print(f"🔍 WDSP 能量: 输入={in_energy:.0f}, 输出={out_energy:.0f}, 比例={ratio:.2f}")
+                            else:
+                                # 没有处理帧（缓冲区未满），使用原始数据
+                                # 这样可以避免 WDSP 启动时的音频丢失
+                                pass
+                            # 保持 48kHz，后续 Opus 编码前统一降采样
+                            
+                            # 每 100 帧获取一次 S-meter 读数
+                            if frame_count % 100 == 0:
+                                smeter = self.wdsp_processor.get_meter(WDSPMeterType.S_PK)
+                                # 可以在这里将 S-meter 值存储到全局变量供前端读取
+                                
                         except Exception as e:
                             if frame_count % 100 == 0:
-                                print(f"⚠️ RNNoise 处理错误: {e}")
+                                print(f"⚠️ WDSP 处理错误: {e}")
+                                import traceback
+                                traceback.print_exc()
                     
                     # 发送到客户端队列
                     try:
@@ -451,6 +625,10 @@ class PyAudioCapture(threading.Thread):
                                             trimmed_len = (len(int16_data) // downsample_ratio) * downsample_ratio
                                             reshaped = int16_data[:trimmed_len].reshape(-1, downsample_ratio)
                                             int16_data = reshaped.mean(axis=1).astype(np.int16)
+                                    
+                                    # 确保数据长度是 2 的倍数（Int16 要求）
+                                    if len(int16_data) % 2 != 0:
+                                        int16_data = int16_data[:-1]
                                     
                                     compressed_data = int16_data.tobytes()
                                     # 弱网优化：智能队列管理

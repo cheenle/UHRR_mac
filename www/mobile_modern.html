@@ -92,7 +92,7 @@
         <main class="main-content">
             <!-- S-Meter visualization -->
             <section class="s-meter-section">
-                <canvas id="s-meter-canvas" width="350" height="100"></canvas>
+                <canvas id="s-meter-canvas" width="350" height="18"></canvas>
                 <div class="s-meter-labels">
                     <span>S1</span>
                     <span>S3</span>
@@ -113,7 +113,40 @@
                     <button class="quick-btn filter-btn" id="filter-btn">MID</button>
                 </div>
             </section>
-            
+
+            <!-- DSP Controls - 显式WDSP控制面板 (高品质手机端测试用) -->
+            <section class="dsp-controls-section" id="dsp-controls">
+                <div class="dsp-header">
+                    <span class="dsp-title">🎛️ DSP</span>
+                    <label class="dsp-switch">
+                        <input type="checkbox" id="dsp-main-toggle" onchange="toggleWDSPMain(this.checked)">
+                        <span class="dsp-slider"></span>
+                    </label>
+                </div>
+                <div class="dsp-buttons-row" id="dsp-buttons">
+                    <button class="dsp-btn" id="dsp-nr2-btn" onclick="cycleWDSPNR2Level()">
+                        <span class="dsp-btn-icon">🔇</span>
+                        <span class="dsp-btn-label">NR2</span>
+                        <span class="dsp-btn-status" id="dsp-nr2-status">低</span>
+                    </button>
+                    <button class="dsp-btn" id="dsp-nb-btn" onclick="toggleWDSPNB()">
+                        <span class="dsp-btn-icon">⚡</span>
+                        <span class="dsp-btn-label">NB</span>
+                        <span class="dsp-btn-status" id="dsp-nb-status">关</span>
+                    </button>
+                    <button class="dsp-btn" id="dsp-anf-btn" onclick="toggleWDSPANF()">
+                        <span class="dsp-btn-icon">🎯</span>
+                        <span class="dsp-btn-label">ANF</span>
+                        <span class="dsp-btn-status" id="dsp-anf-status">关</span>
+                    </button>
+                    <button class="dsp-btn" id="dsp-agc-btn" onclick="cycleWDSPAGC()">
+                        <span class="dsp-btn-icon">📊</span>
+                        <span class="dsp-btn-label">AGC</span>
+                        <span class="dsp-btn-status" id="dsp-agc-status">中</span>
+                    </button>
+                </div>
+            </section>
+
             <!-- ATR-1000 Power/SWR Display (精简版，始终显示) -->
             <section class="atr-meter-section-compact" id="atr-meter-section">
                 <div class="atr-compact-row">
@@ -201,6 +234,9 @@
                 <li><a href="#" class="menu-item" data-action="logbook">Logbook</a></li>
                 <li><a href="#" class="menu-item" data-action="about">About</a></li>
             </ul>
+            <div class="menu-footer">
+                <span class="version-text">MRRC V4.7.0</span>
+            </div>
         </div>
     </div>
     
@@ -214,6 +250,6 @@
     <script src="ui_utils.js"></script>
     <script src="controls.js"></script>
     <script src="tx_button_optimized.js"></script>
-    <script src="mobile_modern.js?v=4.4.22c"></script>
+    <script src="mobile_modern.js?v=4.4.24"></script>
 </body>
 </html>

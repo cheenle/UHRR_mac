@@ -1,9 +1,35 @@
 // Modern Mobile Interface JavaScript for iPhone 15 and modern browsers
-// V4.4.21 - 2026-03-06
+// V4.7.0 - 2026-03-10
 // 完全兼容 controls.js 的实现，确保与桌面版一致的行为
 // 
 // 重要：此文件依赖 controls.js 先加载
 // 所有核心功能由 controls.js 提供，此文件仅处理移动端特定的 UI 逻辑
+
+////////////////////////////////////////////////////////////
+// sendCommand - 发送命令到后端 WebSocket
+////////////////////////////////////////////////////////////
+function sendCommand(action, data) {
+    // 详细调试
+    console.log('🔍 sendCommand 调用:', action, data);
+    console.log('  wsControlTRX 定义:', typeof wsControlTRX !== 'undefined');
+    console.log('  wsControlTRX 值:', wsControlTRX);
+    console.log('  wsControlTRX.readyState:', wsControlTRX ? wsControlTRX.readyState : 'N/A');
+    console.log('  WebSocket.OPEN:', WebSocket.OPEN);
+    
+    if (typeof wsControlTRX !== 'undefined' && wsControlTRX && wsControlTRX.readyState === WebSocket.OPEN) {
+        var message = action;
+        if (data !== undefined && data !== '') {
+            message = action + ':' + data;
+        }
+        wsControlTRX.send(message);
+        console.log('📤 发送命令成功:', message);
+        return true;
+    } else {
+        console.warn('⚠️ WebSocket 未连接，无法发送命令:', action);
+        console.warn('  原因: wsControlTRX=', wsControlTRX, ', readyState=', wsControlTRX ? wsControlTRX.readyState : 'N/A');
+        return false;
+    }
+}
 
 ////////////////////////////////////////////////////////////
 // Wake Lock - 防止屏幕休眠
@@ -149,6 +175,14 @@ document.addEventListener('DOMContentLoaded', function() {
         loadAudioSettingsFromCookies();
     } catch (e) {
         console.error('❌ loadAudioSettingsFromCookies 失败:', e);
+    }
+    
+    // 加载WDSP设置
+    try {
+        loadWDSPStateFromCookies();
+        console.log('✅ WDSP状态已加载:', wdspState);
+    } catch (e) {
+        console.error('❌ loadWDSPStateFromCookies 失败:', e);
     }
     
     // iOS Safari 需要用户交互才能初始化音频
@@ -810,7 +844,67 @@ function togglePower() {
         
         // 更新连接状态
         mobileState.isConnected = true;
+        
+        // 调试：检查 WebSocket 状态
+        setTimeout(function() {
+            console.log('🔍 WebSocket 状态检查:');
+            console.log('  wsControlTRX:', typeof wsControlTRX !== 'undefined' ? '已定义' : '未定义');
+            if (typeof wsControlTRX !== 'undefined' && wsControlTRX) {
+                console.log('  wsControlTRX.readyState:', wsControlTRX.readyState, '(0=CONNECTING, 1=OPEN, 2=CLOSING, 3=CLOSED)');
+            }
+        }, 500);
+        
+        // 同步WDSP状态到后端（延迟1秒确保WebSocket已就绪）
+        setTimeout(function() {
+            console.log('🔄 准备同步 WDSP 状态...');
+            syncWDSPStateToBackend();
+        }, 1000);
     }
+}
+
+// 同步WDSP状态到后端
+function syncWDSPStateToBackend() {
+    if (typeof sendCommand !== 'function') {
+        console.warn('sendCommand不可用，无法同步WDSP状态');
+        return;
+    }
+    
+    // 等待 WebSocket 连接成功后再发送
+    var retryCount = 0;
+    var maxRetries = 20; // 最多等待 4 秒
+    
+    function trySend() {
+        if (typeof wsControlTRX !== 'undefined' && wsControlTRX && wsControlTRX.readyState === WebSocket.OPEN) {
+            console.log('🔄 同步WDSP状态到后端:', wdspState);
+            
+            // 先发送主开关状态
+            sendCommand('setWDSPEnabled', wdspState.enabled ? 'true' : 'false');
+            
+            // 如果WDSP启用，再发送其他设置
+            if (wdspState.enabled) {
+                setTimeout(function() {
+                    sendCommand('setWDSPNR2Level', wdspState.nr2Level.toString());
+                }, 100);
+                setTimeout(function() {
+                    sendCommand('setWDSPNB', wdspState.nb ? 'true' : 'false');
+                }, 200);
+                setTimeout(function() {
+                    sendCommand('setWDSPANF', wdspState.anf ? 'true' : 'false');
+                }, 300);
+                setTimeout(function() {
+                    sendCommand('setWDSPAGC', wdspState.agcMode.toString());
+                }, 400);
+            }
+        } else if (retryCount < maxRetries) {
+            retryCount++;
+            console.log('⏳ 等待 WebSocket 连接... (' + retryCount + '/' + maxRetries + ')');
+            setTimeout(trySend, 200);
+        } else {
+            console.warn('⚠️ WebSocket 连接超时，无法同步 WDSP 状态');
+        }
+    }
+    
+    trySend();
 }
 
 ////////////////////////////////////////////////////////////
@@ -1478,6 +1572,65 @@ function showSettingsPanel() {
     html += '<input type="range" id="mobile-squelch" min="0" max="100" value="' + sqlValue + '" oninput="setSquelch(this.value)">';
     html += '</div>';
     
+    html += '</div>'; // 关闭音频设置容器
+    
+    // ========== WDSP DSP 设置 ==========
+    // 从Cookie加载WDSP状态
+    loadWDSPStateFromCookies();
+    
+    html += '<div class="wdsp-settings">';
+    html += '<h4>🎛️ WDSP 数字处理</h4>';
+    
+    // WDSP 启用开关
+    var wdspEnabledChecked = wdspState.enabled ? 'checked' : '';
+    html += '<div class="setting-item wdsp-item">';
+    html += '<label class="switch-label"><span>WDSP 处理</span>';
+    html += '<input type="checkbox" id="wdsp-enabled" onchange="toggleWDSP(this.checked)" ' + wdspEnabledChecked + '>';
+    html += '<span class="switch-slider"></span></label>';
+    html += '</div>';
+    
+    // NR2 频谱降噪
+    var nr2Checked = wdspState.nr2 ? 'checked' : '';
+    var nr2Disabled = wdspState.enabled ? '' : 'disabled';
+    html += '<div class="setting-item wdsp-item">';
+    html += '<label class="switch-label"><span>频谱降噪 (NR2)</span>';
+    html += '<input type="checkbox" id="wdsp-nr2" onchange="setWDSPNR2(this.checked)" ' + nr2Checked + ' ' + nr2Disabled + '>';
+    html += '<span class="switch-slider"></span></label>';
+    html += '</div>';
+    
+    // NB 噪声抑制器
+    var nbChecked = wdspState.nb ? 'checked' : '';
+    var nbDisabled = wdspState.enabled ? '' : 'disabled';
+    html += '<div class="setting-item wdsp-item">';
+    html += '<label class="switch-label"><span>噪声抑制 (NB)</span>';
+    html += '<input type="checkbox" id="wdsp-nb" onchange="setWDSPNB(this.checked)" ' + nbChecked + ' ' + nbDisabled + '>';
+    html += '<span class="switch-slider"></span></label>';
+    html += '</div>';
+    
+    // ANF 自动陷波
+    var anfChecked = wdspState.anf ? 'checked' : '';
+    var anfDisabled = wdspState.enabled ? '' : 'disabled';
+    html += '<div class="setting-item wdsp-item">';
+    html += '<label class="switch-label"><span>自动陷波 (ANF)</span>';
+    html += '<input type="checkbox" id="wdsp-anf" onchange="setWDSPANF(this.checked)" ' + anfChecked + ' ' + anfDisabled + '>';
+    html += '<span class="switch-slider"></span></label>';
+    html += '</div>';
+    
+    // AGC 模式
+    var agcDisabled = wdspState.enabled ? '' : 'disabled';
+    html += '<div class="setting-item wdsp-item">';
+    html += '<label>AGC 模式</label>';
+    html += '<select id="wdsp-agc" onchange="setWDSPAGC(this.value)" ' + agcDisabled + '>';
+    html += '<option value="0"' + (wdspState.agcMode == 0 ? ' selected' : '') + '>关闭</option>';
+    html += '<option value="1"' + (wdspState.agcMode == 1 ? ' selected' : '') + '>长</option>';
+    html += '<option value="2"' + (wdspState.agcMode == 2 ? ' selected' : '') + '>慢</option>';
+    html += '<option value="3"' + (wdspState.agcMode == 3 ? ' selected' : '') + '>中</option>';
+    html += '<option value="4"' + (wdspState.agcMode == 4 ? ' selected' : '') + '>快</option>';
+    html += '</select>';
+    html += '</div>';
+    
+    html += '</div>'; // 关闭WDSP设置容器
+    
     html += '<button class="close-panel-btn" onclick="closeModalPanel()">关闭</button></div>';
     showModalPanel(html);
 }
@@ -2031,18 +2184,16 @@ const ATR1000 = {
             this._updateDeviceStatus(true);
         }
         
-        // V4.5.10: 数据平滑处理（避免数值跳动）
+        // V4.5.18: 平滑系数 0.97（新数据权重 97%，旧数据权重 3%）
         const rawPower = msg.power || 0;
         const rawSWR = msg.swr || 1.0;
+        const smoothFactor = 0.97;
         
-        // 平滑系数 0.3（新数据权重 30%，旧数据权重 70%）
-        const smoothFactor = 0.3;
         this._smoothPower = this._smoothPower * (1 - smoothFactor) + rawPower * smoothFactor;
         this._smoothSWR = this._smoothSWR * (1 - smoothFactor) + rawSWR * smoothFactor;
         
-        // 使用平滑后的值
         this.lastPower = Math.round(this._smoothPower);
-        this.lastSWR = Math.round(this._smoothSWR * 100) / 100;  // 保留两位小数
+        this.lastSWR = Math.round(this._smoothSWR * 100) / 100;
         
         // 更新继电器状态
         if (msg.sw !== undefined) {
@@ -2475,6 +2626,20 @@ const ATR1000 = {
         
         // 重置消息计数
         this._msgCount = 0;
+        
+        // V4.5.20: 发送 start 命令到服务器，请求功率/SWR 数据流
+        if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+            try {
+                this.ws.send(JSON.stringify({action: 'start'}));
+                console.log('📤 发送 ATR-1000 start 命令');
+            } catch (e) {
+                console.error('发送 start 命令失败:', e);
+            }
+        } else {
+            // WebSocket 未连接，设置 pending 标志以便连接后自动发送
+            this._pendingStart = true;
+            console.log('⏳ WebSocket 未连接，设置 pending start 标志');
+        }
     },
     
     // TX 结束时调用 - V4.5.12: 恢复 sync 间隔
@@ -2553,7 +2718,479 @@ const ATR1000 = {
 document.addEventListener('DOMContentLoaded', function() {
     ATR1000.init();
     console.log('📻 ATR-1000 后端代理模块已加载（通过 Unix Socket 连接独立代理）');
+
+    // 初始化 DSP 控制面板
+    initDSPControlPanel();
 });
 
 // 导出 ATR-1000 控制函数
 window.ATR1000 = ATR1000;
+
+////////////////////////////////////////////////////////////
+// WDSP 数字信号处理控制
+////////////////////////////////////////////////////////////
+
+// NR2 强度名称
+const NR2_LEVEL_NAMES = ['关', '极', '低', '中', '高'];
+
+// WDSP 状态（默认与后端配置一致）
+var wdspState = {
+    enabled: true,  // 与 MRRC.conf 中的 enabled = True 一致
+    nr2Level: 1,    // 默认极温和 (0=关, 1=极, 2=低, 3=中, 4=高)
+    nb: true,
+    anf: false,
+    agcMode: 3
+};
+
+// 从Cookie加载WDSP状态
+function loadWDSPStateFromCookies() {
+    try {
+        if (typeof getCookie === 'function') {
+            var saved = getCookie('wdsp_settings');
+            if (saved) {
+                var settings = JSON.parse(saved);
+                wdspState.enabled = settings.enabled !== undefined ? settings.enabled : true;
+                wdspState.nr2Level = settings.nr2Level !== undefined ? settings.nr2Level : 1;
+                wdspState.nb = settings.nb !== undefined ? settings.nb : true;
+                wdspState.anf = settings.anf !== undefined ? settings.anf : false;
+                wdspState.agcMode = settings.agcMode !== undefined ? settings.agcMode : 3;
+                console.log('🔧 WDSP状态已从Cookie加载:', wdspState);
+            }
+        }
+    } catch (e) {
+        console.error('加载WDSP状态失败:', e);
+    }
+}
+
+// 保存WDSP状态到Cookie
+function saveWDSPStateToCookies() {
+    try {
+        if (typeof setCookie === 'function') {
+            setCookie('wdsp_settings', JSON.stringify(wdspState), 180); // 保存180天
+            console.log('🔧 WDSP状态已保存到Cookie');
+        }
+    } catch (e) {
+        console.error('保存WDSP状态失败:', e);
+    }
+}
+
+// 切换 WDSP 主开关
+function toggleWDSP(enabled) {
+    wdspState.enabled = enabled;
+    
+    console.log('🔧 WDSP 主开关切换:', enabled ? '启用' : '禁用');
+    
+    // 启用/禁用子控件
+    const controls = ['wdsp-nr2', 'wdsp-nb', 'wdsp-anf', 'wdsp-agc'];
+    controls.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            el.disabled = !enabled;
+            console.log(`  ${id}: ${!enabled ? '禁用' : '启用'}`);
+        }
+    });
+    
+    // 发送命令到后端
+    if (typeof sendCommand === 'function') {
+        console.log('  发送命令: setWDSPEnabled =', enabled ? 'true' : 'false');
+        sendCommand('setWDSPEnabled', enabled ? 'true' : 'false');
+        
+        // 如果启用WDSP，同时同步其他参数
+        if (enabled) {
+            setTimeout(() => {
+                console.log('  同步其他WDSP参数...');
+                sendCommand('setWDSPNR2', wdspState.nr2 ? 'true' : 'false');
+                sendCommand('setWDSPNB', wdspState.nb ? 'true' : 'false');
+                sendCommand('setWDSPANF', wdspState.anf ? 'true' : 'false');
+                sendCommand('setWDSPAGC', wdspState.agcMode.toString());
+            }, 100);
+        }
+    } else {
+        console.error('  sendCommand 函数不可用!');
+    }
+    
+    // 保存到Cookie
+    saveWDSPStateToCookies();
+}
+
+// 设置 NR2
+function setWDSPNR2(enabled) {
+    wdspState.nr2 = enabled;
+    if (typeof sendCommand === 'function') {
+        sendCommand('setWDSPNR2', enabled ? 'true' : 'false');
+    }
+    saveWDSPStateToCookies();
+    console.log('🔧 WDSP NR2:', enabled ? '启用' : '禁用');
+}
+
+// 设置 NB
+function setWDSPNB(enabled) {
+    wdspState.nb = enabled;
+    if (typeof sendCommand === 'function') {
+        sendCommand('setWDSPNB', enabled ? 'true' : 'false');
+    }
+    saveWDSPStateToCookies();
+    console.log('🔧 WDSP NB:', enabled ? '启用' : '禁用');
+}
+
+// 设置 ANF
+function setWDSPANF(enabled) {
+    wdspState.anf = enabled;
+    if (typeof sendCommand === 'function') {
+        sendCommand('setWDSPANF', enabled ? 'true' : 'false');
+    }
+    saveWDSPStateToCookies();
+    console.log('🔧 WDSP ANF:', enabled ? '启用' : '禁用');
+}
+
+// 设置 AGC 模式
+function setWDSPAGC(mode) {
+    wdspState.agcMode = parseInt(mode);
+    if (typeof sendCommand === 'function') {
+        sendCommand('setWDSPAGC', mode);
+    }
+    saveWDSPStateToCookies();
+    const modeNames = {0: '关闭', 1: '长', 2: '慢', 3: '中', 4: '快'};
+    // console.log('🔧 WDSP AGC:', modeNames[wdspState.agcMode] || mode);
+}
+
+// 获取 WDSP 状态（从后端）
+function getWDSPStatus() {
+    if (typeof sendCommand === 'function') {
+        sendCommand('getWDSPStatus', '');
+    }
+}
+
+// 处理 WDSP 状态响应
+function handleWDSPStatus(status) {
+    try {
+        const data = JSON.parse(status);
+        wdspState.enabled = data.enabled;
+        
+        // 更新 UI
+        const enabledEl = document.getElementById('wdsp-enabled');
+        if (enabledEl) {
+            enabledEl.checked = data.enabled;
+            if (typeof toggleWDSP === 'function') toggleWDSP(data.enabled);
+        }
+        
+        // 支持两种格式：扁平化格式 或 嵌套 config 格式
+        const config = data.config || data;
+        
+        // 更新 NR2 级别
+        if (config.nr2Level !== undefined) {
+            wdspState.nr2Level = config.nr2Level;
+        }
+        if (config.nr2_enabled !== undefined) {
+            wdspState.nr2 = config.nr2_enabled;
+        }
+        
+        // 更新其他设置
+        if (config.nbEnabled !== undefined) {
+            wdspState.nb = config.nbEnabled;
+        } else if (config.nb_enabled !== undefined) {
+            wdspState.nb = config.nb_enabled;
+        }
+        
+        if (config.anfEnabled !== undefined) {
+            wdspState.anf = config.anfEnabled;
+        } else if (config.anf_enabled !== undefined) {
+            wdspState.anf = config.anf_enabled;
+        }
+        
+        if (config.agcMode !== undefined) {
+            wdspState.agcMode = config.agcMode;
+        } else if (config.agc_mode !== undefined) {
+            wdspState.agcMode = config.agc_mode;
+        }
+        
+        // 更新旧 UI 元素（兼容）
+        const nr2El = document.getElementById('wdsp-nr2');
+        const nbEl = document.getElementById('wdsp-nb');
+        const anfEl = document.getElementById('wdsp-anf');
+        const agcEl = document.getElementById('wdsp-agc');
+        
+        if (nr2El && config.nr2_enabled !== undefined) nr2El.checked = config.nr2_enabled;
+        if (nbEl) nbEl.checked = wdspState.nb;
+        if (anfEl) anfEl.checked = wdspState.anf;
+        if (agcEl) agcEl.value = wdspState.agcMode;
+        
+        // 更新新 DSP 控制面板 UI
+        updateDSPPanelUI();
+        
+        // 更新 DSP 按钮状态
+        if (typeof updateDSPButtonsState === 'function') {
+            updateDSPButtonsState();
+        }
+        
+        console.log('🔧 WDSP 状态已更新:', data);
+    } catch (e) {
+        console.error('WDSP 状态解析错误:', e);
+    }
+}
+
+// 更新 DSP 控制面板 UI（新版本）
+function updateDSPPanelUI() {
+    // 更新 NR2 级别显示
+    const nr2Status = document.getElementById('dsp-nr2-status');
+    const nr2Btn = document.getElementById('dsp-nr2-btn');
+    if (nr2Status) {
+        const levelNames = ['关', '极', '低', '中', '高'];
+        nr2Status.textContent = levelNames[wdspState.nr2Level] || '低';
+    }
+    if (nr2Btn) {
+        nr2Btn.classList.toggle('active', wdspState.nr2Level > 0);
+    }
+    
+    // 更新 NB 状态显示
+    const nbStatus = document.getElementById('dsp-nb-status');
+    const nbBtn = document.getElementById('dsp-nb-btn');
+    if (nbStatus) {
+        nbStatus.textContent = wdspState.nb ? '开' : '关';
+    }
+    if (nbBtn) {
+        nbBtn.classList.toggle('active', wdspState.nb);
+    }
+    
+    // 更新 ANF 状态显示
+    const anfStatus = document.getElementById('dsp-anf-status');
+    const anfBtn = document.getElementById('dsp-anf-btn');
+    if (anfStatus) {
+        anfStatus.textContent = wdspState.anf ? '开' : '关';
+    }
+    if (anfBtn) {
+        anfBtn.classList.toggle('active', wdspState.anf);
+    }
+    
+    // 更新 AGC 模式显示
+    const agcStatus = document.getElementById('dsp-agc-status');
+    const agcBtn = document.getElementById('dsp-agc-btn');
+    if (agcStatus) {
+        agcStatus.textContent = AGC_MODE_NAMES[wdspState.agcMode] || '中';
+    }
+    if (agcBtn) {
+        agcBtn.classList.toggle('active', wdspState.agcMode > 0);
+    }
+    
+    // 更新主开关
+    const mainToggle = document.getElementById('dsp-main-toggle');
+    if (mainToggle) {
+        mainToggle.checked = wdspState.enabled;
+    }
+}
+
+////////////////////////////////////////////////////////////
+// 显式 DSP 控制面板函数 (高品质手机端)
+////////////////////////////////////////////////////////////
+
+// AGC 模式名称
+const AGC_MODE_NAMES = ['关', '长', '慢', '中', '快'];
+
+// 切换 WDSP 主开关（显式UI版本）
+function toggleWDSPMain(enabled) {
+    console.log('🎛️ DSP 主开关:', enabled ? '开启' : '关闭');
+
+    // 更新状态
+    wdspState.enabled = enabled;
+
+    // 更新按钮状态
+    updateDSPButtonsState();
+
+    // 发送到后端
+    if (typeof sendCommand === 'function') {
+        sendCommand('setWDSPEnabled', enabled ? 'true' : 'false');
+
+        // 如果启用，同步其他参数
+        if (enabled) {
+            setTimeout(() => {
+                sendCommand('setWDSPNR2', wdspState.nr2 ? 'true' : 'false');
+                sendCommand('setWDSPNB', wdspState.nb ? 'true' : 'false');
+                sendCommand('setWDSPANF', wdspState.anf ? 'true' : 'false');
+                sendCommand('setWDSPAGC', wdspState.agcMode.toString());
+            }, 100);
+        }
+    }
+
+    saveWDSPStateToCookies();
+}
+
+// 切换 NR2 (保留兼容性)
+function toggleWDSPNR2() {
+    if (!wdspState.enabled) return;
+    // 改为循环强度
+    cycleWDSPNR2Level();
+}
+
+// 循环切换 NR2 强度 (关 → 极 → 低 → 中 → 高 → 关)
+function cycleWDSPNR2Level() {
+    if (!wdspState.enabled) return;
+    wdspState.nr2Level = (wdspState.nr2Level + 1) % 5;  // 0, 1, 2, 3, 4 循环
+    updateNR2LevelUI();
+    if (typeof sendCommand === 'function') {
+        sendCommand('setWDSPNR2Level', wdspState.nr2Level.toString());
+    }
+    saveWDSPStateToCookies();
+    console.log('🎛️ NR2 强度:', NR2_LEVEL_NAMES[wdspState.nr2Level]);
+}
+
+// 更新 NR2 强度 UI
+function updateNR2LevelUI() {
+    const btn = document.getElementById('dsp-nr2-btn');
+    const status = document.getElementById('dsp-nr2-status');
+    if (btn && status) {
+        status.textContent = NR2_LEVEL_NAMES[wdspState.nr2Level];
+        if (wdspState.nr2Level > 0) {
+            btn.classList.add('active');
+        } else {
+            btn.classList.remove('active');
+        }
+    }
+}
+
+// 切换 NB
+function toggleWDSPNB() {
+    if (!wdspState.enabled) return;
+    wdspState.nb = !wdspState.nb;
+    updateDSPButtonUI('nb', wdspState.nb);
+    if (typeof sendCommand === 'function') {
+        sendCommand('setWDSPNB', wdspState.nb ? 'true' : 'false');
+    }
+    saveWDSPStateToCookies();
+    console.log('🎛️ NB:', wdspState.nb ? '开启' : '关闭');
+}
+
+// 切换 ANF
+function toggleWDSPANF() {
+    if (!wdspState.enabled) return;
+    wdspState.anf = !wdspState.anf;
+    updateDSPButtonUI('anf', wdspState.anf);
+    if (typeof sendCommand === 'function') {
+        sendCommand('setWDSPANF', wdspState.anf ? 'true' : 'false');
+    }
+    saveWDSPStateToCookies();
+    console.log('🎛️ ANF:', wdspState.anf ? '开启' : '关闭');
+}
+
+// 循环切换 AGC 模式
+function cycleWDSPAGC() {
+    if (!wdspState.enabled) return;
+    wdspState.agcMode = (wdspState.agcMode + 1) % 5;
+    updateDSPAGCUI();
+    if (typeof sendCommand === 'function') {
+        sendCommand('setWDSPAGC', wdspState.agcMode.toString());
+    }
+    saveWDSPStateToCookies();
+    console.log('🎛️ AGC:', AGC_MODE_NAMES[wdspState.agcMode]);
+}
+
+// 更新 DSP 按钮启用/禁用状态
+function updateDSPButtonsState() {
+    const buttons = document.querySelectorAll('.dsp-btn');
+    buttons.forEach(btn => {
+        if (wdspState.enabled) {
+            btn.classList.remove('disabled');
+        } else {
+            btn.classList.add('disabled');
+        }
+    });
+}
+
+// 更新单个 DSP 按钮 UI
+function updateDSPButtonUI(type, enabled) {
+    const btn = document.getElementById('dsp-' + type + '-btn');
+    const status = document.getElementById('dsp-' + type + '-status');
+    if (btn) {
+        if (enabled) {
+            btn.classList.add('active');
+        } else {
+            btn.classList.remove('active');
+        }
+    }
+    if (status) {
+        status.textContent = enabled ? '开' : '关';
+    }
+}
+
+// 更新 AGC 按钮 UI
+function updateDSPAGCUI() {
+    const btn = document.getElementById('dsp-agc-btn');
+    const status = document.getElementById('dsp-agc-status');
+    if (btn) {
+        btn.classList.add('active');
+    }
+    if (status) {
+        status.textContent = AGC_MODE_NAMES[wdspState.agcMode];
+    }
+}
+
+// 初始化 DSP 控制面板 UI
+function initDSPControlPanel() {
+    console.log('🎛️ 初始化 DSP 控制面板...');
+
+    // 从 Cookie 加载状态
+    loadWDSPStateFromCookies();
+
+    // 设置主开关
+    const mainToggle = document.getElementById('dsp-main-toggle');
+    if (mainToggle) {
+        mainToggle.checked = wdspState.enabled;
+    }
+
+    // 更新按钮状态
+    updateDSPButtonsState();
+    updateNR2LevelUI();  // 使用 NR2 强度 UI
+    updateDSPButtonUI('nb', wdspState.nb);
+    updateDSPButtonUI('anf', wdspState.anf);
+    updateDSPAGCUI();
+
+    console.log('🎛️ DSP 控制面板已初始化:', wdspState);
+}
+
+// 导出 WDSP 控制函数
+window.toggleWDSP = toggleWDSP;
+window.setWDSPNR2 = setWDSPNR2;
+window.setWDSPNB = setWDSPNB;
+window.setWDSPANF = setWDSPANF;
+window.setWDSPAGC = setWDSPAGC;
+window.getWDSPStatus = getWDSPStatus;
+window.handleWDSPStatus = handleWDSPStatus;
+
+// 导出显式 DSP 控制函数
+window.toggleWDSPMain = toggleWDSPMain;
+window.cycleWDSPNR2Level = cycleWDSPNR2Level;
+window.toggleWDSPNB = toggleWDSPNB;
+window.toggleWDSPANF = toggleWDSPANF;
+window.cycleWDSPAGC = cycleWDSPAGC;
+window.initDSPControlPanel = initDSPControlPanel;
+window.updateDSPButtonsState = updateDSPButtonsState;
+window.updateDSPPanelUI = updateDSPPanelUI;
+
+// 全局 UI 更新函数 (供 controls.js 跨页面同步调用)
+window.updateWDSPEnabledUI = function(enabled) {
+    wdspState.enabled = enabled;
+    updateDSPPanelUI();
+    updateDSPButtonsState();
+    console.log('🔧 WDSP Enabled UI 同步:', enabled);
+};
+window.updateNR2LevelUI = function(level) {
+    wdspState.nr2Level = level;
+    updateDSPPanelUI();
+    console.log('🔧 NR2 Level UI 同步:', level);
+};
+window.updateNBUI = function(enabled) {
+    wdspState.nb = enabled;
+    updateDSPPanelUI();
+};
+window.updateANFUI = function(enabled) {
+    wdspState.anf = enabled;
+    updateDSPPanelUI();
+};
+window.updateAGCUI = function(mode) {
+    wdspState.agcMode = mode;
+    updateDSPPanelUI();
+};
+window.updateBandpassUI = function(low, high) {
+    // 如果有带通 UI 需要更新，在这里处理
+    console.log('🔧 Bandpass UI 同步:', low, '-', high);
+};
+

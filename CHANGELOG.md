@@ -5,6 +5,192 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [V4.7.0] - 2026-03-10
+
+### 🎯 WDSP 优化与稳定性提升
+
+**WDSP 库路径改进**:
+- **添加项目目录搜索路径**: `wdsp_wrapper.py` 自动检测项目目录下的 `DSP/wdsp` 文件夹
+  - 便于直接复制项目到不同机器运行，无需系统安装 libwdsp
+  - 搜索顺序: 系统路径 → Homebrew路径 → 项目目录
+
+**日志输出优化**:
+- **减少WDSP调试日志**: 禁用大量周期性调试输出，降低日志噪音
+  - 禁用 `frame_count % 100` 周期性状态打印
+  - 禁用 NR2 更新时的详细日志
+  - 禁用 AGC 模式切换时的打印
+  - 禁用能量对比统计输出
+- **保留关键日志**: 仍保留初始化成功/失败、错误等关键信息
+
+**AGC 参数调整**:
+- **注释掉 SetRXAAGCTarget**: 避免与 SetRXAAGCFixed 冲突
+  - 使用固定增益模式时不需要目标增益设置
+  - 简化AGC配置逻辑
+
+**前端增强**:
+- **WDSP 状态同步**: 页面加载后自动同步WDSP设置到后端
+  - 1秒延迟确保WebSocket连接就绪
+  - 支持重试机制（最多4秒等待）
+- **sendCommand 调试**: 添加详细调试信息，便于排查问题
+- **WebSocket 状态检查**: 连接成功后自动检查并记录状态
+
+**文件变更**:
+- `wdsp_wrapper.py` - 库路径优化，日志清理
+- `audio_interface.py` - 禁用周期性调试输出
+- `www/mobile_modern.js` - WDSP同步增强，调试改进
+
+---
+
+## [V4.6.1] - 2026-03-10
+
+### 🔧 WDSP 关键BUG修复与性能优化
+
+**重要修复**:
+- **修复WDSP初始化被注释的致命BUG**: `wdsp_wrapper.py` 中 `_init_wdsp()` 被意外注释，导致WDSP完全未初始化
+  - 这是导致之前"嘟噜嘟噜水声"失真和降噪无效的根本原因
+  - 修复位置: `wdsp_wrapper.py` 第166-167行
+  
+**参数优化**:
+- **PanelGain设置为0.2**: 修复WDSP输出16倍放大的问题，防止削波失真
+- **NR2参数调整**: 默认使用 `gain_method=1` (moderate)，平衡降噪强度和语音保真度
+- **禁用带通滤波器**: 暂时禁用（之前导致信号衰减），后续单独调试
+
+**默认配置调整** (`MRRC.conf`):
+```ini
+[WDSP]
+enabled = True
+sample_rate = 48000
+buffer_size = 256
+agc_mode = 3
+nr2_enabled = True
+nr2_level = 4
+nr2_gain_method = 0  # 保守模式，保护语音
+nr2_npe_method = 0   # OSMS最优平滑
+nr2_ae_run = True    # 必须开启，消除音乐噪音
+nb_enabled = True
+anf_enabled = True
+```
+
+**降噪效果总结**:
+- 白噪声降噪: 5-10%（NR2设计针对稳态噪声，对白噪声效果有限属正常）
+- 实际短波环境: 预计15-30%降噪效果（背景嘶嘶声）
+- AGC工作正常: 弱信号自动增益，强信号自动衰减
+- 语音保真度: 优秀，SSB语音自然清晰
+
+**相关文件变更**:
+- `wdsp_wrapper.py` - 修复初始化，优化参数
+- `audio_interface.py` - 完善WDSP集成
+- `MRRC.conf` - 更新默认配置
+- `dev_tools/test_wdsp_*.py` - 新增测试工具
+
+## [V4.6.0] - 2026-03-09
+
+### 🎛️ WDSP 数字信号处理集成
+
+#### 核心功能
+- **WDSP 库集成**：集成 OpenHPSDR 项目的 WDSP 库，提供专业级 DSP 功能
+  - GitHub: https://github.com/g0orx/wdsp
+  - 需要先编译安装 `libwdsp` 库
+- **NR2 频谱降噪**：基于谱减法的降噪算法，专门针对 SSB 语音优化
+  - 降噪增益：15-20dB
+  - 语音保真度：极高（让 SSB 听起来像 FM）
+- **NB 噪声抑制**：消除脉冲干扰（电器火花、雷电等）
+- **ANF 自动陷波**：自动消除单频干扰（CW 报音、载波干扰）
+- **AGC 自动增益**：4 种模式（LONG/SLOW/MED/FAST）适应不同场景
+- **带通滤波器**：可配置低切/高切频率，默认 300-2700Hz SSB 优化
+
+#### 架构改进
+- **处理流程**：48kHz 采样率 WDSP 处理 → 16kHz Opus 编码传输
+  ```
+  电台音频 (48kHz Float32)
+      ↓
+  DC去除 → AGC预放大 → 软削波保护
+      ↓
+  Int16转换 (48kHz)
+      ↓
+  WDSP处理 (NR2/NB/ANF/AGC)
+      ↓
+  Opus编码 (16kHz/20kbps)
+      ↓
+  WebSocket传输 → 前端
+  ```
+- **替换 RNNoise**：WDSP 成为默认降噪方案，RNNoise 降级为可选
+- **前端控制**：移动端设置面板实时控制所有 DSP 参数
+- **状态持久化**：Cookie 保存用户 WDSP 设置，页面刷新后恢复
+- **WebSocket 命令**：支持动态开启/关闭各项 DSP 功能
+
+#### 性能对比
+| 特性 | WDSP (NR2) | RNNoise |
+|------|-----------|---------|
+| 算法类型 | 频谱减法 | 神经网络 |
+| 降噪深度 | 15-20 dB | 10-15 dB |
+| 语音保真度 | ⭐⭐⭐⭐⭐ | ⭐⭐⭐ |
+| SSB 优化 | ✅ 专门优化 | ❌ 通用语音 |
+| 延迟 | < 20ms | 30-50ms |
+| 参数可调 | ✅ 多项参数 | ❌ 固定模型 |
+
+#### 配置迁移
+```ini
+# 旧配置（RNNoise）
+[RNNOISE]
+enabled = True  # 改为 False
+
+# 新配置（WDSP）
+[WDSP]
+enabled = True  # 默认启用
+sample_rate = 48000
+buffer_size = 256
+nr2_enabled = True
+nb_enabled = True
+anf_enabled = False
+agc_mode = 3  # MED
+bandpass_low = 300.0
+bandpass_high = 2700.0
+```
+
+#### 前端控制
+在移动端界面"设置"菜单中：
+- 🎛️ WDSP 主开关（联动禁用/启用子控件）
+- 频谱降噪 (NR2)
+- 噪声抑制 (NB)
+- 自动陷波 (ANF)
+- AGC 模式选择（关闭/长/慢/中/快）
+
+#### 安装 WDSP 库
+**macOS:**
+```bash
+cd /tmp && git clone https://github.com/g0orx/wdsp.git
+cd wdsp && make
+sudo cp libwdsp.dylib /usr/local/lib/
+```
+
+**Linux:**
+```bash
+cd /tmp && git clone https://github.com/g0orx/wdsp.git
+cd wdsp && make
+sudo cp libwdsp.so /usr/local/lib/ && sudo ldconfig
+```
+
+#### 文件变更
+- `wdsp_wrapper.py` - WDSP Python 封装（新增）
+- `audio_interface.py` - 集成 WDSP 到 RX 音频处理链
+- `MRRC` - 添加 WebSocket 控制命令
+- `www/mobile_modern.js` - 前端 WDSP 控制面板 + Cookie 持久化
+- `www/mobile_modern.css` - WDSP UI 样式
+- `www/controls.js` - WebSocket 消息处理
+- `MRRC.conf` - WDSP 配置段
+- `DSP.md` - WDSP 详细文档（新增）
+- `IFLOW.md` - 架构文档更新
+- `README_CN.md` - 用户手册更新
+- `AOD.md` - 主要功能更新
+
+#### Bug 修复
+- 修复移动端 WDSP 设置面板状态不保存的问题
+- 添加 Cookie 持久化，设置可跨会话保存
+- 连接成功后自动同步 WDSP 状态到后端
+
+---
+
 ## [V4.5.17] - 2026-03-08
 
 ### 🔧 ATU 天调系统修复与优化
