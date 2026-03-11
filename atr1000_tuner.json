@@ -1,6 +1,6 @@
 {
   "version": "2.0",
-  "updated": "2026-03-10T12:48:03.585671",
+  "updated": "2026-03-11T10:36:17.367133",
   "records": [
     {
       "freq": 7005000,
@@ -91,11 +91,11 @@
       "sw": 1,
       "ind": 3,
       "cap": 24,
-      "swr_avg": 1.0624253459577386,
+      "swr_avg": 1.0618800247371454,
       "swr_min": 1.02,
       "swr_max": 1.43,
-      "sample_count": 1373,
-      "last_update": 1773118083.5856588,
+      "sample_count": 1617,
+      "last_update": 1773187490.5141819,
       "needs_verify": false
     },
     {
@@ -175,11 +175,11 @@
       "sw": 0,
       "ind": 1,
       "cap": 9,
-      "swr_avg": 1.0529090909090886,
-      "swr_min": 1.04,
+      "swr_avg": 1.060277392510404,
+      "swr_min": 1.03,
       "swr_max": 1.4,
-      "sample_count": 220,
-      "last_update": 1773110552.807199,
+      "sample_count": 721,
+      "last_update": 1773196577.3671281,
       "needs_verify": false
     },
     {
@@ -895,11 +895,11 @@
       "sw": 0,
       "ind": 3,
       "cap": 7,
-      "swr_avg": 1.1787654320987675,
-      "swr_min": 1.15,
+      "swr_avg": 1.1645652173913061,
+      "swr_min": 1.06,
       "swr_max": 1.18,
-      "sample_count": 81,
-      "last_update": 1772983521.23485,
+      "sample_count": 92,
+      "last_update": 1773120457.320329,
       "needs_verify": false
     },
     {
@@ -1027,11 +1027,11 @@
       "sw": 0,
       "ind": 47,
       "cap": 85,
-      "swr_avg": 1.406666666666666,
-      "swr_min": 1.18,
+      "swr_avg": 1.388148148148147,
+      "swr_min": 1.15,
       "swr_max": 1.5,
-      "sample_count": 21,
-      "last_update": 1773058664.465813,
+      "sample_count": 81,
+      "last_update": 1773148991.175478,
       "needs_verify": false
     },
     {
@@ -1327,11 +1327,11 @@
       "sw": 1,
       "ind": 3,
       "cap": 25,
-      "swr_avg": 1.0399999999999996,
+      "swr_avg": 1.0786982248520727,
       "swr_min": 1.04,
-      "swr_max": 1.04,
-      "sample_count": 54,
-      "last_update": 1773100966.238778,
+      "swr_max": 1.13,
+      "sample_count": 169,
+      "last_update": 1773188565.183202,
       "needs_verify": false
     },
     {

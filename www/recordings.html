@@ -211,6 +211,63 @@
             border-radius: 4px;
         }
         
+        /* 播放按钮 */
+        .play-btn {
+            background: linear-gradient(180deg, #3a3a8a, #2a2a6a);
+            border: 1px solid #4a4a9a;
+            color: #8ab4f8;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        
+        .play-btn:hover {
+            background: linear-gradient(180deg, #4a4a9a, #3a3a8a);
+            color: #aaccff;
+            transform: scale(1.05);
+        }
+        
+        .play-btn.playing {
+            background: linear-gradient(180deg, #8a3a3a, #6a2a2a);
+            border-color: #9a4a4a;
+            color: #ff8a8a;
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(255, 100, 100, 0.4); }
+            50% { box-shadow: 0 0 0 8px rgba(255, 100, 100, 0); }
+        }
+        
+        /* 进度条 */
+        .progress-bar {
+            width: 100%;
+            height: 4px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 2px;
+            margin-top: 8px;
+            overflow: hidden;
+            display: none;
+        }
+        
+        .progress-bar.active {
+            display: block;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #4CAF50, #8BC34A);
+            border-radius: 2px;
+            transition: width 0.1s linear;
+        }
+        
         /* 下载按钮 */
         .download-btn {
             background: linear-gradient(180deg, #2a5a2a, #1a4a1a);
@@ -235,6 +292,13 @@
         
         .download-btn::before {
             content: '⬇️';
+        }
+        
+        /* 操作按钮组 */
+        .action-buttons {
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
         
         /* 统计信息 */
@@ -435,7 +499,7 @@
                     
                     dateRecordings.forEach(rec => {
                         html += `
-                            <div class="recording-item">
+                            <div class="recording-item" data-filename="${rec.filename}">
                                 <div class="recording-icon">🎵</div>
                                 <div class="recording-info">
                                     <div class="recording-freq">${rec.freq}</div>
@@ -443,8 +507,14 @@
                                         <span>${formatTime(rec.time)}</span>
                                         <span class="recording-size">${formatSize(rec.size)}</span>
                                     </div>
+                                    <div class="progress-bar" id="progress-${rec.filename}">
+                                        <div class="progress-fill" style="width: 0%"></div>
+                                    </div>
                                 </div>
-                                <a href="/recordings/${rec.filename}" class="download-btn" download>下载</a>
+                                <div class="action-buttons">
+                                    <button class="play-btn" onclick="togglePlay('${rec.filename}', this)" title="播放/暂停">▶️</button>
+                                    <a href="/recordings/${rec.filename}" class="download-btn" download>下载</a>
+                                </div>
                             </div>
                         `;
                     });
@@ -468,8 +538,141 @@
             }
         }
         
+        // 全局音频对象
+        let currentAudio = null;
+        let currentPlayBtn = null;
+        let currentProgressBar = null;
+        let progressInterval = null;
+        
+        // 播放/暂停切换
+        function togglePlay(filename, btn) {
+            const filepath = `/recordings/${filename}`;
+            const progressBar = document.getElementById(`progress-${filename}`);
+            
+            // 如果点击的是当前正在播放的音频
+            if (currentAudio && currentAudio.src.includes(filename)) {
+                if (currentAudio.paused) {
+                    // 继续播放
+                    currentAudio.play();
+                    btn.textContent = '⏸️';
+                    btn.classList.add('playing');
+                    progressBar.classList.add('active');
+                    startProgressUpdate();
+                } else {
+                    // 暂停
+                    currentAudio.pause();
+                    btn.textContent = '▶️';
+                    btn.classList.remove('playing');
+                    stopProgressUpdate();
+                }
+                return;
+            }
+            
+            // 停止当前播放的音频
+            stopCurrentAudio();
+            
+            // 创建新的音频对象
+            currentAudio = new Audio(filepath);
+            currentPlayBtn = btn;
+            currentProgressBar = progressBar;
+            
+            // 播放事件
+            currentAudio.addEventListener('play', () => {
+                btn.textContent = '⏸️';
+                btn.classList.add('playing');
+                progressBar.classList.add('active');
+                startProgressUpdate();
+            });
+            
+            // 暂停事件
+            currentAudio.addEventListener('pause', () => {
+                if (currentAudio.ended) return;
+                btn.textContent = '▶️';
+                btn.classList.remove('playing');
+                stopProgressUpdate();
+            });
+            
+            // 结束事件
+            currentAudio.addEventListener('ended', () => {
+                btn.textContent = '▶️';
+                btn.classList.remove('playing');
+                progressBar.classList.remove('active');
+                progressBar.querySelector('.progress-fill').style.width = '0%';
+                stopProgressUpdate();
+                currentAudio = null;
+                currentPlayBtn = null;
+                currentProgressBar = null;
+            });
+            
+            // 错误事件
+            currentAudio.addEventListener('error', (e) => {
+                console.error('音频播放错误:', e);
+                alert('音频播放失败，请检查文件是否存在');
+                btn.textContent = '▶️';
+                btn.classList.remove('playing');
+                progressBar.classList.remove('active');
+                currentAudio = null;
+                currentPlayBtn = null;
+                currentProgressBar = null;
+            });
+            
+            // 开始播放
+            currentAudio.play().catch(err => {
+                console.error('播放失败:', err);
+                alert('无法播放音频: ' + err.message);
+                currentAudio = null;
+                currentPlayBtn = null;
+                currentProgressBar = null;
+            });
+        }
+        
+        // 停止当前播放的音频
+        function stopCurrentAudio() {
+            if (currentAudio) {
+                currentAudio.pause();
+                currentAudio.currentTime = 0;
+                
+                if (currentPlayBtn) {
+                    currentPlayBtn.textContent = '▶️';
+                    currentPlayBtn.classList.remove('playing');
+                }
+                
+                if (currentProgressBar) {
+                    currentProgressBar.classList.remove('active');
+                    currentProgressBar.querySelector('.progress-fill').style.width = '0%';
+                }
+                
+                stopProgressUpdate();
+                currentAudio = null;
+                currentPlayBtn = null;
+                currentProgressBar = null;
+            }
+        }
+        
+        // 开始更新进度
+        function startProgressUpdate() {
+            stopProgressUpdate();
+            progressInterval = setInterval(() => {
+                if (currentAudio && currentProgressBar && currentAudio.duration) {
+                    const progress = (currentAudio.currentTime / currentAudio.duration) * 100;
+                    currentProgressBar.querySelector('.progress-fill').style.width = `${progress}%`;
+                }
+            }, 100);
+        }
+        
+        // 停止更新进度
+        function stopProgressUpdate() {
+            if (progressInterval) {
+                clearInterval(progressInterval);
+                progressInterval = null;
+            }
+        }
+        
         // 页面加载时自动加载
         document.addEventListener('DOMContentLoaded', loadRecordings);
+        
+        // 页面卸载时停止音频
+        window.addEventListener('beforeunload', stopCurrentAudio);
     </script>
 </body>
 </html>
