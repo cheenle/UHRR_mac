@@ -1,0 +1,786 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ARCH-DECISIONS 架构决策 - MRRC 工程设计文档</title>
+    <style>
+        :root {
+            --primary-color: #00d4aa;
+            --bg-dark: #0a0a0f;
+            --bg-card: #12121a;
+            --text-primary: #e8e8e8;
+            --text-secondary: #a0a0a0;
+            --border-color: #2a2a3a;
+            --code-bg: #1a1a24;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg-dark);
+            color: var(--text-primary);
+            line-height: 1.7;
+            padding: 20px;
+        }
+        .container { max-width: 1200px; margin: 0 auto; }
+        .header {
+            background: linear-gradient(135deg, #1a1a2e 0%, #0f0f1a 100%);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 30px;
+            margin-bottom: 30px;
+        }
+        .header h1 {
+            color: var(--primary-color);
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+        .breadcrumb {
+            color: var(--text-secondary);
+            font-size: 0.9em;
+        }
+        .breadcrumb a {
+            color: var(--primary-color);
+            text-decoration: none;
+        }
+        .content {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 30px;
+            overflow-x: auto;
+        }
+        .content h1, .content h2, .content h3 {
+            color: var(--primary-color);
+            margin: 1.5em 0 0.5em;
+            line-height: 1.3;
+        }
+        .content h1 { font-size: 1.8em; border-bottom: 2px solid var(--primary-color); padding-bottom: 10px; }
+        .content h2 { font-size: 1.4em; }
+        .content h3 { font-size: 1.2em; color: #00ffcc; }
+        .content p { margin: 1em 0; color: var(--text-primary); }
+        .content ul, .content ol { margin: 1em 0; padding-left: 2em; }
+        .content li { margin: 0.5em 0; }
+        .content code {
+            background: var(--code-bg);
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-family: 'SF Mono', Monaco, Consolas, monospace;
+            font-size: 0.9em;
+            color: #ff79c6;
+        }
+        .content pre {
+            background: var(--code-bg);
+            padding: 15px;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 1em 0;
+            border: 1px solid var(--border-color);
+        }
+        .content pre code {
+            padding: 0;
+            background: none;
+            color: #f8f8f2;
+        }
+        .content table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1em 0;
+        }
+        .content th, .content td {
+            padding: 12px;
+            border: 1px solid var(--border-color);
+            text-align: left;
+        }
+        .content th {
+            background: var(--code-bg);
+            color: var(--primary-color);
+            font-weight: 600;
+        }
+        .content tr:hover { background: rgba(0, 212, 170, 0.05); }
+        .content blockquote {
+            border-left: 4px solid var(--primary-color);
+            padding-left: 20px;
+            margin: 1em 0;
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+        .content a {
+            color: var(--primary-color);
+            text-decoration: none;
+        }
+        .content a:hover { text-decoration: underline; }
+        .content img {
+            max-width: 100%;
+            border-radius: 8px;
+            margin: 1em 0;
+        }
+        .content hr {
+            border: none;
+            border-top: 1px solid var(--border-color);
+            margin: 2em 0;
+        }
+        .nav-links {
+            display: flex;
+            gap: 15px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+        .nav-links a {
+            background: var(--bg-card);
+            border: 1px solid var(--primary-color);
+            color: var(--primary-color);
+            padding: 10px 20px;
+            border-radius: 6px;
+            text-decoration: none;
+            transition: all 0.3s;
+        }
+        .nav-links a:hover {
+            background: var(--primary-color);
+            color: var(--bg-dark);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>ARCH-DECISIONS 架构决策</h1>
+            <div class="breadcrumb">
+                <a href="design.html">← 设计&工程</a> | 关键架构决策记录
+            </div>
+        </div>
+        <div class="content">
+            <h1>架构决策记录 (ADR)</h1>
+<blockquote>
+<p>MRRC项目重要架构决策记录</p>
+</blockquote>
+<hr />
+<h2>AD-001: WebSocket实时通信协议</h2>
+<table>
+<thead>
+<tr>
+<th>属性</th>
+<th>值</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>ID</td>
+<td>AD-001</td>
+</tr>
+<tr>
+<td>日期</td>
+<td>2024-10-01</td>
+</tr>
+<tr>
+<td>状态</td>
+<td>已批准</td>
+</tr>
+<tr>
+<td>决策者</td>
+<td>MRRC Team</td>
+</tr>
+<tr>
+<td>影响范围</td>
+<td>整体架构</td>
+</tr>
+</tbody>
+</table>
+<h4>问题</h4>
+<p>如何在浏览器和服务器之间实现实时双向通信？</p>
+<h4>背景</h4>
+<ul>
+<li>需要实时传输控制命令（频率、模式、PTT）</li>
+<li>需要实时传输音频数据（TX/RX）</li>
+<li>延迟要求 &lt; 100ms</li>
+<li>HTTP轮询效率低，不满足实时需求</li>
+</ul>
+<h4>决定</h4>
+<p>使用WebSocket作为主要通信协议，控制和音频复用同一连接。</p>
+<h4>理由</h4>
+<ol>
+<li><strong>低延迟</strong>: 全双工通信，服务器可主动推送</li>
+<li><strong>效率高</strong>: 相比HTTP轮询，带宽节省90%+</li>
+<li><strong>浏览器原生支持</strong>: 无需额外库</li>
+<li><strong>单连接复用</strong>: 控制和音频共享连接，简化管理</li>
+</ol>
+<h4>替代方案</h4>
+<table>
+<thead>
+<tr>
+<th>方案</th>
+<th>描述</th>
+<th>被排除原因</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>HTTP轮询</td>
+<td>定期GET请求</td>
+<td>延迟高，浪费带宽</td>
+</tr>
+<tr>
+<td>Server-Sent Events</td>
+<td>单向推送</td>
+<td>不支持双向</td>
+</tr>
+<tr>
+<td>WebRTC DataChannel</td>
+<td>P2P</td>
+<td>穿透NAT困难</td>
+</tr>
+<tr>
+<td>Socket.IO</td>
+<td>WebSocket封装</td>
+<td>增加依赖</td>
+</tr>
+</tbody>
+</table>
+<h4>影响</h4>
+<p><strong>正面影响</strong>:
+- 实时性大幅提升
+- 架构简洁
+- 调试方便</p>
+<p><strong>负面影响</strong>:
+- 需要WebSocket支持（现代浏览器均支持）</p>
+<p><strong>涉及模块</strong>:
+- 前端: controls.js
+- 后端: MRRC主程序</p>
+<hr />
+<h2>AD-002: Tornado Web框架选型</h2>
+<table>
+<thead>
+<tr>
+<th>属性</th>
+<th>值</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>ID</td>
+<td>AD-002</td>
+</tr>
+<tr>
+<td>日期</td>
+<td>2024-10-01</td>
+</tr>
+<tr>
+<td>状态</td>
+<td>已批准</td>
+</tr>
+<tr>
+<td>决策者</td>
+<td>MRRC Team</td>
+</tr>
+<tr>
+<td>影响范围</td>
+<td>后端架构</td>
+</tr>
+</tbody>
+</table>
+<h4>问题</h4>
+<p>选择什么作为Web服务器框架？</p>
+<h4>背景</h4>
+<ul>
+<li>需要WebSocket支持</li>
+<li>需要处理静态文件</li>
+<li>需要与PyAudio集成</li>
+<li>Python生态优先</li>
+</ul>
+<h4>决定</h4>
+<p>使用Tornado作为Web服务器框架。</p>
+<h4>理由</h4>
+<ol>
+<li><strong>原生WebSocket</strong>: 内置WebSocketHandler，无额外依赖</li>
+<li><strong>异步I/O</strong>: 适合实时通信场景</li>
+<li><strong>静态文件服务</strong>: 内置支持</li>
+<li><strong>与PyAudio兼容</strong>: 同为Python生态</li>
+</ol>
+<h4>替代方案</h4>
+<table>
+<thead>
+<tr>
+<th>方案</th>
+<th>描述</th>
+<th>被排除原因</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Flask-SocketIO</td>
+<td>Flask扩展</td>
+<td>需要额外依赖</td>
+</tr>
+<tr>
+<td>FastAPI</td>
+<td>现代异步框架</td>
+<td>WebSocket支持复杂</td>
+</tr>
+<tr>
+<td>aiohttp</td>
+<td>异步HTTP</td>
+<td>静态文件需另配</td>
+</tr>
+<tr>
+<td>Node.js</td>
+<td>完全不同栈</td>
+<td>团队不熟悉</td>
+</tr>
+</tbody>
+</table>
+<h4>影响</h4>
+<p><strong>正面影响</strong>:
+- 开发效率高
+- 社区活跃
+- 文档完善</p>
+<p><strong>负面影响</strong>:
+- 性能略低于Node.js</p>
+<hr />
+<h2>AD-003: Int16音频编码</h2>
+<table>
+<thead>
+<tr>
+<th>属性</th>
+<th>值</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>ID</td>
+<td>AD-003</td>
+</tr>
+<tr>
+<td>日期</td>
+<td>2024-11-01</td>
+</tr>
+<tr>
+<td>状态</td>
+<td>已批准</td>
+</tr>
+<tr>
+<td>决策者</td>
+<td>MRRC Team</td>
+</tr>
+<tr>
+<td>影响范围</td>
+<td>音频系统</td>
+</tr>
+</tbody>
+</table>
+<h4>问题</h4>
+<p>选择什么音频编码格式传输？</p>
+<h4>背景</h4>
+<ul>
+<li>原始PCM 48kHz/32bit每样本带宽过高</li>
+<li>需要在带宽和音质间平衡</li>
+<li>目标延迟 &lt; 100ms</li>
+</ul>
+<h4>决定</h4>
+<p>TX/RX均使用Int16编码，采样率16kHz。</p>
+<h4>理由</h4>
+<ol>
+<li><strong>带宽减半</strong>: 相比Float32，节省50%带宽</li>
+<li><strong>音质足够</strong>: 16kHz/16bit满足语音通信</li>
+<li><strong>编码简单</strong>: 无复杂算法，延迟低</li>
+<li><strong>兼容性</strong>: 所有浏览器支持</li>
+</ol>
+<h4>替代方案</h4>
+<table>
+<thead>
+<tr>
+<th>方案</th>
+<th>描述</th>
+<th>被排除原因</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Float32</td>
+<td>原始格式</td>
+<td>带宽高</td>
+</tr>
+<tr>
+<td>Opus</td>
+<td>IETF标准</td>
+<td>编码延迟</td>
+</tr>
+<tr>
+<td>AAC</td>
+<td>Apple标准</td>
+<td>专利问题</td>
+</tr>
+<tr>
+<td>MP3</td>
+<td>有损压缩</td>
+<td>延迟高</td>
+</tr>
+</tbody>
+</table>
+<h4>影响</h4>
+<p><strong>正面影响</strong>:
+- 带宽节省50%
+- 延迟低
+- 实现简单</p>
+<p><strong>负面影响</strong>:
+- 音质不如无损格式</p>
+<hr />
+<h2>AD-004: WDSP NR2降噪集成</h2>
+<table>
+<thead>
+<tr>
+<th>属性</th>
+<th>值</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>ID</td>
+<td>AD-004</td>
+</tr>
+<tr>
+<td>日期</td>
+<td>2026-03-09</td>
+</tr>
+<tr>
+<td>状态</td>
+<td>已批准</td>
+</tr>
+<tr>
+<td>决策者</td>
+<td>MRRC Team</td>
+</tr>
+<tr>
+<td>影响范围</td>
+<td>DSP模块</td>
+</tr>
+</tbody>
+</table>
+<h4>问题</h4>
+<p>选择什么作为音频降噪方案？</p>
+<h4>背景</h4>
+<ul>
+<li>RNNoise降噪效果一般</li>
+<li>需要专业级SSB语音降噪</li>
+<li>目标15-20dB降噪深度</li>
+</ul>
+<h4>决定</h4>
+<p>集成WDSP库的NR2频谱降噪算法。</p>
+<h4>理由</h4>
+<ol>
+<li><strong>专为SSB优化</strong>: OpenHPSDR项目出品</li>
+<li><strong>降噪深度</strong>: 15-20dB，远超RNNoise</li>
+<li><strong>语音保真</strong>: 频谱减法，语音失真小</li>
+<li><strong>低延迟</strong>: &lt; 20ms处理延迟</li>
+</ol>
+<h4>替代方案</h4>
+<table>
+<thead>
+<tr>
+<th>方案</th>
+<th>描述</th>
+<th>被排除原因</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>RNNoise</td>
+<td>神经网络</td>
+<td>降噪深度不足</td>
+</tr>
+<tr>
+<td>WebRTC NS</td>
+<td>通用语音</td>
+<td>非SSB优化</td>
+</tr>
+<tr>
+<td>Audacity</td>
+<td>离线处理</td>
+<td>不适合实时</td>
+</tr>
+</tbody>
+</table>
+<h4>影响</h4>
+<p><strong>正面影响</strong>:
+- 降噪效果显著提升
+- 语音清晰
+- 专业级品质</p>
+<p><strong>负面影响</strong>:
+- 需要编译WDSP库
+- 配置复杂度增加</p>
+<hr />
+<h2>AD-005: 多实例部署架构</h2>
+<table>
+<thead>
+<tr>
+<th>属性</th>
+<th>值</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>ID</td>
+<td>AD-005</td>
+</tr>
+<tr>
+<td>日期</td>
+<td>2026-03-10</td>
+</tr>
+<tr>
+<td>状态</td>
+<td>已批准</td>
+</tr>
+<tr>
+<td>决策者</td>
+<td>MRRC Team</td>
+</tr>
+<tr>
+<td>影响范围</td>
+<td>部署架构</td>
+</tr>
+</tbody>
+</table>
+<h4>问题</h4>
+<p>如何在单台服务器支持多台独立电台？</p>
+<h4>背景</h4>
+<ul>
+<li>单实例只能控制一台电台</li>
+<li>多电台需要独立服务和端口</li>
+<li>配置管理复杂</li>
+</ul>
+<h4>决定</h4>
+<p>采用配置文件隔离 + Unix Socket隔离架构。</p>
+<h4>理由</h4>
+<ol>
+<li><strong>配置隔离</strong>: 每个实例独立配置文件</li>
+<li><strong>端口隔离</strong>: 每个实例独立Web端口</li>
+<li><strong>Socket隔离</strong>: ATR-1000通信通过独立Socket</li>
+<li><strong>平滑扩展</strong>: 新实例只需添加配置</li>
+</ol>
+<h4>替代方案</h4>
+<table>
+<thead>
+<tr>
+<th>方案</th>
+<th>描述</th>
+<th>被排除原因</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Docker容器</td>
+<td>容器化部署</td>
+<td>资源消耗大</td>
+</tr>
+<tr>
+<td>进程隔离</td>
+<td>多进程</td>
+<td>配置复杂</td>
+</tr>
+<tr>
+<td>数据库隔离</td>
+<td>共享实例</td>
+<td>不够隔离</td>
+</tr>
+</tbody>
+</table>
+<h4>影响</h4>
+<p><strong>正面影响</strong>:
+- 支持多电台
+- 配置清晰
+- 运维简单</p>
+<p><strong>负面影响</strong>:
+- 端口占用增加</p>
+<hr />
+<h2>AD-006: 语音助手架构</h2>
+<table>
+<thead>
+<tr>
+<th>属性</th>
+<th>值</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>ID</td>
+<td>AD-006</td>
+</tr>
+<tr>
+<td>日期</td>
+<td>2026-03-12</td>
+</tr>
+<tr>
+<td>状态</td>
+<td>已批准</td>
+</tr>
+<tr>
+<td>决策者</td>
+<td>MRRC Team</td>
+</tr>
+<tr>
+<td>影响范围</td>
+<td>语音模块</td>
+</tr>
+</tbody>
+</table>
+<h4>问题</h4>
+<p>如何实现AI语音助手功能？</p>
+<h4>背景</h4>
+<ul>
+<li>需要语音识别功能</li>
+<li>需要语音合成功能</li>
+<li>需要本地运行保护隐私</li>
+</ul>
+<h4>决定</h4>
+<p>采用Whisper ASR + Qwen3-TTS本地部署架构。</p>
+<h4>理由</h4>
+<ol>
+<li><strong>本地运行</strong>: 不依赖云服务，保护隐私</li>
+<li><strong>Whisper</strong>: OpenAI开源，识别准确</li>
+<li><strong>Qwen3-TTS</strong>: 阿里开源，音质好</li>
+<li><strong>低延迟</strong>: 本地推理，无需网络</li>
+</ol>
+<h4>替代方案</h4>
+<table>
+<thead>
+<tr>
+<th>方案</th>
+<th>描述</th>
+<th>被排除原因</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>云语音API</td>
+<td>阿里/腾讯/Google</td>
+<td>隐私问题</td>
+</tr>
+<tr>
+<td>Whisper.cpp</td>
+<td>C++移植</td>
+<td>实现复杂</td>
+</tr>
+<tr>
+<td>Coqui TTS</td>
+<td>开源TTS</td>
+<td>效果一般</td>
+</tr>
+</tbody>
+</table>
+<h4>影响</h4>
+<p><strong>正面影响</strong>:
+- 隐私保护
+- 离线可用
+- 定制性强</p>
+<p><strong>负面影响</strong>:
+- 本地资源需求高</p>
+<hr />
+<h2>AD-007: CW实时解码架构</h2>
+<table>
+<thead>
+<tr>
+<th>属性</th>
+<th>值</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>ID</td>
+<td>AD-007</td>
+</tr>
+<tr>
+<td>日期</td>
+<td>2026-03-13</td>
+</tr>
+<tr>
+<td>状态</td>
+<td>已批准</td>
+</tr>
+<tr>
+<td>决策者</td>
+<td>MRRC Team</td>
+</tr>
+<tr>
+<td>影响范围</td>
+<td>CW模块</td>
+</tr>
+</tbody>
+</table>
+<h4>问题</h4>
+<p>如何实现CW实时解码？</p>
+<h4>背景</h4>
+<ul>
+<li>CW通信需要实时解码</li>
+<li>需要低延迟</li>
+<li>需要离线运行</li>
+</ul>
+<h4>决定</h4>
+<p>采用ONNX Runtime前端推理架构。</p>
+<h4>理由</h4>
+<ol>
+<li><strong>ONNX格式</strong>: 跨平台模型格式</li>
+<li><strong>Web运行</strong>: 浏览器可直接运行</li>
+<li><strong>低延迟</strong>: 实时推理</li>
+<li><strong>模型成熟</strong>: cw_decoder.onnx可用</li>
+</ol>
+<h4>替代方案</h4>
+<table>
+<thead>
+<tr>
+<th>方案</th>
+<th>描述</th>
+<th>被排除原因</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Fldigi</td>
+<td>桌面软件</td>
+<td>无法集成</td>
+</tr>
+<tr>
+<td>CWGet</td>
+<td>Windows软件</td>
+<td>闭源</td>
+</tr>
+<tr>
+<td>Cloud API</td>
+<td>云服务</td>
+<td>延迟高</td>
+</tr>
+</tbody>
+</table>
+<h4>影响</h4>
+<p><strong>正面影响</strong>:
+- 实时解码
+- 浏览器集成
+- 离线可用</p>
+<p><strong>负面影响</strong>:
+- 模型精度依赖</p>
+<hr />
+<h2>决策清单</h2>
+<p>使用此清单确保决策完整：</p>
+<ul>
+<li>[x] 问题清晰定义</li>
+<li>[x] 背景信息完整</li>
+<li>[x] 至少考虑3个替代方案</li>
+<li>[x] 决策理由充分</li>
+<li>[x] 影响分析完整</li>
+<li>[x] 派生需求记录</li>
+<li>[x] 相关团队已知会</li>
+<li>[x] 文档已版本化</li>
+</ul>
+<hr />
+<p><strong>文档信息</strong>
+- 版本: 1.0
+- 创建日期: 2026-03-15
+- 最后更新: 2026-03-15
+- 作者: MRRC Team</p>
+        </div>
+        <div class="nav-links">
+            <a href="index.html">首页</a>
+            <a href="docs.html">文档中心</a>
+            <a href="design.html">设计&工程</a>
+        </div>
+    </div>
+</body>
+</html>

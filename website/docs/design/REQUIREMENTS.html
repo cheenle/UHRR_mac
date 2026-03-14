@@ -1,0 +1,916 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>REQUIREMENTS 需求矩阵 - MRRC 工程设计文档</title>
+    <style>
+        :root {
+            --primary-color: #00d4aa;
+            --bg-dark: #0a0a0f;
+            --bg-card: #12121a;
+            --text-primary: #e8e8e8;
+            --text-secondary: #a0a0a0;
+            --border-color: #2a2a3a;
+            --code-bg: #1a1a24;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg-dark);
+            color: var(--text-primary);
+            line-height: 1.7;
+            padding: 20px;
+        }
+        .container { max-width: 1200px; margin: 0 auto; }
+        .header {
+            background: linear-gradient(135deg, #1a1a2e 0%, #0f0f1a 100%);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 30px;
+            margin-bottom: 30px;
+        }
+        .header h1 {
+            color: var(--primary-color);
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+        .breadcrumb {
+            color: var(--text-secondary);
+            font-size: 0.9em;
+        }
+        .breadcrumb a {
+            color: var(--primary-color);
+            text-decoration: none;
+        }
+        .content {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 30px;
+            overflow-x: auto;
+        }
+        .content h1, .content h2, .content h3 {
+            color: var(--primary-color);
+            margin: 1.5em 0 0.5em;
+            line-height: 1.3;
+        }
+        .content h1 { font-size: 1.8em; border-bottom: 2px solid var(--primary-color); padding-bottom: 10px; }
+        .content h2 { font-size: 1.4em; }
+        .content h3 { font-size: 1.2em; color: #00ffcc; }
+        .content p { margin: 1em 0; color: var(--text-primary); }
+        .content ul, .content ol { margin: 1em 0; padding-left: 2em; }
+        .content li { margin: 0.5em 0; }
+        .content code {
+            background: var(--code-bg);
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-family: 'SF Mono', Monaco, Consolas, monospace;
+            font-size: 0.9em;
+            color: #ff79c6;
+        }
+        .content pre {
+            background: var(--code-bg);
+            padding: 15px;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 1em 0;
+            border: 1px solid var(--border-color);
+        }
+        .content pre code {
+            padding: 0;
+            background: none;
+            color: #f8f8f2;
+        }
+        .content table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1em 0;
+        }
+        .content th, .content td {
+            padding: 12px;
+            border: 1px solid var(--border-color);
+            text-align: left;
+        }
+        .content th {
+            background: var(--code-bg);
+            color: var(--primary-color);
+            font-weight: 600;
+        }
+        .content tr:hover { background: rgba(0, 212, 170, 0.05); }
+        .content blockquote {
+            border-left: 4px solid var(--primary-color);
+            padding-left: 20px;
+            margin: 1em 0;
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+        .content a {
+            color: var(--primary-color);
+            text-decoration: none;
+        }
+        .content a:hover { text-decoration: underline; }
+        .content img {
+            max-width: 100%;
+            border-radius: 8px;
+            margin: 1em 0;
+        }
+        .content hr {
+            border: none;
+            border-top: 1px solid var(--border-color);
+            margin: 2em 0;
+        }
+        .nav-links {
+            display: flex;
+            gap: 15px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+        .nav-links a {
+            background: var(--bg-card);
+            border: 1px solid var(--primary-color);
+            color: var(--primary-color);
+            padding: 10px 20px;
+            border-radius: 6px;
+            text-decoration: none;
+            transition: all 0.3s;
+        }
+        .nav-links a:hover {
+            background: var(--primary-color);
+            color: var(--bg-dark);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>REQUIREMENTS 需求矩阵</h1>
+            <div class="breadcrumb">
+                <a href="design.html">← 设计&工程</a> | 功能需求列表
+            </div>
+        </div>
+        <div class="content">
+            <h1>MRRC 需求矩阵</h1>
+<blockquote>
+<p>基于 Vibe-SDD 方法论的功能需求与非功能需求</p>
+</blockquote>
+<hr />
+<h2>1. 功能需求矩阵</h2>
+<h3>1.1 电台控制 (Radio Control)</h3>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>模块</th>
+<th>功能名称</th>
+<th>描述</th>
+<th>优先级</th>
+<th>验收标准</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>REQ-001</td>
+<td>控制</td>
+<td>频率设置</td>
+<td>设置电台工作频率</td>
+<td>P0</td>
+<td>频率正确设置并返回确认</td>
+</tr>
+<tr>
+<td>REQ-002</td>
+<td>控制</td>
+<td>模式切换</td>
+<td>切换USB/LSB/CW/AM/FM模式</td>
+<td>P0</td>
+<td>模式正确切换</td>
+</tr>
+<tr>
+<td>REQ-003</td>
+<td>控制</td>
+<td>PTT控制</td>
+<td>按下发射，松开停止</td>
+<td>P0</td>
+<td>按下即发，松开即停</td>
+</tr>
+<tr>
+<td>REQ-004</td>
+<td>控制</td>
+<td>VFO切换</td>
+<td>切换VFO A/B</td>
+<td>P1</td>
+<td>VFO正确切换</td>
+</tr>
+<tr>
+<td>REQ-005</td>
+<td>控制</td>
+<td>波段选择</td>
+<td>一键切换常用频段</td>
+<td>P1</td>
+<td>频率正确跳变</td>
+</tr>
+<tr>
+<td>REQ-006</td>
+<td>控制</td>
+<td>TUNE控制</td>
+<td>启动天调单音</td>
+<td>P1</td>
+<td>1kHz单音正确发射</td>
+</tr>
+</tbody>
+</table>
+<h3>1.2 音频系统 (Audio System)</h3>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>模块</th>
+<th>功能名称</th>
+<th>描述</th>
+<th>优先级</th>
+<th>验收标准</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>REQ-010</td>
+<td>音频</td>
+<td>TX采集</td>
+<td>采集浏览器麦克风音频</td>
+<td>P0</td>
+<td>48kHz采样正常</td>
+</tr>
+<tr>
+<td>REQ-011</td>
+<td>音频</td>
+<td>TX编码</td>
+<td>Int16/Opus编码传输</td>
+<td>P0</td>
+<td>编码正确，可解码</td>
+</tr>
+<tr>
+<td>REQ-012</td>
+<td>音频</td>
+<td>RX播放</td>
+<td>浏览器AudioWorklet播放</td>
+<td>P0</td>
+<td>延迟&lt;100ms</td>
+</tr>
+<tr>
+<td>REQ-013</td>
+<td>音频</td>
+<td>RX采集</td>
+<td>PyAudio采集电台音频</td>
+<td>P0</td>
+<td>48kHz采集正常</td>
+</tr>
+<tr>
+<td>REQ-014</td>
+<td>音频</td>
+<td>降噪处理</td>
+<td>WDSP NR2频谱降噪</td>
+<td>P1</td>
+<td>15-20dB降噪深度</td>
+</tr>
+<tr>
+<td>REQ-015</td>
+<td>音频</td>
+<td>AGC控制</td>
+<td>自动增益控制</td>
+<td>P1</td>
+<td>输出电平稳定</td>
+</tr>
+<tr>
+<td>REQ-016</td>
+<td>音频</td>
+<td>TX均衡器</td>
+<td>三段EQ优化发射音质</td>
+<td>P2</td>
+<td>低/中/高频可调</td>
+</tr>
+</tbody>
+</table>
+<h3>1.3 仪表显示 (Meters)</h3>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>模块</th>
+<th>功能名称</th>
+<th>描述</th>
+<th>优先级</th>
+<th>验收标准</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>REQ-020</td>
+<td>仪表</td>
+<td>S表显示</td>
+<td>信号强度指示 S0-S9+60dB</td>
+<td>P0</td>
+<td>实时更新</td>
+</tr>
+<tr>
+<td>REQ-021</td>
+<td>仪表</td>
+<td>功率显示</td>
+<td>ATR-1000实时功率 0-200W</td>
+<td>P1</td>
+<td>延迟&lt;200ms</td>
+</tr>
+<tr>
+<td>REQ-022</td>
+<td>仪表</td>
+<td>SWR显示</td>
+<td>驻波比显示 1.0-9.99</td>
+<td>P1</td>
+<td>实时更新</td>
+</tr>
+</tbody>
+</table>
+<h3>1.4 ATR-1000天调 (Tuner)</h3>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>模块</th>
+<th>功能名称</th>
+<th>描述</th>
+<th>优先级</th>
+<th>验收标准</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>REQ-030</td>
+<td>天调</td>
+<td>功率监测</td>
+<td>实时功率显示</td>
+<td>P0</td>
+<td>显示正确</td>
+</tr>
+<tr>
+<td>REQ-031</td>
+<td>天调</td>
+<td>SWR监测</td>
+<td>实时驻波比显示</td>
+<td>P0</td>
+<td>显示正确</td>
+</tr>
+<tr>
+<td>REQ-032</td>
+<td>天调</td>
+<td>智能学习</td>
+<td>发射时自动记录参数</td>
+<td>P1</td>
+<td>频率-参数映射</td>
+</tr>
+<tr>
+<td>REQ-033</td>
+<td>天调</td>
+<td>快速调谐</td>
+<td>切换频率自动应用参数</td>
+<td>P1</td>
+<td>参数正确应用</td>
+</tr>
+<tr>
+<td>REQ-034</td>
+<td>天调</td>
+<td>手动调谐</td>
+<td>手动触发调谐</td>
+<td>P2</td>
+<td>调谐成功</td>
+</tr>
+</tbody>
+</table>
+<h3>1.5 语音助手 (Voice Assistant)</h3>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>模块</th>
+<th>功能名称</th>
+<th>描述</th>
+<th>优先级</th>
+<th>验收标准</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>REQ-040</td>
+<td>语音</td>
+<td>语音识别</td>
+<td>Whisper ASR转文字</td>
+<td>P2</td>
+<td>中英文识别</td>
+</tr>
+<tr>
+<td>REQ-041</td>
+<td>语音</td>
+<td>语音合成</td>
+<td>Qwen3-TTS语音播报</td>
+<td>P2</td>
+<td>自然语音输出</td>
+</tr>
+<tr>
+<td>REQ-042</td>
+<td>语音</td>
+<td>语音控制</td>
+<td>语音指令控制电台</td>
+<td>P2</td>
+<td>指令正确执行</td>
+</tr>
+</tbody>
+</table>
+<h3>1.6 CW解码 (CW Decoder)</h3>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>模块</th>
+<th>功能名称</th>
+<th>描述</th>
+<th>优先级</th>
+<th>验收标准</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>REQ-050</td>
+<td>CW</td>
+<td>实时解码</td>
+<td>ONNX前端实时解码</td>
+<td>P2</td>
+<td>实时显示字符</td>
+</tr>
+<tr>
+<td>REQ-051</td>
+<td>CW</td>
+<td>录音解码</td>
+<td>录音文件解码</td>
+<td>P2</td>
+<td>正确解析字符</td>
+</tr>
+<tr>
+<td>REQ-052</td>
+<td>CW</td>
+<td>QSO状态机</td>
+<td>智能回复建议</td>
+<td>P2</td>
+<td>建议合理</td>
+</tr>
+</tbody>
+</table>
+<h3>1.7 多实例 (Multi-Instance)</h3>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>模块</th>
+<th>功能名称</th>
+<th>描述</th>
+<th>优先级</th>
+<th>验收标准</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>REQ-060</td>
+<td>多实例</td>
+<td>独立配置</td>
+<td>每个实例独立配置文件</td>
+<td>P1</td>
+<td>配置隔离</td>
+</tr>
+<tr>
+<td>REQ-061</td>
+<td>多实例</td>
+<td>独立端口</td>
+<td>每个实例独立Web端口</td>
+<td>P1</td>
+<td>端口隔离</td>
+</tr>
+<tr>
+<td>REQ-062</td>
+<td>多实例</td>
+<td>独立Socket</td>
+<td>每个实例Unix Socket隔离</td>
+<td>P1</td>
+<td>Socket隔离</td>
+</tr>
+<tr>
+<td>REQ-063</td>
+<td>多实例</td>
+<td>独立天调</td>
+<td>每个实例独立学习记录</td>
+<td>P1</td>
+<td>记录隔离</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>2. 非功能需求</h2>
+<h3>2.1 性能需求</h3>
+<table>
+<thead>
+<tr>
+<th>类别</th>
+<th>需求</th>
+<th>指标</th>
+<th>备注</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>性能</td>
+<td>TX/RX切换延迟</td>
+<td>&lt; 100ms</td>
+<td>端到端</td>
+</tr>
+<tr>
+<td>性能</td>
+<td>PTT响应时间</td>
+<td>&lt; 50ms</td>
+<td>协议层</td>
+</tr>
+<tr>
+<td>性能</td>
+<td>音频端到端延迟</td>
+<td>&lt; 100ms</td>
+<td>端到端</td>
+</tr>
+<tr>
+<td>性能</td>
+<td>功率显示延迟</td>
+<td>&lt; 200ms</td>
+<td>ATR-1000</td>
+</tr>
+<tr>
+<td>性能</td>
+<td>界面响应时间</td>
+<td>&lt; 200ms</td>
+<td>用户操作</td>
+</tr>
+<tr>
+<td>性能</td>
+<td>并发客户端数</td>
+<td>≥ 10</td>
+<td>同时在线</td>
+</tr>
+</tbody>
+</table>
+<h3>2.2 可用性需求</h3>
+<table>
+<thead>
+<tr>
+<th>类别</th>
+<th>需求</th>
+<th>指标</th>
+<th>备注</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>可用性</td>
+<td>系统可用性</td>
+<td>≥ 99.5%</td>
+<td>月度</td>
+</tr>
+<tr>
+<td>可用性</td>
+<td>故障恢复时间</td>
+<td>&lt; 30s</td>
+<td>自动重连</td>
+</tr>
+<tr>
+<td>可用性</td>
+<td>自动重连</td>
+<td>支持</td>
+<td>网络断开后</td>
+</tr>
+<tr>
+<td>可用性</td>
+<td>PTT可靠性</td>
+<td>≥ 99%</td>
+<td>长期统计</td>
+</tr>
+</tbody>
+</table>
+<h3>2.3 安全性需求</h3>
+<table>
+<thead>
+<tr>
+<th>类别</th>
+<th>需求</th>
+<th>指标</th>
+<th>备注</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>安全</td>
+<td>传输加密</td>
+<td>TLS 1.2+</td>
+<td>HTTPS/WSS</td>
+</tr>
+<tr>
+<td>安全</td>
+<td>用户认证</td>
+<td>支持</td>
+<td>密码/证书</td>
+</tr>
+<tr>
+<td>安全</td>
+<td>访问控制</td>
+<td>基于角色</td>
+<td>管理员/用户</td>
+</tr>
+<tr>
+<td>安全</td>
+<td>审计日志</td>
+<td>操作记录</td>
+<td>日志文件</td>
+</tr>
+</tbody>
+</table>
+<h3>2.4 兼容性需求</h3>
+<table>
+<thead>
+<tr>
+<th>类别</th>
+<th>需求</th>
+<th>指标</th>
+<th>备注</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>兼容</td>
+<td>移动浏览器</td>
+<td>iOS Safari</td>
+<td>主流版本</td>
+</tr>
+<tr>
+<td>兼容</td>
+<td>移动浏览器</td>
+<td>Android Chrome</td>
+<td>主流版本</td>
+</tr>
+<tr>
+<td>兼容</td>
+<td>桌面浏览器</td>
+<td>Chrome/Firefox/Safari/Edge</td>
+<td>最近2年</td>
+</tr>
+<tr>
+<td>兼容</td>
+<td>电台设备</td>
+<td>Hamlib支持</td>
+<td>所有型号</td>
+</tr>
+<tr>
+<td>兼容</td>
+<td>操作系统</td>
+<td>macOS/Linux</td>
+<td>主流版本</td>
+</tr>
+</tbody>
+</table>
+<h3>2.5 可扩展性需求</h3>
+<table>
+<thead>
+<tr>
+<th>类别</th>
+<th>需求</th>
+<th>指标</th>
+<th>备注</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>扩展</td>
+<td>多实例部署</td>
+<td>支持</td>
+<td>单服务器</td>
+</tr>
+<tr>
+<td>扩展</td>
+<td>模块化设计</td>
+<td>松耦合</td>
+<td>组件独立</td>
+</tr>
+<tr>
+<td>扩展</td>
+<td>新电台支持</td>
+<td>可扩展</td>
+<td>插件机制</td>
+</tr>
+</tbody>
+</table>
+<h3>2.6 容量需求</h3>
+<table>
+<thead>
+<tr>
+<th>类别</th>
+<th>需求</th>
+<th>指标</th>
+<th>备注</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>容量</td>
+<td>网络带宽</td>
+<td>&lt; 100kbps (控制)</td>
+<td>不含音频</td>
+</tr>
+<tr>
+<td>容量</td>
+<td>网络带宽</td>
+<td>&lt; 256kbps (音频)</td>
+<td>单向</td>
+</tr>
+<tr>
+<td>容量</td>
+<td>内存占用</td>
+<td>&lt; 200MB</td>
+<td>服务进程</td>
+</tr>
+<tr>
+<td>容量</td>
+<td>CPU占用</td>
+<td>&lt; 30%</td>
+<td>单客户端</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>3. 需求验证</h2>
+<h3>3.1 技术依赖分析</h3>
+<table>
+<thead>
+<tr>
+<th>需求ID</th>
+<th>依赖项</th>
+<th>依赖类型</th>
+<th>风险评估</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>REQ-001</td>
+<td>rigctld</td>
+<td>外部服务</td>
+<td>低</td>
+</tr>
+<tr>
+<td>REQ-010</td>
+<td>Web Audio API</td>
+<td>浏览器API</td>
+<td>低</td>
+</tr>
+<tr>
+<td>REQ-012</td>
+<td>AudioWorklet</td>
+<td>浏览器API</td>
+<td>中-需降级</td>
+</tr>
+<tr>
+<td>REQ-014</td>
+<td>WDSP库</td>
+<td>系统库</td>
+<td>中-需安装</td>
+</tr>
+<tr>
+<td>REQ-030</td>
+<td>ATR-1000设备</td>
+<td>硬件</td>
+<td>中-需设备</td>
+</tr>
+<tr>
+<td>REQ-040</td>
+<td>Whisper模型</td>
+<td>AI模型</td>
+<td>中-需下载</td>
+</tr>
+<tr>
+<td>REQ-050</td>
+<td>ONNX Runtime</td>
+<td>JS库</td>
+<td>低</td>
+</tr>
+</tbody>
+</table>
+<h3>3.2 可行性评估</h3>
+<table>
+<thead>
+<tr>
+<th>需求</th>
+<th>技术可行性</th>
+<th>资源需求</th>
+<th>风险等级</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>电台控制</td>
+<td>✅ 高</td>
+<td>低</td>
+<td>低</td>
+</tr>
+<tr>
+<td>音频系统</td>
+<td>✅ 高</td>
+<td>中</td>
+<td>低</td>
+</tr>
+<tr>
+<td>WDSP降噪</td>
+<td>✅ 中</td>
+<td>中</td>
+<td>中</td>
+</tr>
+<tr>
+<td>ATR-1000</td>
+<td>✅ 高</td>
+<td>低</td>
+<td>中</td>
+</tr>
+<tr>
+<td>语音助手</td>
+<td>✅ 中</td>
+<td>高</td>
+<td>中</td>
+</tr>
+<tr>
+<td>CW解码</td>
+<td>✅ 中</td>
+<td>中</td>
+<td>中</td>
+</tr>
+<tr>
+<td>多实例</td>
+<td>✅ 高</td>
+<td>低</td>
+<td>低</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>4. 需求状态追踪</h2>
+<table>
+<thead>
+<tr>
+<th>状态</th>
+<th>描述</th>
+<th>需求数量</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>新增</td>
+<td>新识别需求</td>
+<td>0</td>
+</tr>
+<tr>
+<td>设计中</td>
+<td>正在设计</td>
+<td>0</td>
+</tr>
+<tr>
+<td>开发中</td>
+<td>正在开发</td>
+<td>0</td>
+</tr>
+<tr>
+<td>已完成</td>
+<td>开发完成</td>
+<td>30</td>
+</tr>
+<tr>
+<td>已验证</td>
+<td>测试通过</td>
+<td>28</td>
+</tr>
+<tr>
+<td>已发布</td>
+<td>生产可用</td>
+<td>28</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<p><strong>文档信息</strong>
+- 版本: 1.0
+- 创建日期: 2026-03-15
+- 作者: MRRC Team</p>
+        </div>
+        <div class="nav-links">
+            <a href="index.html">首页</a>
+            <a href="docs.html">文档中心</a>
+            <a href="design.html">设计&工程</a>
+        </div>
+    </div>
+</body>
+</html>

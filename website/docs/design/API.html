@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API 接口文档 - MRRC 工程设计文档</title>
+    <style>
+        :root {
+            --primary-color: #00d4aa;
+            --bg-dark: #0a0a0f;
+            --bg-card: #12121a;
+            --text-primary: #e8e8e8;
+            --text-secondary: #a0a0a0;
+            --border-color: #2a2a3a;
+            --code-bg: #1a1a24;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg-dark);
+            color: var(--text-primary);
+            line-height: 1.7;
+            padding: 20px;
+        }
+        .container { max-width: 1200px; margin: 0 auto; }
+        .header {
+            background: linear-gradient(135deg, #1a1a2e 0%, #0f0f1a 100%);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 30px;
+            margin-bottom: 30px;
+        }
+        .header h1 {
+            color: var(--primary-color);
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+        .breadcrumb {
+            color: var(--text-secondary);
+            font-size: 0.9em;
+        }
+        .breadcrumb a {
+            color: var(--primary-color);
+            text-decoration: none;
+        }
+        .content {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 30px;
+            overflow-x: auto;
+        }
+        .content h1, .content h2, .content h3 {
+            color: var(--primary-color);
+            margin: 1.5em 0 0.5em;
+            line-height: 1.3;
+        }
+        .content h1 { font-size: 1.8em; border-bottom: 2px solid var(--primary-color); padding-bottom: 10px; }
+        .content h2 { font-size: 1.4em; }
+        .content h3 { font-size: 1.2em; color: #00ffcc; }
+        .content p { margin: 1em 0; color: var(--text-primary); }
+        .content ul, .content ol { margin: 1em 0; padding-left: 2em; }
+        .content li { margin: 0.5em 0; }
+        .content code {
+            background: var(--code-bg);
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-family: 'SF Mono', Monaco, Consolas, monospace;
+            font-size: 0.9em;
+            color: #ff79c6;
+        }
+        .content pre {
+            background: var(--code-bg);
+            padding: 15px;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 1em 0;
+            border: 1px solid var(--border-color);
+        }
+        .content pre code {
+            padding: 0;
+            background: none;
+            color: #f8f8f2;
+        }
+        .content table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1em 0;
+        }
+        .content th, .content td {
+            padding: 12px;
+            border: 1px solid var(--border-color);
+            text-align: left;
+        }
+        .content th {
+            background: var(--code-bg);
+            color: var(--primary-color);
+            font-weight: 600;
+        }
+        .content tr:hover { background: rgba(0, 212, 170, 0.05); }
+        .content blockquote {
+            border-left: 4px solid var(--primary-color);
+            padding-left: 20px;
+            margin: 1em 0;
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+        .content a {
+            color: var(--primary-color);
+            text-decoration: none;
+        }
+        .content a:hover { text-decoration: underline; }
+        .content img {
+            max-width: 100%;
+            border-radius: 8px;
+            margin: 1em 0;
+        }
+        .content hr {
+            border: none;
+            border-top: 1px solid var(--border-color);
+            margin: 2em 0;
+        }
+        .nav-links {
+            display: flex;
+            gap: 15px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+        .nav-links a {
+            background: var(--bg-card);
+            border: 1px solid var(--primary-color);
+            color: var(--primary-color);
+            padding: 10px 20px;
+            border-radius: 6px;
+            text-decoration: none;
+            transition: all 0.3s;
+        }
+        .nav-links a:hover {
+            background: var(--primary-color);
+            color: var(--bg-dark);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>API 接口文档</h1>
+            <div class="breadcrumb">
+                <a href="design.html">← 设计&工程</a> | WebSocket API 参考
+            </div>
+        </div>
+        <div class="content">
+            <h1>MRRC API 接口文档</h1>
+<blockquote>
+<p>基于 Vibe-SDD 方法论的API设计</p>
+</blockquote>
+<hr />
+<h2>1. WebSocket API</h2>
+<h3>1.1 控制命令接口</h3>
+<h4>频率设置</h4>
+<table>
+<thead>
+<tr>
+<th>属性</th>
+<th>值</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>方法</td>
+<td>WebSocket</td>
+</tr>
+<tr>
+<td>端点</td>
+<td>/WSMRRC</td>
+</tr>
+<tr>
+<td>方向</td>
+<td>双向</td>
+</tr>
+</tbody>
+</table>
+<p><strong>请求</strong>:</p>
+<pre class="codehilite"><code class="language-json">{&quot;action&quot;: &quot;setFreq&quot;, &quot;data&quot;: &quot;7074000&quot;}
+</code></pre>
+
+<table>
+<thead>
+<tr>
+<th>字段</th>
+<th>类型</th>
+<th>描述</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>action</td>
+<td>string</td>
+<td>"setFreq"</td>
+</tr>
+<tr>
+<td>data</td>
+<td>string</td>
+<td>频率 (Hz)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>响应</strong>:</p>
+<pre class="codehilite"><code class="language-json">{&quot;action&quot;: &quot;getFreq&quot;, &quot;data&quot;: &quot;7074000&quot;}
+</code></pre>
+
+<h4>模式设置</h4>
+<p><strong>请求</strong>:</p>
+<pre class="codehilite"><code class="language-json">{&quot;action&quot;: &quot;setMode&quot;, &quot;data&quot;: &quot;USB&quot;}
+</code></pre>
+
+<table>
+<thead>
+<tr>
+<th>字段</th>
+<th>类型</th>
+<th>描述</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>action</td>
+<td>string</td>
+<td>"setMode"</td>
+</tr>
+<tr>
+<td>data</td>
+<td>string</td>
+<td>模式: USB/LSB/CW/AM/FM/CWR</td>
+</tr>
+</tbody>
+</table>
+<p><strong>响应</strong>:</p>
+<pre class="codehilite"><code class="language-json">{&quot;action&quot;: &quot;getMode&quot;, &quot;data&quot;: &quot;USB&quot;}
+</code></pre>
+
+<h4>PTT控制</h4>
+<p><strong>请求</strong>:</p>
+<pre class="codehilite"><code class="language-json">{&quot;action&quot;: &quot;ptt&quot;, &quot;data&quot;: true}
+</code></pre>
+
+<table>
+<thead>
+<tr>
+<th>字段</th>
+<th>类型</th>
+<th>描述</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>action</td>
+<td>string</td>
+<td>"ptt"</td>
+</tr>
+<tr>
+<td>data</td>
+<td>boolean</td>
+<td>true=发射, false=接收</td>
+</tr>
+</tbody>
+</table>
+<p><strong>响应</strong>:</p>
+<pre class="codehilite"><code class="language-json">{&quot;action&quot;: &quot;ptt&quot;, &quot;data&quot;: true, &quot;status&quot;: &quot;ok&quot;}
+</code></pre>
+
+<h4>TUNE控制</h4>
+<p><strong>请求</strong>:</p>
+<pre class="codehilite"><code class="language-json">{&quot;action&quot;: &quot;tune&quot;, &quot;data&quot;: true}
+</code></pre>
+
+<table>
+<thead>
+<tr>
+<th>字段</th>
+<th>类型</th>
+<th>描述</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>action</td>
+<td>string</td>
+<td>"tune"</td>
+</tr>
+<tr>
+<td>data</td>
+<td>boolean</td>
+<td>true=开始调谐, false=停止</td>
+</tr>
+</tbody>
+</table>
+<h4>获取频率</h4>
+<p><strong>请求</strong>:</p>
+<pre class="codehilite"><code class="language-json">{&quot;action&quot;: &quot;getFreq&quot;}
+</code></pre>
+
+<p><strong>响应</strong>:</p>
+<pre class="codehilite"><code class="language-json">{&quot;action&quot;: &quot;getFreq&quot;, &quot;data&quot;: &quot;7074000&quot;}
+</code></pre>
+
+<h4>获取S表</h4>
+<p><strong>请求</strong>:</p>
+<pre class="codehilite"><code class="language-json">{&quot;action&quot;: &quot;getSMeter&quot;}
+</code></pre>
+
+<p><strong>响应</strong>:</p>
+<pre class="codehilite"><code class="language-json">{&quot;action&quot;: &quot;getSMeter&quot;, &quot;data&quot;: &quot;-73&quot;, &quot;rx&quot;: true}
+</code></pre>
+
+<hr />
+<h3>1.2 ATR-1000接口</h3>
+<h4>功率/SWR同步</h4>
+<p><strong>请求</strong>:</p>
+<pre class="codehilite"><code class="language-json">{&quot;action&quot;: &quot;atr_sync&quot;}
+</code></pre>
+
+<p><strong>响应</strong>:</p>
+<pre class="codehilite"><code class="language-json">{
+  &quot;action&quot;: &quot;atr_status&quot;,
+  &quot;data&quot;: {
+    &quot;power&quot;: 50,
+    &quot;swr&quot;: 1.2,
+    &quot;sw&quot;: &quot;LC&quot;,
+    &quot;ind&quot;: 10,
+    &quot;cap&quot;: 27
+  }
+}
+</code></pre>
+
+<h4>手动设置继电器</h4>
+<p><strong>请求</strong>:</p>
+<pre class="codehilite"><code class="language-json">{&quot;action&quot;: &quot;atr_set_relay&quot;, &quot;data&quot;: {&quot;sw&quot;: 1, &quot;ind&quot;: 30, &quot;cap&quot;: 27}}
+</code></pre>
+
+<table>
+<thead>
+<tr>
+<th>字段</th>
+<th>类型</th>
+<th>描述</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>sw</td>
+<td>int</td>
+<td>网络类型: 0=LC, 1=CL</td>
+</tr>
+<tr>
+<td>ind</td>
+<td>int</td>
+<td>电感值 (除10)</td>
+</tr>
+<tr>
+<td>cap</td>
+<td>int</td>
+<td>电容值</td>
+</tr>
+</tbody>
+</table>
+<h4>获取学习记录</h4>
+<p><strong>请求</strong>:</p>
+<pre class="codehilite"><code class="language-json">{&quot;action&quot;: &quot;atr_get_records&quot;}
+</code></pre>
+
+<p><strong>响应</strong>:</p>
+<pre class="codehilite"><code class="language-json">{
+  &quot;action&quot;: &quot;atr_records&quot;,
+  &quot;data&quot;: [
+    {&quot;freq&quot;: 7070000, &quot;sw&quot;: 1, &quot;ind&quot;: 30, &quot;cap&quot;: 27, &quot;swr_avg&quot;: 1.08}
+  ]
+}
+</code></pre>
+
+<hr />
+<h3>1.3 WDSP控制接口</h3>
+<h4>设置NR2</h4>
+<p><strong>请求</strong>:</p>
+<pre class="codehilite"><code class="language-json">{&quot;action&quot;: &quot;wdsp_nr2&quot;, &quot;data&quot;: true}
+</code></pre>
+
+<h4>设置NB</h4>
+<p><strong>请求</strong>:</p>
+<pre class="codehilite"><code class="language-json">{&quot;action&quot;: &quot;wdsp_nb&quot;, &quot;data&quot;: true}
+</code></pre>
+
+<h4>设置ANF</h4>
+<p><strong>请求</strong>:</p>
+<pre class="codehilite"><code class="language-json">{&quot;action&quot;: &quot;wdsp_anf&quot;, &quot;data&quot;: true}
+</code></pre>
+
+<h4>设置AGC</h4>
+<p><strong>请求</strong>:</p>
+<pre class="codehilite"><code class="language-json">{&quot;action&quot;: &quot;wdsp_agc&quot;, &quot;data&quot;: 3}
+</code></pre>
+
+<table>
+<thead>
+<tr>
+<th>值</th>
+<th>模式</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0</td>
+<td>OFF</td>
+</tr>
+<tr>
+<td>1</td>
+<td>LONG</td>
+</tr>
+<tr>
+<td>2</td>
+<td>SLOW</td>
+</tr>
+<tr>
+<td>3</td>
+<td>MED</td>
+</tr>
+<tr>
+<td>4</td>
+<td>FAST</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h3>1.4 音频接口</h3>
+<h4>TX音频帧</h4>
+<table>
+<thead>
+<tr>
+<th>属性</th>
+<th>值</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>方法</td>
+<td>WebSocket Binary</td>
+</tr>
+<tr>
+<td>格式</td>
+<td>Int16 LE</td>
+</tr>
+<tr>
+<td>采样率</td>
+<td>16kHz</td>
+</tr>
+<tr>
+<td>帧大小</td>
+<td>320 samples</td>
+</tr>
+</tbody>
+</table>
+<h4>RX音频帧</h4>
+<table>
+<thead>
+<tr>
+<th>属性</th>
+<th>值</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>方法</td>
+<td>WebSocket Binary</td>
+</tr>
+<tr>
+<td>格式</td>
+<td>Int16 LE</td>
+</tr>
+<tr>
+<td>采样率</td>
+<td>16kHz</td>
+</tr>
+<tr>
+<td>帧大小</td>
+<td>320 samples</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>2. HTTP API</h2>
+<h3>2.1 静态资源</h3>
+<table>
+<thead>
+<tr>
+<th>方法</th>
+<th>端点</th>
+<th>描述</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>GET</td>
+<td>/</td>
+<td>主界面</td>
+</tr>
+<tr>
+<td>GET</td>
+<td>/mobile_modern.html</td>
+<td>移动端界面</td>
+</tr>
+<tr>
+<td>GET</td>
+<td>/controls.js</td>
+<td>控制脚本</td>
+</tr>
+<tr>
+<td>GET</td>
+<td>/mobile_modern.js</td>
+<td>移动端脚本</td>
+</tr>
+<tr>
+<td>GET</td>
+<td>/mobile_modern.css</td>
+<td>移动端样式</td>
+</tr>
+</tbody>
+</table>
+<h3>2.2 服务端状态</h3>
+<table>
+<thead>
+<tr>
+<th>方法</th>
+<th>端点</th>
+<th>描述</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>GET</td>
+<td>/status</td>
+<td>服务器状态</td>
+</tr>
+</tbody>
+</table>
+<p><strong>响应</strong>:</p>
+<pre class="codehilite"><code class="language-json">{
+  &quot;status&quot;: &quot;running&quot;,
+  &quot;version&quot;: &quot;V4.9.1&quot;,
+  &quot;clients&quot;: 2,
+  &quot;ptt&quot;: false,
+  &quot;freq&quot;: 7074000,
+  &quot;mode&quot;: &quot;USB&quot;
+}
+</code></pre>
+
+<hr />
+<h2>3. 错误码</h2>
+<h3>3.1 通用错误</h3>
+<table>
+<thead>
+<tr>
+<th>码</th>
+<th>含义</th>
+<th>处理方式</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>400</td>
+<td>请求错误</td>
+<td>返回详细错误信息</td>
+</tr>
+<tr>
+<td>401</td>
+<td>未认证</td>
+<td>引导登录</td>
+</tr>
+<tr>
+<td>403</td>
+<td>无权限</td>
+<td>权限不足提示</td>
+</tr>
+<tr>
+<td>404</td>
+<td>不存在</td>
+<td>返回友好提示</td>
+</tr>
+<tr>
+<td>500</td>
+<td>服务器错误</td>
+<td>记录日志</td>
+</tr>
+</tbody>
+</table>
+<h3>3.2 WebSocket错误</h3>
+<table>
+<thead>
+<tr>
+<th>码</th>
+<th>含义</th>
+<th>处理方式</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>W1000</td>
+<td>未知错误</td>
+<td>断开连接</td>
+</tr>
+<tr>
+<td>W1001</td>
+<td>客户端断开</td>
+<td>清理资源</td>
+</tr>
+<tr>
+<td>W1002</td>
+<td>协议错误</td>
+<td>断开连接</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>4. ATR-1000协议</h2>
+<h3>4.1 帧格式</h3>
+<pre class="codehilite"><code>┌──────┬──────┬──────┬─────────────┐
+│ FLAG │ CMD  │ LEN  │ DATA...     │
+│ 0xFF │ 1字节│ 1字节│ LEN 字节    │
+└──────┴──────┴──────┴─────────────┘
+</code></pre>
+
+<h3>4.2 命令类型</h3>
+<table>
+<thead>
+<tr>
+<th>命令</th>
+<th>值</th>
+<th>方向</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>SYNC</td>
+<td>0x01</td>
+<td>请求</td>
+<td>触发设备返回数据</td>
+</tr>
+<tr>
+<td>METER_STATUS</td>
+<td>0x02</td>
+<td>响应</td>
+<td>功率/SWR 状态</td>
+</tr>
+<tr>
+<td>RELAY_STATUS</td>
+<td>0x05</td>
+<td>双向</td>
+<td>继电器状态</td>
+</tr>
+<tr>
+<td>START_TUNE</td>
+<td>0x06</td>
+<td>请求</td>
+<td>启动自动调谐</td>
+</tr>
+</tbody>
+</table>
+<h3>4.3 METER_STATUS解析</h3>
+<pre class="codehilite"><code>偏移:  [3]   [4]   [5]   [6]
+数据:  PFH  PFM  PFL  SWRH  SWRL
+
+PF = Power Forward (前向功率)
+SWR = Standing Wave Ratio (驻波比)
+</code></pre>
+
+<p><strong>计算公式</strong>:
+- Power = (PFH &lt;&lt; 8) | PFL
+- SWR = ((SWRH &lt;&lt; 8) | SWRL) / 100</p>
+<hr />
+<p><strong>文档信息</strong>
+- 版本: 1.0
+- 创建日期: 2026-03-15
+- 最后更新: 2026-03-15
+- 作者: MRRC Team</p>
+        </div>
+        <div class="nav-links">
+            <a href="index.html">首页</a>
+            <a href="docs.html">文档中心</a>
+            <a href="design.html">设计&工程</a>
+        </div>
+    </div>
+</body>
+</html>

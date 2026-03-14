@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CONTEXT 系统上下文 - MRRC 工程设计文档</title>
+    <style>
+        :root {
+            --primary-color: #00d4aa;
+            --bg-dark: #0a0a0f;
+            --bg-card: #12121a;
+            --text-primary: #e8e8e8;
+            --text-secondary: #a0a0a0;
+            --border-color: #2a2a3a;
+            --code-bg: #1a1a24;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg-dark);
+            color: var(--text-primary);
+            line-height: 1.7;
+            padding: 20px;
+        }
+        .container { max-width: 1200px; margin: 0 auto; }
+        .header {
+            background: linear-gradient(135deg, #1a1a2e 0%, #0f0f1a 100%);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 30px;
+            margin-bottom: 30px;
+        }
+        .header h1 {
+            color: var(--primary-color);
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+        .breadcrumb {
+            color: var(--text-secondary);
+            font-size: 0.9em;
+        }
+        .breadcrumb a {
+            color: var(--primary-color);
+            text-decoration: none;
+        }
+        .content {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 30px;
+            overflow-x: auto;
+        }
+        .content h1, .content h2, .content h3 {
+            color: var(--primary-color);
+            margin: 1.5em 0 0.5em;
+            line-height: 1.3;
+        }
+        .content h1 { font-size: 1.8em; border-bottom: 2px solid var(--primary-color); padding-bottom: 10px; }
+        .content h2 { font-size: 1.4em; }
+        .content h3 { font-size: 1.2em; color: #00ffcc; }
+        .content p { margin: 1em 0; color: var(--text-primary); }
+        .content ul, .content ol { margin: 1em 0; padding-left: 2em; }
+        .content li { margin: 0.5em 0; }
+        .content code {
+            background: var(--code-bg);
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-family: 'SF Mono', Monaco, Consolas, monospace;
+            font-size: 0.9em;
+            color: #ff79c6;
+        }
+        .content pre {
+            background: var(--code-bg);
+            padding: 15px;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 1em 0;
+            border: 1px solid var(--border-color);
+        }
+        .content pre code {
+            padding: 0;
+            background: none;
+            color: #f8f8f2;
+        }
+        .content table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1em 0;
+        }
+        .content th, .content td {
+            padding: 12px;
+            border: 1px solid var(--border-color);
+            text-align: left;
+        }
+        .content th {
+            background: var(--code-bg);
+            color: var(--primary-color);
+            font-weight: 600;
+        }
+        .content tr:hover { background: rgba(0, 212, 170, 0.05); }
+        .content blockquote {
+            border-left: 4px solid var(--primary-color);
+            padding-left: 20px;
+            margin: 1em 0;
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+        .content a {
+            color: var(--primary-color);
+            text-decoration: none;
+        }
+        .content a:hover { text-decoration: underline; }
+        .content img {
+            max-width: 100%;
+            border-radius: 8px;
+            margin: 1em 0;
+        }
+        .content hr {
+            border: none;
+            border-top: 1px solid var(--border-color);
+            margin: 2em 0;
+        }
+        .nav-links {
+            display: flex;
+            gap: 15px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+        .nav-links a {
+            background: var(--bg-card);
+            border: 1px solid var(--primary-color);
+            color: var(--primary-color);
+            padding: 10px 20px;
+            border-radius: 6px;
+            text-decoration: none;
+            transition: all 0.3s;
+        }
+        .nav-links a:hover {
+            background: var(--primary-color);
+            color: var(--bg-dark);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>CONTEXT 系统上下文</h1>
+            <div class="breadcrumb">
+                <a href="design.html">← 设计&工程</a> | 系统上下文与边界
+            </div>
+        </div>
+        <div class="content">
+            <h1>MRRC 系统上下文</h1>
+<blockquote>
+<p>基于 Vibe-SDD 方法论的系统上下文图和外部实体</p>
+</blockquote>
+<hr />
+<h2>1. 系统上下文图</h2>
+<pre class="codehilite"><code class="language-mermaid">graph TB
+    subgraph 用户层
+        HAM[业余无线电爱好者]
+        Browser[Web浏览器]
+        Mobile[移动设备]
+    end
+
+    subgraph MRRC系统
+        WebServer[Tornado Web服务器]
+        WSHandler[WebSocket处理器]
+        AudioTX[TX音频处理]
+        AudioRX[RX音频处理]
+        DSP[WDSP降噪]
+        ATRProxy[ATR-1000代理]
+        VoiceAI[语音助手服务]
+        CWDecoder[CW解码器]
+    end
+
+    subgraph 外部系统
+        Rigctld[Hamlib rigctld]
+        Radio[电台设备 IC-7100/IC-9000]
+        ATR1000[ATR-1000天调]
+        Internet[互联网]
+    end
+
+    HAM --&gt;|HTTPS/WSS| Internet
+    Mobile --&gt;|HTTPS/WSS| Internet
+    Internet --&gt; WebServer
+    WebServer --&gt; WSHandler
+    WSHandler --&gt;|频率/模式/PTT| Rigctld
+    Rigctld --&gt;|Cat控制| Radio
+    WSHandler --&gt; AudioTX
+    AudioTX --&gt; DSP
+    DSP --&gt;|音频流| Radio
+    Radio --&gt;|音频流| AudioRX
+    AudioRX --&gt; DSP
+    DSP --&gt; WSHandler
+    WSHandler --&gt;|WSS| Browser
+    WSHandler --&gt;|WSS| Mobile
+    ATRProxy --&gt;|WebSocket| ATR1000
+    WSHandler --&gt;|Unix Socket| ATRProxy
+    VoiceAI --&gt;|gRPC| WSHandler
+    CWDecoder --&gt;|推理| WSHandler
+</code></pre>
+
+<hr />
+<h2>2. 外部实体说明</h2>
+<h3>2.1 用户 (User)</h3>
+<table>
+<thead>
+<tr>
+<th>实体</th>
+<th>描述</th>
+<th>接口</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>HAM</td>
+<td>业余无线电爱好者</td>
+<td>HTTPS/WSS</td>
+</tr>
+<tr>
+<td>Mobile</td>
+<td>移动端用户</td>
+<td>HTTPS/WSS</td>
+</tr>
+</tbody>
+</table>
+<p><strong>职责</strong>:
+- 发起控制请求
+- 提供麦克风输入
+- 接收音频输出
+- 查看仪表显示</p>
+<h3>2.2 电台 (Radio)</h3>
+<table>
+<thead>
+<tr>
+<th>实体</th>
+<th>描述</th>
+<th>接口</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>IC-7100</td>
+<td>Icom业余电台</td>
+<td>USB Cat控制</td>
+</tr>
+<tr>
+<td>IC-R9000</td>
+<td>Icom接收机</td>
+<td>USB Cat控制</td>
+</tr>
+<tr>
+<td>其他电台</td>
+<td>Hamlib支持</td>
+<td>串口/USB</td>
+</tr>
+</tbody>
+</table>
+<p><strong>职责</strong>:
+- 频率/模式控制
+- 音频输入/输出
+- PTT控制
+- S表数据提供</p>
+<h3>2.3 天调 (ATR-1000)</h3>
+<table>
+<thead>
+<tr>
+<th>实体</th>
+<th>描述</th>
+<th>接口</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>ATR-1000</td>
+<td>自动天调</td>
+<td>WebSocket</td>
+</tr>
+</tbody>
+</table>
+<p><strong>职责</strong>:
+- 功率测量
+- SWR监测
+- 自动调谐
+- 存储学习参数</p>
+<h3>2.4 Hamlib</h3>
+<table>
+<thead>
+<tr>
+<th>实体</th>
+<th>描述</th>
+<th>接口</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>rigctld</td>
+<td>Hamlib守护进程</td>
+<td>TCP:4532</td>
+</tr>
+</tbody>
+</table>
+<p><strong>职责</strong>:
+- 电台控制协议转换
+- 频率/模式同步
+- S表数据读取</p>
+<hr />
+<h2>3. 数据流设计</h2>
+<h3>3.1 控制数据流</h3>
+<pre class="codehilite"><code class="language-mermaid">sequenceDiagram
+    participant U as 用户
+    participant W as Web服务器
+    participant R as rigctld
+    participant Radio
+
+    U-&gt;&gt;W: setFreq: 7074000
+    W-&gt;&gt;R: F 7074000\n
+    R-&gt;&gt;Radio: Cat命令
+    Radio--&gt;&gt;R: 确认
+    R--&gt;&gt;W: OK
+    W--&gt;&gt;U: getFreq:7074000
+</code></pre>
+
+<h3>3.2 TX音频数据流</h3>
+<pre class="codehilite"><code class="language-mermaid">sequenceDiagram
+    participant M as 麦克风
+    participant B as 浏览器
+    participant W as Web服务器
+    participant D as WDSP
+    participant R as 电台
+
+    M-&gt;&gt;B: 48kHz PCM
+    B-&gt;&gt;B: 降采样16kHz
+    B-&gt;&gt;B: Int16编码
+    B-&gt;&gt;W: WebSocket帧
+    W-&gt;&gt;D: NR2降噪
+    D-&gt;&gt;R: 音频输出
+</code></pre>
+
+<h3>3.3 RX音频数据流</h3>
+<pre class="codehilite"><code class="language-mermaid">sequenceDiagram
+    participant R as 电台
+    participant W as Web服务器
+    participant D as WDSP
+    participant B as 浏览器
+    participant S as 扬声器
+
+    R-&gt;&gt;W: 48kHz PCM
+    W-&gt;&gt;D: NR2降噪
+    D-&gt;&gt;W: 48kHz处理后
+    W-&gt;&gt;B: WebSocket帧
+    B-&gt;&gt;B: 解码
+    B-&gt;&gt;B: 升采样48kHz
+    B-&gt;&gt;S: 播放
+</code></pre>
+
+<h3>3.4 ATR-1000数据流</h3>
+<pre class="codehilite"><code class="language-mermaid">sequenceDiagram
+    participant B as 浏览器
+    participant W as Web服务器
+    participant A as ATR代理
+    participant ATR as ATR-1000
+
+    B-&gt;&gt;W: sync
+    W-&gt;&gt;A: forward
+    A-&gt;&gt;ATR: SYNC命令
+    ATR--&gt;&gt;A: 功率/SWR数据
+    A--&gt;&gt;W: JSON数据
+    W--&gt;&gt;B: 功率/SWR显示
+</code></pre>
+
+<hr />
+<h2>4. 边界接口定义</h2>
+<h3>4.1 用户接口 (User Interface)</h3>
+<table>
+<thead>
+<tr>
+<th>接口</th>
+<th>协议</th>
+<th>描述</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Web界面</td>
+<td>HTTPS</td>
+<td>静态HTML/CSS/JS</td>
+</tr>
+<tr>
+<td>控制API</td>
+<td>WSS</td>
+<td>JSON格式控制命令</td>
+</tr>
+<tr>
+<td>音频流</td>
+<td>WSS</td>
+<td>二进制音频帧</td>
+</tr>
+</tbody>
+</table>
+<p><strong>接口格式</strong>:</p>
+<pre class="codehilite"><code class="language-json">// 控制命令
+{&quot;action&quot;: &quot;setFreq&quot;, &quot;data&quot;: &quot;7074000&quot;}
+{&quot;action&quot;: &quot;setMode&quot;, &quot;data&quot;: &quot;USB&quot;}
+{&quot;action&quot;: &quot;ptt&quot;, &quot;data&quot;: true}
+
+// 响应
+{&quot;action&quot;: &quot;getFreq&quot;, &quot;data&quot;: &quot;7074000&quot;}
+{&quot;action&quot;: &quot;getMode&quot;, &quot;data&quot;: &quot;USB&quot;}
+</code></pre>
+
+<h3>4.2 电台接口 (Radio Interface)</h3>
+<table>
+<thead>
+<tr>
+<th>接口</th>
+<th>协议</th>
+<th>描述</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Cat控制</td>
+<td>串口/USB</td>
+<td>Icom CI-V协议</td>
+</tr>
+<tr>
+<td>音频输入</td>
+<td>3.5mm</td>
+<td>电台AF输出</td>
+</tr>
+<tr>
+<td>音频输出</td>
+<td>3.5mm</td>
+<td>电台MIC输入</td>
+</tr>
+<tr>
+<td>PTT控制</td>
+<td>电台ACC</td>
+<td>发射控制</td>
+</tr>
+</tbody>
+</table>
+<h3>4.3 ATR-1000接口</h3>
+<table>
+<thead>
+<tr>
+<th>接口</th>
+<th>协议</th>
+<th>描述</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>控制</td>
+<td>WebSocket</td>
+<td>JSON帧格式</td>
+</tr>
+<tr>
+<td>端口</td>
+<td>TCP:60001</td>
+<td>网络连接</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>5. 安全性边界</h2>
+<pre class="codehilite"><code class="language-mermaid">graph TB
+    subgraph 外部网络
+        User[用户设备]
+    end
+
+    subgraph 边界防火墙
+        TLS[TLS终止]
+    end
+
+    subgraph DMZ
+        Web[Tornado服务器]
+    end
+
+    subgraph 内部网络
+        Audio[音频处理]
+        DSP[WDSP处理]
+        Hamlib[rigctld]
+    end
+
+    subgraph 硬件层
+        Radio[电台]
+        ATR[ATR-1000]
+    end
+
+    User --&gt;|HTTPS/WSS| TLS
+    TLS --&gt; Web
+    Web --&gt; Audio
+    Audio --&gt; DSP
+    DSP --&gt; Hamlib
+    Hamlib --&gt; Radio
+    Web --&gt;|Unix Socket| ATR
+</code></pre>
+
+<p><strong>安全措施</strong>:
+- TLS 1.2+ 加密传输
+- 用户认证 (密码/证书)
+- 防火墙端口限制
+- Unix Socket进程隔离</p>
+<hr />
+<p><strong>文档信息</strong>
+- 版本: 1.0
+- 创建日期: 2026-03-15
+- 最后更新: 2026-03-15
+- 作者: MRRC Team</p>
+        </div>
+        <div class="nav-links">
+            <a href="index.html">首页</a>
+            <a href="docs.html">文档中心</a>
+            <a href="design.html">设计&工程</a>
+        </div>
+    </div>
+</body>
+</html>

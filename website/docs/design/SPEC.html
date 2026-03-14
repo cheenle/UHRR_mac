@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SPEC 项目规格说明书 - MRRC 工程设计文档</title>
+    <style>
+        :root {
+            --primary-color: #00d4aa;
+            --bg-dark: #0a0a0f;
+            --bg-card: #12121a;
+            --text-primary: #e8e8e8;
+            --text-secondary: #a0a0a0;
+            --border-color: #2a2a3a;
+            --code-bg: #1a1a24;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg-dark);
+            color: var(--text-primary);
+            line-height: 1.7;
+            padding: 20px;
+        }
+        .container { max-width: 1200px; margin: 0 auto; }
+        .header {
+            background: linear-gradient(135deg, #1a1a2e 0%, #0f0f1a 100%);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 30px;
+            margin-bottom: 30px;
+        }
+        .header h1 {
+            color: var(--primary-color);
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+        .breadcrumb {
+            color: var(--text-secondary);
+            font-size: 0.9em;
+        }
+        .breadcrumb a {
+            color: var(--primary-color);
+            text-decoration: none;
+        }
+        .content {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 30px;
+            overflow-x: auto;
+        }
+        .content h1, .content h2, .content h3 {
+            color: var(--primary-color);
+            margin: 1.5em 0 0.5em;
+            line-height: 1.3;
+        }
+        .content h1 { font-size: 1.8em; border-bottom: 2px solid var(--primary-color); padding-bottom: 10px; }
+        .content h2 { font-size: 1.4em; }
+        .content h3 { font-size: 1.2em; color: #00ffcc; }
+        .content p { margin: 1em 0; color: var(--text-primary); }
+        .content ul, .content ol { margin: 1em 0; padding-left: 2em; }
+        .content li { margin: 0.5em 0; }
+        .content code {
+            background: var(--code-bg);
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-family: 'SF Mono', Monaco, Consolas, monospace;
+            font-size: 0.9em;
+            color: #ff79c6;
+        }
+        .content pre {
+            background: var(--code-bg);
+            padding: 15px;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 1em 0;
+            border: 1px solid var(--border-color);
+        }
+        .content pre code {
+            padding: 0;
+            background: none;
+            color: #f8f8f2;
+        }
+        .content table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1em 0;
+        }
+        .content th, .content td {
+            padding: 12px;
+            border: 1px solid var(--border-color);
+            text-align: left;
+        }
+        .content th {
+            background: var(--code-bg);
+            color: var(--primary-color);
+            font-weight: 600;
+        }
+        .content tr:hover { background: rgba(0, 212, 170, 0.05); }
+        .content blockquote {
+            border-left: 4px solid var(--primary-color);
+            padding-left: 20px;
+            margin: 1em 0;
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+        .content a {
+            color: var(--primary-color);
+            text-decoration: none;
+        }
+        .content a:hover { text-decoration: underline; }
+        .content img {
+            max-width: 100%;
+            border-radius: 8px;
+            margin: 1em 0;
+        }
+        .content hr {
+            border: none;
+            border-top: 1px solid var(--border-color);
+            margin: 2em 0;
+        }
+        .nav-links {
+            display: flex;
+            gap: 15px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+        .nav-links a {
+            background: var(--bg-card);
+            border: 1px solid var(--primary-color);
+            color: var(--primary-color);
+            padding: 10px 20px;
+            border-radius: 6px;
+            text-decoration: none;
+            transition: all 0.3s;
+        }
+        .nav-links a:hover {
+            background: var(--primary-color);
+            color: var(--bg-dark);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>SPEC 项目规格说明书</h1>
+            <div class="breadcrumb">
+                <a href="design.html">← 设计&工程</a> | 项目规格与目标
+            </div>
+        </div>
+        <div class="content">
+            <h1>MRRC 项目规格说明书</h1>
+<blockquote>
+<p>基于 Vibe-SDD 方法论的项目规格文档</p>
+</blockquote>
+<hr />
+<h2>1. 项目概述</h2>
+<h3>1.1 项目名称</h3>
+<p><strong>MRRC (Mobile Remote Radio Control)</strong> - 移动端业余电台远程控制系统</p>
+<h3>1.2 项目类型</h3>
+<ul>
+<li>[x] Web应用 (后端 + HTML5前端)</li>
+<li>[ ] 移动应用</li>
+<li>[ ] 后端服务</li>
+<li>[x] 全栈应用 (Python Tornado + HTML5/JS)</li>
+</ul>
+<h3>1.3 一句话描述</h3>
+<p>通过现代Web浏览器实现业余电台的远程控制，让HAMRadio爱好者随时随地操控电台进行通联。</p>
+<h3>1.4 目标用户</h3>
+<ul>
+<li>业余无线电爱好者 (HAM Radio Operators)</li>
+<li>需要远程操作电台的用户</li>
+<li>无线电俱乐部成员</li>
+</ul>
+<hr />
+<h2>2. 业务背景</h2>
+<h3>2.1 业务问题</h3>
+<ol>
+<li><strong>空间限制</strong>: 城市居民无法在住所架设大型天线</li>
+<li><strong>干扰问题</strong>: 城市电磁环境复杂，QRM干扰严重</li>
+<li><strong>移动需求</strong>:  HAM需要随时随地响应通联</li>
+<li><strong>设备限制</strong>: 多台设备需要集中管理</li>
+</ol>
+<h3>2.2 业务价值</h3>
+<ul>
+<li>让HAM突破地理限制，在任何有网络的地方操作电台</li>
+<li>通过专业DSP降噪提升通联质量</li>
+<li>集成天调系统简化天线匹配</li>
+<li>支持多电台集中管理</li>
+</ul>
+<h3>2.3 市场背景</h3>
+<ul>
+<li>业余无线电在全球有约300万持照爱好者</li>
+<li>移动互联网普及，5G/WiFi无处不在</li>
+<li>专业SDR设备价格下降，普及率上升</li>
+<li>远程电台控制是HAM社区长期需求</li>
+</ul>
+<hr />
+<h2>3. 目标与成功标准</h2>
+<h3>3.1 核心目标 (3-5个)</h3>
+<ol>
+<li><strong>低延迟</strong>: TX/RX音频切换延迟 &lt; 100ms</li>
+<li><strong>高可靠</strong>: PTT可靠性 ≥ 99%</li>
+<li><strong>专业降噪</strong>: WDSP NR2降噪 15-20dB</li>
+<li><strong>移动优先</strong>: 完善的iOS/Android支持</li>
+<li><strong>多实例</strong>: 单服务器支持多电台独立控制</li>
+</ol>
+<h3>3.2 成功标准</h3>
+<table>
+<thead>
+<tr>
+<th>标准</th>
+<th>指标</th>
+<th>目标值</th>
+<th>测量方式</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>性能</td>
+<td>TX/RX切换延迟</td>
+<td>&lt; 100ms</td>
+<td>端到端测试</td>
+</tr>
+<tr>
+<td>性能</td>
+<td>PTT响应时间</td>
+<td>&lt; 50ms</td>
+<td>协议分析</td>
+</tr>
+<tr>
+<td>性能</td>
+<td>音频延迟</td>
+<td>&lt; 100ms</td>
+<td>端到端测试</td>
+</tr>
+<tr>
+<td>可用性</td>
+<td>系统可用性</td>
+<td>≥ 99.5%</td>
+<td>月度统计</td>
+</tr>
+<tr>
+<td>可用性</td>
+<td>PTT可靠性</td>
+<td>≥ 99%</td>
+<td>长期测试</td>
+</tr>
+<tr>
+<td>功能</td>
+<td>降噪深度</td>
+<td>≥ 15dB</td>
+<td>频谱分析</td>
+</tr>
+<tr>
+<td>用户</td>
+<td>界面满意度</td>
+<td>≥ 4.5/5</td>
+<td>用户反馈</td>
+</tr>
+<tr>
+<td>兼容</td>
+<td>移动端支持</td>
+<td>100%</td>
+<td>自动化测试</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>4. 项目范围</h2>
+<h3>4.1 包含范围</h3>
+<ul>
+<li>移动端Web界面开发 (mobile_modern.html)</li>
+<li>后端Tornado服务器 (MRRC主程序)</li>
+<li>实时音频流处理 (TX/RX)</li>
+<li>DSP降噪集成 (WDSP NR2/NB/ANF/AGC)</li>
+<li>ATR-1000天调集成 (功率/SWR显示)</li>
+<li>AI语音助手 (Whisper + Qwen3-TTS)</li>
+<li>CW实时解码 (ONNX前端推理)</li>
+<li>多实例部署支持</li>
+</ul>
+<h3>4.2 不包含范围</h3>
+<ul>
+<li>电台硬件开发/改造</li>
+<li>移动端原生App (iOS/Android)</li>
+<li>云端SaaS服务</li>
+<li>商业授权版本</li>
+</ul>
+<h3>4.3 MVP定义</h3>
+<ol>
+<li>基础Web界面 (频率/模式/PTT控制)</li>
+<li>实时音频TX/RX</li>
+<li>WDSP降噪</li>
+<li>ATR-1000功率显示</li>
+</ol>
+<hr />
+<h2>5. 技术约束</h2>
+<h3>5.1 技术栈偏好</h3>
+<table>
+<thead>
+<tr>
+<th>层级</th>
+<th>技术选择</th>
+<th>理由</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>前端</td>
+<td>HTML5/CSS3/Vanilla JS</td>
+<td>轻量，浏览器兼容性好</td>
+</tr>
+<tr>
+<td>后端</td>
+<td>Python 3.12+ / Tornado</td>
+<td>原生WebSocket支持</td>
+</tr>
+<tr>
+<td>音频</td>
+<td>PyAudio</td>
+<td>跨平台音频I/O</td>
+</tr>
+<tr>
+<td>DSP</td>
+<td>WDSP</td>
+<td>专为SSB优化</td>
+</tr>
+<tr>
+<td>控制</td>
+<td>Hamlib/rigctld</td>
+<td>电台控制标准</td>
+</tr>
+<tr>
+<td>部署</td>
+<td>macOS/Linux</td>
+<td>服务器平台</td>
+</tr>
+</tbody>
+</table>
+<h3>5.2 架构约束</h3>
+<ul>
+<li>必须支持WebSocket实时通信</li>
+<li>音频采样率统一16kHz (传输) / 48kHz (处理)</li>
+<li>TLS加密传输</li>
+<li>多实例Unix Socket隔离</li>
+</ul>
+<h3>5.3 组件规范</h3>
+<h4>5.3.1 前端组件</h4>
+<table>
+<thead>
+<tr>
+<th>组件</th>
+<th>文件</th>
+<th>技术</th>
+<th>职责</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>主界面</td>
+<td>mobile_modern.html</td>
+<td>HTML5</td>
+<td>移动端UI</td>
+</tr>
+<tr>
+<td>控制逻辑</td>
+<td>controls.js</td>
+<td>Vanilla JS</td>
+<td>音频处理、WebSocket</td>
+</tr>
+<tr>
+<td>PTT按钮</td>
+<td>tx_button_optimized.js</td>
+<td>JS</td>
+<td>PTT事件处理、预热帧</td>
+</tr>
+<tr>
+<td>音频播放</td>
+<td>rx_worklet_processor.js</td>
+<td>AudioWorklet</td>
+<td>低延迟播放</td>
+</tr>
+<tr>
+<td>均衡器</td>
+<td>controls.js</td>
+<td>Web Audio API</td>
+<td>TX三段EQ</td>
+</tr>
+</tbody>
+</table>
+<h4>5.3.2 后端组件</h4>
+<table>
+<thead>
+<tr>
+<th>组件</th>
+<th>文件</th>
+<th>技术</th>
+<th>职责</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Web服务器</td>
+<td>MRRC</td>
+<td>Tornado</td>
+<td>HTTP/WebSocket</td>
+</tr>
+<tr>
+<td>音频处理</td>
+<td>audio_interface.py</td>
+<td>PyAudio</td>
+<td>采集/播放/分发</td>
+</tr>
+<tr>
+<td>DSP处理</td>
+<td>wdsp_wrapper.py</td>
+<td>ctypes/WDSP</td>
+<td>NR2/NB/ANF/AGC</td>
+</tr>
+<tr>
+<td>电台控制</td>
+<td>hamlib_wrapper.py</td>
+<td>socket</td>
+<td>rigctld通信</td>
+</tr>
+<tr>
+<td>天调代理</td>
+<td>atr1000_proxy.py</td>
+<td>WebSocket</td>
+<td>ATR-1000桥接</td>
+</tr>
+<tr>
+<td>天调存储</td>
+<td>atr1000_tuner.py</td>
+<td>JSON</td>
+<td>参数持久化</td>
+</tr>
+</tbody>
+</table>
+<h3>5.4 接口规范</h3>
+<h4>5.4.1 WebSocket接口</h4>
+<table>
+<thead>
+<tr>
+<th>端点</th>
+<th>协议</th>
+<th>描述</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>/WSMRRC</td>
+<td>WSS</td>
+<td>主控制+音频通道</td>
+</tr>
+<tr>
+<td>/WSATR1000</td>
+<td>WSS</td>
+<td>ATR-1000数据通道</td>
+</tr>
+</tbody>
+</table>
+<h4>5.4.2 控制命令格式</h4>
+<pre class="codehilite"><code class="language-json">{&quot;action&quot;: &quot;setFreq&quot;, &quot;data&quot;: &quot;7074000&quot;}
+{&quot;action&quot;: &quot;setMode&quot;, &quot;data&quot;: &quot;USB&quot;}
+{&quot;action&quot;: &quot;ptt&quot;, &quot;data&quot;: true}
+{&quot;action&quot;: &quot;getFreq&quot;}
+</code></pre>
+
+<h4>5.4.3 音频数据格式</h4>
+<table>
+<thead>
+<tr>
+<th>参数</th>
+<th>值</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>采样率</td>
+<td>16kHz (传输) / 48kHz (处理)</td>
+</tr>
+<tr>
+<td>格式</td>
+<td>Int16 PCM</td>
+</tr>
+<tr>
+<td>帧大小</td>
+<td>320 samples (20ms)</td>
+</tr>
+<tr>
+<td>声道</td>
+<td>单声道</td>
+</tr>
+</tbody>
+</table>
+<h3>5.5 部署约束</h3>
+<h4>5.5.1 多实例配置</h4>
+<table>
+<thead>
+<tr>
+<th>参数</th>
+<th>radio1</th>
+<th>radio2</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Web端口</td>
+<td>8891</td>
+<td>8892</td>
+</tr>
+<tr>
+<td>rigctld端口</td>
+<td>4531</td>
+<td>4532</td>
+</tr>
+<tr>
+<td>Unix Socket</td>
+<td>/tmp/mrrc_radio1.sock</td>
+<td>/tmp/mrrc_radio2.sock</td>
+</tr>
+<tr>
+<td>天调JSON</td>
+<td>atr1000_tuner.json</td>
+<td>atr1000_tuner_radio2.json</td>
+</tr>
+</tbody>
+</table>
+<h3>5.6 预算与时间</h3>
+<ul>
+<li>预算范围: 开源项目，无商业预算</li>
+<li>时间要求: 持续迭代，敏捷发布</li>
+</ul>
+<hr />
+<h2>6. 风险与假设</h2>
+<h3>6.1 主要风险</h3>
+<table>
+<thead>
+<tr>
+<th>风险</th>
+<th>影响</th>
+<th>缓解措施</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>音频延迟过高</td>
+<td>高</td>
+<td>AudioWorklet优化，缓冲区调整</td>
+</tr>
+<tr>
+<td>PTT可靠性不足</td>
+<td>高</td>
+<td>预热帧机制，确认重试</td>
+</tr>
+<tr>
+<td>WDSP集成困难</td>
+<td>中</td>
+<td>备选RNNoise方案</td>
+</tr>
+<tr>
+<td>移动端兼容性</td>
+<td>中</td>
+<td>多浏览器测试</td>
+</tr>
+<tr>
+<td>多实例配置复杂</td>
+<td>中</td>
+<td>标准化配置模板</td>
+</tr>
+</tbody>
+</table>
+<h3>6.2 关键假设</h3>
+<ul>
+<li>用户有稳定的互联网连接</li>
+<li>电台支持Cat控制 (rigctld/Hamlib)</li>
+<li>浏览器支持WebSocket</li>
+<li>用户具备基本网络配置能力</li>
+</ul>
+<hr />
+<h2>7. 利益相关者</h2>
+<h3>7.1 核心团队</h3>
+<table>
+<thead>
+<tr>
+<th>角色</th>
+<th>名字</th>
+<th>职责</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>项目负责</td>
+<td>MRRC Team</td>
+<td>整体决策</td>
+</tr>
+<tr>
+<td>开发人员</td>
+<td>社区贡献</td>
+<td>代码实现</td>
+</tr>
+<tr>
+<td>测试人员</td>
+<td>社区成员</td>
+<td>测试验证</td>
+</tr>
+</tbody>
+</table>
+<h3>7.2 外部干系人</h3>
+<table>
+<thead>
+<tr>
+<th>角色</th>
+<th>期望</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>HAM社区</td>
+<td>稳定可靠的远程控制</td>
+</tr>
+<tr>
+<td>开源社区</td>
+<td>代码可读性，文档完整性</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>8. 里程碑</h2>
+<table>
+<thead>
+<tr>
+<th>里程碑</th>
+<th>计划日期</th>
+<th>交付物</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>M1: 基础TX/RX</td>
+<td>2024-10</td>
+<td>音频流通</td>
+</tr>
+<tr>
+<td>M2: 移动端优化</td>
+<td>2024-12</td>
+<td>mobile_modern</td>
+</tr>
+<tr>
+<td>M3: DSP集成</td>
+<td>2026-03</td>
+<td>WDSP NR2</td>
+</tr>
+<tr>
+<td>M4: V4.9发布</td>
+<td>2026-03-14</td>
+<td>语音助手/CW/多实例</td>
+</tr>
+<tr>
+<td>M5: 持续迭代</td>
+<td>进行中</td>
+<td>功能增强</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>附录: 功能特性清单</h2>
+<table>
+<thead>
+<tr>
+<th>特性</th>
+<th>优先级</th>
+<th>状态</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>远程频率控制</td>
+<td>P0</td>
+<td>✅ 已完成</td>
+</tr>
+<tr>
+<td>远程模式切换</td>
+<td>P0</td>
+<td>✅ 已完成</td>
+</tr>
+<tr>
+<td>PTT控制</td>
+<td>P0</td>
+<td>✅ 已完成</td>
+</tr>
+<tr>
+<td>TX音频流</td>
+<td>P0</td>
+<td>✅ 已完成</td>
+</tr>
+<tr>
+<td>RX音频流</td>
+<td>P0</td>
+<td>✅ 已完成</td>
+</tr>
+<tr>
+<td>WDSP降噪</td>
+<td>P1</td>
+<td>✅ 已完成</td>
+</tr>
+<tr>
+<td>ATR-1000集成</td>
+<td>P1</td>
+<td>✅ 已完成</td>
+</tr>
+<tr>
+<td>语音助手</td>
+<td>P2</td>
+<td>✅ 已完成</td>
+</tr>
+<tr>
+<td>CW解码</td>
+<td>P2</td>
+<td>✅ 已完成</td>
+</tr>
+<tr>
+<td>多实例支持</td>
+<td>P2</td>
+<td>✅ 已完成</td>
+</tr>
+<tr>
+<td>PWA离线支持</td>
+<td>P3</td>
+<td>✅ 已完成</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<p><strong>文档信息</strong>
+- 版本: 1.0
+- 创建日期: 2026-03-15
+- 最后更新: 2026-03-15
+- 作者: MRRC Team</p>
+        </div>
+        <div class="nav-links">
+            <a href="index.html">首页</a>
+            <a href="docs.html">文档中心</a>
+            <a href="design.html">设计&工程</a>
+        </div>
+    </div>
+</body>
+</html>
