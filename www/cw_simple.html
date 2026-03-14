@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CW 解码器 (简化版) - BG1SB</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0a0a0f;
+            color: #eee;
+            padding: 10px;
+            min-height: 100vh;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 2px solid #00d4ff;
+            margin-bottom: 15px;
+        }
+        h1 { 
+            color: #00d4ff; 
+            font-size: 20px;
+        }
+        .callsign {
+            color: #ffaa00;
+            font-family: monospace;
+            font-size: 18px;
+        }
+        .status-bar {
+            display: flex;
+            gap: 15px;
+            font-size: 12px;
+            margin-bottom: 15px;
+        }
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #666;
+        }
+        .status-dot.ready { background: #00ff88; box-shadow: 0 0 8px #00ff88; }
+        .status-dot.error { background: #ff4444; }
+        .status-dot.loading { background: #ffaa00; animation: pulse 1s infinite; }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .main-display {
+            background: #1a1a2e;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 15px;
+            min-height: 150px;
+            border: 1px solid #333;
+        }
+        
+        .decoded-text {
+            font-family: 'Courier New', monospace;
+            font-size: 32px;
+            color: #00ff88;
+            line-height: 1.8;
+            word-wrap: break-word;
+            min-height: 100px;
+            white-space: pre-wrap;
+            text-shadow: 0 0 10px #00ff88;
+        }
+        
+        .spectrogram-container {
+            background: #0f0f1a;
+            border-radius: 8px;
+            padding: 10px;
+            margin-bottom: 15px;
+            height: 200px;
+            border: 1px solid #333;
+        }
+        
+        #spectrogram {
+            width: 100%;
+            height: 100%;
+        }
+        
+        .audio-meter {
+            background: #0f0f1a;
+            border-radius: 8px;
+            padding: 10px;
+            margin-bottom: 15px;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .meter-label {
+            font-size: 12px;
+            color: #888;
+            width: 60px;
+        }
+        
+        .meter-bar {
+            flex: 1;
+            height: 30px;
+            background: #1a1a2e;
+            border-radius: 4px;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .meter-fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #00ff88 0%, #ffaa00 70%, #ff4444 100%);
+            transition: width 0.1s;
+        }
+        
+        .controls {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .btn {
+            background: #0f3460;
+            color: #fff;
+            border: none;
+            padding: 15px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+        
+        .btn:hover { background: #1a4a7a; }
+        .btn:disabled { 
+            background: #333; 
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+        .btn.primary { background: #00d4ff; color: #000; font-weight: bold; }
+        .btn.record { background: #ff4444; }
+        .btn.recording { 
+            background: #ff0000; 
+            animation: pulse 0.5s infinite;
+        }
+        
+        .info-panel {
+            background: #1a1a2e;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+        
+        .info-title {
+            color: #00d4ff;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+        
+        .log-panel {
+            background: #0f0f1a;
+            padding: 10px;
+            border-radius: 8px;
+            max-height: 200px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 11px;
+            border: 1px solid #333;
+        }
+        
+        .log-entry {
+            margin-bottom: 3px;
+            color: #666;
+        }
+        .log-entry.info { color: #00d4ff; }
+        .log-entry.success { color: #00ff88; }
+        .log-entry.error { color: #ff4444; }
+        .log-entry.cw { color: #ffaa00; font-weight: bold; }
+        .log-entry.audio { color: #ff66ff; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>📡 CW 实时解码器</h1>
+        <div class="callsign">BG1SB</div>
+    </div>
+
+    <div class="status-bar">
+        <div class="status-item">
+            <div class="status-dot loading" id="wsStatus"></div>
+            <span>电台连接</span>
+        </div>
+        <div class="status-item">
+            <div class="status-dot" id="audioStatus"></div>
+            <span>音频流</span>
+        </div>
+        <div class="status-item">
+            <div class="status-dot" id="decodeStatus"></div>
+            <span>解码</span>
+        </div>
+    </div>
+
+    <div class="audio-meter">
+        <div class="meter-label">信号强度</div>
+        <div class="meter-bar">
+            <div class="meter-fill" id="signalMeter"></div>
+        </div>
+    </div>
+
+    <div class="spectrogram-container">
+        <canvas id="spectrogram"></canvas>
+    </div>
+
+    <div class="main-display">
+        <div class="decoded-text" id="decodedText">等待 CW 信号...</div>
+    </div>
+
+    <div class="controls">
+        <button class="btn primary" id="connectBtn" onclick="connectRadio()">🔗 连接电台</button>
+        <button class="btn" id="decodeBtn" onclick="toggleDecode()" disabled>▶️ 开始解码</button>
+        <button class="btn" onclick="clearResults()">🔄 清除</button>
+    </div>
+
+    <div class="info-panel">
+        <div class="info-title">ℹ️ 使用说明</div>
+        <div>1. 点击"连接电台"建立 WebSocket 连接</div>
+        <div>2. 点击"开始解码"接收并分析音频</div>
+        <div>3. 当检测到 CW 信号时，频谱图会显示信号波形</div>
+        <div>4. 解码文本将实时显示在主窗口</div>
+        <div style="margin-top: 10px; color: #ffaa00;">
+            注意: 当前为简化测试版本，解码功能使用模拟数据
+        </div>
+    </div>
+
+    <div class="log-panel" id="logPanel">
+        <div class="log-entry">系统初始化完成 - 等待连接...</div>
+    </div>
+
+    <script>
+        // 全局变量
+        let wsAudioRX = null;
+        let wsControlTRX = null;
+        let audioContext = null;
+        let audioBuffer = [];
+        let isDecoding = false;
+        let decodeInterval = null;
+        let canvasCtx = null;
+        
+        // 配置
+        const CONFIG = {
+            fftSize: 512,
+            sampleRate: 16000,
+            bufferSize: 16000 * 2 // 2秒缓冲区
+        };
+
+        // 模拟 CW 解码 (用于测试)
+        const MORSE_PATTERNS = {
+            'CQ': '-.-. --.-',
+            'DE': '-.. .',
+            'BG1SB': '-... --. .---- ... -...',
+            '599': '..... ----. ----.',
+            'R': '.-.',
+            'K': '-.-',
+            '73': '--... ...--',
+            'NAME': '-. .- -- .',
+            'QTH': '--.- - ....'
+        };
+
+        // 连接电台
+        async function connectRadio() {
+            updateStatus('ws', 'loading');
+            log('连接电台...');
+
+            try {
+                const baseUrl = 'wss://' + window.location.host;
+                
+                // 连接控制 WebSocket
+                wsControlTRX = new WebSocket(baseUrl + '/WSCTRX');
+                wsControlTRX.onopen = () => {
+                    log('控制连接成功', 'success');
+                    wsControlTRX.send('setMode:CW');
+                    wsControlTRX.send('setFilterWidth:500');
+                };
+
+                // 连接音频 WebSocket
+                wsAudioRX = new WebSocket(baseUrl + '/WSaudioRX');
+                wsAudioRX.binaryType = 'arraybuffer';
+                
+                wsAudioRX.onopen = () => {
+                    updateStatus('ws', 'ready');
+                    updateStatus('audio', 'ready');
+                    log('音频连接成功', 'success');
+                    document.getElementById('connectBtn').disabled = true;
+                    document.getElementById('decodeBtn').disabled = false;
+                    wsAudioRX.send('setSampleRate:16000');
+                };
+
+                wsAudioRX.onmessage = (msg) => {
+                    // 接收音频数据
+                    const int16Data = new Int16Array(msg.data);
+                    const float32Data = new Float32Array(int16Data.length);
+                    
+                    for (let i = 0; i < int16Data.length; i++) {
+                        float32Data[i] = int16Data[i] / 32768.0;
+                    }
+                    
+                    audioBuffer.push(...float32Data);
+                    
+                    // 限制缓冲区大小
+                    if (audioBuffer.length > CONFIG.bufferSize) {
+                        audioBuffer = audioBuffer.slice(-CONFIG.bufferSize);
+                    }
+                    
+                    // 更新信号强度
+                    updateSignalMeter(float32Data);
+                };
+
+                wsAudioRX.onerror = (err) => {
+                    log('音频连接错误', 'error');
+                    updateStatus('ws', 'error');
+                };
+
+                wsAudioRX.onclose = () => {
+                    log('音频连接关闭');
+                    updateStatus('ws', 'error');
+                    stopDecode();
+                };
+
+            } catch (error) {
+                log('连接失败: ' + error.message, 'error');
+                updateStatus('ws', 'error');
+            }
+        }
+
+        // 更新信号强度表
+        function updateSignalMeter(data) {
+            const sum = data.reduce((a, b) => a + Math.abs(b), 0);
+            const avg = sum / data.length;
+            const db = 20 * Math.log10(avg + 1e-10);
+            const percent = Math.min(100, Math.max(0, (db + 60) / 60 * 100));
+            
+            document.getElementById('signalMeter').style.width = percent + '%';
+        }
+
+        // 切换解码
+        function toggleDecode() {
+            if (isDecoding) {
+                stopDecode();
+            } else {
+                startDecode();
+            }
+        }
+
+        // 开始解码
+        function startDecode() {
+            isDecoding = true;
+            updateStatus('decode', 'ready');
+            document.getElementById('decodeBtn').textContent = '⏹️ 停止解码';
+            document.getElementById('decodeBtn').classList.add('recording');
+            log('开始解码...', 'success');
+
+            // 启动频谱图绘制
+            requestAnimationFrame(drawSpectrogram);
+            
+            // 模拟解码 (实际应用中这里应该是真正的 AI 解码)
+            decodeInterval = setInterval(() => {
+                if (audioBuffer.length > CONFIG.fftSize) {
+                    processAudio();
+                }
+            }, 1000);
+        }
+
+        // 停止解码
+        function stopDecode() {
+            isDecoding = false;
+            updateStatus('decode', '');
+            document.getElementById('decodeBtn').textContent = '▶️ 开始解码';
+            document.getElementById('decodeBtn').classList.remove('recording');
+            
+            if (decodeInterval) {
+                clearInterval(decodeInterval);
+                decodeInterval = null;
+            }
+            
+            log('停止解码');
+        }
+
+        // 处理音频 (模拟解码)
+        function processAudio() {
+            const data = audioBuffer.slice(-CONFIG.fftSize);
+            
+            // 计算信号强度
+            const sum = data.reduce((a, b) => a + Math.abs(b), 0);
+            const avg = sum / data.length;
+            
+            // 如果信号强度足够，模拟解码结果
+            if (avg > 0.01) {
+                // 这里模拟随机解码一些 CW 文本
+                // 实际应用中应该使用真正的 AI 模型
+                simulateDecode();
+            }
+        }
+
+        // 模拟解码结果
+        function simulateDecode() {
+            const patterns = Object.keys(MORSE_PATTERNS);
+            const random = Math.random();
+            
+            if (random < 0.1) { // 10% 概率输出
+                const text = patterns[Math.floor(Math.random() * patterns.length)];
+                const current = document.getElementById('decodedText').textContent;
+                
+                if (current === '等待 CW 信号...') {
+                    document.getElementById('decodedText').textContent = text + ' ';
+                } else {
+                    document.getElementById('decodedText').textContent += text + ' ';
+                }
+                
+                log('解码: ' + text, 'cw');
+            }
+        }
+
+        // 绘制频谱图
+        function drawSpectrogram() {
+            if (!isDecoding) return;
+            
+            const canvas = document.getElementById('spectrogram');
+            const ctx = canvas.getContext('2d');
+            
+            // 设置 canvas 大小
+            if (canvas.width !== canvas.offsetWidth) {
+                canvas.width = canvas.offsetWidth;
+                canvas.height = canvas.offsetHeight;
+            }
+            
+            const width = canvas.width;
+            const height = canvas.height;
+            
+            // 清屏
+            ctx.fillStyle = '#0f0f1a';
+            ctx.fillRect(0, 0, width, height);
+            
+            // 如果有音频数据，绘制简单的波形
+            if (audioBuffer.length > 0) {
+                const data = audioBuffer.slice(-width * 2);
+                const step = Math.floor(data.length / width);
+                
+                ctx.strokeStyle = '#00ff88';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                
+                for (let x = 0; x < width; x++) {
+                    const idx = x * step;
+                    if (idx < data.length) {
+                        const y = height / 2 + data[idx] * height / 2;
+                        if (x === 0) {
+                            ctx.moveTo(x, y);
+                        } else {
+                            ctx.lineTo(x, y);
+                        }
+                    }
+                }
+                
+                ctx.stroke();
+                
+                // 绘制频谱条
+                const barCount = 32;
+                const barWidth = width / barCount;
+                
+                for (let i = 0; i < barCount; i++) {
+                    const idx = Math.floor(i * data.length / barCount);
+                    const value = Math.abs(data[idx] || 0);
+                    const barHeight = value * height * 2;
+                    
+                    const hue = 120 - value * 120; // 绿色到红色
+                    ctx.fillStyle = `hsl(${hue}, 100%, 50%)`;
+                    ctx.fillRect(i * barWidth, height - barHeight, barWidth - 2, barHeight);
+                }
+            }
+            
+            requestAnimationFrame(drawSpectrogram);
+        }
+
+        // 清除结果
+        function clearResults() {
+            document.getElementById('decodedText').textContent = '等待 CW 信号...';
+            audioBuffer = [];
+            log('已清除');
+        }
+
+        // 工具函数
+        function updateStatus(id, state) {
+            const dot = document.getElementById(id + 'Status');
+            if (dot) dot.className = 'status-dot ' + state;
+        }
+
+        function log(message, type = 'info') {
+            const panel = document.getElementById('logPanel');
+            const entry = document.createElement('div');
+            entry.className = 'log-entry ' + type;
+            entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            panel.insertBefore(entry, panel.firstChild);
+            
+            while (panel.children.length > 100) {
+                panel.removeChild(panel.lastChild);
+            }
+        }
+
+        // 初始化
+        window.addEventListener('load', () => {
+            log('CW 解码器就绪 - 等待连接', 'success');
+            log('呼号: BG1SB', 'info');
+        });
+    </script>
+</body>
+</html>

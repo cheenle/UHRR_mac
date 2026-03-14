@@ -26,17 +26,18 @@
     
     <key>ProgramArguments</key>
     <array>
-        <string>{{INSTALL_DIR}}/MRRC</string>
+        <string>/opt/local/bin/python3</string>
+        <string>/Users/cheenle/UHRR/MRRC/MRRCb</string>
     </array>
     
     <key>WorkingDirectory</key>
-    <string>{{INSTALL_DIR}}</string>
+    <string>/Users/cheenle/UHRR/MRRC</string>
     
     <key>StandardOutPath</key>
-    <string>{{INSTALL_DIR}}/mrrc_service.log</string>
+    <string>/Users/cheenle/UHRR/MRRC/mrrc_service.log</string>
     
     <key>StandardErrorPath</key>
-    <string>{{INSTALL_DIR}}/mrrc_service_error.log</string>
+    <string>/Users/cheenle/UHRR/MRRC/mrrc_service_error.log</string>
     
     <key>RunAtLoad</key>
     <true/>
@@ -55,7 +56,7 @@
         <key>PATH</key>
         <string>/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
         <key>PYTHONPATH</key>
-        <string>{{INSTALL_DIR}}</string>
+        <string>/Users/cheenle/UHRR/MRRC</string>
     </dict>
 </dict>
 </plist>

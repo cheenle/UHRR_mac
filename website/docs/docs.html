@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>技术文档 - MRRC 移动远程电台控制</title>
+    <meta name="description" content="MRRC完整技术文档：系统架构、DSP处理、CW解码方案、ATR-1000集成等">
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="../css/docs.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="container header-content">
+            <a href="../index.html" class="logo">
+                <span class="logo-icon">📻</span>
+                <span>MRRC</span>
+            </a>
+            <nav class="nav">
+                <a href="../index.html" data-i18n="nav_home">首页</a>
+                <a href="features.html" data-i18n="nav_features">功能特性</a>
+                <a href="installation.html" data-i18n="nav_install">安装指南</a>
+                <a href="docs.html" class="active" data-i18n="nav_docs">技术文档</a>
+            </nav>
+            <div class="lang-switch">
+                <button class="lang-btn active" data-lang="zh">中文</button>
+                <button class="lang-btn" data-lang="en">English</button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Hero -->
+    <section class="hero">
+        <div class="hero-bg"></div>
+        <div class="container">
+            <h1 class="hero-title">技术文档</h1>
+            <p class="hero-subtitle">深入了解MRRC的系统架构、DSP处理流程和高级功能实现</p>
+        </div>
+    </section>
+
+    <!-- Documentation -->
+    <section class="section">
+        <div class="container">
+            <!-- Architecture -->
+            <div class="doc-section" id="architecture">
+                <h2><span class="feature-icon">🏗️</span> 系统架构</h2>
+                
+                <h3>整体架构图</h3>
+                <pre class="code-block" style="font-size: 0.8rem; overflow-x: auto;">
+┌─────────────────────────────────────────────────────────────────────────┐
+│                         MRRC 系统架构 V4.8                               │
+├─────────────────────────────────────────────────────────────────────────┤
+│  客户端层                                                                 │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  ┌──────────┐  │
+│  │ 移动端界面    │  │ 桌面端界面    │  │ CW解码页面   │  │ 录音页面  │  │
+│  │ mobile_modern │  │ modern.html  │  │ cw_live.html │  │ recordings│  │
+│  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘  └────┬─────┘  │
+│         │                  │                 │                │        │
+│         └──────────────────┴─────────────────┴────────────────┘        │
+│                                    │                                     │
+│                            HTTPS / WebSocket                             │
+│                                    ▼                                     │
+├─────────────────────────────────────────────────────────────────────────┤
+│  服务层                                                                   │
+│  ┌──────────────────────────────────────────────────────────────┐      │
+│  │                      MRRC 主程序 (Tornado)                     │      │
+│  ├──────────────────────────────────────────────────────────────┤      │
+│  │  /WSCTRX     - 主控制+音频 (PTT/频率/模式)                      │      │
+│  │  /WSATR1000  - 天调功率/SWR实时显示                             │      │
+│  │  /WSCW       - CW后端解码 (可选)                                │      │
+│  └──────┬─────────────────────────────────────────────┬──────────┘      │
+│         │                                             │                  │
+│         ▼                                             ▼                  │
+│  ┌─────────────────┐                         ┌──────────────────┐     │
+│  │  rigctld        │                         │  ATR-1000 代理   │     │
+│  │  (Hamlib)       │                         │  atr1000_proxy   │     │
+│  └────────┬────────┘                         └────────┬─────────┘     │
+│           │                                            │                │
+│           ▼                                            ▼                │
+│  ┌─────────────────┐                         ┌──────────────────┐     │
+│  │   电台设备      │                         │  ATR-1000 天调   │     │
+│  │  IC-M710       │                         │  功率计/天调     │     │
+│  └─────────────────┘                         └──────────────────┘     │
+└─────────────────────────────────────────────────────────────────────────┘
+                </pre>
+
+                <h3>核心组件</h3>
+                <table class="comparison-table">
+                    <tr>
+                        <th>组件</th>
+                        <th>文件</th>
+                        <th>功能</th>
+                    </tr>
+                    <tr>
+                        <td>主程序</td>
+                        <td><code>MRRC</code></td>
+                        <td>WebSocket服务器，处理音频流和控制命令</td>
+                    </tr>
+                    <tr>
+                        <td>音频接口</td>
+                        <td><code>audio_interface.py</code></td>
+                        <td>PyAudio封装，支持多格式解码</td>
+                    </tr>
+                    <tr>
+                        <td>DSP处理</td>
+                        <td><code>wdsp_wrapper.py</code></td>
+                        <td>WDSP库封装，NR2降噪/AGC/ANF</td>
+                    </tr>
+                    <tr>
+                        <td>电台控制</td>
+                        <td><code>hamlib_wrapper.py</code></td>
+                        <td>rigctld通信封装</td>
+                    </tr>
+                    <tr>
+                        <td>天调代理</td>
+                        <td><code>atr1000_proxy.py</code></td>
+                        <td>ATR-1000独立代理进程</td>
+                    </tr>
+                </table>
+            </div>
+
+            <!-- Audio Processing -->
+            <div class="doc-section" id="audio">
+                <h2><span class="feature-icon">🔊</span> 音频处理流程</h2>
+                
+                <h3>接收音频链路 (RX)</h3>
+                <pre class="code-block">
+电台音频 (48kHz Float32)
+    │
+    ▼
+┌─────────────────┐
+│ DC去除 + 软削波  │  保护后续处理
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│ Int16 转换      │  48kHz → 16bit
+└────────┬────────┘
+         │
+         ▼  (可选)
+┌─────────────────┐
+│ WDSP 处理       │  NR2/NB/ANF/AGC
+│  - 频谱降噪     │  15-20dB降噪
+│  - 噪声抑制     │
+│  - 自动陷波     │
+│  - AGC增益     │
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│ Opus 编码       │  16kHz/20kbps
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│ WebSocket      │  浏览器传输
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│ AudioWorklet   │  低延迟播放
+└─────────────────┘
+                </pre>
+
+                <h3>发射音频链路 (TX)</h3>
+                <pre class="code-block">
+麦克风输入 (48kHz)
+    │
+    ▼
+┌─────────────────┐
+│ 抗混叠滤波     │  6kHz低通
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│ 降采样         │  48kHz → 16kHz
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│ TX均衡器       │  三段EQ预设
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│ Opus 解码      │  16kHz → 48kHz
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│ WebSocket      │  发送到服务器
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│ 电台输入       │  CAT PTT控制
+└─────────────────┘
+                </pre>
+            </div>
+
+            <!-- WDSP -->
+            <div class="doc-section" id="wdsp">
+                <h2><span class="feature-icon">🎛️</span> WDSP 数字信号处理</h2>
+                
+                <p>WDSP (Warren Pratt's Digital Signal Processing) 是 OpenHPSDR 项目开发的高性能DSP库，被广泛应用于专业业余无线电软件。</p>
+
+                <h3>功能模块</h3>
+                <table class="comparison-table">
+                    <tr>
+                        <th>模块</th>
+                        <th>功能</th>
+                        <th>效果</th>
+                    </tr>
+                    <tr>
+                        <td>NR2</td>
+                        <td>频谱降噪</td>
+                        <td>15-20dB 降噪深度</td>
+                    </tr>
+                    <tr>
+                        <td>NB</td>
+                        <td>脉冲噪声抑制</td>
+                        <td>消除火花/雷电</td>
+                    </tr>
+                    <tr>
+                        <td>ANF</td>
+                        <td>自动陷波</td>
+                        <td>消除单频干扰</td>
+                    </tr>
+                    <tr>
+                        <td>AGC</td>
+                        <td>自动增益控制</td>
+                        <td>4种模式可选</td>
+                    </tr>
+                </table>
+
+                <h3>AGC 模式</h3>
+                <ul>
+                    <li><strong>LONG</strong>：长延迟，适合稳定信号</li>
+                    <li><strong>SLOW</strong>：慢响应，平衡选择</li>
+                    <li><strong>MED</strong>：中等响应，默认推荐</li>
+                    <li><strong>FAST</strong>：快速响应，适合快速QSY</li>
+                </ul>
+            </div>
+
+            <!-- CW System -->
+            <div class="doc-section" id="cw">
+                <h2><span class="feature-icon">📡</span> CW 解码系统架构</h2>
+                
+                <p>MRRC V4.8 引入了完整的 CW 实时解码系统，采用 Browser-First AI 设计理念。</p>
+
+                <h3>双模式解码架构</h3>
+                <pre class="code-block">
+┌─────────────────────────────────────────────────────────────┐
+│                     CW 解码双模式架构                          │
+├─────────────────────────────────────────────────────────────┤
+│                                                              │
+│  前端模式 (推荐)                                              │
+│  ┌──────────────┐    ┌──────────────┐    ┌──────────────┐  │
+│  │ 音频流       │───►│ ONNX Runtime │───►│ CTC 解码     │  │
+│  │ (16kHz)      │    │ (2MB模型)    │    │              │  │
+│  └──────────────┘    └──────────────┘    └──────────────┘  │
+│         │                                       │             │
+│         │                              ┌────────▼────────┐    │
+│         │                              │ QSO 状态机     │    │
+│         │                              │ 智能回复建议   │    │
+│         │                              └────────────────┘    │
+│         │                                                     │
+│  延迟: &lt;50ms                                              │
+│  依赖: 无 (纯浏览器)                                          │
+│                                                              │
+├─────────────────────────────────────────────────────────────┤
+│                                                              │
+│  后端模式 (备选)                                              │
+│  ┌──────────────┐    ┌──────────────┐    ┌──────────────┐  │
+│  │ WebSocket   │───►│ morseangel   │───►│ 文本输出     │  │
+│  │ /WSCW       │    │ (PyTorch)    │    │              │  │
+│  └──────────────┘    └──────────────┘    └──────────────┘  │
+│                                                              │
+│  延迟: &lt;100ms                                              │
+│  依赖: PyTorch + CUDA                                        │
+│                                                              │
+└─────────────────────────────────────────────────────────────┘
+                </pre>
+
+                <h3>技术规格</h3>
+                <table class="comparison-table">
+                    <tr>
+                        <th>指标</th>
+                        <th>前端模式</th>
+                        <th>后端模式</th>
+                    </tr>
+                    <tr>
+                        <td>模型大小</td>
+                        <td>2MB (ONNX)</td>
+                        <td>160MB (PyTorch)</td>
+                    </tr>
+                    <tr>
+                        <td>推理延迟</td>
+                        <td>&lt;50ms</td>
+                        <td>&lt;100ms</td>
+                    </tr>
+                    <tr>
+                        <td>字符错误率</td>
+                        <td>&lt;3%</td>
+                        <td>&lt;2%</td>
+                    </tr>
+                    <tr>
+                        <td>网络依赖</td>
+                        <td>无</td>
+                        <td>有</td>
+                    </tr>
+                </table>
+
+                <h3>在线体验</h3>
+                <div class="demo-links">
+                    <a href="https://radio.vlsc.net:8877/cw_live.html" class="btn btn-primary">
+                        <i class="fas fa-satellite-dish"></i> CW 实时解码
+                    </a>
+                    <a href="https://radio.vlsc.net:8877/cw_test.html" class="btn btn-secondary">
+                        <i class="fas fa-vial"></i> CW 测试页面
+                    </a>
+                </div>
+            </div>
+
+            <!-- ATR-1000 -->
+            <div class="doc-section" id="atr1000">
+                <h2><span class="feature-icon">📊</span> ATR-1000 集成</h2>
+                
+                <h3>系统架构</h3>
+                <pre class="code-block">
+┌─────────────────────────────────────────────────────────────┐
+│                    ATR-1000 集成架构                          │
+├─────────────────────────────────────────────────────────────┤
+│                                                              │
+│  前端 (mobile_modern.js)                                     │
+│      │                                                        │
+│      │ WebSocket /WSATR1000                                  │
+│      ▼                                                        │
+│  ┌─────────────────┐                                         │
+│  │ UHRR 主程序     │  消息路由 + 批量广播                      │
+│  └────────┬────────┘                                         │
+│           │                                                  │
+│           │ Unix Socket                                      │
+│           ▼                                                  │
+│  ┌─────────────────┐     WebSocket                          │
+│  │ atr1000_proxy  │◄────────────────────────────────┐        │
+│  │ 独立进程        │                                  │        │
+│  └────────┬────────┘                                  │        │
+│           │                                             │        │
+│           └──────────────────────┬──────────────────────┘        │
+│                                  │                                │
+│                                  ▼                                │
+│                    ┌──────────────────────┐                      │
+│                    │  ATR-1000 设备       │                      │
+│                    │  192.168.1.63:60001  │                      │
+│                    │  功率/SWR/继电器状态  │                      │
+│                    └──────────────────────┘                      │
+└─────────────────────────────────────────────────────────────┘
+                </pre>
+
+                <h3>智能天调学习</h3>
+                <ul>
+                    <li><strong>自动学习</strong>：每次发射时记录频率与天调参数对应关系</li>
+                    <li><strong>快速调谐</strong>：频率变化时自动应用已学习参数</li>
+                    <li><strong>参数持久化</strong>：保存到 atr1000_tuner.json</li>
+                </ul>
+            </div>
+
+            <!-- Protocols -->
+            <div class="doc-section" id="protocols">
+                <h2><span class="feature-icon">📝</span> 通信协议</h2>
+                
+                <h3>WebSocket 命令</h3>
+                <table class="comparison-table">
+                    <tr>
+                        <th>命令</th>
+                        <th>格式</th>
+                        <th>说明</th>
+                    </tr>
+                    <tr>
+                        <td>设置频率</td>
+                        <td><code>setFreq:14074000</code></td>
+                        <td>Hz为单位</td>
+                    </tr>
+                    <tr>
+                        <td>设置模式</td>
+                        <td><code>setMode:USB</code></td>
+                        <td>USB/LSB/CW/FM</td>
+                    </tr>
+                    <tr>
+                        <td>PTT控制</td>
+                        <td><code>setPTT:1</code></td>
+                        <td>1=发射, 0=接收</td>
+                    </tr>
+                    <tr>
+                        <td>音量</td>
+                        <td><code>setRXA:50</code></td>
+                        <td>0-100</td>
+                    </tr>
+                    <tr>
+                        <td>滤波器</td>
+                        <td><code>setFilter:2400</code></td>
+                        <td>Hz为单位</td>
+                    </tr>
+                    <tr>
+                        <td>WDSP控制</td>
+                        <td><code>setWDSP:NR2:1</code></td>
+                        <td>模块:开关</td>
+                    </tr>
+                </table>
+            </div>
+
+            <!-- References -->
+            <div class="doc-section" id="references">
+                <h2><span class="feature-icon">📚</span> 参考文档</h2>
+                
+                <h3>项目内文档</h3>
+                <ul>
+                    <li><a href="https://github.com/cheenle/UHRR_mac/blob/main/README_CN.md" target="_blank">中文README</a></li>
+                    <li><a href="https://github.com/cheenle/UHRR_mac/blob/main/CHANGELOG.md" target="_blank">更新日志</a></li>
+                    <li><a href="https://github.com/cheenle/UHRR_mac/blob/main/IFLOW.md" target="_blank">系统架构 (IFLOW)</a></li>
+                    <li><a href="https://github.com/cheenle/UHRR_mac/blob/main/DSP.md" target="_blank">DSP文档</a></li>
+                    <li><a href="https://github.com/cheenle/UHRR_mac/blob/main/CW.md" target="_blank">CW系统设计文档</a></li>
+                </ul>
+
+                <h3>外部资源</h3>
+                <ul>
+                    <li><a href="https://github.com/g0orx/wdsp" target="_blank">WDSP Library</a></li>
+                    <li><a href="https://github.com/e04/web-deep-cw-decoder" target="_blank">web-deep-cw-decoder</a></li>
+                    <li><a href="https://github.com/f4exb/morseangel" target="_blank">morseangel</a></li>
+                    <li><a href="https://www.hamlib.org/" target="_blank">Hamlib</a></li>
+                </ul>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA -->
+    <section class="section section-cta">
+        <div class="container">
+            <h2 class="cta-title">需要更多帮助？</h2>
+            <p class="cta-text">查看安装指南或加入社区讨论</p>
+            <div class="cta-buttons">
+                <a href="installation.html" class="btn btn-primary">安装指南</a>
+                <a href="https://github.com/cheenle/UHRR_mac/issues" class="btn btn-secondary" target="_blank">GitHub Issues</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-grid">
+                <div class="footer-section">
+                    <h4>MRRC</h4>
+                    <p>Mobile Remote Radio Control<br>V4.8.0 | 随时随地，畅享业余无线电</p>
+                </div>
+                <div class="footer-section">
+                    <h4>快速链接</h4>
+                    <ul>
+                        <li><a href="../index.html">首页</a></li>
+                        <li><a href="features.html">功能特性</a></li>
+                        <li><a href="installation.html">安装指南</a></li>
+                        <li><a href="docs.html">技术文档</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h4>资源</h4>
+                    <ul>
+                        <li><a href="https://github.com/cheenle/UHRR_mac" target="_blank">GitHub仓库</a></li>
+                        <li><a href="https://github.com/cheenle/UHRR_mac/issues" target="_blank">问题反馈</a></li>
+                        <li><a href="https://radio.vlsc.net:8877/" target="_blank">在线演示</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2024-2026 MRRC Project. Open Source under GPL-3.0 License.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="../js/main.js"></script>
+</body>
+</html>

@@ -5,6 +5,82 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [V4.9.0] - 2026-03-14
+
+### 🚀 新功能发布：语音助手、CW模式、SDR界面
+
+**语音文字助手**:
+- 新增 `voice_assistant_service.py` 后端服务
+- 集成 Whisper ASR 语音识别（支持中文/英文）
+- 集成 Piper TTS 语音合成
+- 新增移动端界面: `mobile_voice_text.html`
+- 新增移动端语音助手界面: `mobile_voice_assistant.html`
+
+**CW 电波模式**:
+- 新增 CW DSP 界面: `cw_dsp.html`
+- 新增 CW 信号发生器: `cw_generator.html`
+- 新增 CW 实时解码: `cw_live.html`
+- 新增 CW 简单测试: `cw_simple.html`
+- 新增 CW 测试页面: `cw_test.html`
+
+**SDR 现代界面**:
+- 全新 SDR 控制界面: `sdr_modern.html`
+- 配套 JavaScript: `sdr_modern.js`
+- 配套样式: `sdr_modern.css`
+
+**文件变更**:
+- `voice_assistant_service.py` - 语音助手服务（新增）
+- `VOICE_ASSISTANT_SETUP.md` - 语音助手安装指南（新增）
+- `www/mobile_voice_*.html/js/css` - 移动端语音界面（新增）
+- `www/cw_*.html` - CW模式页面（新增）
+- `www/sdr_modern.*` - SDR现代界面（新增）
+- `www/voice_assistant_asr.js` - ASR客户端（新增）
+
+---
+
+## [V4.8.0] - 2026-03-12
+
+### 🎯 音频系统重构与录制功能
+
+**后端优化**:
+- **日志优化**: 减少I/O开销，设置日志级别为WARNING
+  - 关闭 tornado 和 PIL 的 DEBUG 日志
+  - 只输出到控制台，不写文件
+- **PTT超时保护增强**: 从2秒(10次×200ms)增加到5秒(25次×200ms)
+  - 提高网络延迟容忍度，减少误判
+- **信号强度获取改进**: 优先从设备获取真实信号强度
+  - 支持 rigctld 协议获取信号强度
+  - 支持 hamlib 直接获取
+  - 失败时返回 S0 而非随机值
+
+**S表精细化**:
+- **新增S表中间刻度**: 添加 S5, S15, S25, S35, S45, S55 等中间值
+  - 更精细的信号强度显示 (-54dB ~ +60dB)
+
+**前端增强**:
+- **步进按钮修复**: 修正步进切换逻辑和事件绑定
+  - 修复点击无响应问题
+  - 支持100Hz/1kHz/5kHz/50kHz切换
+- **PTT按钮优化**: 增加按钮高度适应更长按压
+  - 从圆形改为圆角矩形 (120px → 240px高度)
+- **步进显示改进**: 动态更新步进值显示
+
+**音频处理**:
+- **软削波功能 (Soft Clipping)**: 
+  - 使用 tanh 函数平滑限幅
+  - 阈值 0.95 保留足够动态范围
+  - 避免硬削波产生的尖锐失真
+- **立体声录制优化**:
+  - 改为只录制右声道（电台录音通常右声道是RX输出）
+
+**文件变更**:
+- `MRRC` - 日志优化、PTT超时增强、信号强度获取改进
+- `audio_interface.py` - 软削波、立体声优化
+- `www/mobile_modern.js` - 步进按钮修复
+- `www/mobile_modern.css` - PTT按钮高度增加、CW按钮样式
+
+---
+
 ## [V4.7.0] - 2026-03-10
 
 ### 🎯 WDSP 优化与稳定性提升

@@ -148,7 +148,7 @@ start_mrrc() {
 
     # Start MRRC server
 
-    python3 "$LOG_DIR/MRRC" > "$MRRC_LOG" 2>&1 &
+    Python "$SCRIPT_DIR/MRRC" > "$MRRC_LOG" 2>&1 &
 
     local pid=$!
 

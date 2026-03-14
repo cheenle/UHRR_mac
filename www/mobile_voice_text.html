@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="Voice Text">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#0a0a0a">
+    <title>语音文字助手</title>
+    <link rel="apple-touch-icon" href="favicon.png">
+    <link rel="stylesheet" type="text/css" href="mobile_voice_text.css">
+</head>
+<body>
+    <!-- 安全区域适配 -->
+    <div class="safe-area-top"></div>
+    
+    <!-- 主容器 -->
+    <div class="voice-text-container">
+        <!-- 头部 -->
+        <header class="vt-header">
+            <button id="back-btn" class="vt-icon-btn" aria-label="返回">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M19 12H5M12 19l-7-7 7-7"/>
+                </svg>
+            </button>
+            <h1 class="vt-title">语音文字助手</h1>
+            <div class="vt-status-indicator" id="connection-status" title="未连接">
+                <span class="status-dot"></span>
+            </div>
+        </header>
+
+        <!-- 服务状态栏 -->
+        <div class="vt-service-bar">
+            <div class="vt-service-item" id="status-asr">
+                <span class="service-icon">🎤</span>
+                <span class="service-name">识别</span>
+                <span class="service-status">离线</span>
+            </div>
+            <div class="vt-service-item" id="status-tts">
+                <span class="service-icon">🔊</span>
+                <span class="service-name">合成</span>
+                <span class="service-status">离线</span>
+            </div>
+            <div class="vt-freq" id="current-freq">7053.0 kHz</div>
+        </div>
+        
+        <!-- ATR-1000 功率/驻波显示 -->
+        <div class="vt-atr-bar" id="atr-display">
+            <div class="vt-atr-item">
+                <span class="atr-label">功率</span>
+                <span class="atr-value" id="atr-power">0</span>
+                <span class="atr-unit">W</span>
+            </div>
+            <div class="vt-atr-item">
+                <span class="atr-label">驻波</span>
+                <span class="atr-value" id="atr-swr">1.0</span>
+            </div>
+            <div class="vt-atr-item">
+                <span class="atr-label">LC</span>
+                <span class="atr-value" id="atr-lc">--</span>
+            </div>
+            <div class="vt-atr-status" id="atr-status" title="ATR-1000未连接">
+                <span class="status-dot"></span>
+            </div>
+        </div>
+
+        <!-- 语音识别显示区 -->
+        <section class="vt-recognition-section">
+            <div class="vt-section-header">
+                <div class="vt-section-title">
+                    <span class="icon">📻</span>
+                    <span>电台接收识别</span>
+                </div>
+                <div class="vt-section-actions">
+                    <button id="toggle-asr-btn" class="vt-toggle-btn">启动</button>
+                    <button id="clear-asr-btn" class="vt-icon-btn-small" title="清空">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- 文件选择器 -->
+            <div class="vt-file-selector" id="file-selector" style="display: none;">
+                <div class="file-selector-header">
+                    <span class="selector-label">📁 选择录音文件</span>
+                    <button id="refresh-files-btn" class="vt-icon-btn-small" title="刷新列表">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+                        </svg>
+                    </button>
+                </div>
+                <div class="file-list-container" id="file-list">
+                    <div class="file-list-placeholder">正在加载文件列表...</div>
+                </div>
+                <div class="file-selector-actions">
+                    <button id="select-file-btn" class="vt-btn-primary" disabled>识别选中文件</button>
+                </div>
+            </div>
+
+            <div class="vt-recognition-box" id="asr-display">
+                <div class="vt-placeholder">
+                    <div class="placeholder-icon">🎙️</div>
+                    <div>等待启动语音识别...</div>
+                    <div class="placeholder-hint">点击上方"启动"按钮开始识别电台语音</div>
+                </div>
+            </div>
+            
+            <!-- 识别置信度 -->
+            <div class="vt-confidence" id="confidence-bar" style="display: none;">
+                <div class="confidence-label">置信度</div>
+                <div class="confidence-bar">
+                    <div class="confidence-fill" id="confidence-fill" style="width: 0%"></div>
+                </div>
+                <div class="confidence-value" id="confidence-value">0%</div>
+            </div>
+        </section>
+
+        <!-- 对话记录区 -->
+        <section class="vt-chat-section">
+            <div class="vt-section-header">
+                <div class="vt-section-title">
+                    <span class="icon">💬</span>
+                    <span>对话记录</span>
+                </div>
+                <button id="clear-chat-btn" class="vt-text-btn">清空记录</button>
+            </div>
+            
+            <div class="vt-chat-list" id="chat-list">
+                <!-- 对话消息将动态添加 -->
+            </div>
+        </section>
+
+        <!-- 回复输入区 -->
+        <section class="vt-reply-section">
+            <div class="vt-section-header">
+                <div class="vt-section-title">
+                    <span class="icon">✏️</span>
+                    <span>发送回复</span>
+                </div>
+                <div class="vt-tts-options">
+                    <select id="tts-speed" class="vt-select">
+                        <option value="0.8">慢</option>
+                        <option value="1.0" selected>正常</option>
+                        <option value="1.2">快</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="vt-input-area">
+                <textarea 
+                    id="reply-input" 
+                    class="vt-textarea" 
+                    placeholder="输入要合成的文字内容..."
+                    rows="2"
+                ></textarea>
+                
+                <div class="vt-input-toolbar">
+                    <button id="quick-reply-btn" class="vt-toolbar-btn">
+                        <span>⚡</span>
+                        <span>快捷</span>
+                    </button>
+                    <button id="history-btn" class="vt-toolbar-btn">
+                        <span>🕐</span>
+                        <span>历史</span>
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- 底部发射控制 -->
+        <div class="vt-transmit-bar">
+            <button id="preview-btn" class="vt-preview-btn" disabled>
+                <span class="btn-icon">▶️</span>
+                <span class="btn-text">试听</span>
+            </button>
+            
+            <button id="transmit-btn" class="vt-transmit-btn" disabled>
+                <div class="transmit-inner">
+                    <span class="transmit-icon">📡</span>
+                    <span class="transmit-text">按住发射</span>
+                </div>
+                <div class="transmit-waves">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </div>
+            </button>
+            
+            <button id="stop-btn" class="vt-stop-btn" disabled>
+                <span class="btn-icon">⏹️</span>
+                <span class="btn-text">停止</span>
+            </button>
+        </div>
+
+        <!-- 快捷回复弹窗 -->
+        <div id="quick-reply-modal" class="vt-modal">
+            <div class="vt-modal-content">
+                <div class="vt-modal-header">
+                    <h3>快捷回复</h3>
+                    <button class="vt-modal-close" id="close-quick-reply">&times;</button>
+                </div>
+                <div class="vt-quick-reply-list">
+                    <button class="vt-quick-reply-item" data-text="这里是BH4XXX，您的信号59，请问有什么可以帮您？">
+                        <span class="qr-icon">📡</span>
+                        <span class="qr-text">标准回复</span>
+                    </button>
+                    <button class="vt-quick-reply-item" data-text="信号非常好，清晰可辨">
+                        <span class="qr-icon">👍</span>
+                        <span class="qr-text">信号良好</span>
+                    </button>
+                    <button class="vt-quick-reply-item" data-text="信号比较弱，请再重复一遍">
+                        <span class="qr-icon">🔁</span>
+                        <span class="qr-text">请求重复</span>
+                    </button>
+                    <button class="vt-quick-reply-item" data-text="这里是BH4XXX，请问您的呼号是？">
+                        <span class="qr-icon">❓</span>
+                        <span class="qr-text">询问呼号</span>
+                    </button>
+                    <button class="vt-quick-reply-item" data-text="QRZ？有台在呼叫吗？">
+                        <span class="qr-icon">📢</span>
+                        <span class="qr-text">普遍呼叫</span>
+                    </button>
+                    <button class="vt-quick-reply-item" data-text="73，祝您通联愉快，再见！">
+                        <span class="qr-icon">👋</span>
+                        <span class="qr-text">结束通联</span>
+                    </button>
+                    <button class="vt-quick-reply-item" data-text="请报一下您的QTH位置">
+                        <span class="qr-icon">📍</span>
+                        <span class="qr-text">询问位置</span>
+                    </button>
+                    <button class="vt-quick-reply-item" data-text="收到，完全抄收">
+                        <span class="qr-icon">✅</span>
+                        <span class="qr-text">确认收到</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 历史记录弹窗 -->
+        <div id="history-modal" class="vt-modal">
+            <div class="vt-modal-content">
+                <div class="vt-modal-header">
+                    <h3>发送历史</h3>
+                    <button class="vt-modal-close" id="close-history">&times;</button>
+                </div>
+                <div class="vt-history-list" id="history-list">
+                    <!-- 历史记录动态添加 -->
+                </div>
+            </div>
+        </div>
+
+        <!-- 安全区域底部 -->
+        <div class="safe-area-bottom"></div>
+    </div>
+
+    <!-- Toast提示 -->
+    <div id="vt-toast" class="vt-toast"></div>
+
+    <script src="mobile_voice_text.js"></script>
+</body>
+</html>

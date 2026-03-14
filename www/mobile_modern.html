@@ -111,6 +111,7 @@
                     <button class="quick-btn mode-btn" id="mode-btn">USB</button>
                     <button class="quick-btn band-btn" id="band-btn">20m</button>
                     <button class="quick-btn filter-btn" id="filter-btn">MID</button>
+                    <button class="quick-btn cw-btn" id="cw-btn" onclick="window.location.href='cw_live.html'">CW</button>
                 </div>
             </section>
 
@@ -184,19 +185,14 @@
                 </div>
             </section>
             
-            <!-- Frequency tuning - 两排布局（上加下减） -->
+            <!-- Frequency tuning - 单行布局（左右调谐） -->
             <section class="frequency-tuning-grid">
-                <div class="tuning-row">
-                    <button class="tune-btn-grid tune-btn-plus" data-step="50000">+50</button>
-                    <button class="tune-btn-grid tune-btn-plus" data-step="10000">+10</button>
-                    <button class="tune-btn-grid tune-btn-plus" data-step="5000">+5</button>
-                    <button class="tune-btn-grid tune-btn-plus" data-step="1000">+1</button>
-                </div>
-                <div class="tuning-row">
-                    <button class="tune-btn-grid tune-btn-minus" data-step="-50000">-50</button>
-                    <button class="tune-btn-grid tune-btn-minus" data-step="-10000">-10</button>
-                    <button class="tune-btn-grid tune-btn-minus" data-step="-5000">-5</button>
-                    <button class="tune-btn-grid tune-btn-minus" data-step="-1000">-1</button>
+                <div class="tuning-row single-row">
+                    <button class="tune-btn-grid tune-btn-minus" id="tune-left-fast" data-step="-5000">◀◀</button>
+                    <button class="tune-btn-grid tune-btn-minus" id="tune-left-slow" data-step="-1000">◀</button>
+                    <button class="tune-step-display" id="step-btn" type="button">1kHz</button>
+                    <button class="tune-btn-grid tune-btn-plus" id="tune-right-slow" data-step="1000">▶</button>
+                    <button class="tune-btn-grid tune-btn-plus" id="tune-right-fast" data-step="5000">▶▶</button>
                 </div>
             </section>
         </main>
@@ -204,6 +200,10 @@
         <!-- PTT Section - 底部PTT/TUNE按钮区域 -->
         <footer class="ptt-section">
             <div class="ptt-container">
+                <!-- PTT 按钮 -->
+                <button id="ptt-btn" class="ptt-button" aria-label="Push to Talk">
+                    <span class="ptt-label">PTT</span>
+                </button>
                 <!-- 录音 按钮 -->
                 <button id="record-btn" class="record-button-footer" aria-label="Record">
                     <span class="record-icon">●</span>
@@ -212,10 +212,6 @@
                 <!-- TUNE 按钮 -->
                 <button id="tune-btn" class="tune-button-footer" aria-label="Tune">
                     <span class="tune-label">TUNE</span>
-                </button>
-                <!-- PTT 按钮 -->
-                <button id="ptt-btn" class="ptt-button" aria-label="Push to Talk">
-                    <span class="ptt-label">PTT</span>
                 </button>
             </div>
         </footer>
@@ -236,6 +232,7 @@
                 <li><a href="#" class="menu-item" data-action="audio">Audio Controls</a></li>
                 <li><a href="#" class="menu-item" data-action="txeq">TX Equalizer</a></li>
                 <li><a href="#" class="menu-item" data-action="digital">Digital Modes</a></li>
+                <li><a href="cw_live.html" class="menu-item">📡 CW 解码器</a></li>
                 <li><a href="recordings.html" class="menu-item">录音列表</a></li>
                 <li><a href="#" class="menu-item" data-action="logbook">Logbook</a></li>
                 <li><a href="#" class="menu-item" data-action="about">About</a></li>
@@ -255,7 +252,7 @@
     <!-- 核心脚本加载顺序重要 -->
     <script src="ui_utils.js"></script>
     <script src="controls.js"></script>
-    <script src="mobile_modern.js?v=4.7.1"></script>
+    <script src="mobile_modern.js?v=4.8.0"></script>
     <script src="tx_button_optimized.js"></script>
 </body>
 </html>

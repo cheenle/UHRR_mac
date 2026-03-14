@@ -1,0 +1,762 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CW DSP 解码器 - BG1SB</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0a0a0f;
+            color: #eee;
+            padding: 10px;
+            min-height: 100vh;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 2px solid #00d4ff;
+            margin-bottom: 15px;
+        }
+        h1 { color: #00d4ff; font-size: 20px; }
+        .callsign { color: #ffaa00; font-family: monospace; font-size: 18px; }
+        
+        .status-bar {
+            display: flex;
+            gap: 15px;
+            font-size: 12px;
+            margin-bottom: 15px;
+        }
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #666;
+        }
+        .status-dot.ready { background: #00ff88; box-shadow: 0 0 8px #00ff88; }
+        .status-dot.error { background: #ff4444; }
+        .status-dot.loading { background: #ffaa00; animation: pulse 1s infinite; }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .main-display {
+            background: #1a1a2e;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 15px;
+            min-height: 120px;
+            border: 1px solid #333;
+        }
+        
+        .decoded-text {
+            font-family: 'Courier New', monospace;
+            font-size: 36px;
+            color: #00ff88;
+            line-height: 1.8;
+            word-wrap: break-word;
+            white-space: pre-wrap;
+            text-shadow: 0 0 10px #00ff88;
+            min-height: 80px;
+        }
+        
+        .visualizer-container {
+            background: #0f0f1a;
+            border-radius: 8px;
+            padding: 10px;
+            margin-bottom: 15px;
+            height: 250px;
+            border: 1px solid #333;
+            display: grid;
+            grid-template-rows: 1fr 1fr;
+            gap: 10px;
+        }
+        
+        .viz-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+        
+        .viz-panel {
+            background: #1a1a2e;
+            border-radius: 4px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .viz-label {
+            position: absolute;
+            top: 5px;
+            left: 5px;
+            font-size: 10px;
+            color: #888;
+            z-index: 10;
+        }
+        
+        canvas {
+            width: 100%;
+            height: 100%;
+        }
+        
+        .controls {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .btn {
+            background: #0f3460;
+            color: #fff;
+            border: none;
+            padding: 15px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+        .btn:hover { background: #1a4a7a; }
+        .btn:disabled { background: #333; cursor: not-allowed; opacity: 0.6; }
+        .btn.primary { background: #00d4ff; color: #000; font-weight: bold; }
+        .btn.record { background: #ff4444; }
+        .btn.recording { animation: pulse 0.5s infinite; }
+        
+        .params-panel {
+            background: #1a1a2e;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+        
+        .params-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+        }
+        
+        .param-item {
+            display: flex;
+            flex-direction: column;
+        }
+        .param-item label {
+            font-size: 11px;
+            color: #888;
+            margin-bottom: 4px;
+        }
+        .param-item input, .param-item select {
+            background: #0f0f1a;
+            border: 1px solid #333;
+            color: #fff;
+            padding: 8px;
+            border-radius: 4px;
+            font-size: 13px;
+        }
+        
+        .stats-panel {
+            background: #1a1a2e;
+            border-radius: 8px;
+            padding: 10px;
+            margin-bottom: 15px;
+            font-family: monospace;
+            font-size: 12px;
+            display: flex;
+            gap: 20px;
+        }
+        .stat-item { color: #888; }
+        .stat-value { color: #00d4ff; }
+        
+        .log-panel {
+            background: #0f0f1a;
+            padding: 10px;
+            border-radius: 8px;
+            max-height: 150px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 11px;
+        }
+        .log-entry { margin-bottom: 3px; color: #666; }
+        .log-entry.info { color: #00d4ff; }
+        .log-entry.success { color: #00ff88; }
+        .log-entry.error { color: #ff4444; }
+        .log-entry.cw { color: #ffaa00; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>📡 CW DSP 解码器</h1>
+        <div class="callsign">BG1SB</div>
+    </div>
+
+    <div class="status-bar">
+        <div class="status-item">
+            <div class="status-dot loading" id="wsStatus"></div>
+            <span>电台连接</span>
+        </div>
+        <div class="status-item">
+            <div class="status-dot" id="audioStatus"></div>
+            <span>音频流</span>
+        </div>
+        <div class="status-item">
+            <div class="status-dot" id="decodeStatus"></div>
+            <span>解码器</span>
+        </div>
+        <div class="status-item">
+            <div class="status-dot" id="signalStatus"></div>
+            <span>信号检测</span>
+        </div>
+    </div>
+
+    <div class="visualizer-container">
+        <div class="viz-row">
+            <div class="viz-panel">
+                <div class="viz-label">原始波形</div>
+                <canvas id="waveformCanvas"></canvas>
+            </div>
+            <div class="viz-panel">
+                <div class="viz-label">包络检测</div>
+                <canvas id="envelopeCanvas"></canvas>
+            </div>
+        </div>
+        <div class="viz-row">
+            <div class="viz-panel">
+                <div class="viz-label">自适应阈值</div>
+                <canvas id="thresholdCanvas"></canvas>
+            </div>
+            <div class="viz-panel">
+                <div class="viz-label">解码结果</div>
+                <canvas id="decodeCanvas"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div class="main-display">
+        <div class="decoded-text" id="decodedText">等待 CW 信号...</div>
+    </div>
+
+    <div class="stats-panel">
+        <div class="stat-item">WPM: <span class="stat-value" id="wpmDisplay">20</span></div>
+        <div class="stat-item">SNR: <span class="stat-value" id="snrDisplay">--</span> dB</div>
+        <div class="stat-item">频率: <span class="stat-value" id="freqDisplay">--</span> Hz</div>
+        <div class="stat-item">缓冲: <span class="stat-value" id="bufferDisplay">0</span> ms</div>
+    </div>
+
+    <div class="controls">
+        <button class="btn primary" id="connectBtn" onclick="connectRadio()">🔗 连接电台</button>
+        <button class="btn" id="decodeBtn" onclick="toggleDecode()" disabled>▶️ 开始解码</button>
+        <button class="btn" onclick="calibrateWPM()">⚙️ 自动校准 WPM</button>
+        <button class="btn" onclick="clearResults()">🔄 清除</button>
+    </div>
+
+    <div class="params-panel">
+        <div class="params-grid">
+            <div class="param-item">
+                <label>发送速度 (WPM)</label>
+                <input type="number" id="wpmInput" value="20" min="5" max="50" onchange="updateWPM()">
+            </div>
+            <div class="param-item">
+                <label>中心频率 (Hz)</label>
+                <input type="number" id="centerFreq" value="600" min="300" max="1200">
+            </div>
+            <div class="param-item">
+                <label>带宽 (Hz)</label>
+                <select id="bandwidth">
+                    <option value="100">100 Hz</option>
+                    <option value="250">250 Hz</option>
+                    <option value="500" selected>500 Hz</option>
+                </select>
+            </div>
+            <div class="param-item">
+                <label>阈值灵敏度</label>
+                <input type="range" id="sensitivity" min="1" max="10" value="5">
+            </div>
+        </div>
+    </div>
+
+    <div class="log-panel" id="logPanel">
+        <div class="log-entry">CW DSP 解码器就绪 - 基于自适应阈值算法</div>
+    </div>
+
+    <script>
+        // 全局变量
+        let wsAudioRX = null;
+        let wsControlTRX = null;
+        let audioBuffer = [];
+        let isDecoding = false;
+        let decodeInterval = null;
+        let wpm = 20;
+        
+        // DSP 参数
+        const SAMPLE_RATE = 16000;
+        const FFT_SIZE = 512;
+        const HOP_SIZE = 128;
+        
+        // CW 解码状态
+        let cwState = {
+            inTone: false,
+            toneStart: 0,
+            lastToneEnd: 0,
+            elementBuffer: [],
+            charBuffer: [],
+            ditLength: 0,  // 根据 WPM 计算
+            dahLength: 0,
+            elementSpace: 0,
+            charSpace: 0,
+            wordSpace: 0
+        };
+        
+        // 摩尔斯码表
+        const MORSE_CODE = {
+            '.-': 'A', '-...': 'B', '-.-.': 'C', '-..': 'D', '.': 'E',
+            '..-.': 'F', '--.': 'G', '....': 'H', '..': 'I', '.---': 'J',
+            '-.-': 'K', '.-..': 'L', '--': 'M', '-.': 'N', '---': 'O',
+            '.--.': 'P', '--.-': 'Q', '.-.': 'R', '...': 'S', '-': 'T',
+            '..-': 'U', '...-': 'V', '.--': 'W', '-..-': 'X', '-.--': 'Y',
+            '--..': 'Z', '-----': '0', '.----': '1', '..---': '2',
+            '...--': '3', '....-': '4', '.....': '5', '-....': '6',
+            '--...': '7', '---..': '8', '----.': '9'
+        };
+        
+        // 计算时长参数
+        function calculateTiming() {
+            const dotMs = 1200 / wpm;  // dit 时长 (毫秒)
+            cwState.ditLength = Math.round(dotMs * SAMPLE_RATE / 1000);
+            cwState.dahLength = cwState.ditLength * 3;
+            cwState.elementSpace = cwState.ditLength;
+            cwState.charSpace = cwState.ditLength * 3;
+            cwState.wordSpace = cwState.ditLength * 7;
+        }
+        
+        // 连接电台
+        async function connectRadio() {
+            updateStatus('ws', 'loading');
+            log('连接电台...');
+            
+            try {
+                const baseUrl = 'wss://' + window.location.host;
+                
+                wsControlTRX = new WebSocket(baseUrl + '/WSCTRX');
+                wsControlTRX.onopen = () => {
+                    log('控制连接成功', 'success');
+                    wsControlTRX.send('setMode:CW');
+                    wsControlTRX.send('setFilterWidth:500');
+                };
+                
+                wsAudioRX = new WebSocket(baseUrl + '/WSaudioRX');
+                wsAudioRX.binaryType = 'arraybuffer';
+                
+                wsAudioRX.onopen = () => {
+                    updateStatus('ws', 'ready');
+                    updateStatus('audio', 'ready');
+                    log('音频连接成功', 'success');
+                    document.getElementById('connectBtn').disabled = true;
+                    document.getElementById('decodeBtn').disabled = false;
+                    wsAudioRX.send('setSampleRate:16000');
+                };
+                
+                wsAudioRX.onmessage = (msg) => {
+                    const int16Data = new Int16Array(msg.data);
+                    const float32Data = new Float32Array(int16Data.length);
+                    for (let i = 0; i < int16Data.length; i++) {
+                        float32Data[i] = int16Data[i] / 32768.0;
+                    }
+                    audioBuffer.push(...float32Data);
+                    
+                    // 限制缓冲区
+                    const maxSamples = SAMPLE_RATE * 5;  // 5秒
+                    if (audioBuffer.length > maxSamples) {
+                        audioBuffer = audioBuffer.slice(-maxSamples);
+                    }
+                };
+                
+                wsAudioRX.onerror = () => {
+                    log('音频连接错误', 'error');
+                    updateStatus('ws', 'error');
+                };
+                
+                wsAudioRX.onclose = () => {
+                    log('音频连接关闭');
+                    updateStatus('ws', 'error');
+                    stopDecode();
+                };
+                
+            } catch (error) {
+                log('连接失败: ' + error.message, 'error');
+                updateStatus('ws', 'error');
+            }
+        }
+        
+        // 切换解码
+        function toggleDecode() {
+            if (isDecoding) {
+                stopDecode();
+            } else {
+                startDecode();
+            }
+        }
+        
+        // 开始解码
+        function startDecode() {
+            calculateTiming();
+            isDecoding = true;
+            updateStatus('decode', 'ready');
+            updateStatus('signal', 'ready');
+            document.getElementById('decodeBtn').textContent = '⏹️ 停止解码';
+            document.getElementById('decodeBtn').classList.add('recording');
+            log('开始 DSP 解码...', 'success');
+            log(`WPM: ${wpm}, dit长度: ${cwState.ditLength} 样本`, 'info');
+            
+            decodeLoop();
+        }
+        
+        // 停止解码
+        function stopDecode() {
+            isDecoding = false;
+            updateStatus('decode', '');
+            updateStatus('signal', '');
+            document.getElementById('decodeBtn').textContent = '▶️ 开始解码';
+            document.getElementById('decodeBtn').classList.remove('recording');
+            
+            if (decodeInterval) {
+                cancelAnimationFrame(decodeInterval);
+                decodeInterval = null;
+            }
+            log('停止解码');
+        }
+        
+        // 解码主循环
+        function decodeLoop() {
+            if (!isDecoding) return;
+            
+            if (audioBuffer.length >= FFT_SIZE * 4) {
+                processAudioBlock();
+            }
+            
+            decodeInterval = requestAnimationFrame(decodeLoop);
+        }
+        
+        // 处理音频块
+        function processAudioBlock() {
+            // 取最近的数据
+            const blockSize = Math.min(audioBuffer.length, FFT_SIZE * 4);
+            const data = audioBuffer.slice(-blockSize);
+            
+            // 1. 带通滤波 (集中在 CW 频率)
+            const filtered = bandpassFilter(data, parseInt(document.getElementById('centerFreq').value), 
+                                                   parseInt(document.getElementById('bandwidth').value));
+            
+            // 2. 计算包络
+            const envelope = computeEnvelope(filtered);
+            
+            // 3. 自适应阈值
+            const threshold = adaptiveThreshold(envelope);
+            
+            // 4. 检测 tone
+            detectTone(envelope, threshold);
+            
+            // 5. 可视化
+            drawWaveform(data, 'waveformCanvas');
+            drawWaveform(envelope, 'envelopeCanvas');
+            drawThreshold(envelope, threshold, 'thresholdCanvas');
+            drawDecodeState('decodeCanvas');
+            
+            // 更新统计
+            document.getElementById('bufferDisplay').textContent = 
+                Math.round(audioBuffer.length / SAMPLE_RATE * 1000);
+        }
+        
+        // 带通滤波 (简化版)
+        function bandpassFilter(data, centerFreq, bandwidth) {
+            // 这里使用简单的频率选择
+            // 实际应该使用 IIR/FIR 滤波器
+            return data;
+        }
+        
+        // 计算包络 (希尔伯特变换近似)
+        function computeEnvelope(data) {
+            const envelope = new Float32Array(data.length);
+            
+            // 平方 -> 低通滤波 -> 开方
+            for (let i = 0; i < data.length; i++) {
+                envelope[i] = Math.abs(data[i]);
+            }
+            
+            // 简单移动平均低通
+            const windowSize = Math.round(SAMPLE_RATE * 0.005);  // 5ms 窗口
+            const smoothed = new Float32Array(data.length);
+            
+            for (let i = 0; i < data.length; i++) {
+                let sum = 0;
+                let count = 0;
+                for (let j = Math.max(0, i - windowSize); j < Math.min(data.length, i + windowSize); j++) {
+                    sum += envelope[j];
+                    count++;
+                }
+                smoothed[i] = sum / count;
+            }
+            
+            return smoothed;
+        }
+        
+        // 自适应阈值
+        function adaptiveThreshold(envelope) {
+            // 计算噪声底和信号峰
+            let sum = 0, sumSq = 0;
+            for (let i = 0; i < envelope.length; i++) {
+                sum += envelope[i];
+                sumSq += envelope[i] * envelope[i];
+            }
+            const mean = sum / envelope.length;
+            const variance = sumSq / envelope.length - mean * mean;
+            const std = Math.sqrt(variance);
+            
+            // 阈值 = 均值 + 灵敏度 * 标准差
+            const sensitivity = parseInt(document.getElementById('sensitivity').value) / 5;
+            const threshold = mean + std * sensitivity;
+            
+            // 更新 SNR 显示
+            const snr = 20 * Math.log10((mean + std * 3) / (mean + 0.001));
+            document.getElementById('snrDisplay').textContent = snr.toFixed(1);
+            
+            return threshold;
+        }
+        
+        // 检测 tone
+        function detectTone(envelope, threshold) {
+            const sampleIdx = audioBuffer.length - envelope.length;
+            
+            for (let i = 0; i < envelope.length; i += HOP_SIZE) {
+                const isAboveThreshold = envelope[i] > threshold;
+                const absoluteIdx = sampleIdx + i;
+                
+                if (isAboveThreshold && !cwState.inTone) {
+                    // Tone 开始
+                    cwState.inTone = true;
+                    cwState.toneStart = absoluteIdx;
+                } else if (!isAboveThreshold && cwState.inTone) {
+                    // Tone 结束
+                    cwState.inTone = false;
+                    const toneEnd = absoluteIdx;
+                    const toneDuration = toneEnd - cwState.toneStart;
+                    
+                    // 判断是 dit 还是 dah
+                    if (toneDuration > cwState.ditLength * 0.5) {
+                        if (toneDuration < cwState.dahLength * 0.8) {
+                            cwState.elementBuffer.push('.');
+                            log('检测到: dit', 'info');
+                        } else {
+                            cwState.elementBuffer.push('-');
+                            log('检测到: dah', 'info');
+                        }
+                    }
+                    
+                    cwState.lastToneEnd = toneEnd;
+                }
+                
+                // 检查字符间隔
+                if (!cwState.inTone && cwState.lastToneEnd > 0 && cwState.elementBuffer.length > 0) {
+                    const silenceDuration = absoluteIdx - cwState.lastToneEnd;
+                    
+                    if (silenceDuration > cwState.charSpace * 0.8) {
+                        // 字符结束
+                        decodeCharacter();
+                    }
+                    
+                    if (silenceDuration > cwState.wordSpace * 0.8) {
+                        // 单词结束
+                        document.getElementById('decodedText').textContent += ' ';
+                        log('单词间隔', 'info');
+                    }
+                }
+            }
+        }
+        
+        // 解码字符
+        function decodeCharacter() {
+            if (cwState.elementBuffer.length === 0) return;
+            
+            const pattern = cwState.elementBuffer.join('');
+            const char = MORSE_CODE[pattern];
+            
+            if (char) {
+                const currentText = document.getElementById('decodedText').textContent;
+                if (currentText === '等待 CW 信号...') {
+                    document.getElementById('decodedText').textContent = char;
+                } else {
+                    document.getElementById('decodedText').textContent += char;
+                }
+                log('解码: ' + pattern + ' -> ' + char, 'cw');
+            } else {
+                log('未知模式: ' + pattern, 'error');
+            }
+            
+            cwState.elementBuffer = [];
+        }
+        
+        // 绘制波形
+        function drawWaveform(data, canvasId) {
+            const canvas = document.getElementById(canvasId);
+            const ctx = canvas.getContext('2d');
+            
+            if (canvas.width !== canvas.offsetWidth) {
+                canvas.width = canvas.offsetWidth;
+                canvas.height = canvas.offsetHeight;
+            }
+            
+            const width = canvas.width;
+            const height = canvas.height;
+            
+            ctx.fillStyle = '#1a1a2e';
+            ctx.fillRect(0, 0, width, height);
+            
+            ctx.strokeStyle = '#00ff88';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            
+            const step = Math.ceil(data.length / width);
+            
+            for (let x = 0; x < width; x++) {
+                const idx = x * step;
+                if (idx < data.length) {
+                    const y = height / 2 + data[idx] * height / 2;
+                    if (x === 0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                }
+            }
+            
+            ctx.stroke();
+        }
+        
+        // 绘制阈值
+        function drawThreshold(envelope, threshold, canvasId) {
+            const canvas = document.getElementById(canvasId);
+            const ctx = canvas.getContext('2d');
+            
+            if (canvas.width !== canvas.offsetWidth) {
+                canvas.width = canvas.offsetWidth;
+                canvas.height = canvas.offsetHeight;
+            }
+            
+            const width = canvas.width;
+            const height = canvas.height;
+            
+            ctx.fillStyle = '#1a1a2e';
+            ctx.fillRect(0, 0, width, height);
+            
+            // 绘制包络
+            ctx.strokeStyle = '#00d4ff';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            
+            const step = Math.ceil(envelope.length / width);
+            for (let x = 0; x < width; x++) {
+                const idx = x * step;
+                if (idx < envelope.length) {
+                    const y = height - envelope[idx] * height;
+                    if (x === 0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                }
+            }
+            ctx.stroke();
+            
+            // 绘制阈值线
+            const thresholdY = height - threshold * height;
+            ctx.strokeStyle = '#ff4444';
+            ctx.setLineDash([5, 5]);
+            ctx.beginPath();
+            ctx.moveTo(0, thresholdY);
+            ctx.lineTo(width, thresholdY);
+            ctx.stroke();
+            ctx.setLineDash([]);
+        }
+        
+        // 绘制解码状态
+        function drawDecodeState(canvasId) {
+            const canvas = document.getElementById(canvasId);
+            const ctx = canvas.getContext('2d');
+            
+            if (canvas.width !== canvas.offsetWidth) {
+                canvas.width = canvas.offsetWidth;
+                canvas.height = canvas.offsetHeight;
+            }
+            
+            const width = canvas.width;
+            const height = canvas.height;
+            
+            ctx.fillStyle = '#1a1a2e';
+            ctx.fillRect(0, 0, width, height);
+            
+            // 显示当前元素缓冲区
+            ctx.fillStyle = '#00ff88';
+            ctx.font = '24px monospace';
+            ctx.textAlign = 'center';
+            const pattern = cwState.elementBuffer.join('') || '...';
+            ctx.fillText(pattern, width / 2, height / 2 + 8);
+        }
+        
+        // 自动校准 WPM
+        function calibrateWPM() {
+            log('自动校准 WPM...', 'info');
+            // 这里可以根据接收到的信号自动计算 WPM
+            // 简化版：使用标准值
+            wpm = 20;
+            document.getElementById('wpmInput').value = wpm;
+            calculateTiming();
+            log('WPM 校准完成: ' + wpm, 'success');
+        }
+        
+        // 更新 WPM
+        function updateWPM() {
+            wpm = parseInt(document.getElementById('wpmInput').value);
+            calculateTiming();
+            document.getElementById('wpmDisplay').textContent = wpm;
+            log('WPM 更新为: ' + wpm, 'info');
+        }
+        
+        // 清除结果
+        function clearResults() {
+            document.getElementById('decodedText').textContent = '等待 CW 信号...';
+            cwState.elementBuffer = [];
+            cwState.charBuffer = [];
+            audioBuffer = [];
+            log('已清除');
+        }
+        
+        // 工具函数
+        function updateStatus(id, state) {
+            const dot = document.getElementById(id + 'Status');
+            if (dot) dot.className = 'status-dot ' + state;
+        }
+        
+        function log(message, type = 'info') {
+            const panel = document.getElementById('logPanel');
+            const entry = document.createElement('div');
+            entry.className = 'log-entry ' + type;
+            entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            panel.insertBefore(entry, panel.firstChild);
+            
+            while (panel.children.length > 100) {
+                panel.removeChild(panel.lastChild);
+            }
+        }
+        
+        // 初始化
+        window.addEventListener('load', () => {
+            calculateTiming();
+            log('CW DSP 解码器就绪', 'success');
+            log('算法: 自适应阈值 + 时序分析', 'info');
+            log('呼号: BG1SB', 'info');
+        });
+    </script>
+</body>
+</html>

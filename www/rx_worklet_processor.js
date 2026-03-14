@@ -1,14 +1,14 @@
 // 简化且兼容性更好的AudioWorklet处理器
-// 优化版本：减少缓冲延迟，提高播放流畅度
+// 优化版本：增加缓冲减少抖动
 
 class RxPlayerProcessor extends AudioWorkletProcessor {
   constructor() {
     super();
     this.queue = [];
-    // 优化：降低缓冲区参数
-    // min:2帧(只要有数据就播放), max:20帧(约20ms@16kHz)
-    this.targetMinFrames = 2;
-    this.targetMaxFrames = 20;
+    // 增加缓冲区大小以减少抖动
+    // min:10帧开始播放, max:60帧(约60ms@16kHz)
+    this.targetMinFrames = 10;
+    this.targetMaxFrames = 60;
     
     // 统计计数器
     this._processCount = 0;
@@ -30,7 +30,6 @@ class RxPlayerProcessor extends AudioWorkletProcessor {
       else if (data && data.type === 'flush') {
         // 清空队列（PTT释放时使用）
         this.queue.length = 0;
-        // V4.4.22b: 重置欠载计数器
         this._underrunCount = 0;
       } 
       else if (data && data.type === 'config') {
@@ -52,16 +51,22 @@ class RxPlayerProcessor extends AudioWorkletProcessor {
     
     this._processCount++;
 
-    // 如果队列为空，直接输出静音
+    // 如果队列为空或数据不足，输出静音
     if (this.queue.length === 0) {
       for (let i = 0; i < out.length; i++) {
         out[i] = 0;
       }
       this._underrunCount++;
-      // 每 100 次欠载打印一次日志
-      if (this._underrunCount % 100 === 0) {
-        console.log(`AudioWorklet 欠载: ${this._underrunCount} 次`);
+      // 减少日志频率
+      if (this._underrunCount % 500 === 0) {
+        console.log(`AudioWorklet 欠载: ${this._underrunCount} 次, 队列: ${this.queue.length}`);
       }
+      return true;
+    }
+
+    // 如果数据不足最小缓冲，等待（不输出，保持前一帧）
+    if (this.queue.length < this.targetMinFrames) {
+      // 不输出，等待更多数据
       return true;
     }
 

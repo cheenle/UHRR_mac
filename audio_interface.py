@@ -293,18 +293,19 @@ class PyAudioCapture(threading.Thread):
                     
                     # 每 5 秒打印一次状态
                     current_time = time.time()
-                    if current_time - last_log_time >= 5.0:
+                    if current_time - last_log_time >= 30.0:
                         # 动态读取类变量
                         current_opus_mode = PyAudioCapture.rx_opus_encode
                         encode_mode = "Opus" if current_opus_mode else "Int16"
-                        print(f"🎵 音频捕获正常... 帧数: {frame_count}, 模式: {encode_mode}, 数据长度: {len(data)}")
+                        print(f"🎵 音频捕获正常 | 帧数: {frame_count} | 模式: {encode_mode}")
                         last_log_time = current_time
                     
                     # Convert stereo to mono if needed
+                    # 只取右声道（电台录音通常右声道是RX输出）
                     if self.stereo_mode:
                         stereo_data = np.frombuffer(data, dtype=np.float32)
                         stereo_data = stereo_data.reshape(-1, 2)
-                        mono_data = np.mean(stereo_data, axis=1)
+                        mono_data = stereo_data[:, 1]  # 只取右声道
                         data = mono_data.tobytes()
                     
                     # Convert Float32 to Int16 for 50% bandwidth reduction
@@ -491,6 +492,31 @@ class PyAudioCapture(threading.Thread):
                             # 合并处理后的帧
                             if processed_frames:
                                 int16_data = np.concatenate(processed_frames)
+                                
+                                # ===== 软削波 (Soft Clipping) =====
+                                # WDSP处理后可能产生峰值超过 Int16 范围的情况
+                                # 使用 tanh 软削波函数平滑限幅，避免硬削波产生的尖锐失真
+                                # 阈值 0.95 允许一定动态范围，同时防止超过 Int16 上限
+                                try:
+                                    # 转换为 float32 进行软削波处理
+                                    float_output = int16_data.astype(np.float32) / 32767.0
+                                    
+                                    # 软削波: 使用 tanh 平滑限幅
+                                    # 阈值 0.95 保留足够动态范围
+                                    soft_clip_threshold = 0.95
+                                    float_output = np.tanh(float_output / soft_clip_threshold) * soft_clip_threshold
+                                    
+                                    # 检查是否发生显著限幅（削波）
+                                    clipped_samples = np.sum(np.abs(float_output) >= soft_clip_threshold * 0.99)
+                                    if clipped_samples > 0 and frame_count % 200 == 0:
+                                        print(f"🔊 软削波触发: {clipped_samples} 样本被限幅")
+                                    
+                                    # 转换回 int16
+                                    int16_data = (float_output * 32767.0).astype(np.int16)
+                                except Exception as e:
+                                    if frame_count % 500 == 0:
+                                        print(f"⚠️ 软削波处理错误: {e}")
+                                
                                 # 调试：显示WDSP处理效果（输入vs输出能量对比）
                                 # 调试：打印能量统计（已禁用）
                                 # if frame_count % 100 == 0:

@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>MRRC - SDR Control</title>
+    <link rel="stylesheet" href="sdr_modern.css">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📻</text></svg>">
+</head>
+<body onload="bodyload()">
+    <!-- 连接状态栏 -->
+    <header class="status-bar">
+        <div class="status-left">
+            <span id="connection-status" class="status-indicator disconnected">
+                <span class="status-dot"></span>
+                <span class="status-text">未连接</span>
+            </span>
+            <span class="audio-status" id="audio-rx-status" title="RX音频">
+                <span class="audio-dot"></span>
+            </span>
+            <span class="audio-status" id="audio-tx-status" title="TX音频">
+                <span class="audio-dot"></span>
+            </span>
+        </div>
+        <div class="status-center">
+            <span id="call-sign">---</span>
+        </div>
+        <div class="status-right">
+            <button id="menu-btn" class="icon-btn" title="菜单">☰</button>
+        </div>
+    </header>
+
+    <!-- 主显示区域 -->
+    <main class="main-display">
+        <!-- 顶部仪表 -->
+        <section class="meter-section">
+            <div class="meter-container">
+                <div class="meter" id="s-meter">
+                    <div class="meter-header">
+                        <div class="meter-label">S</div>
+                        <div class="meter-value" id="s-meter-text">S5</div>
+                    </div>
+                    <div class="meter-scale">
+                        <span class="s-mark s0">S0</span>
+                        <span class="s-mark s1">1</span>
+                        <span class="s-mark s2">2</span>
+                        <span class="s-mark s3">3</span>
+                        <span class="s-mark s4">4</span>
+                        <span class="s-mark s5">5</span>
+                        <span class="s-mark s6">6</span>
+                        <span class="s-mark s7">7</span>
+                        <span class="s-mark s8">8</span>
+                        <span class="s-mark s9">9</span>
+                        <span class="s-mark s+20">+20</span>
+                        <span class="s-mark s+40">+40</span>
+                        <span class="s-mark s+60">+60</span>
+                    </div>
+                    <div class="meter-bar" id="s-meter-bar">
+                        <div class="meter-fill" id="s-meter-fill"></div>
+                    </div>
+                </div>
+                <div class="meter" id="power-meter" style="display:none;">
+                    <div class="meter-label">PWR</div>
+                    <div class="meter-scale">
+                        <span class="p-mark">0</span>
+                        <span class="p-mark">25</span>
+                        <span class="p-mark">50</span>
+                        <span class="p-mark">75</span>
+                        <span class="p-mark">100</span>
+                        <span class="p-mark">150</span>
+                        <span class="p-mark">200</span>
+                    </div>
+                    <div class="meter-bar" id="power-meter-bar">
+                        <div class="meter-fill power" id="power-meter-fill"></div>
+                    </div>
+                </div>
+                <div class="meter" id="swr-meter" style="display:none;">
+                    <div class="meter-label">SWR</div>
+                    <div class="meter-scale">
+                        <span class="swr-mark">1.0</span>
+                        <span class="swr-mark">1.5</span>
+                        <span class="swr-mark">2.0</span>
+                        <span class="swr-mark">3.0</span>
+                        <span class="swr-mark">5.0</span>
+                    </div>
+                    <div class="meter-bar" id="swr-meter-bar">
+                        <div class="meter-fill swr" id="swr-meter-fill"></div>
+                    </div>
+                </div>
+            </div>
+
+                                    </div>
+            </div>
+            <button class="meter-toggle" id="meter-toggle" title="长按切换仪表">≡</button>
+        </section>
+
+        <!-- VFO显示 -->
+        <section class="vfo-section">
+            <div class="vfo-container">
+                <div class="vfo" id="vfo-display">
+                    <span class="vfo-frequency" id="vfo-freq">14.074.000</span>
+                    <span class="vfo-mode-inline" id="vfo-mode">USB</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- 波段和模式切换区 -->
+        <section class="band-mode-section">
+            <div class="band-mode-row">
+                <!-- 波段切换 -->
+                <div class="band-dial">
+                    <button class="tune-btn band-left" id="band-left">◀</button>
+                    <div class="band-display" id="band-display">20m</div>
+                    <button class="tune-btn band-right" id="band-right">▶</button>
+                </div>
+                <!-- 模式切换 -->
+                <div class="mode-dial">
+                    <button class="tune-btn mode-left" id="mode-left">◀</button>
+                    <div class="mode-display" id="mode-display">USB</div>
+                    <button class="tune-btn mode-right" id="mode-right">▶</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- WDSP控制区 -->
+        <section class="wdsp-section">
+            <div class="wdsp-container">
+                <button class="wdsp-main-btn" id="btn-wdsp-main">DSP</button>
+                <div class="wdsp-divider"></div>
+                <button class="wdsp-btn" id="btn-nr2">NR2</button>
+                <button class="wdsp-btn" id="btn-nb">NB</button>
+                <button class="wdsp-btn" id="btn-anf">ANF</button>
+                <button class="wdsp-btn" id="btn-agc">AGC</button>
+            </div>
+            <!-- 音量和麦克风增益 -->
+            <div class="audio-gain-row">
+                <div class="gain-control">
+                    <span class="gain-label">VOL</span>
+                    <input type="range" id="vol-slider" min="0" max="100" value="80" class="gain-slider">
+                    <span class="gain-value" id="vol-value">80</span>
+                </div>
+                <div class="gain-control">
+                    <span class="gain-label">MIC</span>
+                    <input type="range" id="mic-slider" min="0" max="100" value="80" class="gain-slider">
+                    <span class="gain-value" id="mic-value">80</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- PTT按钮 -->
+        <section class="ptt-section">
+            <button class="ptt-button" id="ptt-btn">
+                <span class="ptt-text">PTT</span>
+                <span class="ptt-status" id="ptt-status">TX</span>
+            </button>
+        </section>
+    </main>
+
+    <!-- 底部调谐区 -->
+    <footer class="tuning-section">
+        <div class="tuning-dial">
+            <button class="tune-btn tune-left" id="tune-left">◀◀</button>
+            <button class="tune-btn tune-left-s" id="tune-left-s">◀</button>
+            <div class="tune-step-container">
+                <span class="tune-step" id="tune-step">1kHz</span>
+            </div>
+            <button class="tune-btn tune-right-s" id="tune-right-s">▶</button>
+            <button class="tune-btn tune-right" id="tune-right">▶▶</button>
+        </div>
+    </footer>
+
+    <!-- 侧边菜单 -->
+    <aside class="side-menu" id="side-menu">
+        <div class="menu-header">
+            <span class="menu-title">菜单</span>
+            <button class="menu-close" id="menu-close">×</button>
+        </div>
+        <nav class="menu-items">
+            <button class="menu-item" id="menu-logbook">
+                <span class="menu-icon">📖</span>
+                <span class="menu-text">日志</span>
+            </button>
+            <button class="menu-item" id="menu-recordings">
+                <span class="menu-icon">🎙️</span>
+                <span class="menu-text">录音</span>
+            </button>
+            <button class="menu-item" id="menu-cw">
+                <span class="menu-icon">⚡</span>
+                <span class="menu-text">CW</span>
+            </button>
+            <button class="menu-item" id="menu-tune">
+                <span class="menu-icon">🔧</span>
+                <span class="menu-text">天调</span>
+            </button>
+            <button class="menu-item" id="menu-ptt-macros">
+                <span class="menu-icon">⌨️</span>
+                <span class="menu-text">PTT宏</span>
+            </button>
+            <button class="menu-item" id="menu-settings">
+                <span class="menu-icon">⚙️</span>
+                <span class="menu-text">设置</span>
+            </button>
+            <button class="menu-item" id="menu-about">
+                <span class="menu-icon">ℹ️</span>
+                <span class="menu-text">关于</span>
+            </button>
+        </nav>
+    </aside>
+
+    <!-- 设置面板 -->
+    <div class="panel" id="settings-panel">
+        <div class="panel-header">
+            <span class="panel-title">设置</span>
+            <button class="panel-close" id="settings-close">×</button>
+        </div>
+        <div class="panel-content">
+            <div class="setting-group">
+                <h3>音频设置</h3>
+                <div class="setting-item">
+                    <label>麦克风增益</label>
+                    <input type="range" id="mic-gain" min="0" max="100" value="80">
+                </div>
+                <div class="setting-item">
+                    <label>扬声器音量</label>
+                    <input type="range" id="speaker-volume" min="0" max="100" value="80">
+                </div>
+            </div>
+            <div class="setting-group">
+                <h3>DSP设置</h3>
+                <div class="setting-item">
+                    <label>降噪 (NR)</label>
+                    <button class="toggle-btn" id="toggle-nr">关</button>
+                </div>
+                <div class="setting-item">
+                    <label>噪声抑制 (NB)</label>
+                    <button class="toggle-btn" id="toggle-nb">关</button>
+                </div>
+                <div class="setting-item">
+                    <label>自动陷波 (ANF)</label>
+                    <button class="toggle-btn" id="toggle-anf">关</button>
+                </div>
+            </div>
+            <div class="setting-group">
+                <h3>S表校准 (dBFS)</h3>
+                <div class="setting-item">
+                    <label>S0 (无信号)</label>
+                    <input type="number" id="cal-s0-input" value="-60" step="1" min="-100" max="0" style="width: 80px; text-align: center;">
+                </div>
+                <div class="setting-item">
+                    <label>S9+20 (强信号)</label>
+                    <input type="number" id="cal-s9-input" value="-30" step="1" min="-100" max="0" style="width: 80px; text-align: center;">
+                </div>
+                <div class="setting-item">
+                    <label>当前校准</label>
+                    <span id="cal-info-settings" style="font-size: 12px; color: var(--text-secondary);">S0@-60dB | S9+20@-30dB</span>
+                </div>
+            </div>
+            <div class="setting-group">
+                <h3>AGC设置</h3>
+                <div class="setting-item">
+                    <label>AGC模式</label>
+                    <select id="agc-mode">
+                        <option value="0">关闭</option>
+                        <option value="1">慢</option>
+                        <option value="2">中</option>
+                        <option value="3">快</option>
+                    </select>
+                </div>
+            </div>
+            <div class="setting-group">
+                <h3>TX均衡器</h3>
+                <div class="setting-item">
+                    <label>低频</label>
+                    <input type="range" id="eq-low" min="-20" max="20" value="0">
+                </div>
+                <div class="setting-item">
+                    <label>中频</label>
+                    <input type="range" id="eq-mid" min="-20" max="20" value="0">
+                </div>
+                <div class="setting-item">
+                    <label>高频</label>
+                    <input type="range" id="eq-high" min="-20" max="20" value="0">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 日志面板 -->
+    <div class="panel" id="logbook-panel">
+        <div class="panel-header">
+            <span class="panel-title">电台日志</span>
+            <button class="panel-close" id="logbook-close">×</button>
+        </div>
+        <div class="panel-content">
+            <div class="logbook-controls">
+                <button class="action-btn" id="add-log">+ 新建记录</button>
+            </div>
+            <div class="logbook-list" id="logbook-list">
+                <!-- 日志列表将通过JS动态加载 -->
+            </div>
+        </div>
+    </div>
+
+    <!-- 录音面板 -->
+    <div class="panel" id="recordings-panel">
+        <div class="panel-header">
+            <span class="panel-title">录音</span>
+            <button class="panel-close" id="recordings-close">×</button>
+        </div>
+        <div class="panel-content">
+            <div class="recording-controls">
+                <button class="action-btn record-btn" id="start-recording">● 录音</button>
+                <button class="action-btn" id="play-last">▶ 回放</button>
+            </div>
+            <div class="recordings-list" id="recordings-list">
+                <!-- 录音列表将通过JS动态加载 -->
+            </div>
+        </div>
+    </div>
+
+    <!-- PTT宏面板 -->
+    <div class="panel" id="ptt-macros-panel">
+        <div class="panel-header">
+            <span class="panel-title">PTT宏</span>
+            <button class="panel-close" id="ptt-macros-close">×</button>
+        </div>
+        <div class="panel-content">
+            <div class="macro-list">
+                <button class="macro-btn" data-macro="CQ">CQ</button>
+                <button class="macro-btn" data-macro="QRZ">QRZ?</button>
+                <button class="macro-btn" data-macro="TEST">测试</button>
+                <button class="macro-btn" data-macro="TNX">感谢</button>
+                <button class="macro-btn" data-macro="73">73</button>
+                <button class="macro-btn" data-macro="RST599">RST 599</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 遮罩层 -->
+    <div class="overlay" id="overlay"></div>
+
+    <script src="controls.js"></script>
+    <script src="sdr_modern.js"></script>
+</body>
+</html>

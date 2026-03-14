@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CW 测试音频生成器 - MRRC</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0a0a0f;
+            color: #eee;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        .container { max-width: 600px; margin: 0 auto; }
+        h1 { color: #00d4ff; margin-bottom: 20px; text-align: center; }
+        
+        .panel {
+            background: #1a1a2e;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        label {
+            display: block;
+            color: #888;
+            font-size: 12px;
+            margin-bottom: 5px;
+        }
+        
+        input[type="text"],
+        input[type="number"],
+        select {
+            width: 100%;
+            background: #0f0f1a;
+            border: 1px solid #333;
+            color: #fff;
+            padding: 10px;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        
+        textarea {
+            width: 100%;
+            background: #0f0f1a;
+            border: 1px solid #333;
+            color: #fff;
+            padding: 10px;
+            border-radius: 4px;
+            font-size: 14px;
+            resize: vertical;
+            min-height: 80px;
+            font-family: 'Courier New', monospace;
+        }
+        
+        .btn {
+            background: #0f3460;
+            color: #fff;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            width: 100%;
+            margin-bottom: 10px;
+            transition: all 0.3s;
+        }
+        
+        .btn:hover { background: #1a4a7a; }
+        .btn.primary { background: #00d4ff; color: #000; font-weight: bold; }
+        .btn.primary:hover { background: #33ddff; }
+        .btn.success { background: #00ff88; color: #000; }
+        
+        .params-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+        }
+        
+        .preview {
+            background: #0f0f1a;
+            padding: 15px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 16px;
+            color: #00ff88;
+            min-height: 60px;
+            line-height: 1.6;
+        }
+        
+        .log {
+            background: #0f0f1a;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 150px;
+            overflow-y: auto;
+            color: #888;
+        }
+        
+        .preset-buttons {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .waveform {
+            background: #0f0f1a;
+            border-radius: 4px;
+            height: 100px;
+            margin-top: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📡 CW 测试音频生成器</h1>
+        
+        <div class="panel">
+            <div class="preset-buttons">
+                <button class="btn" onclick="setPreset('cq')">CQ 呼叫</button>
+                <button class="btn" onclick="setPreset('qso')">QSO 示例</button>
+                <button class="btn" onclick="setPreset('rst')">RST 报告</button>
+                <button class="btn" onclick="setPreset('custom')">自定义</button>
+            </div>
+            
+            <div class="form-group">
+                <label>文本内容</label>
+                <textarea id="textInput" placeholder="输入要转换为CW的文本...">CQ CQ CQ DE BG1SB BG1SB K</textarea>
+            </div>
+            
+            <div class="form-group">
+                <label>摩尔斯码预览</label>
+                <div class="preview" id="morsePreview">-·-· --·- --·- -·-· --·</div>
+            </div>
+        </div>
+        
+        <div class="panel">
+            <div class="params-grid">
+                <div class="form-group">
+                    <label>发送速度 (WPM)</label>
+                    <input type="number" id="wpm" value="20" min="5" max="40">
+                </div>
+                <div class="form-group">
+                    <label>音频频率 (Hz)</label>
+                    <input type="number" id="toneFreq" value="600" min="300" max="1200">
+                </div>
+                <div class="form-group">
+                    <label>采样率</label>
+                    <select id="sampleRate">
+                        <option value="16000" selected>16 kHz</option>
+                        <option value="48000">48 kHz</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>噪声等级</label>
+                    <select id="noiseLevel">
+                        <option value="0">无噪声</option>
+                        <option value="0.05" selected>低噪声</option>
+                        <option value="0.1">中噪声</option>
+                        <option value="0.2">高噪声</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+        
+        <div class="panel">
+            <button class="btn primary" onclick="generateAndPlay()">▶️ 生成并播放</button>
+            <button class="btn success" onclick="downloadWav()">💾 下载 WAV 文件</button>
+        </div>
+        
+        <div class="panel">
+            <label>操作日志</label>
+            <div class="log" id="logPanel">
+                <div>系统就绪 - 等待输入...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 摩尔斯码表
+        const MORSE_CODE = {
+            'A': '.-', 'B': '-...', 'C': '-.-.', 'D': '-..', 'E': '.',
+            'F': '..-.', 'G': '--.', 'H': '....', 'I': '..', 'J': '.---',
+            'K': '-.-', 'L': '.-..', 'M': '--', 'N': '-.', 'O': '---',
+            'P': '.--.', 'Q': '--.-', 'R': '.-.', 'S': '...', 'T': '-',
+            'U': '..-', 'V': '...-', 'W': '.--', 'X': '-..-', 'Y': '-.--',
+            'Z': '--..',
+            '1': '.----', '2': '..---', '3': '...--', '4': '....-', '5': '.....',
+            '6': '-....', '7': '--...', '8': '---..', '9': '----.', '0': '-----',
+            '.': '.-.-.-', ',': '--..--', '?': '..--..', '/': '-..-.', '@': '.--.-.',
+            ' ': ' '
+        };
+        
+        let audioContext = null;
+        let generatedBuffer = null;
+        
+        // 预设模板
+        const PRESETS = {
+            cq: 'CQ CQ CQ DE BG1SB BG1SB K',
+            qso: 'BG1SB DE BH4XXX UR 599 599 NAME JOHN QTH BEIJING HW?',
+            rst: 'R R UR 599 599 NAME OP QTH HERE OK',
+            custom: ''
+        };
+        
+        // 设置预设
+        function setPreset(name) {
+            document.getElementById('textInput').value = PRESETS[name];
+            updatePreview();
+            log('已加载预设: ' + name);
+        }
+        
+        // 更新摩尔斯码预览
+        function updatePreview() {
+            const text = document.getElementById('textInput').value.toUpperCase();
+            const morse = text.split('').map(c => MORSE_CODE[c] || '?').join(' ');
+            document.getElementById('morsePreview').textContent = morse;
+        }
+        
+        // 文本转摩尔斯码
+        function textToMorse(text) {
+            return text.toUpperCase().split('').map(c => MORSE_CODE[c] || '').join(' ');
+        }
+        
+        // 生成音频
+        async function generateAudio() {
+            const text = document.getElementById('textInput').value;
+            const wpm = parseInt(document.getElementById('wpm').value) || 20;
+            const toneFreq = parseInt(document.getElementById('toneFreq').value) || 600;
+            const sampleRate = parseInt(document.getElementById('sampleRate').value) || 16000;
+            const noiseLevel = parseFloat(document.getElementById('noiseLevel').value) || 0;
+            
+            const morse = textToMorse(text);
+            const dotDuration = 1.2 / wpm;
+            const dahDuration = dotDuration * 3;
+            const elementSpace = dotDuration;
+            const charSpace = dotDuration * 3;
+            
+            // 计算总时长
+            let totalDuration = 0;
+            for (const char of morse) {
+                if (char === '.') totalDuration += dotDuration + elementSpace;
+                else if (char === '-') totalDuration += dahDuration + elementSpace;
+                else if (char === ' ') totalDuration += charSpace;
+            }
+            totalDuration += 0.5;  // 结尾余量
+            
+            const numSamples = Math.ceil(totalDuration * sampleRate);
+            const buffer = new Float32Array(numSamples);
+            
+            let sampleIndex = 0;
+            
+            for (const char of morse) {
+                let duration = 0;
+                
+                if (char === '.') duration = dotDuration;
+                else if (char === '-') duration = dahDuration;
+                else if (char === ' ') {
+                    sampleIndex += Math.ceil(charSpace * sampleRate);
+                    continue;
+                }
+                
+                const toneSamples = Math.ceil(duration * sampleRate);
+                for (let j = 0; j < toneSamples; j++) {
+                    const t = j / sampleRate;
+                    // 淡入淡出
+                    const fadeIn = Math.min(1, j / 10);
+                    const fadeOut = Math.min(1, (toneSamples - j) / 10);
+                    const envelope = fadeIn * fadeOut;
+                    
+                    buffer[sampleIndex + j] = Math.sin(2 * Math.PI * toneFreq * t) * envelope * 0.8;
+                }
+                
+                sampleIndex += toneSamples;
+                sampleIndex += Math.ceil(elementSpace * sampleRate);
+            }
+            
+            // 添加噪声
+            if (noiseLevel > 0) {
+                for (let i = 0; i < buffer.length; i++) {
+                    buffer[i] += (Math.random() - 0.5) * noiseLevel;
+                }
+            }
+            
+            return { buffer, sampleRate, text, morse, wpm };
+        }
+        
+        // 生成并播放
+        async function generateAndPlay() {
+            if (!audioContext) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            
+            log('生成音频...');
+            const result = await generateAudio();
+            generatedBuffer = result;
+            
+            // 创建音频缓冲区
+            const audioBuffer = audioContext.createBuffer(1, result.buffer.length, result.sampleRate);
+            audioBuffer.copyToChannel(result.buffer, 0);
+            
+            // 播放
+            const source = audioContext.createBufferSource();
+            source.buffer = audioBuffer;
+            source.connect(audioContext.destination);
+            source.start();
+            
+            log(`生成完成: ${result.text.length}字符, ${result.wpm}WPM, ${result.buffer.length / result.sampleRate}s`);
+            log('正在播放...', 'success');
+        }
+        
+        // 下载WAV文件
+        async function downloadWav() {
+            if (!generatedBuffer) {
+                log('请先生成音频', 'error');
+                return;
+            }
+            
+            const { buffer, sampleRate, text } = generatedBuffer;
+            
+            // 转换为Int16
+            const int16Buffer = new Int16Array(buffer.length);
+            for (let i = 0; i < buffer.length; i++) {
+                const s = Math.max(-1, Math.min(1, buffer[i]));
+                int16Buffer[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+            }
+            
+            // 创建WAV文件
+            const wavData = createWavBlob(int16Buffer, sampleRate);
+            const url = URL.createObjectURL(wavData);
+            
+            // 下载
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `cw_${text.replace(/\s+/g, '_').substring(0, 20)}_${generatedBuffer.wpm}wpm.wav`;
+            a.click();
+            
+            URL.revokeObjectURL(url);
+            log('WAV文件已下载', 'success');
+        }
+        
+        // 创建WAV Blob
+        function createWavBlob(int16Data, sampleRate) {
+            const buffer = new ArrayBuffer(44 + int16Data.length * 2);
+            const view = new DataView(buffer);
+            
+            // WAV头部
+            const writeString = (view, offset, string) => {
+                for (let i = 0; i < string.length; i++) {
+                    view.setUint8(offset + i, string.charCodeAt(i));
+                }
+            };
+            
+            writeString(view, 0, 'RIFF');
+            view.setUint32(4, 36 + int16Data.length * 2, true);
+            writeString(view, 8, 'WAVE');
+            writeString(view, 12, 'fmt ');
+            view.setUint32(16, 16, true);
+            view.setUint16(20, 1, true);
+            view.setUint16(22, 1, true);
+            view.setUint32(24, sampleRate, true);
+            view.setUint32(28, sampleRate * 2, true);
+            view.setUint16(32, 2, true);
+            view.setUint16(34, 16, true);
+            writeString(view, 36, 'data');
+            view.setUint32(40, int16Data.length * 2, true);
+            
+            // 写入数据
+            for (let i = 0; i < int16Data.length; i++) {
+                view.setInt16(44 + i * 2, int16Data[i], true);
+            }
+            
+            return new Blob([buffer], { type: 'audio/wav' });
+        }
+        
+        // 日志
+        function log(message, type = 'info') {
+            const panel = document.getElementById('logPanel');
+            const entry = document.createElement('div');
+            entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            if (type === 'error') entry.style.color = '#ff4444';
+            if (type === 'success') entry.style.color = '#00ff88';
+            panel.insertBefore(entry, panel.firstChild);
+            
+            while (panel.children.length > 50) {
+                panel.removeChild(panel.lastChild);
+            }
+        }
+        
+        // 事件监听
+        document.getElementById('textInput').addEventListener('input', updatePreview);
+        
+        // 初始化
+        updatePreview();
+        log('CW音频生成器就绪');
+    </script>
+</body>
+</html>

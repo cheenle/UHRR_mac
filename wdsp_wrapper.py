@@ -190,9 +190,9 @@ class WDSPProcessor:
             # Set RX mode
             _wdsp.SetRXAMode(ctypes.c_int(self.channel), ctypes.c_int(self.mode))
             
-            # 设置面板增益为 0.1，减少爆破音和削波失真
-            # 测试显示：PanelGain=0.1时，实际增益约0.13x，更保守稳定
-            _wdsp.SetRXAPanelGain1(ctypes.c_int(self.channel), ctypes.c_double(0.1))
+            # 设置面板增益为 0.06，进一步减少削波风险
+            # 测试显示：PanelGain=0.06时，实际增益更保守
+            _wdsp.SetRXAPanelGain1(ctypes.c_int(self.channel), ctypes.c_double(0.06))
             
             # 注意：暂时禁用带通滤波器，因为测试显示它会导致信号被错误衰减
             # 后续需要进一步调试带通滤波器参数
@@ -428,9 +428,9 @@ class WDSPProcessor:
                 # _wdsp.SetRXAAGCTarget(ctypes.c_int(self.channel), ctypes.c_float(-3.0))
                 # print(f"🔧 WDSP AGC: LONG")
             
-            # 关键：每次 AGC 模式切换后，重新设置 PanelGain1 = 0.1
-            # 保持与初始化时一致（保守增益，减少爆破音）
-            _wdsp.SetRXAPanelGain1(ctypes.c_int(self.channel), ctypes.c_double(0.1))
+            # 关键：每次 AGC 模式切换后，重新设置 PanelGain1 = 0.06
+            # 保持保守增益，减少削峰
+            _wdsp.SetRXAPanelGain1(ctypes.c_int(self.channel), ctypes.c_double(0.06))
                 
         except Exception as e:
             print(f"⚠️ AGC setup error: {e}")

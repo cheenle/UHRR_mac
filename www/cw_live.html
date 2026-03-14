@@ -1,0 +1,1796 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CW 实时解码 - MRRC</title>
+    <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.17.1/dist/ort.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0a0a0f;
+            color: #eee;
+            padding: 10px;
+            min-height: 100vh;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid #333;
+            margin-bottom: 15px;
+        }
+        h1 { 
+            color: #00d4ff; 
+            font-size: 18px;
+        }
+        .status-bar {
+            display: flex;
+            gap: 15px;
+            font-size: 12px;
+        }
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #666;
+        }
+        .status-dot.ready { background: #00ff88; box-shadow: 0 0 8px #00ff88; }
+        .status-dot.error { background: #ff4444; }
+        .status-dot.loading { background: #ffaa00; animation: pulse 1s infinite; }
+        
+        .main-display {
+            background: #1a1a2e;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+            min-height: 200px;
+        }
+        
+        .decoded-text {
+            font-family: 'Courier New', monospace;
+            font-size: 28px;
+            color: #00ff88;
+            line-height: 1.8;
+            word-wrap: break-word;
+            min-height: 120px;
+            white-space: pre-wrap;
+        }
+        
+        .spectrogram-container {
+            background: #0f0f1a;
+            border-radius: 8px;
+            padding: 10px;
+            margin-bottom: 15px;
+            height: 150px;
+        }
+        
+        #spectrogram {
+            width: 100%;
+            height: 100%;
+        }
+        
+        .controls {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .btn {
+            background: #0f3460;
+            color: #fff;
+            border: none;
+            padding: 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+        
+        .btn:hover { background: #1a4a7a; }
+        .btn:disabled { 
+            background: #333; 
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+        .btn.primary { background: #00d4ff; color: #000; }
+        .btn.record { background: #ff4444; }
+        .btn.recording { 
+            background: #ff0000; 
+            animation: pulse 0.5s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .reply-section {
+            background: #1a1a2e;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+        
+        .reply-title {
+            color: #ffaa00;
+            font-size: 12px;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+        }
+        
+        #replyText {
+            width: 100%;
+            background: #0f0f1a;
+            border: 1px solid #333;
+            color: #ffaa00;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 16px;
+            resize: vertical;
+            min-height: 60px;
+        }
+        
+        .send-controls {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        .settings-panel {
+            background: #1a1a2e;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+        
+        .settings-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+        }
+        
+        .setting-item {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .setting-item label {
+            font-size: 11px;
+            color: #888;
+            margin-bottom: 4px;
+        }
+        
+        .setting-item select,
+        .setting-item input {
+            background: #0f0f1a;
+            border: 1px solid #333;
+            color: #fff;
+            padding: 8px;
+            border-radius: 4px;
+            font-size: 13px;
+        }
+        
+        .log-panel {
+            background: #0f0f1a;
+            padding: 10px;
+            border-radius: 8px;
+            max-height: 150px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 11px;
+        }
+        
+        .log-entry {
+            margin-bottom: 3px;
+            color: #666;
+        }
+        .log-entry.info { color: #00d4ff; }
+        .log-entry.success { color: #00ff88; }
+        .log-entry.error { color: #ff4444; }
+        .log-entry.cw { color: #ffaa00; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>📡 CW 实时解码器</h1>
+        <div class="status-bar">
+            <div class="status-item">
+                <div class="status-dot loading" id="wsStatus"></div>
+                <span>电台</span>
+            </div>
+            <div class="status-item">
+                <div class="status-dot loading" id="modelStatus"></div>
+                <span>模型</span>
+            </div>
+            <div class="status-item">
+                <div class="status-dot" id="decodeStatus"></div>
+                <span>解码</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="spectrogram-container">
+        <canvas id="spectrogram"></canvas>
+    </div>
+
+    <div class="main-display">
+        <div class="decoded-text" id="decodedText">等待音频输入...</div>
+    </div>
+
+    <div class="reply-section">
+        <div class="reply-title">📝 回复建议 (可编辑)</div>
+        <textarea id="replyText" placeholder="AI 建议回复将显示在这里..."></textarea>
+        <div class="send-controls">
+            <button class="btn primary" id="sendBtn" onclick="sendCW()">📤 发送 CW</button>
+            <button class="btn" onclick="clearText()">🗑️ 清除</button>
+            <button class="btn" onclick="copyReply()">📋 复制</button>
+        </div>
+    </div>
+
+    <div class="controls">
+        <button class="btn" id="connectBtn" onclick="connectRadio()">🔗 连接电台</button>
+        <button class="btn" id="decodeBtn" onclick="toggleDecode()" disabled>▶️ 开始解码</button>
+        <button class="btn" onclick="retryLoadModel()">🔄 重载模型</button>
+        <button class="btn" onclick="testModelInference()">🧪 测试模型</button>
+        <button class="btn" onclick="clearResults()">🗑️ 清除</button>
+    </div>
+
+    <div class="settings-panel">
+        <div class="settings-grid">
+            <div class="setting-item">
+                <label>接收滤波器</label>
+                <select id="filterWidth" onchange="setFilter()">
+                    <option value="250">250 Hz (窄带)</option>
+                    <option value="500" selected>500 Hz (标准)</option>
+                    <option value="1000">1 kHz (宽带)</option>
+                    <option value="2400">2.4 kHz (超宽带)</option>
+                </select>
+            </div>
+            <div class="setting-item">
+                <label>发送速度 (WPM)</label>
+                <input type="number" id="wpm" value="20" min="10" max="40">
+            </div>
+            <div class="setting-item">
+                <label>侧音频率</label>
+                <select id="toneFreq">
+                    <option value="600">600 Hz</option>
+                    <option value="700">700 Hz</option>
+                    <option value="800">800 Hz</option>
+                </select>
+            </div>
+            <div class="setting-item">
+                <label>我的呼号</label>
+                <input type="text" id="myCallsign" placeholder="YOURCALL">
+            </div>
+        </div>
+    </div>
+
+    <div class="info-panel" style="margin-bottom: 15px;">
+        <div style="font-size: 12px; color: #888; line-height: 1.6;">
+            <strong style="color: #00d4ff;">快捷键:</strong> 
+            空格=开始/停止解码 | Ctrl+Enter=发送 | F5=重置 | F1=连接<br>
+            <strong style="color: #00d4ff;">使用流程:</strong> 
+            1.连接电台 → 2.开始解码 → 3.编辑回复 → 4.发送CW
+        </div>
+    </div>
+
+    <div class="log-panel" id="logPanel">
+        <div class="log-entry">系统初始化...</div>
+    </div>
+
+    <script>
+        // 全局变量
+        let session = null;
+        let wsAudioRX = null;
+        let wsControlTRX = null;
+        let audioContext = null;
+        let audioBuffer = [];
+        let isDecoding = false;
+        let decodeInterval = null;
+        
+        // 配置 - 匹配原始模型训练参数
+        const CONFIG = {
+            fftSize: 256,      // 原始模型使用 256
+            hopLength: 64,     // 原始模型使用 64
+            nMels: 65,         // 频率 bins 数量 (模型期望 65)
+            sampleRate: 16000, // 保持与后端一致，但数据处理时会调整
+            bufferSize: 16000 * 2,  // 2秒缓冲区
+            centerFreq: 600,   // CW中心频率
+            bandwidth: 200     // 滤波器带宽
+        };
+
+        // 初始化 ONNX 模型 (带重试机制)
+        async function initModel(maxRetries = 3) {
+            updateStatus('model', 'loading');
+            log('加载 ONNX 模型...');
+            
+            // 检查 ONNX Runtime
+            if (typeof ort === 'undefined') {
+                updateStatus('model', 'error');
+                log('ONNX Runtime 未加载，请检查网络连接', 'error');
+                return false;
+            }
+
+            // 设置 WASM 路径
+            ort.env.wasm.wasmPaths = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.17.1/dist/';
+            
+            for (let attempt = 1; attempt <= maxRetries; attempt++) {
+                try {
+                    log(`尝试加载模型 (${attempt}/${maxRetries})...`);
+                    
+                    // fetch 模型文件
+                    const response = await fetch('/models/cw_decoder.onnx', {
+                        cache: 'no-cache'  // 避免缓存问题
+                    });
+                    
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    
+                    const modelBuffer = await response.arrayBuffer();
+                    log(`模型文件下载成功: ${(modelBuffer.byteLength / 1024).toFixed(1)} KB`);
+                    
+                    if (modelBuffer.byteLength < 1000) {
+                        throw new Error('模型文件太小，可能已损坏');
+                    }
+                    
+                    // 从 buffer 创建 session
+                    log('初始化推理会话...');
+                    session = await ort.InferenceSession.create(modelBuffer, {
+                        executionProviders: ['wasm'],
+                        graphOptimizationLevel: 'basic',
+                        wasmOptions: {
+                            numThreads: 1  // 移动端兼容性更好
+                        }
+                    });
+
+                    updateStatus('model', 'ready');
+                    log('模型加载成功！', 'success');
+                    
+                    // 记录模型输入/输出信息
+                    log(`模型输入: ${session.inputNames.join(', ')}`, 'info');
+                    log(`模型输出: ${session.outputNames.join(', ')}`, 'info');
+                    
+                    // 记录输入/输出形状
+                    try {
+                        const inputMeta = session.inputMetadata;
+                        const outputMeta = session.outputMetadata;
+                        
+                        for (const name of session.inputNames) {
+                            const meta = inputMeta[name];
+                            if (meta) {
+                                log(`输入 ${name} 形状: [${meta.dims?.join(', ') || 'unknown'}]`, 'info');
+                            }
+                        }
+                        
+                        for (const name of session.outputNames) {
+                            const meta = outputMeta[name];
+                            if (meta) {
+                                log(`输出 ${name} 形状: [${meta.dims?.join(', ') || 'unknown'}]`, 'info');
+                            }
+                        }
+                    } catch (e) {
+                        console.log('无法获取形状信息:', e);
+                    }
+                    
+                    // 启用解码按钮
+                    if (wsAudioRX && wsAudioRX.readyState === WebSocket.OPEN) {
+                        document.getElementById('decodeBtn').disabled = false;
+                    }
+                    
+                    return true;
+
+                } catch (error) {
+                    log(`加载失败 (${attempt}/${maxRetries}): ${error.message}`, 'error');
+                    console.error('详细错误:', error);
+                    
+                    if (attempt < maxRetries) {
+                        log(`${attempt}秒后重试...`);
+                        await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+                                } else {
+                                    updateStatus('model', 'error');
+                                    log('模型加载失败，将使用传统DSP解码', 'error');
+                                    log('如需AI解码，请确保 models/cw_decoder.onnx 文件存在', 'info');
+                                    
+                                    // 显示详细的故障排除信息
+                                    showTroubleshootingInfo(error);
+                                }                }
+            }
+            
+            return false;
+        }
+        
+        // 显示故障排除信息
+        function showTroubleshootingInfo(error) {
+            const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+            const isHTTPS = window.location.protocol === 'https:';
+            
+            log('--- 故障排除 ---', 'info');
+            log(`1. 检查模型文件是否存在: /models/cw_decoder.onnx`, 'info');
+            log(`2. 当前协议: ${window.location.protocol}`, 'info');
+            log(`3. 当前主机: ${window.location.hostname}`, 'info');
+            
+            if (!isHTTPS && !isLocalhost) {
+                log('⚠️ 警告: 非HTTPS环境可能无法加载WASM模块', 'error');
+            }
+            
+            log(`4. 错误详情: ${error.message}`, 'info');
+            log('5. 尝试使用Chrome或Safari浏览器', 'info');
+        }
+
+        // 连接电台
+        async function connectRadio() {
+            updateStatus('ws', 'loading');
+            log('连接电台...');
+
+            try {
+                const baseUrl = 'wss://' + window.location.host;
+                
+                // 连接控制 WebSocket
+                wsControlTRX = new WebSocket(baseUrl + '/WSCTRX');
+                wsControlTRX.onopen = () => {
+                    log('控制连接成功', 'success');
+                    // 设置 CW 模式
+                    wsControlTRX.send('setMode:CW');
+                    wsControlTRX.send('setFilterWidth:500');
+                };
+
+                // 连接音频 WebSocket
+                wsAudioRX = new WebSocket(baseUrl + '/WSaudioRX');
+                wsAudioRX.binaryType = 'arraybuffer';
+                
+                wsAudioRX.onopen = () => {
+                    updateStatus('ws', 'ready');
+                    log('音频连接成功', 'success');
+                    document.getElementById('connectBtn').disabled = true;
+                    
+                    // 只有当模型加载成功后才启用解码按钮
+                    if (session) {
+                        document.getElementById('decodeBtn').disabled = false;
+                        log('可以开始解码了！', 'success');
+                    } else {
+                        log('等待模型加载完成...', 'info');
+                        // 轮询检查模型状态
+                        const checkModel = setInterval(() => {
+                            if (session) {
+                                document.getElementById('decodeBtn').disabled = false;
+                                log('模型加载完成，可以开始解码！', 'success');
+                                clearInterval(checkModel);
+                            }
+                        }, 500);
+                        // 30秒后停止检查
+                        setTimeout(() => clearInterval(checkModel), 30000);
+                    }
+                    
+                    // 请求 16kHz 音频
+                    wsAudioRX.send('setSampleRate:16000');
+                };
+
+                wsAudioRX.onmessage = (msg) => {
+                    // 接收音频数据
+                    const int16Data = new Int16Array(msg.data);
+                    const float32Data = new Float32Array(int16Data.length);
+                    
+                    for (let i = 0; i < int16Data.length; i++) {
+                        float32Data[i] = int16Data[i] / 32768.0;
+                    }
+                    
+                    audioBuffer.push(...float32Data);
+                    
+                    // 限制缓冲区大小
+                    if (audioBuffer.length > CONFIG.bufferSize) {
+                        audioBuffer = audioBuffer.slice(-CONFIG.bufferSize);
+                    }
+                };
+
+                wsAudioRX.onerror = (err) => {
+                    log('音频连接错误', 'error');
+                    updateStatus('ws', 'error');
+                };
+
+                wsAudioRX.onclose = () => {
+                    log('音频连接关闭');
+                    updateStatus('ws', 'error');
+                    stopDecode();
+                };
+
+            } catch (error) {
+                log('连接失败: ' + error.message, 'error');
+                updateStatus('ws', 'error');
+            }
+        }
+
+        // 切换解码
+        function toggleDecode() {
+            if (isDecoding) {
+                stopDecode();
+            } else {
+                startDecode();
+            }
+        }
+
+        // 开始解码
+        function startDecode() {
+            if (!session) {
+                log('⚠️ ONNX模型未加载，使用传统DSP解码模式', 'info');
+                log('如需AI解码，请点击"重载模型"按钮', 'info');
+            } else {
+                log('使用ONNX AI解码模式', 'success');
+            }
+
+            isDecoding = true;
+            updateStatus('decode', 'ready');
+            document.getElementById('decodeBtn').textContent = '⏹️ 停止解码';
+            document.getElementById('decodeBtn').classList.add('recording');
+            log('开始实时解码...', 'success');
+            log('快捷键: 空格=开始/停止, Ctrl+Enter=发送, F5=重置', 'info');
+
+            // 更频繁的解码以获得更好的实时性
+            decodeInterval = setInterval(async () => {
+                if (audioBuffer.length >= CONFIG.fftSize * 4 && !isTransmitting) {
+                    if (session) {
+                        await processAudio();
+                    } else {
+                        await processAudioTraditional();
+                    }
+                }
+            }, 300); // 每 300ms 解码一次
+        }
+
+        // 停止解码
+        function stopDecode() {
+            isDecoding = false;
+            updateStatus('decode', '');
+            document.getElementById('decodeBtn').textContent = '▶️ 开始解码';
+            document.getElementById('decodeBtn').classList.remove('recording');
+            
+            if (decodeInterval) {
+                clearInterval(decodeInterval);
+                decodeInterval = null;
+            }
+            
+            log('停止解码');
+        }
+
+        // 解码历史 (用于去重)
+        let decodeHistory = [];
+        let lastDecodeTime = 0;
+        
+        // 传统DSP解码状态
+        let traditionalDecoderState = {
+            inTone: false,
+            toneStart: 0,
+            lastToneEnd: 0,
+            elementBuffer: [],
+            ditLength: 0,
+            dahLength: 0,
+            elementSpace: 0,
+            charSpace: 0,
+            wordSpace: 0
+        };
+        
+        // 摩尔斯码表
+        const MORSE_CODE_MAP = {
+            '.-': 'A', '-...': 'B', '-.-.': 'C', '-..': 'D', '.': 'E',
+            '..-.': 'F', '--.': 'G', '....': 'H', '..': 'I', '.---': 'J',
+            '-.-': 'K', '.-..': 'L', '--': 'M', '-.': 'N', '---': 'O',
+            '.--.': 'P', '--.-': 'Q', '.-.': 'R', '...': 'S', '-': 'T',
+            '..-': 'U', '...-': 'V', '.--': 'W', '-..-': 'X', '-.--': 'Y',
+            '--..': 'Z', '-----': '0', '.----': '1', '..---': '2',
+            '...--': '3', '....-': '4', '.....': '5', '-....': '6',
+            '--...': '7', '---..': '8', '----.': '9'
+        };
+        
+        // 计算时长参数
+        function calculateTiming() {
+            const dotMs = 1200 / wpm;  // dit 时长 (毫秒)
+            traditionalDecoderState.ditLength = Math.round(dotMs * CONFIG.sampleRate / 1000);
+            traditionalDecoderState.dahLength = traditionalDecoderState.ditLength * 3;
+            traditionalDecoderState.elementSpace = traditionalDecoderState.ditLength;
+            traditionalDecoderState.charSpace = traditionalDecoderState.ditLength * 3;
+            traditionalDecoderState.wordSpace = traditionalDecoderState.ditLength * 7;
+        }
+        
+        // 传统DSP解码 (自适应阈值算法)
+        async function processAudioTraditional() {
+            if (audioBuffer.length < CONFIG.fftSize) return;
+
+            try {
+                // 取最近的数据
+                const dataSize = Math.min(audioBuffer.length, CONFIG.sampleRate);
+                const data = new Float32Array(audioBuffer.slice(-dataSize));
+                
+                // 1. 带通滤波
+                const filtered = bandpassFilter(data, CONFIG.centerFreq, CONFIG.bandwidth);
+                
+                // 2. 计算包络
+                const envelope = computeEnvelope(filtered);
+                
+                // 3. 自适应阈值
+                const threshold = adaptiveThreshold(envelope);
+                
+                // 4. 检测tone并解码
+                detectAndDecodeTone(envelope, threshold, data.length);
+                
+                // 5. 可视化
+                drawWaveform(data, 'waveformCanvas');
+                drawWaveform(envelope, 'envelopeCanvas');
+                drawThreshold(envelope, threshold, 'thresholdCanvas');
+                
+            } catch (error) {
+                log('传统解码错误: ' + error.message, 'error');
+            }
+        }
+        
+        // 计算包络
+        function computeEnvelope(data) {
+            const envelope = new Float32Array(data.length);
+            
+            // 平方 -> 低通滤波 -> 开方
+            for (let i = 0; i < data.length; i++) {
+                envelope[i] = Math.abs(data[i]);
+            }
+            
+            // 简单移动平均低通
+            const windowSize = Math.round(CONFIG.sampleRate * 0.005);  // 5ms 窗口
+            const smoothed = new Float32Array(data.length);
+            
+            for (let i = 0; i < data.length; i++) {
+                let sum = 0;
+                let count = 0;
+                for (let j = Math.max(0, i - windowSize); j < Math.min(data.length, i + windowSize); j++) {
+                    sum += envelope[j];
+                    count++;
+                }
+                smoothed[i] = sum / count;
+            }
+            
+            return smoothed;
+        }
+        
+        // 自适应阈值
+        function adaptiveThreshold(envelope) {
+            // 计算噪声底和信号峰
+            let sum = 0, sumSq = 0;
+            for (let i = 0; i < envelope.length; i++) {
+                sum += envelope[i];
+                sumSq += envelope[i] * envelope[i];
+            }
+            const mean = sum / envelope.length;
+            const variance = sumSq / envelope.length - mean * mean;
+            const std = Math.sqrt(variance);
+            
+            // 阈值 = 均值 + 灵敏度 * 标准差
+            const sensitivity = 3;  // 固定灵敏度
+            const threshold = mean + std * sensitivity;
+            
+            return threshold;
+        }
+        
+        // 检测tone并解码
+        function detectAndDecodeTone(envelope, threshold, bufferLength) {
+            const sampleIdx = audioBuffer.length - envelope.length;
+            
+            for (let i = 0; i < envelope.length; i += 64) {  // 64样本步进
+                const isAboveThreshold = envelope[i] > threshold;
+                const absoluteIdx = sampleIdx + i;
+                
+                if (isAboveThreshold && !traditionalDecoderState.inTone) {
+                    // Tone 开始
+                    traditionalDecoderState.inTone = true;
+                    traditionalDecoderState.toneStart = absoluteIdx;
+                } else if (!isAboveThreshold && traditionalDecoderState.inTone) {
+                    // Tone 结束
+                    traditionalDecoderState.inTone = false;
+                    const toneEnd = absoluteIdx;
+                    const toneDuration = toneEnd - traditionalDecoderState.toneStart;
+                    
+                    // 判断是 dit 还是 dah
+                    if (toneDuration > traditionalDecoderState.ditLength * 0.5) {
+                        if (toneDuration < traditionalDecoderState.dahLength * 0.8) {
+                            traditionalDecoderState.elementBuffer.push('.');
+                        } else {
+                            traditionalDecoderState.elementBuffer.push('-');
+                        }
+                    }
+                    
+                    traditionalDecoderState.lastToneEnd = toneEnd;
+                }
+                
+                // 检查字符间隔
+                if (!traditionalDecoderState.inTone && traditionalDecoderState.lastToneEnd > 0 && 
+                    traditionalDecoderState.elementBuffer.length > 0) {
+                    const silenceDuration = absoluteIdx - traditionalDecoderState.lastToneEnd;
+                    
+                    if (silenceDuration > traditionalDecoderState.charSpace * 0.8) {
+                        // 字符结束，解码
+                        decodeTraditionalCharacter();
+                    }
+                    
+                    if (silenceDuration > traditionalDecoderState.wordSpace * 0.8) {
+                        // 单词结束
+                        const currentText = document.getElementById('decodedText').textContent;
+                        if (currentText !== '等待音频输入...' && !currentText.endsWith(' ')) {
+                            document.getElementById('decodedText').textContent += ' ';
+                        }
+                    }
+                }
+            }
+        }
+        
+        // 解码传统模式字符
+        function decodeTraditionalCharacter() {
+            if (traditionalDecoderState.elementBuffer.length === 0) return;
+            
+            const pattern = traditionalDecoderState.elementBuffer.join('');
+            const char = MORSE_CODE_MAP[pattern];
+            
+            if (char) {
+                const currentText = document.getElementById('decodedText').textContent;
+                if (currentText === '等待音频输入...') {
+                    document.getElementById('decodedText').textContent = char;
+                } else {
+                    document.getElementById('decodedText').textContent += char;
+                }
+                log('解码: ' + pattern + ' -> ' + char, 'cw');
+                
+                // 生成回复建议
+                generateReply(char);
+            }
+            
+            traditionalDecoderState.elementBuffer = [];
+        }
+        
+        // 绘制波形
+        function drawWaveform(data, canvasId) {
+            const canvas = document.getElementById(canvasId);
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            
+            if (canvas.width !== canvas.offsetWidth) {
+                canvas.width = canvas.offsetWidth;
+                canvas.height = canvas.offsetHeight;
+            }
+            
+            const width = canvas.width;
+            const height = canvas.height;
+            
+            ctx.fillStyle = '#1a1a2e';
+            ctx.fillRect(0, 0, width, height);
+            
+            ctx.strokeStyle = '#00ff88';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            
+            const step = Math.ceil(data.length / width);
+            
+            for (let x = 0; x < width; x++) {
+                const idx = x * step;
+                if (idx < data.length) {
+                    const y = height / 2 + data[idx] * height / 2;
+                    if (x === 0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                }
+            }
+            
+            ctx.stroke();
+        }
+        
+        // 绘制阈值
+        function drawThreshold(envelope, threshold, canvasId) {
+            const canvas = document.getElementById(canvasId);
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            
+            if (canvas.width !== canvas.offsetWidth) {
+                canvas.width = canvas.offsetWidth;
+                canvas.height = canvas.offsetHeight;
+            }
+            
+            const width = canvas.width;
+            const height = canvas.height;
+            
+            ctx.fillStyle = '#1a1a2e';
+            ctx.fillRect(0, 0, width, height);
+            
+            // 绘制包络
+            ctx.strokeStyle = '#00d4ff';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            
+            const step = Math.ceil(envelope.length / width);
+            for (let x = 0; x < width; x++) {
+                const idx = x * step;
+                if (idx < envelope.length) {
+                    const y = height - envelope[idx] * height;
+                    if (x === 0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                }
+            }
+            ctx.stroke();
+            
+            // 绘制阈值线
+            const thresholdY = height - threshold * height;
+            ctx.strokeStyle = '#ff4444';
+            ctx.setLineDash([5, 5]);
+            ctx.beginPath();
+            ctx.moveTo(0, thresholdY);
+            ctx.lineTo(width, thresholdY);
+            ctx.stroke();
+            ctx.setLineDash([]);
+        }
+        
+        // 处理音频
+        async function processAudio() {
+            if (audioBuffer.length < CONFIG.fftSize * 4) return;
+            
+            if (!session) {
+                console.warn('模型未加载，跳过推理');
+                return;
+            }
+
+            try {
+                // 取最近的数据 (约1秒)
+                const dataSize = Math.min(audioBuffer.length, CONFIG.sampleRate);
+                const data = new Float32Array(audioBuffer.slice(-dataSize));
+                
+                // 生成频谱图
+                const spectrogram = generateSpectrogram(data);
+                
+                if (!spectrogram || spectrogram.length === 0 || !spectrogram[0] || spectrogram[0].length === 0) {
+                    return;
+                }
+                
+                drawSpectrogram(spectrogram);
+                
+                // 确保数据维度正确
+                const rows = spectrogram.length;
+                const cols = spectrogram[0].length;
+                
+                // 验证维度
+                if (cols !== 65) {
+                    console.warn(`警告: 频谱图列数为 ${cols}，期望 65`);
+                }
+                
+                // 计算数据范围用于调试
+                let minVal = Infinity, maxVal = -Infinity, sumVal = 0;
+                for (let i = 0; i < rows; i++) {
+                    for (let j = 0; j < cols; j++) {
+                        const val = spectrogram[i][j];
+                        minVal = Math.min(minVal, val);
+                        maxVal = Math.max(maxVal, val);
+                        sumVal += val;
+                    }
+                }
+                const avgVal = sumVal / (rows * cols);
+                console.log(`频谱图统计: 行=${rows}, 列=${cols}, 最小=${minVal.toFixed(2)}, 最大=${maxVal.toFixed(2)}, 平均=${avgVal.toFixed(2)}`);
+                
+                // 运行推理 - 使用正确的输入名
+                // 模型期望 4D 输入: [batch, timeSteps, freqBins, channels] = [1, rows, cols, 1]
+                const flattenedData = new Float32Array(rows * cols);
+                for (let i = 0; i < rows; i++) {
+                    for (let j = 0; j < cols; j++) {
+                        flattenedData[i * cols + j] = spectrogram[i][j];
+                    }
+                }
+                
+                const inputTensor = new ort.Tensor('float32', flattenedData, [1, rows, cols, 1]);
+                
+                // 动态获取输入名
+                const inputName = session.inputNames[0] || 'input';
+                const feeds = {};
+                feeds[inputName] = inputTensor;
+                
+                log(`输入维度: [1, ${rows}, ${cols}, 1]`, 'info');
+                
+                const results = await session.run(feeds);
+                
+                // 动态获取输出名
+                const outputName = session.outputNames[0] || 'output';
+                const outputTensor = results[outputName];
+                
+                if (!outputTensor) {
+                    console.error('无法获取模型输出数据', results);
+                    return;
+                }
+                
+                const outputData = outputTensor.data;
+                const outputDims = outputTensor.dims;
+                
+                log(`输出维度: [${outputDims.join(', ')}]`, 'info');
+                
+                const decoded = ctcDecode(outputData, outputDims, 0.4);
+                
+                // 调试：始终显示解码结果
+                if (decoded.text) {
+                    console.log(`解码结果: "${decoded.text}", 置信度数量: ${decoded.confidences.length}`);
+                }
+                
+                if (decoded.text && decoded.text.length > 0) {
+                    // 去重检查
+                    const now = Date.now();
+                    const isDuplicate = decodeHistory.some(h => 
+                        h.text === decoded.text && (now - h.time) < 2000
+                    );
+                    
+                    if (!isDuplicate) {
+                        decodeHistory.push({ text: decoded.text, time: now });
+                        
+                        // 限制历史记录
+                        if (decodeHistory.length > 10) {
+                            decodeHistory.shift();
+                        }
+                        
+                        // 后处理
+                        const processed = postProcessDecoded(decoded.text);
+                        
+                        // 更新显示
+                        const currentText = document.getElementById('decodedText').textContent;
+                        if (currentText === '等待音频输入...') {
+                            document.getElementById('decodedText').textContent = processed;
+                        } else {
+                            document.getElementById('decodedText').textContent += ' ' + processed;
+                        }
+                        
+                        const avgConfidence = decoded.confidences.length > 0 
+                            ? (decoded.confidences.reduce((a, b) => a + b, 0) / decoded.confidences.length * 100).toFixed(1)
+                            : 0;
+                        
+                        log(`解码: ${processed} (置信度: ${avgConfidence}%)`, 'cw');
+                        
+                        // 生成回复建议
+                        generateReply(processed);
+                        
+                        lastDecodeTime = now;
+                    }
+                }
+
+            } catch (error) {
+                const errorMsg = error.message || error.toString();
+                log('解码错误: ' + errorMsg, 'error');
+                console.error('完整错误:', error);
+                
+                // 如果是维度错误，提供调试信息
+                if (errorMsg.includes('rank') || errorMsg.includes('dimension')) {
+                    console.log('当前频谱图维度:', rows, 'x', cols);
+                    console.log('尝试的输入形状: [1,', rows, ',', cols, ']');
+                    log('请检查控制台查看详细的维度信息', 'info');
+                }
+            }
+        }
+
+        // 重采样函数：将音频从 sourceRate 重采样到 targetRate
+        function resampleAudio(audioData, sourceRate = 16000, targetRate = 3200) {
+            const ratio = sourceRate / targetRate;
+            const outputLength = Math.floor(audioData.length / ratio);
+            const resampled = new Float32Array(outputLength);
+            
+            for (let i = 0; i < outputLength; i++) {
+                const srcIndex = i * ratio;
+                const index0 = Math.floor(srcIndex);
+                const index1 = Math.min(index0 + 1, audioData.length - 1);
+                const fraction = srcIndex - index0;
+                
+                // 线性插值
+                resampled[i] = audioData[index0] * (1 - fraction) + audioData[index1] * fraction;
+            }
+            
+            return resampled;
+        }
+
+        // 带通滤波器 (集中在CW频率，默认600Hz)
+        function bandpassFilter(audioData, centerFreq = 600, bandwidth = 200, sampleRate = null) {
+            // 简单的IIR带通滤波器实现
+            const fs = sampleRate || CONFIG.sampleRate;
+            const f0 = centerFreq;
+            const bw = bandwidth;
+            
+            // 计算滤波器系数 (二阶带通)
+            const w0 = 2 * Math.PI * f0 / fs;
+            const cosw0 = Math.cos(w0);
+            const sinw0 = Math.sin(w0);
+            const alpha = sinw0 * Math.sinh(Math.log(2) / 2 * bw * w0 / sinw0);
+            
+            const b0 = alpha;
+            const b1 = 0;
+            const b2 = -alpha;
+            const a0 = 1 + alpha;
+            const a1 = -2 * cosw0;
+            const a2 = 1 - alpha;
+            
+            // 归一化
+            const b0n = b0 / a0;
+            const b1n = b1 / a0;
+            const b2n = b2 / a0;
+            const a1n = a1 / a0;
+            const a2n = a2 / a0;
+            
+            // 应用滤波器
+            const output = new Float32Array(audioData.length);
+            let x1 = 0, x2 = 0, y1 = 0, y2 = 0;
+            
+            for (let i = 0; i < audioData.length; i++) {
+                const x0 = audioData[i];
+                const y0 = b0n * x0 + b1n * x1 + b2n * x2 - a1n * y1 - a2n * y2;
+                
+                output[i] = y0;
+                x2 = x1;
+                x1 = x0;
+                y2 = y1;
+                y1 = y0;
+            }
+            
+            return output;
+        }
+
+        // FFT 实现 (简化版)
+        function fft(real, imag) {
+            const n = real.length;
+            if (n <= 1) return;
+            
+            // 位反转置换
+            for (let i = 1, j = 0; i < n; i++) {
+                let bit = n >> 1;
+                for (; j & bit; bit >>= 1) {
+                    j ^= bit;
+                }
+                j ^= bit;
+                if (i < j) {
+                    [real[i], real[j]] = [real[j], real[i]];
+                    [imag[i], imag[j]] = [imag[j], imag[i]];
+                }
+            }
+            
+            // Cooley-Tukey FFT
+            for (let len = 2; len <= n; len <<= 1) {
+                const ang = -2 * Math.PI / len;
+                const wlen_real = Math.cos(ang);
+                const wlen_imag = Math.sin(ang);
+                
+                for (let i = 0; i < n; i += len) {
+                    let w_real = 1, w_imag = 0;
+                    for (let j = 0; j < len / 2; j++) {
+                        const u_real = real[i + j];
+                        const u_imag = imag[i + j];
+                        const v_real = real[i + j + len / 2] * w_real - imag[i + j + len / 2] * w_imag;
+                        const v_imag = real[i + j + len / 2] * w_imag + imag[i + j + len / 2] * w_real;
+                        
+                        real[i + j] = u_real + v_real;
+                        imag[i + j] = u_imag + v_imag;
+                        real[i + j + len / 2] = u_real - v_real;
+                        imag[i + j + len / 2] = u_imag - v_imag;
+                        
+                        const next_w_real = w_real * wlen_real - w_imag * wlen_imag;
+                        w_imag = w_real * wlen_imag + w_imag * wlen_real;
+                        w_real = next_w_real;
+                    }
+                }
+            }
+        }
+
+        // 生成频谱图 - 与原始项目兼容
+        function generateSpectrogram(audioData) {
+            if (!audioData || audioData.length < 16000) {  // 至少1秒数据
+                console.warn('音频数据不足，无法生成频谱图');
+                return [];
+            }
+            
+            // 1. 重采样到 3200 Hz (模型训练时使用的采样率)
+            const resampledData = resampleAudio(audioData, 16000, 3200);
+            
+            // 2. 应用带通滤波 (在 3200 Hz 采样率下)
+            const filteredData = bandpassFilter(resampledData, 600, 200, 3200);
+            
+            const frames = [];
+            const fftSize = 256;  // FFT 长度
+            const hopLength = 64; // 帧移
+            const maxFrames = 200;
+            
+            for (let i = 0; i < filteredData.length - fftSize && frames.length < maxFrames; i += hopLength) {
+                const frame = filteredData.slice(i, i + fftSize);
+                
+                // 复制到实部和虚部
+                const real = new Float32Array(fftSize);
+                const imag = new Float32Array(fftSize);
+                
+                // 加 Hann 窗
+                for (let n = 0; n < fftSize; n++) {
+                    real[n] = frame[n] * 0.5 * (1 - Math.cos(2 * Math.PI * n / (fftSize - 1)));
+                }
+                
+                // 执行 FFT
+                fft(real, imag);
+                
+                // 计算幅度谱 (只取前半部分，共 129 bins)
+                const nBins = fftSize / 2 + 1;  // 129
+                const magnitudes = new Float32Array(nBins);
+                for (let j = 0; j < nBins; j++) {
+                    magnitudes[j] = Math.sqrt(real[j] * real[j] + imag[j] * imag[j]);
+                }
+                
+                // 裁剪频谱：去掉上下各 1/4 (与原始项目一致)
+                // 129 bins -> 去掉 32 + 32 = 64 bins -> 剩下 65 bins
+                const cutBins = Math.floor(nBins / 4);  // 32
+                const cropped = magnitudes.slice(cutBins, nBins - cutBins);  // 65 bins
+                
+                // 不归一化，直接使用原始幅度值（模型可能期望线性幅度）
+                frames.push(cropped);
+            }
+            
+            if (frames.length === 0) {
+                console.warn('未能生成任何频谱帧');
+            }
+
+            // 归一化
+            if (frames.length === 0) return [];
+            
+            const flat = frames.flat();
+            const mean = flat.reduce((a, b) => a + b, 0) / flat.length;
+            const std = Math.sqrt(flat.reduce((a, b) => a + (b - mean) ** 2, 0) / flat.length) + 1e-10;
+            
+            return frames.map(frame => frame.map(x => (x - mean) / std));
+        }
+
+        // Goertzel算法 (比FFT更高效，只需要特定频率bins)
+        // 限制最大 65 bins 以匹配模型期望
+        function computeGoertzel(signal, numBins) {
+            const N = signal.length;
+            const sampleRate = 3200;  // 使用重采样后的采样率
+            const bins = Math.min(numBins, 65);  // 限制最大 65
+            const magnitudes = new Float32Array(bins);
+            
+            // 关注100-1200Hz范围 (CW常见频率)
+            const fLow = 100;
+            const fHigh = 1200;
+            
+            for (let k = 0; k < bins; k++) {
+                const freq = fLow + (fHigh - fLow) * k / (bins - 1);
+                const w = 2 * Math.PI * freq / sampleRate;
+                const coeff = 2 * Math.cos(w);
+                
+                let s0 = 0, s1 = 0, s2 = 0;
+                
+                for (let n = 0; n < N; n++) {
+                    s0 = coeff * s1 - s2 + signal[n];
+                    s2 = s1;
+                    s1 = s0;
+                }
+                
+                const power = s2 * s2 + s1 * s1 - coeff * s1 * s2;
+                magnitudes[k] = Math.sqrt(power) / N;
+            }
+            
+            return magnitudes;
+        }
+
+        // 频谱图历史 (瀑布效果)
+        let spectrogramHistory = [];
+        const MAX_HISTORY = 200;
+        
+        // 绘制频谱图 (带瀑布效果)
+        function drawSpectrogram(spectrogram) {
+            if (!spectrogram || spectrogram.length === 0) return;
+            
+            const canvas = document.getElementById('spectrogram');
+            const ctx = canvas.getContext('2d');
+            
+            // 确保canvas尺寸合适
+            const targetWidth = canvas.offsetWidth;
+            const targetHeight = canvas.offsetHeight;
+            if (canvas.width !== targetWidth || canvas.height !== targetHeight) {
+                canvas.width = targetWidth;
+                canvas.height = targetHeight;
+            }
+            
+            // 将新帧添加到历史
+            const frame = spectrogram[Math.floor(spectrogram.length / 2)] || spectrogram[0];
+            if (frame) {
+                spectrogramHistory.push(frame);
+                if (spectrogramHistory.length > MAX_HISTORY) {
+                    spectrogramHistory.shift();
+                }
+            }
+            
+            // 清屏
+            ctx.fillStyle = '#0f0f1a';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            if (spectrogramHistory.length < 2) return;
+            
+            // 绘制瀑布图
+            const binHeight = canvas.height / frame.length;
+            const frameWidth = canvas.width / spectrogramHistory.length;
+            
+            for (let i = 0; i < spectrogramHistory.length; i++) {
+                const histFrame = spectrogramHistory[i];
+                const x = i * frameWidth;
+                
+                for (let j = 0; j < histFrame.length; j++) {
+                    const value = histFrame[j];
+                    const y = canvas.height - (j + 1) * binHeight;
+                    
+                    // 映射值到颜色 (使用对数刻度进行可视化)
+                    const logVal = Math.log10(value + 1e-10);
+                    const normalized = Math.min(1, Math.max(0, (logVal + 10) / 10));
+                    
+                    // 使用热力图颜色: 黑->蓝->绿->黄->红
+                    let r, g, b;
+                    if (normalized < 0.25) {
+                        // 黑到蓝
+                        const t = normalized * 4;
+                        r = 0; g = 0; b = Math.floor(255 * t);
+                    } else if (normalized < 0.5) {
+                        // 蓝到绿
+                        const t = (normalized - 0.25) * 4;
+                        r = 0; g = Math.floor(255 * t); b = Math.floor(255 * (1 - t));
+                    } else if (normalized < 0.75) {
+                        // 绿到黄
+                        const t = (normalized - 0.5) * 4;
+                        r = Math.floor(255 * t); g = 255; b = 0;
+                    } else {
+                        // 黄到红
+                        const t = (normalized - 0.75) * 4;
+                        r = 255; g = Math.floor(255 * (1 - t)); b = 0;
+                    }
+                    
+                    ctx.fillStyle = `rgb(${r},${g},${b})`;
+                    ctx.fillRect(x, y, frameWidth + 1, binHeight + 1);
+                }
+            }
+            
+            // 绘制频率刻度
+            ctx.fillStyle = '#666';
+            ctx.font = '10px sans-serif';
+            ctx.fillText('100Hz', 5, canvas.height - 5);
+            ctx.fillText('650Hz', 5, canvas.height / 2);
+            ctx.fillText('1200Hz', 5, 15);
+            
+            // 绘制中心线 (600Hz)
+            ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+            ctx.setLineDash([5, 5]);
+            ctx.beginPath();
+            ctx.moveTo(0, canvas.height / 2);
+            ctx.lineTo(canvas.width, canvas.height / 2);
+            ctx.stroke();
+            ctx.setLineDash([]);
+        }
+
+        // CTC 解码 (处理 3D 输出格式 [batch, timeSteps, numClasses])
+        function ctcDecode(output, dims, confidenceThreshold = 0.3) {
+            // 使用模型原始词汇表（包含CTC空白符）
+            const vocabulary = [
+                '[UNK]', '/', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
+                '?', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K',
+                'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W',
+                'X', 'Y', 'Z', '', '', '', '', '', '', '', ' '
+            ];
+            const blank = 0;
+            
+            // 解析输出维度 [batch, timeSteps, numClasses]
+            const batchSize = dims[0] || 1;
+            const timeSteps = dims[1];
+            const numClasses = dims[2];
+            
+            if (!timeSteps || !numClasses) {
+                console.error('Invalid output dimensions:', dims);
+                return { text: '', confidences: [] };
+            }
+            
+            let decoded = '';
+            let prev = -1;
+            const confidences = [];
+
+            // 只处理第一个 batch
+            for (let t = 0; t < timeSteps; t++) {
+                let maxProb = -Infinity;
+                let maxIdx = 0;
+                
+                for (let c = 0; c < numClasses; c++) {
+                    const offset = t * numClasses + c;
+                    const prob = output[offset];
+                    if (prob > maxProb) {
+                        maxProb = prob;
+                        maxIdx = c;
+                    }
+                }
+                
+                // CTC 解码：跳过空白符和重复字符
+                if (maxIdx !== blank && maxIdx !== prev) {
+                    const char = vocabulary[maxIdx];
+                    if (char && char !== '[UNK]') {
+                        decoded += char;
+                        confidences.push(maxProb);
+                    }
+                }
+                prev = maxIdx;
+            }
+
+            return { text: decoded, confidences: confidences };
+        }
+        
+        // 后处理：将解码结果格式化为HAM Radio常用格式
+        function postProcessDecoded(text) {
+            if (!text) return '';
+            
+            // 转换为大写 (呼号通常是大写)
+            let result = text.toUpperCase();
+            
+            // 常见HAM Radio词汇映射
+            const commonWords = {
+                'CQ': 'CQ ',
+                'DE': ' DE ',
+                'K': ' K ',
+                'R': ' R ',
+                'KN': ' KN ',
+                'AR': ' AR ',
+                'SK': ' SK ',
+                'BT': ' BT ',
+            };
+            
+            // 添加空格分隔
+            for (const [word, replacement] of Object.entries(commonWords)) {
+                result = result.replace(new RegExp(word, 'g'), replacement);
+            }
+            
+            // 清理多余空格
+            result = result.replace(/\s+/g, ' ').trim();
+            
+            return result;
+        }
+
+        // QSO 上下文跟踪
+        let qsoContext = {
+            state: 'IDLE',  // IDLE, CQ, CALL, EXCHANGE, CONFIRM, COMPLETE
+            remoteCallsign: null,
+            rstReceived: null,
+            rstSent: '599',
+            nameReceived: null,
+            qthReceived: null,
+            lastActivity: 0
+        };
+        
+        // 呼号识别正则
+        const CALLSIGN_REGEX = /\b([A-Z]{1,2}|[0-9][A-Z]|[A-Z][0-9])([0-9][A-Z]{1,3})\b/g;
+        
+        // 生成回复建议
+        function generateReply(decodedText) {
+            const myCall = document.getElementById('myCallsign').value || 'YOURCALL';
+            const text = decodedText.toUpperCase();
+            const now = Date.now();
+            
+            // 提取呼号
+            const callsigns = [...text.matchAll(CALLSIGN_REGEX)].map(m => m[0]);
+            const remoteCall = callsigns.find(c => c !== myCall.toUpperCase());
+            
+            if (remoteCall) {
+                qsoContext.remoteCallsign = remoteCall;
+            }
+            
+            // 提取RST
+            const rstMatch = text.match(/\b([1-5][1-9][1-9])\b/);
+            if (rstMatch && !qsoContext.rstReceived) {
+                qsoContext.rstReceived = rstMatch[1];
+            }
+            
+            // 状态机和回复生成
+            let reply = '';
+            
+            if (text.includes('CQ') && !text.includes(myCall.toUpperCase())) {
+                // 回答CQ
+                qsoContext.state = 'CQ';
+                reply = `${qsoContext.remoteCallsign || 'CALL'} DE ${myCall} UR ${qsoContext.rstSent} ${qsoContext.rstSent} NAME OP QTH HERE HW?`;
+            } 
+            else if (text.includes(myCall.toUpperCase()) && qsoContext.state === 'IDLE') {
+                // 被呼叫
+                qsoContext.state = 'CALL';
+                reply = `${qsoContext.remoteCallsign || 'CALL'} DE ${myCall} UR ${qsoContext.rstSent} ${qsoContext.rstSent} NAME OP QTH HERE HW?`;
+            }
+            else if (qsoContext.rstReceived && qsoContext.state !== 'EXCHANGE') {
+                // 收到RST，进入交换阶段
+                qsoContext.state = 'EXCHANGE';
+                reply = `R R UR ${qsoContext.rstReceived} NAME OP QTH HERE OK`;
+            }
+            else if (text.includes('73') || text.includes('SK')) {
+                // 结束QSO
+                qsoContext.state = 'COMPLETE';
+                reply = `R R TNX FER QSO 73 73 ${myCall} SK`;
+            }
+            else if (qsoContext.state === 'EXCHANGE') {
+                // 确认交换
+                reply = `R R TNX FER NICE QSO ES GUD LUCK 73 73 ${myCall} SK`;
+            }
+            
+            if (reply) {
+                document.getElementById('replyText').value = reply;
+                log(`QSO状态: ${qsoContext.state}, 建议回复已更新`, 'info');
+            }
+            
+            qsoContext.lastActivity = now;
+        }
+        
+        // 重置QSO上下文
+        function resetQSO() {
+            qsoContext = {
+                state: 'IDLE',
+                remoteCallsign: null,
+                rstReceived: null,
+                rstSent: '599',
+                nameReceived: null,
+                qthReceived: null,
+                lastActivity: 0
+            };
+            log('QSO上下文已重置', 'info');
+        }
+        
+        // 测试模型推理
+        async function testModelInference() {
+            if (!session) {
+                log('模型未加载，请先加载模型', 'error');
+                return;
+            }
+            
+            log('测试模型推理...', 'info');
+            
+            try {
+                // 创建测试输入 (模拟频谱图)
+                const testRows = 10;
+                const testCols = 65;
+                const testData = new Float32Array(testRows * testCols);
+                
+                // 填充一些测试数据 (模拟 CW 信号)
+                for (let i = 0; i < testRows; i++) {
+                    for (let j = 0; j < testCols; j++) {
+                        // 在中间频率附近创建峰值
+                        if (j >= 30 && j <= 35) {
+                            testData[i * testCols + j] = 0.5 + Math.random() * 0.5;
+                        } else {
+                            testData[i * testCols + j] = Math.random() * 0.1;
+                        }
+                    }
+                }
+                
+                const inputTensor = new ort.Tensor('float32', testData, [1, testRows, testCols, 1]);
+                const inputName = session.inputNames[0];
+                const feeds = { [inputName]: inputTensor };
+                
+                log(`测试输入维度: [1, ${testRows}, ${testCols}, 1]`);
+                
+                const results = await session.run(feeds);
+                const outputName = session.outputNames[0];
+                const outputTensor = results[outputName];
+                
+                log(`测试输出维度: [${outputTensor.dims.join(', ')}]`);
+                
+                // 尝试解码
+                const decoded = ctcDecode(outputTensor.data, outputTensor.dims, 0.4);
+                log(`测试结果: "${decoded.text}", 置信度: ${decoded.confidences.length}`, 'success');
+                
+            } catch (error) {
+                log('测试失败: ' + error.message, 'error');
+                console.error(error);
+            }
+        }
+
+        // 手动重试加载模型
+        async function retryLoadModel() {
+            if (session) {
+                log('模型已经加载，无需重试', 'info');
+                return;
+            }
+            
+            log('手动重试加载模型...', 'info');
+            const success = await initModel();
+            
+            if (success) {
+                // 如果已经连接电台，启用解码按钮
+                if (wsAudioRX && wsAudioRX.readyState === WebSocket.OPEN) {
+                    document.getElementById('decodeBtn').disabled = false;
+                }
+            }
+        }
+
+        // 摩尔斯码表
+        const MORSE_CODE = {
+            'A': '.-', 'B': '-...', 'C': '-.-.', 'D': '-..', 'E': '.',
+            'F': '..-.', 'G': '--.', 'H': '....', 'I': '..', 'J': '.---',
+            'K': '-.-', 'L': '.-..', 'M': '--', 'N': '-.', 'O': '---',
+            'P': '.--.', 'Q': '--.-', 'R': '.-.', 'S': '...', 'T': '-',
+            'U': '..-', 'V': '...-', 'W': '.--', 'X': '-..-', 'Y': '-.--',
+            'Z': '--..',
+            '1': '.----', '2': '..---', '3': '...--', '4': '....-', '5': '.....',
+            '6': '-....', '7': '--...', '8': '---..', '9': '----.', '0': '-----',
+            '.': '.-.-.-', ',': '--..--', '?': '..--..', '/': '-..-.', '@': '.--.-.',
+            ' ': ' '  // 字间距
+        };
+        
+        let isTransmitting = false;
+        
+        // 文本转摩尔斯码
+        function textToMorse(text) {
+            return text.toUpperCase().split('').map(char => {
+                return MORSE_CODE[char] || '';
+            }).join(' ');
+        }
+        
+        // 生成摩尔斯音频
+        async function generateMorseAudio(morse, wpm, toneFreq) {
+            const sampleRate = CONFIG.sampleRate;
+            const dotDuration = 1.2 / wpm;  // 点时长 (秒)
+            const dahDuration = dotDuration * 3;
+            const elementSpace = dotDuration;
+            const charSpace = dotDuration * 3;
+            const wordSpace = dotDuration * 7;
+            
+            // 计算总时长
+            let totalDuration = 0;
+            for (const char of morse) {
+                if (char === '.') totalDuration += dotDuration + elementSpace;
+                else if (char === '-') totalDuration += dahDuration + elementSpace;
+                else if (char === ' ') totalDuration += charSpace;
+            }
+            totalDuration += wordSpace;  // 结尾空格
+            
+            const numSamples = Math.ceil(totalDuration * sampleRate);
+            const audioBuffer = new Float32Array(numSamples);
+            
+            let sampleIndex = 0;
+            
+            for (let i = 0; i < morse.length; i++) {
+                const char = morse[i];
+                let duration = 0;
+                
+                if (char === '.') duration = dotDuration;
+                else if (char === '-') duration = dahDuration;
+                else if (char === ' ') {
+                    sampleIndex += Math.ceil(charSpace * sampleRate);
+                    continue;
+                }
+                
+                // 生成音调
+                const toneSamples = Math.ceil(duration * sampleRate);
+                for (let j = 0; j < toneSamples; j++) {
+                    const t = j / sampleRate;
+                    // 使用余弦平方窗做淡入淡出，避免咔哒声
+                    const fadeIn = Math.min(1, j / 10);
+                    const fadeOut = Math.min(1, (toneSamples - j) / 10);
+                    const envelope = fadeIn * fadeOut;
+                    
+                    audioBuffer[sampleIndex + j] = Math.sin(2 * Math.PI * toneFreq * t) * envelope * 0.8;
+                }
+                
+                sampleIndex += toneSamples;
+                
+                // 元素间隔 (静音)
+                sampleIndex += Math.ceil(elementSpace * sampleRate);
+            }
+            
+            return audioBuffer;
+        }
+        
+        // 转换为Int16格式 (用于WebSocket发送)
+        function floatToInt16(floatArray) {
+            const int16Array = new Int16Array(floatArray.length);
+            for (let i = 0; i < floatArray.length; i++) {
+                const s = Math.max(-1, Math.min(1, floatArray[i]));
+                int16Array[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+            }
+            return int16Array;
+        }
+        
+        // 发送 CW
+        async function sendCW() {
+            if (isTransmitting) {
+                log('正在发送中，请等待...', 'error');
+                return;
+            }
+            
+            const text = document.getElementById('replyText').value;
+            if (!text) {
+                log('请输入要发送的内容', 'error');
+                return;
+            }
+            
+            if (!wsControlTRX || wsControlTRX.readyState !== WebSocket.OPEN) {
+                log('请先连接电台', 'error');
+                return;
+            }
+            
+            isTransmitting = true;
+            const wpm = parseInt(document.getElementById('wpm').value) || 20;
+            const toneFreq = parseInt(document.getElementById('toneFreq').value) || 600;
+            
+            try {
+                log('生成摩尔斯码音频...', 'info');
+                const morse = textToMorse(text);
+                log(`摩尔斯码: ${morse}`, 'info');
+                
+                const audioData = await generateMorseAudio(morse, wpm, toneFreq);
+                const int16Data = floatToInt16(audioData);
+                
+                log(`发送: ${text} (${text.length}字符, ${wpm}WPM)`, 'success');
+                
+                // PTT ON
+                wsControlTRX.send('setPTT:1');
+                document.getElementById('sendBtn').textContent = '📤 发送中...';
+                document.getElementById('sendBtn').disabled = true;
+                
+                await new Promise(resolve => setTimeout(resolve, 100));  // PTT延迟
+                
+                // 分块发送音频 (每块20ms)
+                const chunkSize = 320;  // 20ms @ 16kHz
+                for (let i = 0; i < int16Data.length; i += chunkSize) {
+                    const chunk = int16Data.slice(i, i + chunkSize);
+                    if (wsAudioRX && wsAudioRX.readyState === WebSocket.OPEN) {
+                        wsAudioRX.send(chunk.buffer);
+                    }
+                    // 控制发送速率，避免缓冲区溢出
+                    await new Promise(resolve => setTimeout(resolve, 15));
+                }
+                
+                await new Promise(resolve => setTimeout(resolve, 100));  // 结尾延迟
+                
+                // PTT OFF
+                wsControlTRX.send('setPTT:0');
+                
+                log('发送完成', 'success');
+                
+            } catch (error) {
+                log('发送错误: ' + error.message, 'error');
+                console.error(error);
+                // 确保PTT关闭
+                if (wsControlTRX) wsControlTRX.send('setPTT:0');
+            } finally {
+                isTransmitting = false;
+                document.getElementById('sendBtn').textContent = '📤 发送 CW';
+                document.getElementById('sendBtn').disabled = false;
+            }
+        }
+
+        // 当前滤波器设置
+        let currentFilterWidth = 500;
+        
+        // 设置滤波器
+        function setFilter() {
+            const width = parseInt(document.getElementById('filterWidth').value);
+            currentFilterWidth = width;
+            
+            // 发送到电台
+            if (wsControlTRX && wsControlTRX.readyState === WebSocket.OPEN) {
+                wsControlTRX.send('setFilterWidth:' + width);
+                log('电台滤波器已设置: ' + width + 'Hz');
+            }
+            
+            // 同时更新前端解码滤波器
+            CONFIG.bandwidth = width;
+            log('解码滤波器已更新: ' + width + 'Hz', 'info');
+            
+            // 清空频谱图历史以获得最佳效果
+            spectrogramHistory = [];
+        }
+        
+        // 快速切换滤波器
+        function cycleFilter() {
+            const filters = [250, 500, 1000, 2400];
+            const currentIndex = filters.indexOf(currentFilterWidth);
+            const nextIndex = (currentIndex + 1) % filters.length;
+            document.getElementById('filterWidth').value = filters[nextIndex];
+            setFilter();
+        }
+
+        // 工具函数
+        function updateStatus(id, state) {
+            const dot = document.getElementById(id + 'Status');
+            if (dot) dot.className = 'status-dot ' + state;
+        }
+
+        function log(message, type = 'info') {
+            const panel = document.getElementById('logPanel');
+            const entry = document.createElement('div');
+            entry.className = 'log-entry ' + type;
+            entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            panel.insertBefore(entry, panel.firstChild);
+            
+            // 限制日志数量
+            while (panel.children.length > 50) {
+                panel.removeChild(panel.lastChild);
+            }
+        }
+
+        function clearText() {
+            document.getElementById('replyText').value = '';
+        }
+
+        function copyReply() {
+            const text = document.getElementById('replyText');
+            text.select();
+            document.execCommand('copy');
+            log('已复制到剪贴板', 'success');
+        }
+
+        // 清除结果
+        function clearResults() {
+            document.getElementById('decodedText').textContent = '等待音频输入...';
+            document.getElementById('replyText').value = '';
+            audioBuffer = [];
+            decodeHistory = [];
+            spectrogramHistory = [];
+            resetQSO();
+            log('已重置所有状态');
+        }
+
+        // 初始化
+        window.addEventListener('load', async () => {
+            log('系统初始化...', 'info');
+            calculateTiming();
+            
+            // 加载ONNX模型 (异步，不阻塞)
+            initModel().then(success => {
+                if (!success) {
+                    log('💡 提示: 未检测到AI模型，将使用传统DSP解码', 'info');
+                    log('如需AI解码，请将 cw_decoder.onnx 放入 models/ 目录', 'info');
+                }
+            });
+            
+            // 从localStorage恢复呼号
+            const savedCallsign = localStorage.getItem('myCallsign');
+            if (savedCallsign) {
+                document.getElementById('myCallsign').value = savedCallsign;
+            }
+            
+            // 保存呼号到localStorage
+            document.getElementById('myCallsign').addEventListener('change', (e) => {
+                localStorage.setItem('myCallsign', e.target.value);
+            });
+            
+            log('初始化完成', 'success');
+        });
+        
+        // 页面卸载时清理
+        window.addEventListener('beforeunload', () => {
+            if (wsAudioRX) wsAudioRX.close();
+            if (wsControlTRX) wsControlTRX.close();
+            stopDecode();
+        });
+        
+        // 键盘快捷键
+        document.addEventListener('keydown', (e) => {
+            // Space: 切换解码
+            if (e.code === 'Space' && !e.repeat && e.target.tagName !== 'TEXTAREA' && e.target.tagName !== 'INPUT') {
+                e.preventDefault();
+                toggleDecode();
+            }
+            // F1: 连接电台
+            else if (e.code === 'F1') {
+                e.preventDefault();
+                connectRadio();
+            }
+            // F5: 清除结果
+            else if (e.code === 'F5') {
+                e.preventDefault();
+                clearResults();
+            }
+            // Ctrl+Enter: 发送CW
+            else if (e.code === 'Enter' && e.ctrlKey) {
+                e.preventDefault();
+                sendCW();
+            }
+        });
+        
+        // 定期清理旧的历史记录
+        setInterval(() => {
+            const now = Date.now();
+            decodeHistory = decodeHistory.filter(h => (now - h.time) < 10000);
+        }, 5000);
+    </script>
+</body>
+</html>

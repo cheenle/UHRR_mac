@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CW 解码测试 - MRRC</title>
+    <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.17.1/dist/ort.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #1a1a2e;
+            color: #eee;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        .container { max-width: 800px; margin: 0 auto; }
+        h1 { color: #00d4ff; margin-bottom: 20px; text-align: center; }
+        .status {
+            background: #16213e;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .status-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #666;
+        }
+        .status-dot.ready { background: #00ff88; box-shadow: 0 0 10px #00ff88; }
+        .status-dot.error { background: #ff4444; }
+        .status-dot.loading { 
+            background: #ffaa00; 
+            animation: pulse 1s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        .control-panel {
+            background: #16213e;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .btn {
+            background: #0f3460;
+            color: #fff;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-right: 10px;
+            margin-bottom: 10px;
+            transition: all 0.3s;
+        }
+        .btn:hover { background: #1a4a7a; }
+        .btn:disabled { 
+            background: #333; 
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+        .btn.primary { background: #00d4ff; color: #000; }
+        .btn.primary:hover { background: #33ddff; }
+        .btn.record { background: #ff4444; }
+        .btn.record:hover { background: #ff6666; }
+        .btn.recording { 
+            background: #ff0000; 
+            animation: pulse 0.5s infinite;
+        }
+        .file-input {
+            display: none;
+        }
+        .spectrogram-container {
+            background: #0a0a14;
+            border-radius: 8px;
+            padding: 10px;
+            margin-bottom: 20px;
+            height: 200px;
+            position: relative;
+            overflow: hidden;
+        }
+        #spectrogram {
+            width: 100%;
+            height: 100%;
+        }
+        .result-panel {
+            background: #16213e;
+            padding: 20px;
+            border-radius: 8px;
+            min-height: 150px;
+        }
+        .result-title {
+            color: #00d4ff;
+            margin-bottom: 10px;
+            font-size: 14px;
+            text-transform: uppercase;
+        }
+        .decoded-text {
+            font-family: 'Courier New', monospace;
+            font-size: 24px;
+            color: #00ff88;
+            line-height: 1.6;
+            word-wrap: break-word;
+        }
+        .confidence {
+            margin-top: 10px;
+            font-size: 12px;
+            color: #888;
+        }
+        .log-panel {
+            background: #0a0a14;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            max-height: 200px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        .log-entry {
+            margin-bottom: 5px;
+            color: #888;
+        }
+        .log-entry.info { color: #00d4ff; }
+        .log-entry.success { color: #00ff88; }
+        .log-entry.error { color: #ff4444; }
+        .settings {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        .setting-item {
+            display: flex;
+            flex-direction: column;
+        }
+        .setting-item label {
+            font-size: 12px;
+            color: #888;
+            margin-bottom: 5px;
+        }
+        .setting-item select,
+        .setting-item input {
+            background: #0a0a14;
+            border: 1px solid #333;
+            color: #fff;
+            padding: 8px;
+            border-radius: 4px;
+        }
+        .audio-visualizer {
+            background: #0a0a14;
+            border-radius: 8px;
+            padding: 10px;
+            margin-bottom: 20px;
+            height: 100px;
+        }
+        #audioCanvas {
+            width: 100%;
+            height: 100%;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔊 CW 摩尔斯码解码测试</h1>
+        
+        <div class="status">
+            <div class="status-dot" id="statusDot"></div>
+            <span id="statusText">初始化中...</span>
+        </div>
+
+        <div class="control-panel">
+            <div class="settings">
+                <div class="setting-item">
+                    <label>音频源</label>
+                    <select id="audioSource">
+                        <option value="file">音频文件</option>
+                        <option value="microphone">麦克风</option>
+                    </select>
+                </div>
+                <div class="setting-item">
+                    <label>采样率</label>
+                    <select id="sampleRate">
+                        <option value="16000" selected>16 kHz</option>
+                        <option value="8000">8 kHz</option>
+                    </select>
+                </div>
+                <div class="setting-item">
+                    <label>解码模式</label>
+                    <select id="decodeMode">
+                        <option value="greedy">贪婪解码</option>
+                        <option value="beam">波束搜索</option>
+                    </select>
+                </div>
+            </div>
+
+            <div id="fileControls">
+                <input type="file" id="audioFile" class="file-input" accept="audio/*">
+                <button class="btn primary" onclick="document.getElementById('audioFile').click()">
+                    📁 选择音频文件
+                </button>
+            </div>
+
+            <div id="micControls" style="display:none">
+                <button class="btn record" id="recordBtn" onclick="toggleRecording()">
+                    🎤 开始录音
+                </button>
+            </div>
+
+            <button class="btn" onclick="testWithSample()" id="testBtn" disabled>
+                🧪 测试样本
+            </button>
+            <button class="btn" onclick="clearResults()">
+                🗑️ 清除结果
+            </button>
+        </div>
+
+        <div class="audio-visualizer">
+            <canvas id="audioCanvas"></canvas>
+        </div>
+
+        <div class="spectrogram-container">
+            <canvas id="spectrogram"></canvas>
+        </div>
+
+        <div class="result-panel">
+            <div class="result-title">解码结果</div>
+            <div class="decoded-text" id="decodedText">等待输入...</div>
+            <div class="confidence" id="confidence"></div>
+        </div>
+
+        <div class="log-panel" id="logPanel">
+            <div class="log-entry">系统初始化中...</div>
+        </div>
+    </div>
+
+    <script>
+        // 全局变量
+        let session = null;
+        let audioContext = null;
+        let mediaRecorder = null;
+        let audioChunks = [];
+        let isRecording = false;
+        let analyser = null;
+        let animationId = null;
+
+        // 配置
+        const CONFIG = {
+            fftSize: 512,
+            hopLength: 256,
+            nMels: 21,
+            sampleRate: 16000
+        };
+
+        // 初始化
+        async function init() {
+            updateStatus('loading', '加载 ONNX 模型...');
+            
+            try {
+                // 检查 ONNX Runtime
+                if (typeof ort === 'undefined') {
+                    throw new Error('ONNX Runtime Web 未加载');
+                }
+
+                // 加载模型
+                session = await ort.InferenceSession.create(
+                    '/models/cw_decoder.onnx',
+                    {
+                        executionProviders: ['wasm'],
+                        graphOptimizationLevel: 'all'
+                    }
+                );
+
+                updateStatus('ready', '模型加载成功，准备就绪');
+                log('模型加载成功', 'success');
+                document.getElementById('testBtn').disabled = false;
+
+                // 初始化音频上下文
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+
+                // 启动可视化
+                initVisualizer();
+
+            } catch (error) {
+                updateStatus('error', '模型加载失败: ' + error.message);
+                log('错误: ' + error.message, 'error');
+                console.error(error);
+            }
+        }
+
+        // 更新状态
+        function updateStatus(state, text) {
+            const dot = document.getElementById('statusDot');
+            const statusText = document.getElementById('statusText');
+            
+            dot.className = 'status-dot ' + state;
+            statusText.textContent = text;
+        }
+
+        // 日志
+        function log(message, type = 'info') {
+            const panel = document.getElementById('logPanel');
+            const entry = document.createElement('div');
+            entry.className = 'log-entry ' + type;
+            entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            panel.insertBefore(entry, panel.firstChild);
+        }
+
+        // 生成频谱图
+        function generateSpectrogram(audioData, sampleRate) {
+            const fftSize = CONFIG.fftSize;
+            const hopLength = CONFIG.hopLength;
+            const frames = [];
+
+            // 分帧并计算 FFT
+            for (let i = 0; i < audioData.length - fftSize; i += hopLength) {
+                const frame = audioData.slice(i, i + fftSize);
+                
+                // 加窗 (Hann 窗)
+                const windowed = frame.map((x, n) => {
+                    return x * 0.5 * (1 - Math.cos(2 * Math.PI * n / (fftSize - 1)));
+                });
+
+                // FFT (使用简单的 DFT 实现)
+                const fft = computeFFT(windowed);
+                const magnitude = fft.map(c => Math.sqrt(c[0] ** 2 + c[1] ** 2));
+                
+                // 取对数并裁剪
+                const logMag = magnitude.slice(0, CONFIG.nMels).map(m => {
+                    return 20 * Math.log10(m + 1e-10);
+                });
+                
+                frames.push(logMag);
+            }
+
+            // 归一化
+            const flat = frames.flat();
+            const mean = flat.reduce((a, b) => a + b, 0) / flat.length;
+            const std = Math.sqrt(flat.reduce((a, b) => a + (b - mean) ** 2, 0) / flat.length);
+            
+            return frames.map(frame => frame.map(x => (x - mean) / (std + 1e-10)));
+        }
+
+        // 简化版 FFT
+        function computeFFT(signal) {
+            const N = signal.length;
+            const result = [];
+            
+            for (let k = 0; k < N / 2; k++) {
+                let real = 0, imag = 0;
+                for (let n = 0; n < N; n++) {
+                    const angle = -2 * Math.PI * k * n / N;
+                    real += signal[n] * Math.cos(angle);
+                    imag += signal[n] * Math.sin(angle);
+                }
+                result.push([real, imag]);
+            }
+            
+            return result;
+        }
+
+        // 绘制频谱图
+        function drawSpectrogram(spectrogram) {
+            const canvas = document.getElementById('spectrogram');
+            const ctx = canvas.getContext('2d');
+            
+            canvas.width = spectrogram.length;
+            canvas.height = spectrogram[0].length;
+
+            const imageData = ctx.createImageData(spectrogram.length, spectrogram[0].length);
+            
+            for (let x = 0; x < spectrogram.length; x++) {
+                for (let y = 0; y < spectrogram[0].length; y++) {
+                    const value = spectrogram[x][y];
+                    const intensity = Math.min(255, Math.max(0, (value + 3) * 40));
+                    
+                    const idx = (y * spectrogram.length + x) * 4;
+                    imageData.data[idx] = intensity;     // R
+                    imageData.data[idx + 1] = intensity; // G
+                    imageData.data[idx + 2] = intensity * 0.8; // B
+                    imageData.data[idx + 3] = 255;       // A
+                }
+            }
+
+            ctx.putImageData(imageData, 0, 0);
+        }
+
+        // 解码
+        async function decode(audioData, sampleRate) {
+            if (!session) {
+                log('模型未加载', 'error');
+                return;
+            }
+
+            log('开始解码...');
+            
+            try {
+                // 重采样到 16kHz
+                const resampled = await resampleAudio(audioData, sampleRate, CONFIG.sampleRate);
+                
+                // 生成频谱图
+                const spectrogram = generateSpectrogram(resampled, CONFIG.sampleRate);
+                drawSpectrogram(spectrogram);
+                
+                // 转换为 tensor
+                const inputTensor = new ort.Tensor('float32', 
+                    new Float32Array(spectrogram.flat()),
+                    [spectrogram.length, spectrogram[0].length]
+                );
+
+                // 运行推理
+                const feeds = { input: inputTensor };
+                const results = await session.run(feeds);
+                
+                // CTC 解码
+                const output = results.output.data;
+                const decoded = ctcDecode(output);
+                
+                // 显示结果
+                document.getElementById('decodedText').textContent = decoded || '(无识别结果)';
+                document.getElementById('confidence').textContent = 
+                    `频谱图尺寸: ${spectrogram.length}×${spectrogram[0].length}`;
+                
+                log('解码完成: ' + decoded, 'success');
+
+            } catch (error) {
+                log('解码错误: ' + error.message, 'error');
+                console.error(error);
+            }
+        }
+
+        // CTC 解码 (贪婪)
+        function ctcDecode(output) {
+            const alphabet = 'abcdefghijklmnopqrstuvwxyz0123456789+/=';
+            const blank = 0;
+            
+            const timeSteps = output.length / (alphabet.length + 1);
+            let decoded = '';
+            let prev = -1;
+
+            for (let t = 0; t < timeSteps; t++) {
+                // 找到概率最大的字符
+                let maxProb = -Infinity;
+                let maxIdx = 0;
+                
+                for (let c = 0; c <= alphabet.length; c++) {
+                    const prob = output[t * (alphabet.length + 1) + c];
+                    if (prob > maxProb) {
+                        maxProb = prob;
+                        maxIdx = c;
+                    }
+                }
+
+                // 去除重复和 blank
+                if (maxIdx !== blank && maxIdx !== prev) {
+                    decoded += alphabet[maxIdx - 1] || '';
+                }
+                prev = maxIdx;
+            }
+
+            return decoded;
+        }
+
+        // 重采样音频
+        async function resampleAudio(audioData, fromRate, toRate) {
+            if (fromRate === toRate) return audioData;
+            
+            const ratio = toRate / fromRate;
+            const newLength = Math.floor(audioData.length * ratio);
+            const result = new Float32Array(newLength);
+            
+            for (let i = 0; i < newLength; i++) {
+                const idx = i / ratio;
+                const idx0 = Math.floor(idx);
+                const idx1 = Math.min(idx0 + 1, audioData.length - 1);
+                const frac = idx - idx0;
+                result[i] = audioData[idx0] * (1 - frac) + audioData[idx1] * frac;
+            }
+            
+            return result;
+        }
+
+        // 文件选择
+        document.getElementById('audioFile').addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            log('加载音频文件: ' + file.name);
+
+            try {
+                const arrayBuffer = await file.arrayBuffer();
+                const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+                
+                // 转换为单声道
+                const channelData = audioBuffer.getChannelData(0);
+                
+                log(`音频加载成功: ${audioBuffer.duration.toFixed(2)}s, ${audioBuffer.sampleRate}Hz`);
+                
+                await decode(channelData, audioBuffer.sampleRate);
+
+            } catch (error) {
+                log('音频加载失败: ' + error.message, 'error');
+            }
+        });
+
+        // 音频源切换
+        document.getElementById('audioSource').addEventListener('change', (e) => {
+            const isFile = e.target.value === 'file';
+            document.getElementById('fileControls').style.display = isFile ? 'block' : 'none';
+            document.getElementById('micControls').style.display = isFile ? 'none' : 'block';
+        });
+
+        // 录音
+        async function toggleRecording() {
+            if (isRecording) {
+                stopRecording();
+            } else {
+                startRecording();
+            }
+        }
+
+        async function startRecording() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                mediaRecorder = new MediaRecorder(stream);
+                audioChunks = [];
+
+                mediaRecorder.ondataavailable = (e) => {
+                    audioChunks.push(e.data);
+                };
+
+                mediaRecorder.onstop = async () => {
+                    const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+                    const arrayBuffer = await audioBlob.arrayBuffer();
+                    const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+                    await decode(audioBuffer.getChannelData(0), audioBuffer.sampleRate);
+                };
+
+                mediaRecorder.start();
+                isRecording = true;
+                
+                const btn = document.getElementById('recordBtn');
+                btn.textContent = '⏹️ 停止录音';
+                btn.classList.add('recording');
+                
+                log('开始录音...');
+
+            } catch (error) {
+                log('麦克风访问失败: ' + error.message, 'error');
+            }
+        }
+
+        function stopRecording() {
+            if (mediaRecorder && isRecording) {
+                mediaRecorder.stop();
+                isRecording = false;
+                
+                const btn = document.getElementById('recordBtn');
+                btn.textContent = '🎤 开始录音';
+                btn.classList.remove('recording');
+                
+                log('停止录音');
+            }
+        }
+
+        // 测试样本 (生成简单的 CW 音频)
+        async function testWithSample() {
+            log('生成测试样本...');
+            
+            // 生成 "CQ" 的摩尔斯码音频
+            const sampleRate = CONFIG.sampleRate;
+            const duration = 2; // 2秒
+            const samples = new Float32Array(sampleRate * duration);
+            
+            // 频率 600Hz
+            const freq = 600;
+            
+            // CQ = -.-. --.- (dah-dit-dah-dit dah-dah-dit-dah)
+            const morse = [
+                { type: 'dah', start: 0.2 },
+                { type: 'dit', start: 0.35 },
+                { type: 'dah', start: 0.5 },
+                { type: 'dit', start: 0.65 },
+                { type: 'dah', start: 1.0 },
+                { type: 'dah', start: 1.15 },
+                { type: 'dit', start: 1.30 },
+                { type: 'dah', start: 1.45 }
+            ];
+            
+            const wpm = 20;
+            const ditDuration = 1.2 / wpm;
+            const dahDuration = ditDuration * 3;
+            
+            morse.forEach(item => {
+                const duration = item.type === 'dit' ? ditDuration : dahDuration;
+                const startSample = Math.floor(item.start * sampleRate);
+                const endSample = Math.floor((item.start + duration) * sampleRate);
+                
+                for (let i = startSample; i < endSample && i < samples.length; i++) {
+                    const t = i / sampleRate;
+                    // 添加淡入淡出避免咔哒声
+                    const fadeIn = Math.min(1, (i - startSample) / 100);
+                    const fadeOut = Math.min(1, (endSample - i) / 100);
+                    const envelope = Math.min(fadeIn, fadeOut);
+                    samples[i] = Math.sin(2 * Math.PI * freq * t) * envelope * 0.5;
+                }
+            });
+            
+            // 添加一些噪声
+            for (let i = 0; i < samples.length; i++) {
+                samples[i] += (Math.random() - 0.5) * 0.05;
+            }
+            
+            log('测试样本生成完成，开始解码...');
+            await decode(samples, sampleRate);
+        }
+
+        // 清除结果
+        function clearResults() {
+            document.getElementById('decodedText').textContent = '等待输入...';
+            document.getElementById('confidence').textContent = '';
+            document.getElementById('spectrogram').getContext('2d').clearRect(0, 0, 100, 100);
+            log('结果已清除');
+        }
+
+        // 可视化
+        function initVisualizer() {
+            const canvas = document.getElementById('audioCanvas');
+            const ctx = canvas.getContext('2d');
+            
+            canvas.width = canvas.offsetWidth;
+            canvas.height = canvas.offsetHeight;
+            
+            function draw() {
+                if (!analyser) {
+                    // 绘制占位
+                    ctx.fillStyle = '#0a0a14';
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                    ctx.fillStyle = '#333';
+                    ctx.font = '14px sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.fillText('音频可视化', canvas.width / 2, canvas.height / 2);
+                    return;
+                }
+                
+                const bufferLength = analyser.frequencyBinCount;
+                const dataArray = new Uint8Array(bufferLength);
+                analyser.getByteTimeDomainData(dataArray);
+                
+                ctx.fillStyle = '#0a0a14';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                
+                ctx.lineWidth = 2;
+                ctx.strokeStyle = '#00d4ff';
+                ctx.beginPath();
+                
+                const sliceWidth = canvas.width / bufferLength;
+                let x = 0;
+                
+                for (let i = 0; i < bufferLength; i++) {
+                    const v = dataArray[i] / 128.0;
+                    const y = v * canvas.height / 2;
+                    
+                    if (i === 0) {
+                        ctx.moveTo(x, y);
+                    } else {
+                        ctx.lineTo(x, y);
+                    }
+                    
+                    x += sliceWidth;
+                }
+                
+                ctx.stroke();
+            }
+            
+            setInterval(draw, 50);
+        }
+
+        // 启动
+        window.addEventListener('load', init);
+    </script>
+</body>
+</html>

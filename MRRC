@@ -20,16 +20,19 @@ import logging
 import json
 import struct
 
-# Set up comprehensive logging
+# Set up minimal logging to reduce I/O overhead
+# V4.8.1: 优化logging配置，减少文件I/O操作以降低CPU占用
 logging.basicConfig(
-    level=logging.INFO,
+    level=logging.WARNING,  # 只记录WARNING及以上级别
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler('mrrc_debug.log'),
-        logging.StreamHandler()
+        logging.StreamHandler()  # 只输出到控制台
     ]
 )
 logger = logging.getLogger('MRRC')
+# 关闭第三方库的DEBUG日志
+logging.getLogger('tornado').setLevel(logging.WARNING)
+logging.getLogger('PIL').setLevel(logging.WARNING)
 # Use cross-platform Hamlib wrapper instead of direct import
 try:
     from hamlib_wrapper import HamlibWrapper
@@ -463,11 +466,11 @@ class WS_AudioTXHandler(tornado.websocket.WebSocketHandler):
 			if tune_playing or cq_playing:
 				return None
 
-			# 每200ms检查一次，连续10次未收到帧（约2秒）则熄灭PTT
+			# 每200ms检查一次，连续25次未收到帧（约5秒）则熄灭PTT
 			# 增加容忍度以应对网络延迟和浏览器处理延迟
 			if time.time() > last_AudioTXHandler_msg_time + 0.2:
 				self.miss_count += 1
-				if self.miss_count >= 10 and self.ws_connection and CTRX.infos["PTT"]==True:
+				if self.miss_count >= 25 and self.ws_connection and CTRX.infos["PTT"]==True:
 					CTRX.setPTT("false")
 					print("stop ptt on timeout by miss_count (10x200ms)")
 			else:
@@ -1760,7 +1763,7 @@ class WS_ATUAutoTunerHandler(tornado.websocket.WebSocketHandler):
 class TRXRIG:
 	def __init__(self):
 		global HAMLIB_AVAILABLE
-		self.spoints = {"0":-54, "1":-48, "2":-42, "3":-36, "4":-30, "5":-24, "6":-18, "7":-12, "8":-6, "9":0, "10":10, "20":20, "30":30, "40":40, "50":50, "60":60}
+		self.spoints = {"0":-54, "1":-48, "2":-42, "3":-36, "4":-30, "5":-24, "6":-18, "7":-12, "8":-6, "9":0, "5":5, "10":10, "15":15, "20":20, "25":25, "30":30, "35":35, "40":40, "45":45, "50":50, "55":55, "60":60}
 		self.infos = {}
 		self.infos["PTT"]=False
 		self.infos["powerstat"]=False
@@ -2097,12 +2100,72 @@ class TRXRIG:
 		return self.infos.get("MODE", "USB")
 
 	def getStrgLVL(self):
-		# Always return simulated values for signal strength to avoid errors
-		# IC-M710 signal strength reporting may not be fully supported
-		import random
-		self.infos["StrgLVLi"] = random.randint(-60, -20)
-		self.infos["StrgLVL"] = self.parsedbtospoint(self.infos["StrgLVLi"])
-		return self.infos["StrgLVL"]
+		"""获取信号强度，优先从设备读取，失败时返回S0"""
+		try:
+			if self.rig == "rigctld_daemon":
+				# 通过 rigctld 获取信号强度
+				strength = self._rigctld_get_signal_strength()
+				if strength is not None:
+					self.infos["StrgLVLi"] = strength
+					self.infos["StrgLVL"] = self.parsedbtospoint(strength)
+					return self.infos["StrgLVL"]
+			elif self.rig:
+				# 通过 hamlib 直接获取
+				try:
+					vfo = self.infos.get("VFO", 1)
+					from hamlib_wrapper import RIG_LEVEL_STRENGTH
+					strength = self.rig.rig_get_level(vfo, RIG_LEVEL_STRENGTH)
+					if strength is not None and strength >= 0:
+						# hamlib 返回的是 0-255 范围的值，需要转换为 dB
+						# 0 = -54dB (S0), 255 = +60dB (S9+60)
+						db = -54 + (strength / 255.0) * 114
+						self.infos["StrgLVLi"] = int(db)
+						self.infos["StrgLVL"] = self.parsedbtospoint(int(db))
+						return self.infos["StrgLVL"]
+				except Exception as e:
+					logger.debug(f"从 hamlib 获取信号强度失败: {e}")
+			
+			# 没有可用信号或读取失败，返回 S0
+			self.infos["StrgLVLi"] = -60
+			self.infos["StrgLVL"] = "0"
+			return "0"
+			
+		except Exception as e:
+			logger.debug(f"获取信号强度出错: {e}")
+			self.infos["StrgLVLi"] = -60
+			self.infos["StrgLVL"] = "0"
+			return "0"
+	
+	def _rigctld_get_signal_strength(self):
+		"""通过 rigctld 获取信号强度，返回 dB 值或 None"""
+		try:
+			import socket
+			sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+			sock.settimeout(1)
+			sock.connect(('127.0.0.1', 4532))
+			# 发送获取信号强度命令
+			sock.sendall(b"l STRENGTH\n")
+			response = sock.recv(1024).decode().strip()
+			sock.close()
+			
+			# 解析响应，格式通常为 "0" 到 "255" 或 "RPRT -..."
+			if response.startswith("RPRT"):
+				return None
+			
+			try:
+				strength = int(response)
+				if strength < 0:
+					return None
+				# rigctld STRENGTH 返回 0-255，转换为 dB
+				# 0 = -54dB (S0), 255 = +60dB (S9+60)
+				db = -54 + (strength / 255.0) * 114
+				return int(db)
+			except ValueError:
+				return None
+				
+		except Exception as e:
+			logger.debug(f"rigctld 获取信号强度失败: {e}")
+			return None
 		
 	def setPTT(self, status):
 		ptt_state = (status == "true")
@@ -2111,6 +2174,10 @@ class TRXRIG:
 		
 		# 保存旧的PTT状态
 		old_ptt_state = self.infos.get("PTT", False)
+		
+		# 关键优化：先更新状态，这样 audio_interface.py 的半双工检查可以立即生效
+		# 避免 TX→RX 切换时因为等待 rigctld 响应而延迟
+		self.infos["PTT"] = ptt_state
 		
 		# 增加重试机制确保PTT命令成功执行
 		max_retries = 3
@@ -2302,12 +2369,12 @@ class ticksTRXRIG(threading.Thread):
 		while True:
 			if CTRX.infos["powerstat"]:
 				CTRX.getStrgLVL()
-			time.sleep(0.1)
+			time.sleep(0.5)  # 优化：从 0.1s 改为 0.5s，减少CPU消耗
 
 class WS_ControlTRX(tornado.websocket.WebSocketHandler):
 
 	def send_to_all_clients(self,msg):
-		print ("Send to all: "+msg)
+		# print ("Send to all: "+msg)  # 已移除：此 print 语句产生大量 I/O 操作
 		# 复制列表避免遍历时修改
 		clients_to_remove = []
 		for client in ControlTRXHandlerClients:
@@ -3010,11 +3077,13 @@ if __name__ == "__main__":
 			threadsurveilTRX = threadtimeoutTRXshutdown()
 			threadsurveilTRX.start()
 		
-		pass		
+		pass
+		
+		# V4.8.1: 启动时自动连接 ATR-1000 代理
+		atr1000_proxy_manager.start()
 		
 		app = tornado.web.Application([
-			(r'/login', AuthLoginHandler),
-			(r'/logout', AuthLogoutHandler),
+					(r'/login', AuthLoginHandler),			(r'/logout', AuthLogoutHandler),
 			(r'/WSaudioRX', WS_AudioRXHandler),
 			(r'/WSaudioTX', WS_AudioTXHandler),
 			(r'/WSCTRX', WS_ControlTRX),
@@ -3029,7 +3098,7 @@ if __name__ == "__main__":
 					(r'/api/recordings', RecordingsListHandler),  # 录音列表API
 					(r'/recordings/([^/]+)', RecordingsDownloadHandler),  # 录音下载
 					(r'/', MainHandler),
-					(r'/(.*)', tornado.web.StaticFileHandler, { 'path' : './www' })			],debug=bool(config['SERVER']['debug']), websocket_ping_interval=10, cookie_secret=config['SERVER']['cookie_secret'])
+					(r'/(.*)', tornado.web.StaticFileHandler, { 'path' : './www' })			],debug=bool(config['SERVER']['debug']), websocket_ping_interval=30, cookie_secret=config['SERVER']['cookie_secret'])
 	except:
 		e = str(sys.exc_info())
 		print("=== SERVER FALLING BACK TO CONFIG-ONLY MODE ===")
@@ -3053,7 +3122,13 @@ if __name__ == "__main__":
 	ssl_ctx.minimum_version = ssl.TLSVersion.TLSv1_2
 	ssl_ctx.maximum_version = ssl.TLSVersion.TLSv1_3
 	ssl_ctx.load_cert_chain(certfile=cert_path, keyfile=key_path)
-	http_server = tornado.httpserver.HTTPServer(app, ssl_options=ssl_ctx)
+	
+	# Tornado HTTP 服务器性能优化
+	http_server = tornado.httpserver.HTTPServer(
+		app, 
+		ssl_options=ssl_ctx,
+		max_buffer_size=1024*1024,      # 减少最大缓冲
+	)
 	http_server.listen(int(config['SERVER']['port']))
 	print('HTTP server started.')
 	tornado.ioloop.IOLoop.instance().start()

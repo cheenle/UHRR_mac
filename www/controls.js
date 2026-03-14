@@ -1210,8 +1210,8 @@ function initRXSmeter(){
 	document.getElementById("div-smeterdigitRX").innerHTML="S0";
 }
 
-var SP = {0:0,1:25,2:37,3:50,4:62,5:73,6:84,7:98,8:110,9:123,10:144,20:164,30:180,40:202,50:221,60:240};
-var RIG_LEVEL_STRENGTH = {0:-54,1:-48,2:-42,3:-36,4:-30,5:-24,6:-18,7:-12,8:-6,9:0,10:10,20:20,30:30,40:40,50:50,60:60};
+var SP = {0:0,1:25,2:37,3:50,4:62,5:73,6:84,7:98,8:110,9:123,5:134,10:144,15:154,20:164,25:172,30:180,35:191,40:202,45:212,50:221,55:231,60:240};
+var RIG_LEVEL_STRENGTH = {0:-54,1:-48,2:-42,3:-36,4:-30,5:-24,6:-18,7:-12,8:-6,9:0,5:5,10:10,15:15,20:20,25:25,30:30,35:35,40:40,45:45,50:50,55:55,60:60};
 function drawRXSmeter() {
 	// 添加canvas元素存在性检查以兼容移动端
 	if (!canvasRXsmeter || !ctxRXsmeter) {
@@ -1308,8 +1308,14 @@ function checkCookie() {
 }
 
 function get_freqfromcokkies(itemselected=""){
-	var freqs=getCookie("freqs").replace("//", '/').split("/").sort();
+	// 防御性检查：如果元素不存在则跳过
 	var x = document.getElementById("selectpersonalfrequency");
+	if (!x) {
+		console.log('⚠️ selectpersonalfrequency 元素不存在，跳过频率加载');
+		return;
+	}
+	
+	var freqs=getCookie("freqs").replace("//", '/').split("/").sort();
 	var length = x.options.length;
 	for (i = length-1; i >= 0; i--) {
 	  x.options[i] = null;

@@ -104,7 +104,9 @@ var mobileState = {
     currentMode: 'USB',
     currentVFO: 'VFO-A',
     isTransmitting: false,
-    tuneStep: 100  // 默认步进 100Hz
+    tuneStep: 0.1,  // 默认步进 100Hz (0.1kHz)
+    tuneStepIndex: 0,  // 当前步进索引
+    tuneSteps: [0.1, 1, 5, 50]  // 步进数组: 100Hz, 1kHz, 5kHz, 50kHz
 };
 
 // PTT 触摸状态由 tx_button_optimized.js 管理
@@ -138,13 +140,36 @@ const domElements = {
 ////////////////////////////////////////////////////////////
 
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('🚀 Mobile Modern 界面初始化...');
+    console.log('🚀 Mobile Modern 界面初始化... (v4.8.0 - 步进按钮修复版)');
     
     try {
         initializeElements();
         console.log('✅ DOM元素初始化完成');
     } catch (e) {
         console.error('❌ initializeElements 失败:', e);
+    }
+    
+    // 步进按钮事件绑定（在initializeElements之后）
+    try {
+        const stepBtn = document.getElementById('step-btn');
+        if (stepBtn) {
+            console.log('🔧 绑定步进按钮事件...');
+            stepBtn.addEventListener('click', function(e) {
+                console.log('步进按钮被点击 (click)');
+                cycleStep();
+            });
+            stepBtn.addEventListener('touchend', function(e) {
+                e.preventDefault();
+                console.log('步进按钮被点击 (touchend)');
+                cycleStep();
+            });
+            stepBtn.style.cursor = 'pointer';
+            console.log('✅ 步进按钮事件已绑定');
+        } else {
+            console.warn('⚠️ 步进按钮元素未找到');
+        }
+    } catch (e) {
+        console.error('❌ 步进按钮事件绑定失败:', e);
     }
     
     try {
@@ -164,6 +189,19 @@ document.addEventListener('DOMContentLoaded', function() {
         updateFrequencyDisplay();
     } catch (e) {
         console.error('❌ updateFrequencyDisplay 失败:', e);
+    }
+    
+    // 初始化步进显示和按钮
+    try {
+        const stepBtn = document.getElementById('step-btn');
+        if (stepBtn) {
+            const step = mobileState.tuneStep;
+            stepBtn.innerHTML = step < 1 ? `${step * 1000}Hz` : `${step}kHz`;
+        }
+        updateTuneButtons();
+        console.log('✅ 步进初始化完成:', mobileState.tuneStep < 1 ? `${mobileState.tuneStep * 1000}Hz` : `${mobileState.tuneStep}kHz`);
+    } catch (e) {
+        console.error('❌ 步进初始化失败:', e);
     }
     
     try {
@@ -1405,19 +1443,48 @@ function cycleFilter() {
 
 // 步进切换
 function cycleStep() {
-    const steps = ['10Hz', '100Hz', '1kHz', '10kHz'];
-    const stepValues = [10, 100, 1000, 10000];
     const stepBtn = document.getElementById('step-btn');
     if (!stepBtn) return;
     
-    const current = stepBtn.innerHTML;
-    const currentIndex = steps.indexOf(current);
-    const nextIndex = (currentIndex + 1) % steps.length;
-    stepBtn.innerHTML = steps[nextIndex];
+    // 切换到下一档
+    mobileState.tuneStepIndex = (mobileState.tuneStepIndex + 1) % mobileState.tuneSteps.length;
+    mobileState.tuneStep = mobileState.tuneSteps[mobileState.tuneStepIndex];
     
-    // 存储当前步进值
-    mobileState.tuneStep = stepValues[nextIndex];
-    console.log('步进切换:', steps[nextIndex]);
+    // 更新显示
+    const step = mobileState.tuneStep;
+    stepBtn.innerHTML = step < 1 ? `${step * 1000}Hz` : `${step}kHz`;
+    
+    // 更新调谐按钮的步进值
+    updateTuneButtons();
+    
+    console.log('步进切换:', step < 1 ? `${step * 1000}Hz` : `${step}kHz`);
+}
+
+// 获取快步进（当前步进的下一档）
+function getFastStep() {
+    const currentIdx = mobileState.tuneStepIndex;
+    if (currentIdx < mobileState.tuneSteps.length - 1) {
+        return mobileState.tuneSteps[currentIdx + 1];
+    }
+    return 100; // 50k的下一档是100k
+}
+
+// 更新调谐按钮的步进值
+function updateTuneButtons() {
+    const slowStep = mobileState.tuneStep;
+    const fastStep = getFastStep();
+    
+    // 更新慢步进按钮 (◀ ▶)
+    const leftSlow = document.getElementById('tune-left-slow');
+    const rightSlow = document.getElementById('tune-right-slow');
+    if (leftSlow) leftSlow.dataset.step = -(slowStep * 1000);
+    if (rightSlow) rightSlow.dataset.step = slowStep * 1000;
+    
+    // 更新快步进按钮 (◀◀ ▶▶)
+    const leftFast = document.getElementById('tune-left-fast');
+    const rightFast = document.getElementById('tune-right-fast');
+    if (leftFast) leftFast.dataset.step = -(fastStep * 1000);
+    if (rightFast) rightFast.dataset.step = fastStep * 1000;
 }
 
 ////////////////////////////////////////////////////////////
