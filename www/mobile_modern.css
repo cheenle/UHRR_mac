@@ -1613,7 +1613,6 @@ body {
 .cq-button-wide {
     width: 100%;
     height: 44px;
-    margin-top: 8px;
     border: none;
     border-radius: 12px;
     background: linear-gradient(180deg, #2a5a3a, #1a4a2a);
@@ -1696,6 +1695,27 @@ body {
     align-items: stretch;
     padding: 6px;
     padding-bottom: calc(6px + env(safe-area-inset-bottom));
+}
+
+/* 右侧控制区域 - 录音/TUNE/CQCQCQ 垂直排列 */
+.side-controls {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+/* 右侧控制区域第一行 - 录音和 TUNE 并排 */
+.side-controls-row {
+    display: flex;
+    gap: 6px;
+    flex: 1;
+}
+
+.side-controls-row .record-button-footer,
+.side-controls-row .tune-button-footer {
+    flex: 1;
+    height: 44px;
 }
 
 /* PTT 按钮调整 */
