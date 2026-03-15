@@ -1,8 +1,8 @@
-# Mobile Remote Radio Control (MRRC) V4.8.0
+# Mobile Remote Radio Control (MRRC) V4.9.0
 
 [![English](https://img.shields.io/badge/lang-English-blue.svg)](README_en.md)
 [![中文](https://img.shields.io/badge/lang-中文-red.svg)](README_CN.md)
-[![Version](https://img.shields.io/badge/version-V4.8.0-green.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-V4.9.0-green.svg)](CHANGELOG.md)
 
 ---
 
@@ -14,7 +14,7 @@ A modern web-based remote control system optimized for mobile devices, enabling 
 
 基于现代Web技术的远程电台控制系统，专为移动端优化，让您随时随地灵活操控业余电台。
 
-> 🎉 **V4.8.0 更新**: 音频录制功能、远程启动支持、RX音频处理重构、WDSP优化
+> 🎉 **V4.9.0 更新**: 语音助手、CW实时解码、SDR界面、多实例支持
 
 ---
 
@@ -108,6 +108,8 @@ A modern web-based remote control system optimized for mobile devices, enabling 
 | 📱 **Mobile First** | Optimized for iPhone/Android with touch-friendly UI |
 | 🎛️ **Full Control** | Frequency, mode, PTT - complete station control |
 | 🎤 **Real-time Audio** | Bidirectional TX/RX streaming (16kHz) |
+| 🎙️ **AI Voice Assistant** | Whisper ASR + Qwen3-TTS synthesis |
+| 📡 **CW Decoder** | ONNX real-time decoding, QSO state machine |
 | 🎙️ **Audio Recording** | Record QSOs directly in browser (WAV/MP3) |
 | 🌍 **Remote Anywhere** | Access your station from anywhere with internet |
 | 🔒 **Secure Connection** | TLS encrypted HTTPS/WSS |
@@ -116,6 +118,8 @@ A modern web-based remote control system optimized for mobile devices, enabling 
 | 🔧 **ATR-1000 Integration** | Smart tuner learning & quick tune |
 | 🔌 **REST API** | Standalone API for external software integration |
 | 🚀 **Remote Start** | SSH-based remote service management |
+| 🖥️ **Multi-Instance** | Multiple independent radio instances on one server |
+| 🖥️ **SDR Interface** | Modern SDR control interface |
 
 ---
 
@@ -246,7 +250,50 @@ Based on [F4HTB/Universal_HamRadio_Remote_HTML5](https://github.com/F4HTB/Univer
 - [DSP Documentation](DSP.md) ⭐ V4.8.0
 - [System Architecture](docs/System_Architecture_Design.md)
 - [ATR-1000 Tuner Documentation](docs/ATR1000_Tuner_Auto_Learning.md)
+- [Multi-Instance Setup](docs/Multi_Instance_Setup.md) ⭐ New
 
 ---
 
-**Latest Release: V4.8.0** (2026-03-10) | [View Changelog](CHANGELOG.md)
+**Latest Release: V4.9.0** (2026-03-14) | [View Changelog](CHANGELOG.md)
+
+## 🖥️ Multi-Instance Support ⭐ New
+
+MRRC V4.8+ supports running multiple independent instances on a single server, each connecting to different radio devices.
+
+### Quick Start
+
+```bash
+# Create new instance
+./mrrc_multi.sh create radio2
+
+# Edit configuration (ports, serial device, audio)
+vim MRRC.radio2.conf
+
+# Start instance
+./mrrc_multi.sh start radio2
+
+# Access
+# radio1: https://localhost:8891
+# radio2: https://localhost:8892
+```
+
+### Key Features
+
+| Feature | Description |
+|---------|-------------|
+| **Independent Ports** | Each instance uses independent Web and rigctld ports |
+| **Independent Audio** | Support different sound cards |
+| **Independent Tuner** | Each instance has its own Unix Socket and learning records |
+| **Unified Management** | Manage all instances with `mrrc_multi.sh` script |
+
+### Management Commands
+
+```bash
+./mrrc_multi.sh start radio2      # Start
+./mrrc_multi.sh stop radio2       # Stop
+./mrrc_multi.sh restart radio2    # Restart
+./mrrc_multi.sh status radio2     # Check status
+./mrrc_multi.sh logs radio2       # View logs
+```
+
+**Full Documentation**: [Multi-Instance Setup Guide](docs/Multi_Instance_Setup.md)

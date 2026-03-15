@@ -18,6 +18,9 @@
 - **随时随地访问**：互联网覆盖处即可操控您的电台
 - **安全连接**：TLS加密传输，用户认证保护
 - **完整控制**：频率、模式、PTT、天调等完整电台功能
+- **AI语音助手**：Whisper语音识别 + Qwen3-TTS语音合成
+- **CW实时解码**：ONNX前端推理，QSO状态机智能建议
+- **多实例支持**：单服务器多电台独立控制
 
 ### 历史改进
 - **增强的PTT可靠性机制**：按下即发送PTT命令，并立即发送预热帧确保后端收到音频数据
@@ -28,6 +31,10 @@
 - **NanoVNA集成**：内置矢量网络分析仪Web界面支持
 - **ATR-1000集成**：实时功率/SWR显示，天调存储功能
 - **WebRTC最佳实践**：Opus编码参数优化，降低CPU占用
+- **语音助手**：Whisper + Qwen3-TTS 完整集成
+- **CW解码**：ONNX实时推理，QSO状态机
+- **SDR界面**：全新现代SDR控制界面
+- **多实例**：独立配置，独立天调学习
 
 ## 目录结构要点
 
@@ -113,6 +120,13 @@ MRRC/
 │   ├── iphone15_mobile_interface_analysis.md # iPhone 15界面分析
 │   └── mobile_interface_enhancement_summary.md # 移动界面增强总结
 ├── opus/                         # Opus编解码器Python绑定
+├── DESIGN/                       # 工程设计文档 (Vibe-SDD方法论)
+│   ├── MRRC_SDD.md               # 软件设计说明 (IBM TeamSD)
+│   ├── SPEC.md                   # 项目规格说明书
+│   ├── REQUIREMENTS.md           # 需求矩阵
+│   ├── ARCH-DECISIONS.md         # 架构决策记录
+│   ├── CONTEXT.md                # 系统上下文图
+│   └── API.md                   # API接口文档
 ├── screenshots/                  # 截图资源目录
 ├── *.wav                         # 音频测试文件 (cq.wav, tune.wav等)
 └── com.user.mrrc.plist           # macOS launchd服务配置
@@ -1827,7 +1841,49 @@ agc_mode = 3
 
 ---
 
-**最后更新**：2026年3月8日  
-**文档版本**：v4.5.17  
-**发布版本**：V4.5.17  
+### V4.9.1 多实例支持深度优化 (2026-03-15)
+
+**多实例架构修复**:
+- **配置键大小写修复**: 修复 ConfigParser 键名大小写问题
+  - `INSTANCE_UNIX_SOCKET` → `instance_unix_socket`
+- **Socket 路径修复**: 修复硬编码的 Unix Socket 路径
+  - `sync_freq_to_atr1000` 函数现在使用 `INSTANCE_UNIX_SOCKET` 配置
+
+#### 文件变更
+- `MRRC` - 配置键和 Socket 路径修复
+
+---
+
+### V4.9.0 语音助手、CW模式、SDR界面 (2026-03-14)
+
+**语音文字助手**:
+- 新增 `voice_assistant_service.py` 后端服务
+- 集成 Whisper ASR 语音识别（支持中文/英文）
+- 集成 Qwen3-TTS 语音合成
+- 新增移动端界面: `mobile_voice_text.html`
+- 新增移动端语音助手界面: `mobile_voice_assistant.html`
+
+**CW 电波模式**:
+- 新增 CW DSP 界面: `cw_dsp.html`
+- 新增 CW 信号发生器: `cw_generator.html`
+- 新增 CW 实时解码: `cw_live.html`
+- 新增 CW 简单测试: `cw_simple.html`
+- 新增 CW 测试页面: `cw_test.html`
+- ONNX 前端推理 (<2MB)，双模式架构
+
+**SDR 现代界面**:
+- 全新 SDR 控制界面: `sdr_modern.html`
+- 配套 JavaScript: `sdr_modern.js`
+- 配套样式: `sdr_modern.css`
+
+**多实例支持**:
+- 单服务器运行多个独立实例
+- 各电台独立控制
+- 差异化天调参数学习
+
+---
+
+**最后更新**：2026年3月15日  
+**文档版本**：v4.9.1  
+**发布版本**：V4.9.1  
 **维护者**：MRRC开发团队

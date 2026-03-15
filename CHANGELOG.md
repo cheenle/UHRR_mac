@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [V4.9.1] - 2026-03-15
+
+### 🎯 多实例支持深度优化
+
+**多实例架构修复**:
+- **配置键大小写修复**: 修复 ConfigParser 键名大小写问题
+  - `INSTANCE_UNIX_SOCKET` → `instance_unix_socket`
+- **Socket 路径修复**: 修复硬编码的 Unix Socket 路径
+  - `sync_freq_to_atr1000` 函数现在使用 `INSTANCE_UNIX_SOCKET` 配置
+
+**文件变更**:
+- `MRRC` - 配置键和 Socket 路径修复
+
+---
+
 ## [V4.9.0] - 2026-03-14
 
 ### 🚀 新功能发布：语音助手、CW模式、SDR界面

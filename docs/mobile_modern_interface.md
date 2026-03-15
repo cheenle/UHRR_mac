@@ -4,7 +4,7 @@
 
 This document describes the mobile-optimized web interface designed specifically for iPhone 15 and other modern mobile browsers. The interface maintains full compatibility with the existing MRRC backend while providing an enhanced user experience for mobile users.
 
-**Version**: v4.5.4 (2026-03-06)
+**Version**: V4.9.1 (2026-03-15)
 
 ## Features
 
@@ -189,8 +189,10 @@ Use browser developer tools to inspect:
 
 | Version | Date | Changes |
 |---------|------|---------|
+| v4.9.1 | 2026-03-15 | Multi-instance support deep optimization |
+| v4.9.0 | 2026-03-14 | Voice assistant, CW mode, SDR interface |
+| v4.8.0 | 2026-03-10 | Audio recording, remote start |
 | v4.5.4 | 2026-03-06 | ATR-1000 stable, dual time protection |
-| v4.5.4 | 2026-03-06 | Frequency tuning button layout optimization |
 | v4.4.0 | 2026-03-05 | ATR-1000 real-time display fix |
 | v4.3.0 | 2026-03-04 | ATR-1000 architecture separation |
 | v4.2.0 | 2026-03-02 | TX Equalizer integration |

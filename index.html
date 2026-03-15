@@ -184,6 +184,7 @@
 				<span class="button_unpressed" id="TX-record">TX</span>	
 				<span onclick="TXtogle();" class="button_unpressed" id="TX-record-lock">TX Lock</span>
 			<span onclick="tuneTone();" class="button_unpressed" id="Tune-button">Tune</span>
+			<span onclick="startCQ();" class="button_unpressed" id="CQ-button" style="background: #4CAF50; color: white;">📻 CQ</span>
 				<div id="ptt-status-indicator" style="display: inline-block; margin-left: 10px; color: #ff4444; font-weight: bold;">PTT: OFF</div>
 				<form id="TX-record_record_opus">
 					<input type="checkbox" id="encode" class=none alt="Encode TX with opus codec">Encode TX</input><br>
@@ -202,7 +203,7 @@
 			<div id="div-bitrates">bitrate RX: 0.0 kbps | TX: 0.0 kbps</div>
 			
 		</div>	
-		<script src="controls.js"></script>
-	<script src="tx_button_optimized.js"></script>
+		<script src="www/controls.js"></script>
+	<script src="www/tx_button_optimized.js"></script>
 	</body>
 </html>

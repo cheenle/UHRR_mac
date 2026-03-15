@@ -1,6 +1,6 @@
-# Mobile Remote Radio Control (MRRC) V4.8.0
+# Mobile Remote Radio Control (MRRC) V4.9.0
 
-[![English](https://img.shields.io/badge/lang-English-blue.svg)](README_en.md) [![中文](https://img.shields.io/badge/lang-中文-red.svg)](README_CN.md) [![版本](https://img.shields.io/badge/版本-V4.8.0-green.svg)](CHANGELOG.md)
+[![English](https://img.shields.io/badge/lang-English-blue.svg)](README_en.md) [![中文](https://img.shields.io/badge/lang-中文-red.svg)](README_CN.md) [![版本](https://img.shields.io/badge/版本-V4.9.0-green.svg)](CHANGELOG.md)
 
 **随时随地，畅享业余无线电。**
 
@@ -8,11 +8,11 @@ MRRC 是一款专为移动端优化的业余电台远程控制系统。无论您
 
 > ✅ **核心优势**：移动端优先设计，TX→RX切换延迟<100ms，PWA支持离线访问，专为单手操作优化
 >
-> 🎉 **V4.8.0 更新亮点**：
-> - 🎙️ **音频录制功能**：浏览器内直接录制QSO (WAV/MP3)
-> - 🚀 **远程启动支持**：SSH远程管理服务启动
-> - 🎧 **RX音频重构**：支持多格式解码 (Int16/Float32)
-> - 🎛️ **WDSP优化**：状态同步、库路径改进
+> 🎉 **V4.9.0 更新亮点**：
+> - 🎙️ **AI语音助手**：Whisper语音识别 + Qwen3-TTS语音合成
+> - 📡 **CW实时解码**：ONNX前端推理，QSO状态机智能建议
+> - 🖥️ **SDR现代界面**：全新SDR控制界面
+> - 🖥️ **多实例支持**：单服务器运行多个独立电台实例
 
 ## 🎯 设计理念
 
@@ -126,6 +126,24 @@ MRRC 是一款专为移动端优化的业余电台远程控制系统。无论您
 - **服务状态检查**：远程查询服务运行状态
 - **日志查看**：远程查看服务日志
 - **使用脚本**：`./mrrc_remote_start.sh`
+
+### 🎙️ AI 语音助手 (V4.9.0 新增)
+- **Whisper 语音识别**：支持中文/英文语音转文字
+- **Qwen3-TTS 语音合成**：自然语音合成播报
+- **语音控制电台**：语音指令控制频率、模式等
+- **呼号自动解释**：AI 识别呼号并给出解释
+- **访问地址**：`https://<域名>/mobile_voice_assistant.html`
+
+### 📡 CW 实时解码 (V4.9.0 新增)
+- **ONNX 前端推理**：轻量级模型 (<2MB)，浏览器内实时解码
+- **双模式架构**：支持音频流实时解码和录音文件解码
+- **QSO 状态机**：智能建议回复内容
+- **访问地址**：`https://<域名>/cw_live.html`
+
+### 🖥️ SDR 现代界面 (V4.9.0 新增)
+- **全新 SDR 控制界面**：现代化响应式设计
+- **实时频谱显示**：瀑布图、频谱图
+- **访问地址**：`https://<域名>/sdr_modern.html`
 
 ### 音频系统
 - **双向音频**：TX端Int16编码，RX端低抖动播放（AudioWorklet），采样率16kHz
@@ -338,10 +356,55 @@ curl -X POST -H "Content-Type: application/json" \
 - **[PTT/音频稳定性](docs/PTT_Audio_Postmortem_and_Best_Practices.md)**：稳定性分析与最佳实践
 - **[延迟优化指南](docs/latency_optimization_guide.md)**：TX/RX切换延迟优化详解
 - **[移动端界面文档](docs/mobile_modern_interface.md)**：移动端界面设计说明
+- **[多实例配置指南](docs/Multi_Instance_Setup.md)**：多电台实例配置详解 ⭐
 
 ---
 
-**最新版本: V4.8.0** (2026-03-10) | [查看更新日志](CHANGELOG.md)
+**最新版本: V4.9.0** (2026-03-14) | [查看更新日志](CHANGELOG.md)
+
+## 🖥️ 多实例支持（Multi-Instance）⭐ 新功能
+
+MRRC V4.8+ 支持在同一台服务器上运行多个独立实例，每个实例可连接不同的电台设备。
+
+### 快速开始
+
+```bash
+# 创建新实例
+./mrrc_multi.sh create radio2
+
+# 编辑配置（修改端口、串口、音频设备）
+vim MRRC.radio2.conf
+
+# 启动实例
+./mrrc_multi.sh start radio2
+
+# 访问
+# radio1: https://localhost:8891
+# radio2: https://localhost:8892
+```
+
+### 核心特性
+
+| 特性 | 说明 |
+|------|------|
+| **独立端口** | 每个实例使用独立的 Web 端口和 rigctld 端口 |
+| **独立音频** | 支持不同声卡设备 |
+| **独立天调** | 每个实例有自己的 Unix Socket 和学习记录 |
+| **统一管理** | 使用 `mrrc_multi.sh` 脚本统一管理 |
+
+### 管理命令
+
+```bash
+./mrrc_multi.sh start radio2      # 启动
+./mrrc_multi.sh stop radio2       # 停止
+./mrrc_multi.sh restart radio2    # 重启
+./mrrc_multi.sh status radio2     # 查看状态
+./mrrc_multi.sh logs radio2       # 查看日志
+```
+
+**详细文档**：[多实例配置指南](docs/Multi_Instance_Setup.md)
+
+---
 
 ## 🔧 常见问题
 

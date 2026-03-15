@@ -57,7 +57,31 @@ except ImportError:
 ############ Global variables ##################################
 CTRX=None
 config = configparser.ConfigParser()
-config.read('MRRC.conf')
+
+# 支持命令行参数指定配置文件路径
+# 用法: python3 MRRC [config_file]
+# 默认使用 MRRC.conf
+if len(sys.argv) > 1:
+    config_file = sys.argv[1]
+else:
+    config_file = 'MRRC.conf'
+
+# 确保使用绝对路径（如果提供的是相对路径）
+if not os.path.isabs(config_file):
+    config_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), config_file)
+
+config.read(config_file)
+print(f"Using config file: {config_file}")
+
+# ATR-1000 Unix Socket 路径（支持多实例）
+INSTANCE_UNIX_SOCKET = "/tmp/atr1000_proxy.sock"
+if config.has_option('INSTANCE_SETTINGS', 'instance_unix_socket'):
+    INSTANCE_UNIX_SOCKET = config.get('INSTANCE_SETTINGS', 'instance_unix_socket')
+else:
+    pass  # 使用默认值
+
+logger.info(f"📂 使用 Unix Socket: {INSTANCE_UNIX_SOCKET}")
+
 e="No"
 
 # ATU相关功能已移除
@@ -1078,10 +1102,11 @@ def sync_freq_to_atr1000(freq):
     """同步频率给 ATR-1000 代理（用于天调自动学习）"""
     import socket
     import json
+    global INSTANCE_UNIX_SOCKET
     try:
         sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         sock.settimeout(0.5)  # 短超时，不阻塞主程序
-        sock.connect("/tmp/atr1000_proxy.sock")
+        sock.connect(INSTANCE_UNIX_SOCKET)
         sock.sendall(json.dumps({"action": "set_freq", "freq": freq}).encode())
         sock.close()
         logger.info(f"📤 频率同步给ATR-1000: {freq/1000:.1f}kHz")
@@ -1288,12 +1313,15 @@ class ATR1000ProxyManager:
     
     def _connect(self):
         """连接到 ATR-1000 代理"""
+        global INSTANCE_UNIX_SOCKET
+        
         try:
+            import os
             self.unix_socket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
             self.unix_socket.settimeout(2.0)
-            self.unix_socket.connect("/tmp/atr1000_proxy.sock")
+            self.unix_socket.connect(INSTANCE_UNIX_SOCKET)
             self.unix_socket.setblocking(False)
-            logger.info("✅ ATR-1000 代理管理器已连接 Unix Socket")
+            logger.info(f"✅ ATR-1000 代理管理器已连接 Unix Socket: {INSTANCE_UNIX_SOCKET}")
             
             # 清除重连状态
             if hasattr(self, '_reconnecting'):
@@ -1309,6 +1337,8 @@ class ATR1000ProxyManager:
             if not self.read_thread or not self.read_thread.is_alive():
                 self.read_thread = threading.Thread(target=self._read_loop, daemon=True)
                 self.read_thread.start()
+            else:
+                logger.debug("ATR-1000 读取线程已在运行")
         except Exception as e:
             logger.warning(f"⚠️ ATR-1000 代理连接失败: {e}")
             self.unix_socket = None
@@ -1325,22 +1355,26 @@ class ATR1000ProxyManager:
         import time
         import json
         
-        last_log_time = 0
-        last_power = 0
-        last_swr = 0
-        data_buffer = ""  # 数据缓冲区，处理粘包
-        message_batch = []  # 消息批次，用于批量广播
-        last_batch_time = time.time()
-        logger.info("🔄 ATR-1000 代理读取线程已启动")
+        try:
+            last_log_time = 0
+            last_power = 0
+            last_swr = 0
+            data_buffer = ""  # 数据缓冲区，处理粘包
+            message_batch = []  # 消息批次，用于批量广播
+            last_batch_time = time.time()
+            logger.info("🔄 ATR-1000 代理读取线程已启动")
+        except Exception as e:
+            import traceback
+            logger.warning(f"🔍 _read_loop 初始化错误: {e}")
+            logger.warning(f"🔍 堆栈: {traceback.format_exc()}")
         
         while self.running and self.unix_socket:
             try:
-                ready, _, _ = select.select([self.unix_socket], [], [], 0.005)  # V4.5.6: 5ms超时，更快响应
+                ready, _, _ = select.select([self.unix_socket], [], [], 0.005)
                 if ready:
                     try:
                         data = self.unix_socket.recv(4096)
                         if data:
-                            # 添加到缓冲区
                             data_buffer += data.decode('utf-8')
                             
                             # 处理可能的多条消息（按换行分割）
@@ -1779,8 +1813,17 @@ class TRXRIG:
 				# Test connection to rigctld
 				try:
 					sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+					# 从配置读取 rigctld 端口，默认 4532
+					rigctld_port = 4532
+					# 尝试从 INSTANCE_SETTINGS 节读取端口
+					if config.has_option('INSTANCE_SETTINGS', 'instance_rigctl_port'):
+						try:
+							rigctld_port = int(config.get('INSTANCE_SETTINGS', 'instance_rigctl_port'))
+						except:
+							pass
+					
 					sock.settimeout(2)
-					sock.connect(('127.0.0.1', 4532))
+					sock.connect(('127.0.0.1', rigctld_port))
 					sock.sendall(b"f\n")
 					response = sock.recv(1024).decode().strip()
 					sock.close()
@@ -1788,11 +1831,11 @@ class TRXRIG:
 					logger.info(f"✓ rigctld daemon responding! Initial frequency: {response}")
 					self.rig = "rigctld_daemon"  # Use daemon approach
 					self.rigctld_host = "127.0.0.1"
-					self.rigctld_port = 4532
+					self.rigctld_port = rigctld_port
 					
 				except socket.error as e:
 					logger.error(f"⚠ rigctld daemon not running: {e}")
-					logger.info("Please start rigctld with: rigctld -m 30003 -r /dev/cu.usbserial-230 -s 4800 -C stop_bits=2 -T 127.0.0.1 -t 4532")
+					logger.info(f"Please start rigctld with: rigctld -m 30003 -r /dev/cu.usbserial-230 -s 4800 -C stop_bits=2 -T 127.0.0.1 -t {rigctld_port}")
 					self.rig = None
 					
 			except Exception as e:
@@ -1830,7 +1873,7 @@ class TRXRIG:
 			import socket
 			sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 			sock.settimeout(3)
-			sock.connect(('127.0.0.1', 4532))
+			sock.connect(('127.0.0.1', self.rigctld_port))
 			sock.sendall((cmd + '\n').encode())
 			response = sock.recv(1024).decode().strip()
 			sock.close()
@@ -1851,7 +1894,7 @@ class TRXRIG:
 			import socket
 			sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 			sock.settimeout(3)
-			sock.connect(('127.0.0.1', 4532))
+			sock.connect(('127.0.0.1', self.rigctld_port))
 			command = f"{cmd} {value}\n"
 			sock.sendall(command.encode())
 			response = sock.recv(1024).decode().strip()
@@ -1874,7 +1917,7 @@ class TRXRIG:
 			import socket
 			sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 			sock.settimeout(3)
-			sock.connect(('127.0.0.1', 4532))
+			sock.connect(('127.0.0.1', self.rigctld_port))
 			sock.sendall((mode_cmd + '\n').encode())
 			response = sock.recv(1024).decode().strip()
 			sock.close()
@@ -2004,7 +2047,7 @@ class TRXRIG:
 				import socket
 				sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 				sock.settimeout(3)
-				sock.connect(('127.0.0.1', 4532))
+				sock.connect(('127.0.0.1', self.rigctld_port))
 				sock.sendall((mode_cmd + '\n').encode())
 				response = sock.recv(1024).decode().strip()
 				sock.close()
@@ -2142,7 +2185,7 @@ class TRXRIG:
 			import socket
 			sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 			sock.settimeout(1)
-			sock.connect(('127.0.0.1', 4532))
+			sock.connect(('127.0.0.1', self.rigctld_port))
 			# 发送获取信号强度命令
 			sock.sendall(b"l STRENGTH\n")
 			response = sock.recv(1024).decode().strip()
@@ -2190,7 +2233,7 @@ class TRXRIG:
 					import socket
 					sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 					sock.settimeout(1)  # Reduced timeout for faster response
-					sock.connect(('127.0.0.1', 4532))
+					sock.connect(('127.0.0.1', self.rigctld_port))
 					command = f"T {ptt_value}\n"
 					sock.sendall(command.encode())
 					response = sock.recv(1024).decode().strip()
@@ -2271,7 +2314,7 @@ class TRXRIG:
 			import socket
 			sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 			sock.settimeout(3)
-			sock.connect(('127.0.0.1', 4532))
+			sock.connect(('127.0.0.1', self.rigctld_port))
 			# Send 't' command to get PTT state (0 = off, 1 = on)
 			sock.sendall(b"t\n")
 			response = sock.recv(1024).decode().strip()

@@ -7,7 +7,7 @@ set -e
 # Configuration
 LOCAL_WEBSITE_DIR="/Users/cheenle/UHRR/MRRC/website"
 REMOTE_HOST="www.vlsc.net"
-REMOTE_USER="vlsc"  # Adjust if different
+REMOTE_USER="cheenle"  # Adjust if different
 REMOTE_WEBROOT="/var/www/html/mrrc"  # Adjust path as needed
 BACKUP_DIR="/var/www/backups/mrrc_$(date +%Y%m%d_%H%M%S)"
 

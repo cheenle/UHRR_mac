@@ -200,19 +200,25 @@
         <!-- PTT Section - 底部PTT/TUNE按钮区域 -->
         <footer class="ptt-section">
             <div class="ptt-container">
-                <!-- PTT 按钮 -->
+                <!-- 左侧：PTT 大按钮 -->
                 <button id="ptt-btn" class="ptt-button" aria-label="Push to Talk">
                     <span class="ptt-label">PTT</span>
                 </button>
-                <!-- 录音 按钮 -->
-                <button id="record-btn" class="record-button-footer" aria-label="Record">
-                    <span class="record-icon">●</span>
-                    <span class="record-label">录音</span>
-                </button>
-                <!-- TUNE 按钮 -->
-                <button id="tune-btn" class="tune-button-footer" aria-label="Tune">
-                    <span class="tune-label">TUNE</span>
-                </button>
+                <!-- 右侧：录音/TUNE/CQCQCQ 垂直排列 -->
+                <div class="side-controls">
+                    <div class="side-controls-row">
+                        <button id="record-btn" class="record-button-footer" aria-label="Record">
+                            <span class="record-icon">●</span>
+                            <span class="record-label">录音</span>
+                        </button>
+                        <button id="tune-btn" class="tune-button-footer" aria-label="Tune">
+                            <span class="tune-label">TUNE</span>
+                        </button>
+                    </div>
+                    <button id="cq-btn" class="cq-button-wide" aria-label="CQCQCQ">
+                        <span class="cq-label-wide">📻 CQCQCQ</span>
+                    </button>
+                </div>
             </div>
         </footer>
     </div>

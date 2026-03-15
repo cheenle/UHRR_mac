@@ -406,6 +406,7 @@ function initializeElements() {
     domElements.pttButton = document.getElementById('ptt-btn');
     domElements.tuneButton = document.getElementById('tune-btn');
     domElements.recordButton = document.getElementById('record-btn');
+    domElements.cqButton = document.getElementById('cq-btn');
     domElements.powerButton = document.getElementById('power-btn');
     domElements.freqDisplay = document.getElementById('freq-main-display');
     domElements.freqInput = document.getElementById('freq-input');
@@ -645,6 +646,21 @@ function setupEventListeners() {
         });
         
         console.log('🎵 底部 TUNE 按钮已初始化');
+    }
+    
+    // CQ 按钮 - 点击播放 CQ 音频
+    if (domElements.cqButton) {
+        domElements.cqButton.addEventListener('click', function(e) {
+            e.preventDefault();
+            playCQAudio();
+        });
+        
+        domElements.cqButton.addEventListener('touchend', function(e) {
+            e.preventDefault();
+            playCQAudio();
+        }, { passive: false });
+        
+        console.log('📻 CQ 按钮已初始化');
     }
     
     // 录音按钮
@@ -3409,4 +3425,61 @@ window.startRecording = startRecording;
 window.stopRecording = stopRecording;
 window.handleRecordingStatus = handleRecordingStatus;
 window.handleRecordingSaved = handleRecordingSaved;
+
+/**
+ * 播放 CQ 音频
+ * 使用服务器端的 CQ 功能播放 CQCQCQ.wav
+ */
+function playCQAudio() {
+    console.log('📻 开始播放 CQCQCQ...');
+    
+    // 检查 WebSocket 是否连接 - 尝试多种方式检测
+    const isConnected = window.isConnected || 
+                       (typeof wsControlTRX !== 'undefined' && wsControlTRX && wsControlTRX.readyState === WebSocket.OPEN) ||
+                       (typeof poweron !== 'undefined' && poweron);
+    
+    if (!isConnected) {
+        showRecordingStatus('请先开启电源并连接电台', 'error');
+        return;
+    }
+    
+    // 检查是否已经在播放 CQ
+    if (window.isCQing) {
+        console.log('CQCQCQ 已经在播放中');
+        return;
+    }
+    
+    // 使用服务器端的 startCQ 函数
+    if (typeof startCQ === 'function') {
+        // 添加视觉反馈
+        const cqBtn = document.getElementById('cq-btn');
+        if (cqBtn) {
+            cqBtn.style.background = 'linear-gradient(180deg, #3a7a4a, #2a6a3a)';
+            cqBtn.style.transform = 'scale(0.98)';
+        }
+        
+        startCQ();
+        showRecordingStatus('📻 CQCQCQ 发送中...', 'info');
+        
+        // 3.5 秒后自动停止（CQ 音频通常 3 秒左右）
+        setTimeout(() => {
+            if (typeof stopCQ === 'function') {
+                stopCQ();
+            }
+            showRecordingStatus('✅ CQCQCQ 发送完成', 'success');
+            
+            // 恢复按钮样式
+            if (cqBtn) {
+                cqBtn.style.background = '';
+                cqBtn.style.transform = '';
+            }
+        }, 3500);
+    } else {
+        console.error('startCQ 函数不可用');
+        showRecordingStatus('❌ CQ 功能不可用', 'error');
+    }
+}
+
+// 导出 CQ 播放函数
+window.playCQAudio = playCQAudio;
 

@@ -687,13 +687,18 @@ def signal_handler(sig, frame):
 
 def main():
     global running
+    global UNIX_SOCKET_PATH
     
     parser = argparse.ArgumentParser(description='ATR-1000 天调代理')
     parser.add_argument('--device', default='192.168.1.63', help='ATR-1000 设备 IP')
     parser.add_argument('--port', type=int, default=60001, help='ATR-1000 WebSocket 端口')
     parser.add_argument('--interval', type=float, default=1.0, help='数据请求间隔（秒）')
+    parser.add_argument('--unix-socket', default='/tmp/atr1000_proxy.sock', help='Unix Socket 路径')
     parser.add_argument('--debug', action='store_true', help='调试模式')
     args = parser.parse_args()
+    
+    # 设置 Unix Socket 路径
+    UNIX_SOCKET_PATH = args.unix_socket
     
     if args.debug:
         logging.getLogger().setLevel(logging.DEBUG)
@@ -705,6 +710,7 @@ def main():
     logger.info("=" * 50)
     logger.info("ATR-1000 天调代理程序启动")
     logger.info(f"设备地址: {args.device}:{args.port}")
+    logger.info(f"Unix Socket: {UNIX_SOCKET_PATH}")
     logger.info(f"轮询间隔: 空闲{POLL_INTERVAL_IDLE}s / 活跃{POLL_INTERVAL_ACTIVE}s / TX{POLL_INTERVAL_TX}s")
     logger.info("=" * 50)
     

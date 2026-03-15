@@ -303,5 +303,7 @@ Based on [F4HTB/Universal_HamRadio_Remote_HTML5](https://github.com/F4HTB/Univer
 
 ---
 
+**Latest Version: V4.9.0** (2026-03-14) | [View Changelog](CHANGELOG.md)
+
 **MRRC - Mobile Remote Radio Control**  
 *Amateur Radio, Anytime, Anywhere.*

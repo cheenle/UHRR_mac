@@ -61,6 +61,9 @@ Universal HamRadio Remote HTML5 (MRRC) is a Python/Tornado-based server applicat
 - **Panadapter/Spectrum Display**: Real-time FFT visualization via RTL-SDR
 - **Mobile Optimization**: Responsive design with touch-friendly controls
 - **Cross-platform Audio**: Works on macOS, Linux, Windows with consistent performance
+- **Voice Assistant**: Whisper ASR + Qwen3-TTS integration for voice control
+- **CW Decoder**: ONNX-based real-time Morse code decoding with QSO state machine
+- **Multi-Instance Support**: Single server, multiple independent radio instances
 
 ## Development Commands
 

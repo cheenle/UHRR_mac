@@ -1,0 +1,107 @@
+[SERVER]
+port = 8878
+certfile = certs/radio.vlsc.net.pem
+keyfile = certs/radio.vlsc.net.key
+auth = FILE
+cookie_secret = L8LwECiNRxq2N0N2eGxx9MZlrpmuMEimlydNX/vt1LM=
+db_users_file = MRRC_users.db
+pam_account = pi
+log_file = MRRC.log
+debug = False
+
+[CTRL]
+interval_smeter_update = 5.0
+debug = False
+
+[AUDIO]
+outputdevice = USB PnP Sound Device
+inputdevice = USB PnP Sound Device
+
+[HAMLIB]
+rig_pathname = /dev/tty.usbserial-ABAUOK9F
+retry = 5
+rig_model = NRD535
+trxautopower = True
+rig_rate = 4800
+data_bits = 
+stop_bits = 1
+serial_parity = 
+serial_handshake = 
+dtr_state = 
+rts_state = 
+
+[RNNOISE]
+# RNNoise 神经网络降噪（RX 接收端）
+# 注意: 已弃用，推荐使用 WDSP 的 NR2 频谱降噪
+# 需要安装: pip install pyrnnoise
+enabled = False
+# 降噪强度 0-100，0=仅降噪不静音，100=无语音时静音
+suppress_level = 50
+
+[WDSP]
+# WDSP 数字信号处理模块（Warren Pratt's DSP Library）
+# 提供专业的业余无线电音频处理功能，替代 RNNoise
+# 需要先编译安装 WDSP 库: https://github.com/g0orx/wdsp
+enabled = True
+# 采样率，支持 16000 或 48000
+sample_rate = 48000
+# 处理缓冲区大小 (128, 256, 512, 1024)
+# 推荐使用 256，平衡性能和稳定性
+buffer_size = 256
+
+# ===== AGC 自动增益控制 =====
+# AGC 模式: 0=OFF, 1=LONG, 2=SLOW, 3=MED, 4=FAST
+# 推荐使用 SLOW(2) 或 MED(3)，OFF 最稳定但无自动增益
+# AGC会动态放大信号，是导致削峰的主要原因之一
+agc_mode = 2
+
+# ===== NR2 频谱降噪 (EMNR) =====
+# NR2: 频谱降噪，基于谱减法，专门针对 SSB 语音优化
+nr2_enabled = True
+# NR2 强度级别: 0-4 (前端显示 0=关, 1=极温和, 2=温和, 3=中等, 4=强力)
+# 默认改为 2 (温和)，4 容易导致削峰
+nr2_level = 1
+# NR2 Gain Method: 0=Gaussian(保守), 1=Gaussian(log), 2=Gamma(激进)
+# 0 最保守，适合语音；2 默认但可能过于激进
+nr2_gain_method = 2
+# NR2 NPE Method: 0=OSMS(最优平滑), 1=MMSE
+# 0 默认值，适合平稳噪声
+nr2_npe_method = 1
+# NR2 Auto-Equalization: 必须开启，消除"音乐噪音"
+nr2_ae_run = True
+
+# 传统LMS降噪（与NR2互斥，一般关闭）
+nr_enabled = False
+nr_level = 2
+
+# 噪声抑制器（脉冲干扰）
+nb_enabled = True
+# NB2: 高级频谱噪声抑制
+nb2_enabled = False
+
+# 自动陷波器（消除CW干扰音）
+anf_enabled = True
+
+# ===== 带通滤波器 =====
+# 低切频率 (Hz)
+bandpass_low = 300.0
+# 高切频率 (Hz)
+bandpass_high = 2700.0
+
+# ===== 音频均衡器（TX发射端） =====
+# 启用 TX EQ
+tx_eq_enabled = False
+# 低频增益 (dB, -12 到 12)
+tx_eq_low = 4.0
+# 中频增益 (dB)
+tx_eq_mid = 6.0
+# 高频增益 (dB)
+tx_eq_high = -3.0
+
+[PANADAPTER]
+sample_rate = 960000
+center_freq = 68330000
+freq_correction = 1
+gain = 10
+fft_window = hamming
+
