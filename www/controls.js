@@ -118,8 +118,10 @@ function powertogle()
 		poweron = true;
 		
 		canvasRXsmeter = document.getElementById("canRXsmeter");
-		ctxRXsmeter = canvasRXsmeter.getContext("2d");
-		initRXSmeter();
+		if (canvasRXsmeter) {
+			ctxRXsmeter = canvasRXsmeter.getContext("2d");
+			initRXSmeter();
+		}
 		
 		button_light_all("div-filtershortcut");
 	}
@@ -457,6 +459,14 @@ function AudioRX_start(){
         }
     })();
 
+    // 创建独立的S表分析器（不受音量控制影响）
+    if (typeof AudioRX_smeter_analyser === 'undefined') {
+        window.AudioRX_smeter_analyser = AudioRX_context.createAnalyser();
+        AudioRX_smeter_analyser.fftSize = 256;
+    }
+    
+    // 音频链：在滤波器之后、增益之前连接S表分析器
+    AudioRX_biquadFilter_node.connect(AudioRX_smeter_analyser);
     AudioRX_biquadFilter_node.connect(AudioRX_gain_node);
     AudioRX_gain_node.connect(AudioRX_analyser);
     AudioRX_gain_node.connect( AudioRX_context.destination );
@@ -759,7 +769,13 @@ function wsControlTRXcrtol( msg ){
 	else if(words[0] == "getSignalLevel"){SignalLevel=words[1];drawRXSmeter();}
 	else if(words[0] == "getPTT"){updatePTTStatus(words[1] === "true");}
 	else if(words[0] == "panfft"){document.getElementById("div-panfft").style.display = "block";}
-	else if(words[0] == "cq"){if(words[1] === "complete"){onCQComplete();}}
+	else if(words[0] == "cq"){
+		console.log('📻 收到CQ消息:', words[1]);
+		if(words[1] === "complete"){
+			console.log('📻 CQ播放完成，调用onCQComplete');
+			onCQComplete();
+		}
+	}
 	// WDSP 状态响应 (支持多端同步)
 	else if(words[0] == "wdspStatus" || words[0] == "getWDSPStatus"){
         console.log('🔧 收到 WDSP 状态消息:', words[1] ? words[1].substring(0, 100) + '...' : 'empty');
@@ -1217,7 +1233,10 @@ function drawRXSmeter() {
 	if (!canvasRXsmeter || !ctxRXsmeter) {
 		// 移动端：调用mobile_modern.js中的updateSMeter函数
 		if (typeof updateSMeter === 'function') {
+			console.log('📱 移动端S表更新:', 'SignalLevel=' + SignalLevel);
 			updateSMeter(SignalLevel);
+		} else {
+			console.warn('⚠️ updateSMeter函数未定义');
 		}
 		return;
 	}
@@ -2462,7 +2481,11 @@ function startCQ() {
 }
 
 function stopCQ() {
-    if (!isCQing) return;
+    console.log('🛑 stopCQ被调用，isCQing=', isCQing);
+    if (!isCQing) {
+        console.log('🛑 isCQing为false，直接返回');
+        return;
+    }
 
     try {
         // 发送cq停止命令到服务器
@@ -2484,12 +2507,19 @@ function stopCQ() {
             cqStatus.style.color = '#ff4444';
         }
 
-        // 更新按钮状态
+        // 更新桌面端按钮状态
         var cqBtn = document.getElementById('CQ-button');
         if (cqBtn) {
             cqBtn.className = 'button_unpressed';
             cqBtn.style.background = '#9C27B0';
             cqBtn.disabled = false; // 启用按钮
+        }
+
+        // 恢复移动端按钮样式
+        var mobileCqBtn = document.getElementById('cq-btn');
+        if (mobileCqBtn) {
+            mobileCqBtn.style.background = '';
+            mobileCqBtn.disabled = false;
         }
 
         console.log('🛑 CQ停止');
@@ -2501,10 +2531,20 @@ function stopCQ() {
 
 // 添加CQ自动停止的监听器
 function onCQComplete() {
-    if (!isCQing) return;
-    
+    console.log('📻 onCQComplete被调用，isCQing=', isCQing);
+    if (!isCQing) {
+        console.log('📻 isCQing为false，跳过停止');
+        return;
+    }
+
     console.log('📻 CQ播放完成，自动停止');
     stopCQ();
+
+    // 调用移动端处理函数（如果存在）
+    if (typeof handleCQCompleteMobile === 'function') {
+        console.log('📻 调用handleCQCompleteMobile');
+        handleCQCompleteMobile();
+    }
 }
 
 // 在WebSocket消息处理中添加CQ完成通知

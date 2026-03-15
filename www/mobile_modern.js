@@ -97,6 +97,9 @@ var audioContextInitialized = false;
 // 移动端特定状态（不影响 controls.js 的全局变量）
 ////////////////////////////////////////////////////////////
 
+// RIG信号强度映射表（与controls.js保持一致）
+var RIG_LEVEL_STRENGTH = {0:-54,1:-48,2:-42,3:-36,4:-30,5:-24,6:-18,7:-12,8:-6,9:0,10:10,15:15,20:20,25:25,30:30,35:35,40:40,45:45,50:50,55:55,60:60};
+
 // 移动端 UI 状态
 var mobileState = {
     isConnected: false,
@@ -106,7 +109,20 @@ var mobileState = {
     isTransmitting: false,
     tuneStep: 0.1,  // 默认步进 100Hz (0.1kHz)
     tuneStepIndex: 0,  // 当前步进索引
-    tuneSteps: [0.1, 1, 5, 50]  // 步进数组: 100Hz, 1kHz, 5kHz, 50kHz
+    tuneSteps: [0.1, 1, 5, 50],  // 步进数组: 100Hz, 1kHz, 5kHz, 50kHz
+    
+    // S表校准参数（为音频计算调整）
+    // 当前：显示 S9，应该是 S7，需降低约 2 个 S 单位
+    sMeterCalibration: {
+        baseNoiseDB: -70,      // 基准噪音点
+        baseNoiseS: 0,         // S0 (无信号)
+        strongSignalDB: -42,   // 稍微降低强信号参考点
+        strongSignalS: 4.0     // 降低约 2 个 S 单位，使 S9 显示变为 S7
+    },
+    currentSMeter: 0,          // 当前S表值
+    currentAudioDB: undefined, // 当前音频dB值
+    lastAudioTime: 0,          // 上次音频更新时间
+    lastRIGSignalTime: 0       // 上次RIG信号值更新时间
 };
 
 // PTT 触摸状态由 tx_button_optimized.js 管理
@@ -126,7 +142,6 @@ const domElements = {
     freqDisplay: null,
     freqInput: null,
     modeIndicator: null,
-    vfoIndicator: null,
     statusCtrl: null,
     statusRX: null,
     statusTX: null,
@@ -411,7 +426,6 @@ function initializeElements() {
     domElements.freqDisplay = document.getElementById('freq-main-display');
     domElements.freqInput = document.getElementById('freq-input');
     domElements.modeIndicator = document.getElementById('mode-indicator');
-    domElements.vfoIndicator = document.getElementById('vfo-indicator');
     domElements.statusCtrl = document.getElementById('status-ctrl');
     domElements.statusRX = document.getElementById('status-rx');
     domElements.statusTX = document.getElementById('status-tx');
@@ -650,15 +664,35 @@ function setupEventListeners() {
     
     // CQ 按钮 - 点击播放 CQ 音频
     if (domElements.cqButton) {
-        domElements.cqButton.addEventListener('click', function(e) {
+        // 使用标志防止重复触发
+        let cqTouchStarted = false;
+        
+        domElements.cqButton.addEventListener('touchstart', function(e) {
             e.preventDefault();
-            playCQAudio();
-        });
+            cqTouchStarted = true;
+            this.style.transform = 'scale(0.95)';
+        }, { passive: false });
         
         domElements.cqButton.addEventListener('touchend', function(e) {
             e.preventDefault();
-            playCQAudio();
+            this.style.transform = '';
+            if (cqTouchStarted) {
+                cqTouchStarted = false;
+                playCQAudio();
+            }
         }, { passive: false });
+        
+        // 桌面端鼠标支持
+        domElements.cqButton.addEventListener('mousedown', function(e) {
+            e.preventDefault();
+            this.style.transform = 'scale(0.95)';
+        });
+        
+        domElements.cqButton.addEventListener('mouseup', function(e) {
+            e.preventDefault();
+            this.style.transform = '';
+            playCQAudio();
+        });
         
         console.log('📻 CQ 按钮已初始化');
     }
@@ -859,6 +893,9 @@ function togglePower() {
         // 释放 Wake Lock
         releaseWakeLock();
         
+        // 停止S表监测
+        stopSMeterMonitoring();
+        
         // 更新连接状态
         mobileState.isConnected = false;
     } else {
@@ -906,6 +943,9 @@ function togglePower() {
         if (typeof ATR1000 !== 'undefined' && ATR1000.onPowerOn) {
             ATR1000.onPowerOn();
         }
+        
+        // 启动S表监测（使用音频计算，因为电台没有S表输出）
+        startSMeterMonitoring();
         
         // 更新 Opus 编码状态指示器
         updateOpusStatus();
@@ -1061,11 +1101,13 @@ function updateFrequencyDisplay() {
         }
     }
     
-    // 频率格式：kHz 单位，显示 5 位数字（如 07053 = 7053 kHz）
+    // 频率格式：kHz 单位，显示 5 位数字 + 2位100Hz（如 07050.00 = 7050.00 kHz）
     const freqKhz = Math.floor(mobileState.currentFrequency / 1000);
+    const freqHz = Math.floor((mobileState.currentFrequency % 1000) / 10); // 100Hz精度
     const freqStr = freqKhz.toString().padStart(5, '0');
+    const hzStr = freqHz.toString().padStart(2, '0');
     
-    // 更新显示元素（只更新 5 位数字）
+    // 更新显示元素（5位kHz + 2位100Hz）
     const elements = ['freq-10mhz', 'freq-1mhz', 
                       'freq-100khz', 'freq-10khz', 'freq-1khz'];
     
@@ -1073,6 +1115,12 @@ function updateFrequencyDisplay() {
         const el = document.getElementById(id);
         if (el) el.textContent = freqStr[index];
     });
+    
+    // 更新100Hz位
+    const el100hz = document.getElementById('freq-100hz');
+    const el10hz = document.getElementById('freq-10hz');
+    if (el100hz) el100hz.textContent = hzStr[0];
+    if (el10hz) el10hz.textContent = hzStr[1];
 }
 
 // 调节频率
@@ -1197,43 +1245,86 @@ function hideFrequencyInput(apply) {
 // SP: S表位置映射，键为信号级别(0-9为S单位，10-60为S9+dB)，值为画布X坐标
 // RIG_LEVEL_STRENGTH: 对应的dB值，S9=0dB
 
-// 更新 S 表
+// 更新 S 表 - 使用RIG的SignalLevel值
 function updateSMeter(level) {
-    const canvas = domElements.sMeterCanvas;
-    if (!canvas) return;
+    // level 是从RIG接收的SignalLevel值
+    // 0-9 = S0-S9, 10/15/20/... = S9+10/15/20...
+    const rigValue = parseInt(level);
     
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
+    if (isNaN(rigValue)) {
+        console.warn('⚠️ S表收到无效值:', level);
+        return;
+    }
     
-    const value = parseInt(level) || 0;
-    drawSMeter(ctx, value);
+    // 调试日志（每次显示，便于调试）
+    console.log('📊 S表接收:', 'RIG值=' + rigValue);
     
-    // 更新信号强度文字显示
-    updateSignalText(value);
+    // 记录RIG信号值接收时间
+    mobileState.lastRIGSignalTime = Date.now();
+    
+    // RIG_LEVEL_STRENGTH映射: 0:-54, 1:-48, ..., 9:0, 10:10, 15:15, ..., 60:60
+    // 转换为S单位: S0-S9 直接对应
+    let sValue;
+    if (rigValue <= 9) {
+        // S0-S9: 0-9
+        sValue = rigValue;
+    } else {
+        // 调整: RIG=57时显示S7
+        // 9 + 57/6 - 偏移 = 7  →  偏移 = 9 + 9.5 - 7 = 11.5
+        sValue = 9 + (rigValue / 6) - 11.5;
+    }
+    
+    console.log('📊 S表计算:', '原始sValue=' + sValue.toFixed(2));
+    
+    // 限制范围 S0 - S9+60 (最大19)
+    if (sValue < 0) sValue = 0;
+    if (sValue > 19) sValue = 19;
+    
+    // 取消平滑处理，直接显示
+    mobileState.currentSMeter = sValue;
+    
+    console.log('📊 S表显示:', 'currentSMeter=' + mobileState.currentSMeter.toFixed(2));
+    
+    // 更新显示（包括canvas和DOM中的S值）
+    drawSMeterSDR(mobileState.currentSMeter);
 }
 
-// 更新信号强度文字显示
-function updateSignalText(level) {
-    const signalText = document.querySelector('.signal-text');
-    if (!signalText) return;
+// 基于dBFS计算S表值（从SDR界面复制）
+function calculateSMeterValue(dbFS) {
+    const cal = mobileState.sMeterCalibration;
+    let sValue;
     
-    let res = "S0";
-    if (level > 9) {
-        res = "S9+" + level;
+    // 基于两个参考点进行线性插值计算S值
+    if (dbFS <= cal.baseNoiseDB) {
+        // 低于基础噪音，按每6dB一个S单位计算
+        const dbBelowBase = cal.baseNoiseDB - dbFS;
+        sValue = cal.baseNoiseS - (dbBelowBase / 6);
+    } else if (dbFS >= cal.strongSignalDB) {
+        // 高于强信号参考点
+        const dbAboveStrong = dbFS - cal.strongSignalDB;
+        sValue = cal.strongSignalS + (dbAboveStrong / 6);
     } else {
-        res = "S" + level;
+        // 在两个参考点之间进行线性插值
+        const dbRange = cal.strongSignalDB - cal.baseNoiseDB;
+        const sRange = cal.strongSignalS - cal.baseNoiseS;
+        const ratio = (dbFS - cal.baseNoiseDB) / dbRange;
+        sValue = cal.baseNoiseS + (sRange * ratio);
     }
     
-    // 添加dB显示
-    if (typeof RIG_LEVEL_STRENGTH[level] !== 'undefined') {
-        res += " (" + RIG_LEVEL_STRENGTH[level] + "dB)";
-    }
+    // 限制范围 S0 - S9+60 (15)
+    if (sValue < 0) sValue = 0;
+    if (sValue > 15) sValue = 15;
     
-    signalText.textContent = res;
+    return sValue;
+}
+
+// 更新信号强度文字显示（保留函数但逻辑已移至drawSMeterSDR）
+function updateSignalText(level) {
+    // S值显示现在由drawSMeterSDR函数统一处理
 }
 
 ////////////////////////////////////////////////////////////
-// S 表绘制
+// S 表绘制 - SDR风格
 ////////////////////////////////////////////////////////////
 
 function initializeSMeter() {
@@ -1243,21 +1334,32 @@ function initializeSMeter() {
         return;
     }
     
-    // 确保 SP 变量存在（来自 controls.js）
-    if (typeof SP === 'undefined') {
-        console.warn('SP 变量未定义，使用默认值');
-        // 定义默认 SP 映射表
-        window.SP = {0:0,1:25,2:37,3:50,4:62,5:73,6:84,7:98,8:110,9:123,10:144,20:164,30:180,40:202,50:221,60:240};
+    const ctx = canvas.getContext('2d');
+    drawSMeterSDR(0);
+}
+
+// SDR风格的S表绘制
+function drawSMeterSDR(sValue) {
+    const canvas = domElements.sMeterCanvas;
+    if (!canvas) {
+        console.warn('⚠️ drawSMeterSDR: canvas未找到');
+        return;
     }
     
     const ctx = canvas.getContext('2d');
-    drawSMeter(ctx, 0);
-}
-
-function drawSMeter(ctx, level) {
-    const canvas = ctx.canvas;
+    if (!ctx) {
+        console.warn('⚠️ drawSMeterSDR: 无法获取2D上下文');
+        return;
+    }
+    
     const width = canvas.width;
     const height = canvas.height;
+    
+    // 调试日志（限制频率）
+    if (!window._drawCount) window._drawCount = 0;
+    if (++window._drawCount % 20 === 0) {
+        console.log('📊 绘制S表:', 'sValue=' + sValue.toFixed(2), 'canvas=' + width + 'x' + height);
+    }
     
     // 清除画布
     ctx.clearRect(0, 0, width, height);
@@ -1266,73 +1368,165 @@ function drawSMeter(ctx, level) {
     ctx.fillStyle = '#111';
     ctx.fillRect(0, 0, width, height);
     
-    // S表刻度区域（0-240像素对应S0-S9+60dB）
-    const meterWidth = 240;
-    const meterStartX = 20;
+    // 计算百分比 (S0-S9对应0-50%, S9+10到S9+60对应50-100%)
+    let percentage;
+    let displayText;
     
-    // 绘制S单位刻度线（S1-S9）
+    if (sValue < 9) {
+        percentage = (sValue / 9) * 50;
+        displayText = `S${Math.round(sValue)}`;
+    } else {
+        const overS9 = (sValue - 9) * 6;
+        percentage = 50 + Math.min(overS9 / 60 * 50, 50);
+        if (overS9 <= 0) {
+            displayText = 'S9';
+        } else if (overS9 >= 60) {
+            displayText = 'S9+60';
+        } else {
+            displayText = `S9+${Math.round(overS9)}`;
+        }
+        console.log('📊 S9+分支:', 'overS9=' + overS9, '显示=' + displayText);
+    }
+    
+    // 绘制S表刻度线（S1-S9）- 前半段
     ctx.strokeStyle = '#444';
     ctx.lineWidth = 1;
     for (let i = 1; i <= 9; i++) {
-        if (SP[i] !== undefined) {
-            const x = meterStartX + SP[i];
-            ctx.beginPath();
-            ctx.moveTo(x, height * 0.7);
-            ctx.lineTo(x, height);
-            ctx.stroke();
-        }
+        const x = 20 + (i / 9) * (width * 0.5 - 40);
+        ctx.beginPath();
+        ctx.moveTo(x, height * 0.7);
+        ctx.lineTo(x, height);
+        ctx.stroke();
     }
     
-    // 绘制S9+刻度线（+10, +20, +30, +40, +50, +60）
+    // 绘制S9+刻度线（+10, +20, +30, +40, +50, +60）- 后半段
     ctx.strokeStyle = '#666';
-    for (let i = 10; i <= 60; i += 10) {
-        if (SP[i] !== undefined) {
-            const x = meterStartX + SP[i];
-            ctx.beginPath();
-            ctx.moveTo(x, height * 0.7);
-            ctx.lineTo(x, height);
-            ctx.stroke();
-        }
+    for (let i = 1; i <= 6; i++) {
+        const x = width * 0.5 + (i / 6) * (width * 0.5 - 40);
+        ctx.beginPath();
+        ctx.moveTo(x, height * 0.7);
+        ctx.lineTo(x, height);
+        ctx.stroke();
     }
+    
+    // 绘制S9分隔线
+    ctx.strokeStyle = '#888';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(width * 0.5, 0);
+    ctx.lineTo(width * 0.5, height);
+    ctx.stroke();
     
     // 绘制当前信号级别条形
-    if (typeof SP[level] !== 'undefined') {
-        const barX = meterStartX;
-        const barWidth = SP[level];
-        const barHeight = height * 0.5;
-        const barY = height * 0.25;
-        
-        // 创建渐变色
-        const gradient = ctx.createLinearGradient(barX, 0, barX + meterWidth, 0);
-        gradient.addColorStop(0, '#4CAF50');      // S1-S3 绿色
-        gradient.addColorStop(0.35, '#8BC34A');   // S4-S5 浅绿
-        gradient.addColorStop(0.5, '#FFC107');    // S6-S7 黄色
-        gradient.addColorStop(0.65, '#FF9800');   // S8-S9 橙色
-        gradient.addColorStop(0.75, '#F44336');   // S9+10 红色
-        gradient.addColorStop(1, '#D32F2F');      // S9+60 深红
-        
-        ctx.fillStyle = gradient;
-        ctx.fillRect(barX, barY, barWidth, barHeight);
-        
-        // 绘制指示线
-        ctx.strokeStyle = '#fffb16';
+    const barWidth = (percentage / 100) * (width - 40);
+    const barHeight = height * 0.5;
+    const barY = height * 0.25;
+    
+    // 根据信号强度选择颜色
+    let color;
+    if (sValue < 3) {
+        color = '#4CAF50'; // 绿色 - 弱信号
+    } else if (sValue < 7) {
+        color = '#FFC107'; // 黄色 - 中等
+    } else if (sValue < 9) {
+        color = '#FF9800'; // 橙色 - 强信号
+    } else {
+        color = '#f44336'; // 红色 - 很强
+    }
+    
+    // 绘制条形
+    ctx.fillStyle = color;
+    ctx.fillRect(20, barY, barWidth, barHeight);
+    
+    // 添加发光效果
+    ctx.shadowColor = color;
+    ctx.shadowBlur = 10;
+    ctx.fillRect(20, barY, barWidth, barHeight);
+    ctx.shadowBlur = 0;
+    
+    // 绘制指示线
+    if (barWidth > 0) {
+        ctx.strokeStyle = '#fff';
         ctx.lineWidth = 2;
         ctx.beginPath();
-        ctx.moveTo(meterStartX + SP[level], 0);
-        ctx.lineTo(meterStartX + SP[level], height);
+        ctx.moveTo(20 + barWidth, 0);
+        ctx.lineTo(20 + barWidth, height);
         ctx.stroke();
     }
     
-    // 绘制静噪线（如果有设置）
-    const squelchEl = document.getElementById('SQUELCH');
-    if (squelchEl) {
-        const sqValue = squelchEl.value * 2.5; // 转换为像素位置
-        ctx.strokeStyle = '#deded5';
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        ctx.moveTo(meterStartX + sqValue, 0);
-        ctx.lineTo(meterStartX + sqValue, height);
-        ctx.stroke();
+    // 更新DOM中的S值显示
+    const sMeterValueEl = document.getElementById('s-meter-value');
+    if (sMeterValueEl) {
+        sMeterValueEl.textContent = displayText;
+        sMeterValueEl.style.color = color;
+    }
+}
+
+// 基于音频计算S表值（电台没有S表输出，只能用音频）
+// 使用独立的 AudioRX_smeter_analyser，不受音量控制影响
+function updateSMeterFromAudio() {
+    // 使用独立的S表分析器（在音量控制之前）
+    const analyser = (typeof AudioRX_smeter_analyser !== 'undefined' && AudioRX_smeter_analyser) 
+        ? AudioRX_smeter_analyser 
+        : AudioRX_analyser;
+    
+    if (!analyser) {
+        return;
+    }
+    
+    const bufferLength = analyser.fftSize;
+    const dataArray = new Float32Array(bufferLength);
+    analyser.getFloatTimeDomainData(dataArray);
+    
+    // 计算RMS值
+    let sum = 0;
+    for (let i = 0; i < bufferLength; i++) {
+        sum += dataArray[i] * dataArray[i];
+    }
+    const rms = Math.sqrt(sum / bufferLength);
+    
+    // 转换为dBFS
+    const dbFS = 20 * Math.log10(rms);
+    
+    if (isNaN(dbFS) || !isFinite(dbFS)) {
+        return;
+    }
+    
+    // 更新状态
+    mobileState.currentAudioDB = dbFS;
+    mobileState.lastAudioTime = Date.now();
+    
+    // 计算S值
+    const sValue = calculateSMeterValue(dbFS);
+    
+    // 调试日志（限制频率避免刷屏）
+    if (!window._sMeterDebugCount) window._sMeterDebugCount = 0;
+    if (++window._sMeterDebugCount % 50 === 0) {
+        console.log('📊 S表音频:', 'dbFS=' + dbFS.toFixed(1), 'sValue=' + sValue.toFixed(2));
+    }
+    
+    // 平滑处理
+    mobileState.currentSMeter = mobileState.currentSMeter || sValue;
+    mobileState.currentSMeter = mobileState.currentSMeter * 0.5 + sValue * 0.5;
+    
+    // 更新显示
+    drawSMeterSDR(mobileState.currentSMeter);
+}
+
+// 启动S表监测
+function startSMeterMonitoring() {
+    if (mobileState.sMeterInterval) return;
+    
+    mobileState.sMeterInterval = setInterval(() => {
+        updateSMeterFromAudio();
+    }, 100); // 100ms更新一次
+}
+
+// 停止S表监测
+function stopSMeterMonitoring() {
+    if (mobileState.sMeterInterval) {
+        clearInterval(mobileState.sMeterInterval);
+        mobileState.sMeterInterval = null;
     }
 }
 
@@ -1361,12 +1555,9 @@ function handleQuickButton(button) {
     
     // 处理特定按钮
     if (button.id === 'vfo-a-btn' || button.id === 'vfo-b-btn') {
-        // VFO 切换 - 目前后端不支持，只更新 UI
+        // VFO 切换 - 目前后端不支持，只更新状态
         const vfo = button.id === 'vfo-a-btn' ? 'VFO-A' : 'VFO-B';
         mobileState.currentVFO = vfo;
-        if (domElements.vfoIndicator) {
-            domElements.vfoIndicator.textContent = vfo;
-        }
         console.log('VFO 切换:', vfo, '(后端暂不支持)');
         // TODO: 当后端支持时发送命令
         // sendWebSocketMessage("setVFO:" + vfo.replace('-', ''));
@@ -2436,7 +2627,7 @@ const ATR1000 = {
                 // 根据功率设置颜色
                 const colorClass = power > maxPower * 0.8 ? 'high' : power > maxPower * 0.5 ? 'medium' : 'low';
                 powerEl.dataset.powerLevel = colorClass;
-                powerEl.style.color = colorClass === 'high' ? '#f44336' : colorClass === 'medium' ? '#ff9800' : '#4CAF50';
+                powerEl.style.color = colorClass === 'high' ? '#f44336' : colorClass === 'medium' ? '#ff9800' : '#3b82f6';
             }
             
             if (swrEl) {
@@ -2446,7 +2637,7 @@ const ATR1000 = {
                 // 根据 SWR 设置颜色
                 const swrClass = swr >= 3 ? 'danger' : swr >= 2 ? 'warning' : 'normal';
                 swrEl.dataset.swrLevel = swrClass;
-                swrEl.style.color = swrClass === 'danger' ? '#f44336' : swrClass === 'warning' ? '#ff9800' : '#4CAF50';
+                swrEl.style.color = swrClass === 'danger' ? '#f44336' : swrClass === 'warning' ? '#ff9800' : '#3b82f6';
             }
             
             // 更新功率条
@@ -2458,11 +2649,11 @@ const ATR1000 = {
                 const barClass = powerPercent > 80 ? 'high' : powerPercent > 50 ? 'medium' : 'low';
                 powerBar.dataset.barLevel = barClass;
                 if (barClass === 'high') {
-                    powerBar.style.background = 'linear-gradient(90deg, #4CAF50, #ff9800, #f44336)';
+                    powerBar.style.background = 'linear-gradient(90deg, #3b82f6, #ff9800, #f44336)';
                 } else if (barClass === 'medium') {
-                    powerBar.style.background = 'linear-gradient(90deg, #4CAF50, #ff9800)';
+                    powerBar.style.background = 'linear-gradient(90deg, #3b82f6, #ff9800)';
                 } else {
-                    powerBar.style.background = '#4CAF50';
+                    powerBar.style.background = '#3b82f6';
                 }
             }
             
@@ -2480,7 +2671,7 @@ const ATR1000 = {
                 // SWR 条颜色
                 const swrBarClass = swr >= 3 ? 'danger' : swr >= 2 ? 'warning' : 'normal';
                 swrBar.dataset.swrLevel = swrBarClass;
-                swrBar.style.background = swrBarClass === 'danger' ? '#f44336' : swrBarClass === 'warning' ? '#ff9800' : '#4CAF50';
+                swrBar.style.background = swrBarClass === 'danger' ? '#f44336' : swrBarClass === 'warning' ? '#ff9800' : '#3b82f6';
             }
             
             // 更新继电器状态显示
@@ -2519,7 +2710,7 @@ const ATR1000 = {
             const freqStr = (record.freq / 1000).toFixed(1) + 'kHz';
             html += `<tr style="border-bottom: 1px solid #eee;">
                 <td style="padding: 8px;">${freqStr}</td>
-                <td style="padding: 8px; text-align: center; color: ${record.swr < 1.5 ? '#4CAF50' : record.swr < 2 ? '#ff9800' : '#f44336'}">${record.swr.toFixed(2)}</td>
+                <td style="padding: 8px; text-align: center; color: ${record.swr < 1.5 ? '#3b82f6' : record.swr < 2 ? '#ff9800' : '#f44336'}">${record.swr.toFixed(2)}</td>
                 <td style="padding: 8px; text-align: center;">${swText}</td>
                 <td style="padding: 8px; text-align: center;">
                     <button onclick="ATR1000.applyTunerRecord(${record.freq})" style="padding: 4px 8px; font-size: 11px; background: #2196F3; color: white; border: none; border-radius: 4px; cursor: pointer;">应用</button>
@@ -2686,7 +2877,7 @@ const ATR1000 = {
         if (statusEl) {
             if (online) {
                 statusEl.textContent = '●';
-                statusEl.style.color = '#4CAF50';
+                statusEl.style.color = '#3b82f6';
                 statusEl.title = '设备在线';
             } else {
                 statusEl.textContent = '○';
@@ -2794,22 +2985,22 @@ const ATR1000 = {
         
         if (powerEl) {
             powerEl.textContent = '0';
-            powerEl.style.color = '#4CAF50';
+            powerEl.style.color = '#3b82f6';
         }
         
         if (swrEl) {
             swrEl.textContent = '1.00';
-            swrEl.style.color = '#4CAF50';
+            swrEl.style.color = '#3b82f6';
         }
         
         if (powerBar) {
             powerBar.style.width = '0%';
-            powerBar.style.background = '#4CAF50';
+            powerBar.style.background = '#3b82f6';
         }
         
         if (swrBar) {
             swrBar.style.width = '0%';
-            swrBar.style.background = '#4CAF50';
+            swrBar.style.background = '#3b82f6';
         }
     }
 };
@@ -3234,6 +3425,31 @@ function initDSPControlPanel() {
     const mainToggle = document.getElementById('dsp-main-toggle');
     if (mainToggle) {
         mainToggle.checked = wdspState.enabled;
+        // 添加事件监听器（替代HTML中的onchange）
+        mainToggle.addEventListener('change', function() {
+            toggleWDSPMain(this.checked);
+        });
+    }
+
+    // 为DSP按钮添加事件监听器（替代HTML中的onclick）
+    const nr2Btn = document.getElementById('dsp-nr2-btn');
+    if (nr2Btn) {
+        nr2Btn.addEventListener('click', cycleWDSPNR2Level);
+    }
+
+    const nbBtn = document.getElementById('dsp-nb-btn');
+    if (nbBtn) {
+        nbBtn.addEventListener('click', toggleWDSPNB);
+    }
+
+    const anfBtn = document.getElementById('dsp-anf-btn');
+    if (anfBtn) {
+        anfBtn.addEventListener('click', toggleWDSPANF);
+    }
+
+    const agcBtn = document.getElementById('dsp-agc-btn');
+    if (agcBtn) {
+        agcBtn.addEventListener('click', cycleWDSPAGC);
     }
 
     // 更新按钮状态
@@ -3382,6 +3598,28 @@ function showRecordingStatus(message, type = 'info') {
 }
 
 /**
+ * 显示 CQ 状态消息（独立于录音状态）
+ */
+function showCQStatus(message, type = 'info') {
+    console.log(`📻 CQ状态 [${type}]: ${message}`);
+    
+    // 在 CQ 按钮上显示状态
+    const cqBtn = document.getElementById('cq-btn');
+    if (cqBtn) {
+        const label = cqBtn.querySelector('.cq-label-wide');
+        if (label) {
+            const originalText = label.textContent;
+            label.textContent = message;
+            
+            // 2秒后恢复原始文字
+            setTimeout(() => {
+                label.textContent = '📻 CQCQCQ';
+            }, 2000);
+        }
+    }
+}
+
+/**
  * 处理录音状态消息
  */
 function handleRecordingStatus(status) {
@@ -3428,58 +3666,82 @@ window.handleRecordingSaved = handleRecordingSaved;
 
 /**
  * 播放 CQ 音频
- * 使用服务器端的 CQ 功能播放 CQCQCQ.wav
+ * 使用服务器端的 CQ 功能播放 CQCQCQ.wav（播放完整文件）
  */
 function playCQAudio() {
-    console.log('📻 开始播放 CQCQCQ...');
-    
+    console.log('📻 开始播放 CQCQCQ..., isCQing=', typeof isCQing !== 'undefined' ? isCQing : 'undefined');
+
     // 检查 WebSocket 是否连接 - 尝试多种方式检测
-    const isConnected = window.isConnected || 
+    const isConnected = window.isConnected ||
                        (typeof wsControlTRX !== 'undefined' && wsControlTRX && wsControlTRX.readyState === WebSocket.OPEN) ||
                        (typeof poweron !== 'undefined' && poweron);
-    
+
+    console.log('📻 连接状态:', isConnected);
+
     if (!isConnected) {
-        showRecordingStatus('请先开启电源并连接电台', 'error');
+        showCQStatus('请先开启电源', 'error');
         return;
     }
-    
+
     // 检查是否已经在播放 CQ
-    if (window.isCQing) {
-        console.log('CQCQCQ 已经在播放中');
+    if (typeof isCQing !== 'undefined' && isCQing) {
+        console.log('📻 CQCQCQ 已经在播放中(isCQing=true)，强制重置状态');
+        // 强制重置状态，确保可以再次播放
+        if (typeof stopCQ === 'function') {
+            console.log('📻 调用stopCQ强制停止');
+            stopCQ();
+        }
+        // 短暂延迟后再次尝试
+        setTimeout(() => {
+            playCQAudioInternal();
+        }, 100);
         return;
     }
-    
+
+    playCQAudioInternal();
+}
+
+/**
+ * 内部函数：实际执行 CQ 播放
+ */
+function playCQAudioInternal() {
     // 使用服务器端的 startCQ 函数
     if (typeof startCQ === 'function') {
         // 添加视觉反馈
         const cqBtn = document.getElementById('cq-btn');
         if (cqBtn) {
             cqBtn.style.background = 'linear-gradient(180deg, #3a7a4a, #2a6a3a)';
-            cqBtn.style.transform = 'scale(0.98)';
+            cqBtn.disabled = true;
         }
-        
+
         startCQ();
-        showRecordingStatus('📻 CQCQCQ 发送中...', 'info');
-        
-        // 3.5 秒后自动停止（CQ 音频通常 3 秒左右）
-        setTimeout(() => {
-            if (typeof stopCQ === 'function') {
-                stopCQ();
-            }
-            showRecordingStatus('✅ CQCQCQ 发送完成', 'success');
-            
-            // 恢复按钮样式
-            if (cqBtn) {
-                cqBtn.style.background = '';
-                cqBtn.style.transform = '';
-            }
-        }, 3500);
+        showCQStatus('📻 播放中...', 'info');
+        console.log('⏳ 等待服务器播放完成...');
+        // 不再使用客户端定时器停止，完全依赖服务器的 cq:complete 通知
     } else {
         console.error('startCQ 函数不可用');
-        showRecordingStatus('❌ CQ 功能不可用', 'error');
+        showCQStatus('❌ 功能不可用', 'error');
     }
 }
 
-// 导出 CQ 播放函数
+/**
+ * 处理 CQ 完成（由服务器通知调用）
+ */
+function handleCQCompleteMobile() {
+    console.log('📻 handleCQCompleteMobile被调用，恢复按钮状态');
+
+    // 恢复按钮样式
+    const cqBtn = document.getElementById('cq-btn');
+    if (cqBtn) {
+        cqBtn.style.background = '';
+        cqBtn.disabled = false;
+        console.log('📻 CQ按钮已恢复');
+    }
+
+    showCQStatus('✅ 播放完成', 'success');
+}
+
+// 导出 CQ 相关函数
 window.playCQAudio = playCQAudio;
+window.handleCQCompleteMobile = handleCQCompleteMobile;
 

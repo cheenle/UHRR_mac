@@ -49,14 +49,13 @@
                         <span class="freq-digit" id="freq-1mhz">7</span>
                         <span class="freq-digit" id="freq-100khz">0</span>
                         <span class="freq-digit" id="freq-10khz">5</span>
-                        <span class="freq-digit" id="freq-1khz">3</span>
+                        <span class="freq-digit" id="freq-1khz">0</span>
+                        <span class="freq-decimal">.</span>
+                        <span class="freq-digit freq-hz" id="freq-100hz">0</span>
+                        <span class="freq-digit freq-hz" id="freq-10hz">0</span>
                     </div>
                     <!-- 频率输入框（默认隐藏） -->
                     <input type="text" id="freq-input" class="freq-input-hidden" placeholder="输入频率 (kHz)" inputmode="numeric" pattern="[0-9]*">
-                    <div class="freq-sub">
-                        <span class="vfo-indicator" id="vfo-indicator">VFO-A</span>
-                        <span class="mode-indicator" id="mode-indicator">USB</span>
-                    </div>
                 </div>
                 
                 <button id="power-btn" class="header-btn power-btn" aria-label="Power">
@@ -75,35 +74,50 @@
                 <div class="status-item" id="indwsControlTRX" style="display:none;"><img src="img/critsred.png">wsCtrl</div>
                 <div class="status-item" id="indwsAudioRX"><img src="img/critsred.png">wsRX</div>
                 <div class="status-item" id="indwsAudioTX"><img src="img/critsred.png">wsTX</div>
-                <div class="signal-strength">
-                    <div class="signal-bars">
-                        <div class="signal-bar"></div>
-                        <div class="signal-bar"></div>
-                        <div class="signal-bar"></div>
-                        <div class="signal-bar"></div>
-                        <div class="signal-bar"></div>
-                    </div>
-                    <span class="signal-text">S9</span>
-                </div>
+                <!-- 模式指示器 -->
+                <span class="mode-indicator-header" id="mode-indicator">USB</span>
             </div>
         </header>
         
         <!-- Main content area -->
         <main class="main-content">
-            <!-- S-Meter visualization -->
-            <section class="s-meter-section">
-                <canvas id="s-meter-canvas" width="350" height="18"></canvas>
-                <div class="s-meter-labels">
-                    <span>S1</span>
-                    <span>S3</span>
-                    <span>S5</span>
-                    <span>S7</span>
-                    <span>S9</span>
-                    <span>+20</span>
-                    <span>+40</span>
-                    <span>+60</span>
+            <!-- S-Meter & Power/SWR visualization -->
+            <div class="meter-display-frame">
+                <section class="s-meter-section">
+                    <div class="s-meter-container">
+                        <canvas id="s-meter-canvas" width="300" height="30"></canvas>
+                        <span class="s-meter-value" id="s-meter-value">S0</span>
+                    </div>
+                    <div class="s-meter-labels">
+                        <span>S1</span>
+                        <span>S3</span>
+                        <span>S5</span>
+                        <span>S7</span>
+                        <span>S9</span>
+                        <span>+20</span>
+                        <span>+40</span>
+                        <span>+60</span>
+                    </div>
+                </section>
+                <!-- ATR-1000 Power/SWR Display (放在S表下边) -->
+                <div class="atr-under-meter" id="atr-meter-section">
+                    <div class="atr-under-row">
+                        <span id="atr-device-status" class="atr-status-icon" title="设备状态">○</span>
+                        <span class="atr-under-label">功率</span>
+                        <span class="atr-under-value" id="atr-power">--</span>
+                        <span class="atr-under-unit">W</span>
+                        <div class="atr-under-bar">
+                            <div class="atr-power-bar-compact" id="atr-power-bar"></div>
+                        </div>
+                        <span class="atr-under-divider">|</span>
+                        <span class="atr-under-label">驻波</span>
+                        <span class="atr-under-value" id="atr-swr">--</span>
+                        <div class="atr-under-bar">
+                            <div class="atr-swr-bar-compact" id="atr-swr-bar"></div>
+                        </div>
+                    </div>
                 </div>
-            </section>
+            </div>
             
             <!-- Quick controls - 精简版 -->
             <section class="quick-controls">
@@ -120,27 +134,27 @@
                 <div class="dsp-header">
                     <span class="dsp-title">🎛️ DSP</span>
                     <label class="dsp-switch">
-                        <input type="checkbox" id="dsp-main-toggle" onchange="toggleWDSPMain(this.checked)">
+                        <input type="checkbox" id="dsp-main-toggle">
                         <span class="dsp-slider"></span>
                     </label>
                 </div>
                 <div class="dsp-buttons-row" id="dsp-buttons">
-                    <button class="dsp-btn" id="dsp-nr2-btn" onclick="cycleWDSPNR2Level()">
+                    <button class="dsp-btn" id="dsp-nr2-btn">
                         <span class="dsp-btn-icon">🔇</span>
                         <span class="dsp-btn-label">NR2</span>
                         <span class="dsp-btn-status" id="dsp-nr2-status">低</span>
                     </button>
-                    <button class="dsp-btn" id="dsp-nb-btn" onclick="toggleWDSPNB()">
+                    <button class="dsp-btn" id="dsp-nb-btn">
                         <span class="dsp-btn-icon">⚡</span>
                         <span class="dsp-btn-label">NB</span>
                         <span class="dsp-btn-status" id="dsp-nb-status">关</span>
                     </button>
-                    <button class="dsp-btn" id="dsp-anf-btn" onclick="toggleWDSPANF()">
+                    <button class="dsp-btn" id="dsp-anf-btn">
                         <span class="dsp-btn-icon">🎯</span>
                         <span class="dsp-btn-label">ANF</span>
                         <span class="dsp-btn-status" id="dsp-anf-status">关</span>
                     </button>
-                    <button class="dsp-btn" id="dsp-agc-btn" onclick="cycleWDSPAGC()">
+                    <button class="dsp-btn" id="dsp-agc-btn">
                         <span class="dsp-btn-icon">📊</span>
                         <span class="dsp-btn-label">AGC</span>
                         <span class="dsp-btn-status" id="dsp-agc-status">中</span>
@@ -148,34 +162,6 @@
                 </div>
             </section>
 
-            <!-- ATR-1000 Power/SWR Display (精简版，始终显示) -->
-            <section class="atr-meter-section-compact" id="atr-meter-section">
-                <div class="atr-compact-row">
-                    <div class="atr-compact-item">
-                        <span class="atr-compact-label">
-                            <span id="atr-device-status" style="font-size: 0.8em; margin-right: 4px;" title="设备状态">○</span>
-                            功率
-                        </span>
-                        <div class="atr-compact-value-row">
-                            <span class="atr-compact-value" id="atr-power">--</span>
-                            <span class="atr-compact-unit">W</span>
-                        </div>
-                        <div class="atr-bar-compact">
-                            <div class="atr-power-bar-compact" id="atr-power-bar"></div>
-                        </div>
-                    </div>
-                    <div class="atr-compact-item">
-                        <span class="atr-compact-label">驻波</span>
-                        <div class="atr-compact-value-row">
-                            <span class="atr-compact-value" id="atr-swr">--</span>
-                        </div>
-                        <div class="atr-bar-compact">
-                            <div class="atr-swr-bar-compact" id="atr-swr-bar"></div>
-                        </div>
-                    </div>
-                </div>
-            </section>
-            
             <!-- Volume Control - 精简版 -->
             <section class="volume-control-compact">
                 <div class="volume-row-compact">

@@ -1,6 +1,6 @@
 {
   "version": "2.0",
-  "updated": "2026-03-15T09:21:14.708005",
+  "updated": "2026-03-15T14:28:59.851299",
   "records": [
     {
       "freq": 7005000,
@@ -91,11 +91,11 @@
       "sw": 1,
       "ind": 3,
       "cap": 24,
-      "swr_avg": 1.0757602339181458,
+      "swr_avg": 1.0801085799446517,
       "swr_min": 1.02,
       "swr_max": 1.43,
-      "sample_count": 4446,
-      "last_update": 1773512917.520082,
+      "sample_count": 4697,
+      "last_update": 1773556139.8512902,
       "needs_verify": false
     },
     {
@@ -103,11 +103,11 @@
       "sw": 1,
       "ind": 3,
       "cap": 25,
-      "swr_avg": 1.0918561320755087,
+      "swr_avg": 1.0917810476751388,
       "swr_min": 1.02,
       "swr_max": 1.25,
-      "sample_count": 8480,
-      "last_update": 1773512260.9096372,
+      "sample_count": 8495,
+      "last_update": 1773543391.7806542,
       "needs_verify": false
     },
     {
@@ -115,11 +115,11 @@
       "sw": 1,
       "ind": 2,
       "cap": 23,
-      "swr_avg": 1.1593354943274023,
-      "swr_min": 1.03,
+      "swr_avg": 1.1187914789021012,
+      "swr_min": 1.02,
       "swr_max": 1.5,
-      "sample_count": 1234,
-      "last_update": 1773489312.8119822,
+      "sample_count": 2441,
+      "last_update": 1773547596.504268,
       "needs_verify": false
     },
     {
@@ -727,11 +727,11 @@
       "sw": 0,
       "ind": 1,
       "cap": 9,
-      "swr_avg": 1.0411764705882351,
+      "swr_avg": 1.0951230769230782,
       "swr_min": 1.04,
-      "swr_max": 1.05,
-      "sample_count": 17,
-      "last_update": 1772983125.35254,
+      "swr_max": 1.18,
+      "sample_count": 650,
+      "last_update": 1773544860.721725,
       "needs_verify": false
     },
     {
@@ -1339,11 +1339,11 @@
       "sw": 0,
       "ind": 1,
       "cap": 9,
-      "swr_avg": 1.0399999999999996,
+      "swr_avg": 1.1289719626168233,
       "swr_min": 1.04,
-      "swr_max": 1.04,
-      "sample_count": 15,
-      "last_update": 1773107990.384073,
+      "swr_max": 1.18,
+      "sample_count": 214,
+      "last_update": 1773553467.28269,
       "needs_verify": false
     },
     {

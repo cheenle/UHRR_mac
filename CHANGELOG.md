@@ -5,6 +5,40 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [V4.9.2] - 2026-03-15
+
+### 🎨 UI风格改版与功能修复
+
+**蓝色系专业风格UI改版**:
+- 全新蓝色系配色方案（青色 #00d4ff 为主色调）
+- CSS 变量系统化重构，支持主题定制
+- 频率显示改为 SDR 风格蓝色数码管效果
+- 按钮、菜单、弹窗统一蓝色风格
+- 信号强度表(S-Meter)视觉优化
+
+**S表显示优化**:
+- 创建独立的 S 表分析器（不受音量控制影响）
+- 音频链优化：滤波器后连接独立分析器
+- 移动端 S 表更新支持
+
+**CQ功能修复**:
+- 修复 CQ 播放完成后自动停止逻辑
+- 支持移动端 CQ 按钮状态同步
+- 添加 `handleCQCompleteMobile` 移动端处理函数
+- 完善 CQ 状态日志输出
+
+**天调数据更新**:
+- `atr1000_tuner.json` 数据更新（样本数、SWR平均值等）
+
+**文件变更**:
+- `www/mobile_modern.css` - 蓝色系UI改版
+- `www/mobile_modern.html` - 对应HTML结构调整
+- `www/mobile_modern.js` - 功能逻辑更新
+- `www/controls.js` - S表和CQ功能修复
+- `atr1000_tuner.json` - 天调数据更新
+
+---
+
 ## [V4.9.1] - 2026-03-15
 
 ### 🎯 多实例支持深度优化
