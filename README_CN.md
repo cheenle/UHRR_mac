@@ -1,6 +1,6 @@
-# Mobile Remote Radio Control (MRRC) V4.9.0
+# Mobile Remote Radio Control (MRRC) V4.9.2
 
-[![English](https://img.shields.io/badge/lang-English-blue.svg)](README_en.md) [![中文](https://img.shields.io/badge/lang-中文-red.svg)](README_CN.md) [![版本](https://img.shields.io/badge/版本-V4.9.0-green.svg)](CHANGELOG.md)
+[![English](https://img.shields.io/badge/lang-English-blue.svg)](README_en.md) [![中文](https://img.shields.io/badge/lang-中文-red.svg)](README_CN.md) [![版本](https://img.shields.io/badge/版本-V4.9.2-green.svg)](CHANGELOG.md)
 
 **随时随地，畅享业余无线电。**
 
@@ -8,11 +8,12 @@ MRRC 是一款专为移动端优化的业余电台远程控制系统。无论您
 
 > ✅ **核心优势**：移动端优先设计，TX→RX切换延迟<100ms，PWA支持离线访问，专为单手操作优化
 >
-> 🎉 **V4.9.0 更新亮点**：
-> - 🎙️ **AI语音助手**：Whisper语音识别 + Qwen3-TTS语音合成
-> - 📡 **CW实时解码**：ONNX前端推理，QSO状态机智能建议
-> - 🖥️ **SDR现代界面**：全新SDR控制界面
-> - 🖥️ **多实例支持**：单服务器运行多个独立电台实例
+> 🎉 **V4.9.2 更新亮点**：
+> - 🎨 **蓝色系UI风格改版**：全新SDR风格蓝色专业配色
+> - 📊 **S表显示优化**：独立分析器，不受音量控制影响
+> - 📻 **CQ功能修复**：支持移动端自动停止
+>
+> 历史版本：V4.9.0 语音助手、CW实时解码、SDR界面、多实例支持
 
 ## 🎯 设计理念
 

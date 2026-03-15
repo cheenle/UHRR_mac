@@ -1,8 +1,8 @@
-# Mobile Remote Radio Control (MRRC) V4.9.0
+# Mobile Remote Radio Control (MRRC) V4.9.2
 
 [![English](https://img.shields.io/badge/lang-English-blue.svg)](README_en.md)
 [![中文](https://img.shields.io/badge/lang-中文-red.svg)](README_CN.md)
-[![Version](https://img.shields.io/badge/version-V4.9.0-green.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-V4.9.2-green.svg)](CHANGELOG.md)
 
 ---
 
@@ -14,7 +14,9 @@ A modern web-based remote control system optimized for mobile devices, enabling 
 
 基于现代Web技术的远程电台控制系统，专为移动端优化，让您随时随地灵活操控业余电台。
 
-> 🎉 **V4.9.0 更新**: 语音助手、CW实时解码、SDR界面、多实例支持
+> 🎉 **V4.9.2 更新**: 蓝色系UI风格改版、S表显示优化、CQ功能修复
+>
+> 历史版本: V4.9.0 语音助手、CW实时解码、SDR界面、多实例支持
 
 ---
 

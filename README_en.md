@@ -1,12 +1,19 @@
-# Mobile Remote Radio Control (MRRC)
+# Mobile Remote Radio Control (MRRC) V4.9.2
 
-[![English](https://img.shields.io/badge/lang-English-blue.svg)](README_en.md) [![中文](https://img.shields.io/badge/lang-中文-red.svg)](README_CN.md)
+[![English](https://img.shields.io/badge/lang-English-blue.svg)](README_en.md) [![中文](https://img.shields.io/badge/lang-中文-red.svg)](README_CN.md) [![Version](https://img.shields.io/badge/version-V4.9.2-green.svg)](CHANGELOG.md)
 
 **Amateur Radio, Anytime, Anywhere.**
 
 MRRC is a modern web-based remote control system optimized for mobile devices, enabling flexible operation of your amateur radio station from anywhere. Built with HTML5/JS frontend and Tornado + PyAudio + rigctld (Hamlib) backend.
 
 > ✅ **Core Advantage**: Mobile-first design, TX→RX switching latency <100ms, PWA support for offline access, optimized for one-hand operation
+>
+> 🎉 **V4.9.2 Highlights**:
+> - 🎨 **Blue Theme UI Refresh**: New SDR-style professional blue color scheme
+> - 📊 **S-Meter Optimization**: Independent analyzer, unaffected by volume control
+> - 📻 **CQ Function Fix**: Auto-stop support for mobile devices
+>
+> Previous: V4.9.0 Voice Assistant, CW Decoder, SDR Interface, Multi-Instance Support
 
 ## 🎯 Design Philosophy
 

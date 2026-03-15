@@ -1,6 +1,6 @@
 {
   "version": "2.0",
-  "updated": "2026-03-15T14:28:59.851299",
+  "updated": "2026-03-15T14:30:13.019013",
   "records": [
     {
       "freq": 7005000,
@@ -91,11 +91,11 @@
       "sw": 1,
       "ind": 3,
       "cap": 24,
-      "swr_avg": 1.0801085799446517,
+      "swr_avg": 1.0801977461195038,
       "swr_min": 1.02,
       "swr_max": 1.43,
-      "sample_count": 4697,
-      "last_update": 1773556139.8512902,
+      "sample_count": 4703,
+      "last_update": 1773556182.091943,
       "needs_verify": false
     },
     {
@@ -115,11 +115,11 @@
       "sw": 1,
       "ind": 2,
       "cap": 23,
-      "swr_avg": 1.1187914789021012,
+      "swr_avg": 1.1174528680304978,
       "swr_min": 1.02,
       "swr_max": 1.5,
-      "sample_count": 2441,
-      "last_update": 1773547596.504268,
+      "sample_count": 2493,
+      "last_update": 1773556213.019009,
       "needs_verify": false
     },
     {
