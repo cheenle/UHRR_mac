@@ -224,7 +224,14 @@ document.addEventListener('DOMContentLoaded', function() {
     } catch (e) {
         console.error('❌ setupMenuItems 失败:', e);
     }
-    
+
+    try {
+        setupFullscreenListener();
+        console.log('✅ 全屏监听器初始化完成');
+    } catch (e) {
+        console.error('❌ setupFullscreenListener 失败:', e);
+    }
+
     try {
         loadAudioSettingsFromCookies();
     } catch (e) {
@@ -1702,7 +1709,7 @@ function updateTuneButtons() {
 function handleMenuItem(action) {
     console.log('菜单项点击:', action);
     closeMenu();
-    
+
     switch (action) {
         case 'bands':
             showBandSelector();
@@ -1731,7 +1738,65 @@ function handleMenuItem(action) {
         case 'about':
             showAboutPanel();
             break;
+        case 'fullscreen':
+            toggleFullscreen();
+            break;
     }
+}
+
+// 全屏模式切换
+function toggleFullscreen() {
+    console.log('⛶ 切换全屏模式');
+
+    if (!document.fullscreenElement &&
+        !document.webkitFullscreenElement &&
+        !document.mozFullScreenElement &&
+        !document.msFullscreenElement) {
+        // 进入全屏
+        const docEl = document.documentElement;
+        if (docEl.requestFullscreen) {
+            docEl.requestFullscreen().catch(err => {
+                console.error('全屏请求失败:', err);
+                showNotification('全屏模式需要用户手势触发', 'warning');
+            });
+        } else if (docEl.webkitRequestFullscreen) {
+            docEl.webkitRequestFullscreen();
+        } else if (docEl.mozRequestFullScreen) {
+            docEl.mozRequestFullScreen();
+        } else if (docEl.msRequestFullscreen) {
+            docEl.msRequestFullscreen();
+        }
+    } else {
+        // 退出全屏
+        if (document.exitFullscreen) {
+            document.exitFullscreen();
+        } else if (document.webkitExitFullscreen) {
+            document.webkitExitFullscreen();
+        } else if (document.mozCancelFullScreen) {
+            document.mozCancelFullScreen();
+        } else if (document.msExitFullscreen) {
+            document.msExitFullscreen();
+        }
+    }
+}
+
+// 监听全屏状态变化，更新菜单文字
+function setupFullscreenListener() {
+    const fullscreenBtn = document.getElementById('fullscreen-btn');
+    if (!fullscreenBtn) return;
+
+    const updateFullscreenLabel = () => {
+        const isFullscreen = !!(document.fullscreenElement ||
+                               document.webkitFullscreenElement ||
+                               document.mozFullScreenElement ||
+                               document.msFullscreenElement);
+        fullscreenBtn.innerHTML = isFullscreen ? '⛶ 退出全屏' : '⛶ 全屏模式';
+    };
+
+    document.addEventListener('fullscreenchange', updateFullscreenLabel);
+    document.addEventListener('webkitfullscreenchange', updateFullscreenLabel);
+    document.addEventListener('mozfullscreenchange', updateFullscreenLabel);
+    document.addEventListener('MSFullscreenChange', updateFullscreenLabel);
 }
 
 // 波段选择器

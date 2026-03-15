@@ -27,13 +27,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 添加 `handleCQCompleteMobile` 移动端处理函数
 - 完善 CQ 状态日志输出
 
+**全屏模式功能**:
+- 菜单中添加全屏模式按钮
+- 支持一键进入/退出全屏
+- 菜单按钮文字根据全屏状态自动更新
+- 兼容 iOS Safari 和 Android Chrome
+
 **天调数据更新**:
 - `atr1000_tuner.json` 数据更新（样本数、SWR平均值等）
 
 **文件变更**:
 - `www/mobile_modern.css` - 蓝色系UI改版
-- `www/mobile_modern.html` - 对应HTML结构调整
-- `www/mobile_modern.js` - 功能逻辑更新
+- `www/mobile_modern.html` - 对应HTML结构调整，添加全屏按钮
+- `www/mobile_modern.js` - 功能逻辑更新，添加全屏功能
 - `www/controls.js` - S表和CQ功能修复
 - `atr1000_tuner.json` - 天调数据更新
 
