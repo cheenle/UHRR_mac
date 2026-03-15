@@ -1984,11 +1984,111 @@ function showSettingsPanel() {
     html += '<option value="4"' + (wdspState.agcMode == 4 ? ' selected' : '') + '>快</option>';
     html += '</select>';
     html += '</div>';
-    
+
+    // 高级设置链接
+    html += '<div class="setting-item wdsp-item" style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #333;">';
+    html += '<a href="#" onclick="showWDSPAdvancedSettings(); return false;" style="color: #00d4ff; text-decoration: none; font-size: 14px;">⚙️ 高级设置...</a>';
+    html += '</div>';
+
     html += '</div>'; // 关闭WDSP设置容器
-    
+
     html += '<button class="close-panel-btn" onclick="closeModalPanel()">关闭</button></div>';
     showModalPanel(html);
+}
+
+// WDSP 高级设置面板
+function showWDSPAdvancedSettings() {
+    // 重新加载WDSP状态
+    loadWDSPStateFromCookies();
+
+    let html = '<div class="modal-panel"><h3>🎛️ WDSP 高级设置</h3>';
+
+    // 说明文字
+    html += '<p style="font-size:12px;color:#888;margin-bottom:15px;">WDSP 数字信号处理详细参数配置</p>';
+
+    // WDSP 主开关
+    html += '<div class="setting-item wdsp-item">';
+    html += '<label class="switch-label"><span>WDSP 处理总开关</span>';
+    html += '<input type="checkbox" id="wdsp-adv-enabled" onchange="toggleWDSP(this.checked)" ' + (wdspState.enabled ? 'checked' : '') + '>';
+    html += '<span class="switch-slider"></span></label>';
+    html += '</div>';
+
+    // NR2 开关
+    html += '<div class="setting-item wdsp-item">';
+    html += '<label class="switch-label"><span>频谱降噪 (NR2)</span>';
+    html += '<input type="checkbox" id="wdsp-adv-nr2" onchange="setWDSPNR2(this.checked)" ' + (wdspState.nr2 ? 'checked' : '') + ' ' + (wdspState.enabled ? '' : 'disabled') + '>';
+    html += '<span class="switch-slider"></span></label>';
+    html += '</div>';
+
+    // NR2 Level 选择
+    const nr2Levels = ['关闭', '极温和', '低', '中', '高'];
+    html += '<div class="setting-item wdsp-item">';
+    html += '<label>NR2 降噪强度</label>';
+    html += '<select id="wdsp-adv-nr2-level" onchange="setWDSPNR2Level(parseInt(this.value))" ' + (wdspState.enabled && wdspState.nr2 ? '' : 'disabled') + '>';
+    nr2Levels.forEach((level, idx) => {
+        html += '<option value="' + idx + '"' + (wdspState.nr2Level == idx ? ' selected' : '') + '>' + level + '</option>';
+    });
+    html += '</select>';
+    html += '</div>';
+
+    // NB 开关
+    html += '<div class="setting-item wdsp-item">';
+    html += '<label class="switch-label"><span>噪声抑制 (NB)</span>';
+    html += '<input type="checkbox" id="wdsp-adv-nb" onchange="setWDSPNB(this.checked)" ' + (wdspState.nb ? 'checked' : '') + ' ' + (wdspState.enabled ? '' : 'disabled') + '>';
+    html += '<span class="switch-slider"></span></label>';
+    html += '</div>';
+
+    // ANF 开关
+    html += '<div class="setting-item wdsp-item">';
+    html += '<label class="switch-label"><span>自动陷波 (ANF)</span>';
+    html += '<input type="checkbox" id="wdsp-adv-anf" onchange="setWDSPANF(this.checked)" ' + (wdspState.anf ? 'checked' : '') + ' ' + (wdspState.enabled ? '' : 'disabled') + '>';
+    html += '<span class="switch-slider"></span></label>';
+    html += '</div>';
+
+    // AGC 模式
+    const agcModes = ['关闭', '长 (LONG)', '慢 (SLOW)', '中 (MED)', '快 (FAST)'];
+    html += '<div class="setting-item wdsp-item">';
+    html += '<label>AGC 自动增益控制</label>';
+    html += '<select id="wdsp-adv-agc" onchange="setWDSPAGC(parseInt(this.value))" ' + (wdspState.enabled ? '' : 'disabled') + '>';
+    agcModes.forEach((mode, idx) => {
+        html += '<option value="' + idx + '"' + (wdspState.agcMode == idx ? ' selected' : '') + '>' + mode + '</option>';
+    });
+    html += '</select>';
+    html += '</div>';
+
+    // 说明信息
+    html += '<div style="margin-top:15px;padding:10px;background:#1a1a2a;border-radius:8px;font-size:12px;color:#888;">';
+    html += '<strong>参数说明：</strong><br>';
+    html += '• <strong>NR2</strong>: 频谱降噪，推荐开启（极温和）<br>';
+    html += '• <strong>NB</strong>: 噪声抑制器，消除脉冲噪声<br>';
+    html += '• <strong>ANF</strong>: 自动陷波，消除单频干扰<br>';
+    html += '• <strong>AGC</strong>: 自动增益控制，推荐"中"模式';
+    html += '</div>';
+
+    html += '<button class="close-panel-btn" onclick="closeModalPanel()" style="margin-top:15px;">关闭</button></div>';
+    showModalPanel(html);
+}
+
+// 设置 NR2 Level（用于高级设置面板）
+function setWDSPNR2Level(level) {
+    if (!wdspState.enabled) return;
+    wdspState.nr2Level = level;
+    wdspState.nr2 = (level > 0); // level > 0 时自动启用 NR2
+
+    // 发送命令到后端
+    if (typeof sendCommand === 'function') {
+        sendCommand('setWDSPNR2Level', level.toString());
+        sendCommand('setWDSPNR2', wdspState.nr2 ? 'true' : 'false');
+    }
+
+    // 保存到 Cookie
+    saveWDSPStateToCookies();
+
+    // 更新主设置面板（如果打开）
+    const nr2Checkbox = document.getElementById('wdsp-nr2');
+    if (nr2Checkbox) nr2Checkbox.checked = wdspState.nr2;
+
+    console.log('🔧 WDSP NR2 Level:', level, '(' + (['关', '极温和', '低', '中', '高'][level] || '未知') + ')');
 }
 
 function setAFGain(value) {
@@ -3092,6 +3192,7 @@ const NR2_LEVEL_NAMES = ['关', '极', '低', '中', '高'];
 // WDSP 状态（默认与后端配置一致）
 var wdspState = {
     enabled: true,  // 与 MRRC.conf 中的 enabled = True 一致
+    nr2: true,      // NR2 默认启用
     nr2Level: 1,    // 默认极温和 (0=关, 1=极, 2=低, 3=中, 4=高)
     nb: true,
     anf: false,
@@ -3106,6 +3207,7 @@ function loadWDSPStateFromCookies() {
             if (saved) {
                 var settings = JSON.parse(saved);
                 wdspState.enabled = settings.enabled !== undefined ? settings.enabled : true;
+                wdspState.nr2 = settings.nr2 !== undefined ? settings.nr2 : true;
                 wdspState.nr2Level = settings.nr2Level !== undefined ? settings.nr2Level : 1;
                 wdspState.nb = settings.nb !== undefined ? settings.nb : true;
                 wdspState.anf = settings.anf !== undefined ? settings.anf : false;
@@ -3172,11 +3274,18 @@ function toggleWDSP(enabled) {
 // 设置 NR2
 function setWDSPNR2(enabled) {
     wdspState.nr2 = enabled;
+    // 启用时如果 level 为 0，则默认设置为 1（极温和）
+    if (enabled && wdspState.nr2Level === 0) {
+        wdspState.nr2Level = 1;
+        if (typeof sendCommand === 'function') {
+            sendCommand('setWDSPNR2Level', '1');
+        }
+    }
     if (typeof sendCommand === 'function') {
         sendCommand('setWDSPNR2', enabled ? 'true' : 'false');
     }
     saveWDSPStateToCookies();
-    console.log('🔧 WDSP NR2:', enabled ? '启用' : '禁用');
+    console.log('🔧 WDSP NR2:', enabled ? '启用' : '禁用', 'Level:', wdspState.nr2Level);
 }
 
 // 设置 NB

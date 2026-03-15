@@ -33,13 +33,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 菜单按钮文字根据全屏状态自动更新
 - 兼容 iOS Safari 和 Android Chrome
 
+**WDSP DSP设置增强**:
+- 在设置面板的WDSP区域添加'⚙️ 高级设置...'链接
+- 新增高级设置面板，包含详细WDSP参数配置：
+  - NR2 降噪强度选择（关闭/极温和/低/中/高）
+  - WDSP 各功能独立开关
+  - AGC 模式详细说明
+- 默认NR2启用（nr2: true），默认级别 level=1（极温和）
+- 新增 `setWDSPNR2Level()` 函数用于调节NR2强度
+- 优化 `setWDSPNR2()` 函数，启用时自动设置默认level=1
+
 **天调数据更新**:
 - `atr1000_tuner.json` 数据更新（样本数、SWR平均值等）
 
 **文件变更**:
 - `www/mobile_modern.css` - 蓝色系UI改版
 - `www/mobile_modern.html` - 对应HTML结构调整，添加全屏按钮
-- `www/mobile_modern.js` - 功能逻辑更新，添加全屏功能
+- `www/mobile_modern.js` - 功能逻辑更新，添加全屏功能、WDSP高级设置
 - `www/controls.js` - S表和CQ功能修复
 - `atr1000_tuner.json` - 天调数据更新
 
