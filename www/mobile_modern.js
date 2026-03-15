@@ -114,9 +114,9 @@ var mobileState = {
     // S表校准参数（为音频计算调整）
     // 当前：显示 S9，应该是 S7，需降低约 2 个 S 单位
     sMeterCalibration: {
-        baseNoiseDB: -70,      // 基准噪音点
+        baseNoiseDB: -80,      // 基准噪音点
         baseNoiseS: 0,         // S0 (无信号)
-        strongSignalDB: -55,   // 降低强信号参考点
+        strongSignalDB: -50,   // 强信号参考点
         strongSignalS: 4.0     // 降低约 2 个 S 单位，使 S9 显示变为 S7
     },
     currentSMeter: 0,          // 当前S表值
