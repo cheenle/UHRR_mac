@@ -1114,6 +1114,46 @@ def sync_freq_to_atr1000(freq):
         # 静默失败，不影响主程序
         logger.debug(f"频率同步失败: {e}")
 
+# 独立的频率同步线程 - 不依赖WebSocket客户端连接
+class FrequencySyncThread(threading.Thread):
+    """
+    独立的频率同步线程
+    定期从rigctld读取频率并同步到ATR-1000代理
+    支持第三方软件（JTDX、flrig等）频率变更联动
+    """
+    def __init__(self):
+        threading.Thread.__init__(self)
+        self.daemon = True
+        self.running = True
+        self.last_freq = 0
+        self.sync_interval = 2.0  # 同步间隔（秒）
+        
+    def run(self):
+        logger.info("🔄 频率同步线程启动")
+        while self.running:
+            try:
+                # 等待CTRX初始化完成
+                if 'CTRX' not in globals() or CTRX is None:
+                    time.sleep(1)
+                    continue
+                    
+                # 获取当前频率
+                current_freq = CTRX.getFreq()
+                
+                # 只有频率变化时才同步（避免不必要的通信）
+                if current_freq and current_freq > 0 and current_freq != self.last_freq:
+                    sync_freq_to_atr1000(current_freq)
+                    self.last_freq = current_freq
+                    logger.debug(f"🔄 频率同步: {current_freq/1000:.1f}kHz")
+                    
+            except Exception as e:
+                logger.debug(f"频率同步线程异常: {e}")
+                
+            time.sleep(self.sync_interval)
+            
+    def stop(self):
+        self.running = False
+
 # 在程序启动时加载配置
 load_optimized_configs()
 
@@ -1340,7 +1380,7 @@ class ATR1000ProxyManager:
             else:
                 logger.debug("ATR-1000 读取线程已在运行")
         except Exception as e:
-            logger.warning(f"⚠️ ATR-1000 代理连接失败: {e}")
+            logger.warning(f"⚠️ ATR-1000 代理连接失败 (Socket: {INSTANCE_UNIX_SOCKET}): {e}")
             self.unix_socket = None
             # 清除重连状态
             if hasattr(self, '_reconnecting'):
@@ -3124,6 +3164,11 @@ if __name__ == "__main__":
 		
 		# V4.8.1: 启动时自动连接 ATR-1000 代理
 		atr1000_proxy_manager.start()
+		
+		# V4.9.2: 启动独立的频率同步线程（支持第三方软件联动）
+		freq_sync_thread = FrequencySyncThread()
+		freq_sync_thread.start()
+		logger.info("🚀 频率同步线程已启动（支持JTDX/flrig联动）")
 		
 		app = tornado.web.Application([
 					(r'/login', AuthLoginHandler),			(r'/logout', AuthLogoutHandler),

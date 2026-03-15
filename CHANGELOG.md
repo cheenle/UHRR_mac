@@ -5,6 +5,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [V4.9.3] - 2026-03-16
+
+### 🔄 频率同步线程 - 第三方软件联动修复
+
+**问题修复**:
+- **修复JTDX/flrig频率联动失效**: 原频率同步逻辑依赖WebSocket客户端连接，无客户端时不工作
+- **添加独立频率同步线程**: 新增 `FrequencySyncThread` 类，独立于WebSocket连接运行
+- **支持第三方软件联动**: JTDX、flrig、wfview等软件改变频率时自动同步天调
+
+**技术实现**:
+- 新增 `FrequencySyncThread` 线程类（daemon模式）
+- 每2秒检测频率变化（可配置）
+- 频率变化时自动调用 `sync_freq_to_atr1000()` 同步到ATR-1000代理
+- 启动时自动运行，无需客户端连接
+
+**测试验证**:
+- 7.074 MHz → 14.150 MHz → 3.850 MHz → 7.074 MHz 频率切换测试通过
+- 天调参数自动调整正常
+
+**文件变更**:
+- `MRRC` - 添加 `FrequencySyncThread` 类和启动代码
+
+---
+
 ## [V4.9.2] - 2026-03-15
 
 ### 🎨 UI风格改版与功能修复
