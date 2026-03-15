@@ -43,14 +43,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 新增 `setWDSPNR2Level()` 函数用于调节NR2强度
 - 优化 `setWDSPNR2()` 函数，启用时自动设置默认level=1
 
+**频率步进调整**:
+- 默认步进从 100Hz (0.1kHz) 调整为 1kHz
+- `mobileState.tuneStep` 默认值改为 1
+- `mobileState.tuneStepIndex` 改为 1
+- 更适合日常频率调整习惯
+
 **天调数据更新**:
 - `atr1000_tuner.json` 数据更新（样本数、SWR平均值等）
 
 **文件变更**:
 - `www/mobile_modern.css` - 蓝色系UI改版
 - `www/mobile_modern.html` - 对应HTML结构调整，添加全屏按钮
-- `www/mobile_modern.js` - 功能逻辑更新，添加全屏功能、WDSP高级设置
+- `www/mobile_modern.js` - 功能逻辑更新，添加全屏功能、WDSP高级设置、步进调整
 - `www/controls.js` - S表和CQ功能修复
+- `MRRC.radio1.conf` - NR设置优化
 - `atr1000_tuner.json` - 天调数据更新
 
 ---

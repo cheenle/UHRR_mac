@@ -107,8 +107,8 @@ var mobileState = {
     currentMode: 'USB',
     currentVFO: 'VFO-A',
     isTransmitting: false,
-    tuneStep: 0.1,  // 默认步进 100Hz (0.1kHz)
-    tuneStepIndex: 0,  // 当前步进索引
+    tuneStep: 1,  // 默认步进 1kHz
+    tuneStepIndex: 1,  // 当前步进索引 (1kHz在数组中的位置)
     tuneSteps: [0.1, 1, 5, 50],  // 步进数组: 100Hz, 1kHz, 5kHz, 50kHz
     
     // S表校准参数（为音频计算调整）
