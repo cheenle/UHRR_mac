@@ -116,7 +116,7 @@ var mobileState = {
     sMeterCalibration: {
         baseNoiseDB: -70,      // 基准噪音点
         baseNoiseS: 0,         // S0 (无信号)
-        strongSignalDB: -42,   // 稍微降低强信号参考点
+        strongSignalDB: -55,   // 降低强信号参考点
         strongSignalS: 4.0     // 降低约 2 个 S 单位，使 S9 显示变为 S7
     },
     currentSMeter: 0,          // 当前S表值
