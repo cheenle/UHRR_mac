@@ -538,66 +538,333 @@ agc_mode = 2
 
 ## 多实例配置
 
-MRRC 支持单服务器运行多个独立电台实例，每个实例有独立的配置和天调学习数据。
+MRRC 支持单服务器运行多个独立电台实例，每个实例有独立的配置、端口、日志和天调学习数据。
 
 ### 使用场景
 
-- 同时控制多部电台
-- 主备电台切换
-- 不同波段电台独立管理
+- **多电台控制**: 同时控制多部电台（如 HF + VHF）
+- **主备切换**: 主电台故障时快速切换到备用电台
+- **多波段独立**: 不同波段使用不同天线系统
+- **多人共享**: 不同操作员使用不同电台
 
-### 多实例配置文件
+### 多实例脚本 `mrrc_multi.sh`
 
-每个实例需要一个独立的配置文件：
+MRRC 提供了专门的多实例管理脚本，可以统一管理多个实例的启动、停止和监控。
 
-```
-MRRC.radio1.conf  # 实例1: 主电台
-MRRC.radio2.conf  # 实例2: 备用电台
-```
+#### 脚本功能
 
-### 配置步骤
+| 命令 | 说明 | 示例 |
+|------|------|------|
+| `create <name>` | 创建新实例配置 | `./mrrc_multi.sh create radio1` |
+| `start <name>` | 启动指定实例 | `./mrrc_multi.sh start radio1` |
+| `stop <name>` | 停止指定实例 | `./mrrc_multi.sh stop radio1` |
+| `restart <name>` | 重启指定实例 | `./mrrc_multi.sh restart radio1` |
+| `status [name]` | 查看实例状态 | `./mrrc_multi.sh status` 或 `status radio1` |
+| `logs <name> [n]` | 查看日志 | `./mrrc_multi.sh logs radio1 50` |
+| `list` | 列出所有实例 | `./mrrc_multi.sh list` |
+| `delete <name>` | 删除实例 | `./mrrc_multi.sh delete radio1` |
 
-#### 步骤 1: 复制并修改配置文件
+### 快速开始（推荐方式）
+
+#### 步骤 1: 创建第一个实例
 
 ```bash
-# 复制主配置
-cp MRRC.conf MRRC.radio1.conf
-cp MRRC.conf MRRC.radio2.conf
+# 使用脚本自动创建配置
+./mrrc_multi.sh create radio1
+
+# 输出：
+# [radio1] Created config: /path/to/MRRC.radio1.conf
+# [radio1] MRRC Port: 8891
+# [radio1] Rigctl Port: 4531
 ```
 
-#### 步骤 2: 修改 MRRC.radio1.conf
+脚本会自动：
+- 从 `MRRC.conf` 复制配置
+- 分配端口号（radio1 → 8891, radio2 → 8892...）
+- 设置 rigctld 端口（4531, 4532...）
+- 添加 `INSTANCE_SETTINGS` 配置节
+
+#### 步骤 2: 编辑实例配置
+
+```bash
+# 编辑实例配置
+nano MRRC.radio1.conf
+```
+
+修改以下关键配置：
 
 ```ini
 [SERVER]
-# 实例1使用不同端口
-port = 8877
-# 可选：使用不同的 Unix Socket 路径
-instance_unix_socket = /tmp/mrrc_radio1.sock
+# HTTP 端口（脚本已自动设置）
+port = 8891
 
 [AUDIO]
-# 实例1使用不同的音频设备
+# 音频设备名称（根据实际情况修改）
 outputdevice = USB Audio CODEC
 inputdevice = USB Audio CODEC
 
 [HAMLIB]
-# 实例1连接的电台
+# 电台串口设备（根据实际情况修改）
+# macOS: /dev/cu.usbserial-xxx
+# Linux: /dev/ttyUSB0
 rig_pathname = /dev/cu.usbserial-230
+
+# 电台型号代码
 rig_model = 3073
+
+[INSTANCE_SETTINGS]
+# 实例名称
+INSTANCE_NAME = radio1
+# MRRC HTTP 端口
+INSTANCE_PORT = 8891
+# 电台串口设备
+INSTANCE_RIGCTL_DEVICE = /dev/cu.usbserial-230
+# 电台型号
+INSTANCE_RIGCTL_MODEL = 3073
+# rigctld 监听端口（每个实例必须不同）
+INSTANCE_RIGCTL_PORT = 4531
+# ATR-1000 天调设备 IP（如果有）
+INSTANCE_ATR1000_DEVICE = 192.168.1.63
 ```
 
-#### 步骤 3: 修改 MRRC.radio2.conf
+#### 步骤 3: 启动实例
 
+```bash
+# 启动实例
+./mrrc_multi.sh start radio1
+
+# 输出示例：
+# [radio1] Loaded config: MRRC.radio1.conf
+# [radio1] Port: 8891
+# [radio1] Rig: /dev/cu.usbserial-230
+# [radio1] Audio In: USB Audio CODEC
+# [radio1] Starting instance: radio1
+# [radio1] Starting rigctld...
+# [radio1] Starting MRRC server...
+# [radio1] MRRC started (PID: 12345)
+# [radio1] Access at: https://localhost:8891
+```
+
+#### 步骤 4: 查看状态
+
+```bash
+# 查看所有实例状态
+./mrrc_multi.sh status
+
+# 输出示例：
+# ========== Instance: radio1 ==========
+# [radio1] rigctld: running (PID: 12340)
+# [radio1] MRRC: running (PID: 12345)
+# [radio1]   URL: https://localhost:8891
+# [radio1] ATR-1000: running (PID: 12350)
+```
+
+#### 步骤 5: 查看日志
+
+```bash
+# 查看最后 20 行日志
+./mrrc_multi.sh logs radio1
+
+# 查看最后 100 行日志
+./mrrc_multi.sh logs radio1 100
+```
+
+### 创建第二个实例
+
+```bash
+# 创建第二个实例
+./mrrc_multi.sh create radio2
+
+# 编辑配置（修改端口和设备）
+nano MRRC.radio2.conf
+```
+
+修改内容：
 ```ini
 [SERVER]
-# 实例2使用不同端口
-port = 8878
-# 可选：使用不同的 Unix Socket 路径
-instance_unix_socket = /tmp/mrrc_radio2.sock
+port = 8892  # 与 radio1 不同
 
 [AUDIO]
-# 实例2使用不同的音频设备
-outputdevice = USB Audio CODEC 2
+outputdevice = USB Audio CODEC 2  # 第二个音频设备
 inputdevice = USB Audio CODEC 2
+
+[HAMLIB]
+rig_pathname = /dev/cu.usbserial-231  # 第二个电台串口
+
+[INSTANCE_SETTINGS]
+INSTANCE_RIGCTL_PORT = 4532  # 与 radio1 不同
+```
+
+启动：
+```bash
+./mrrc_multi.sh start radio2
+```
+
+### 多实例配置文件详解
+
+#### 配置文件结构
+
+每个实例配置文件 `MRRC.<实例名>.conf` 包含：
+
+1. **标准 MRRC 配置节**: `[SERVER]`, `[AUDIO]`, `[HAMLIB]`, `[WDSP]` 等
+2. **实例特有配置节**: `[INSTANCE_SETTINGS]` - 供 `mrrc_multi.sh` 使用
+
+#### [INSTANCE_SETTINGS] 配置项说明
+
+```ini
+[INSTANCE_SETTINGS]
+# 实例标识名称
+INSTANCE_NAME = radio1
+
+# MRRC HTTP 服务端口（每个实例必须不同）
+INSTANCE_PORT = 8891
+
+# 电台串口设备路径
+INSTANCE_RIGCTL_DEVICE = /dev/cu.usbserial-230
+
+# Hamlib 电台型号代码
+INSTANCE_RIGCTL_MODEL = 3073
+
+# 串口波特率
+INSTANCE_RIGCTL_SPEED = 4800
+
+# 串口停止位
+INSTANCE_RIGCTL_STOP_BITS = 2
+
+# rigctld 监听地址
+INSTANCE_RIGCTL_HOST = 127.0.0.1
+
+# rigctld 监听端口（每个实例必须不同）
+INSTANCE_RIGCTL_PORT = 4531
+
+# 音频输入设备名称
+INSTANCE_AUDIO_INPUT = USB Audio CODEC
+
+# 音频输出设备名称
+INSTANCE_AUDIO_OUTPUT = USB Audio CODEC
+
+# ATR-1000 天调设备 IP 地址（可选）
+INSTANCE_ATR1000_DEVICE = 192.168.1.63
+
+# ATR-1000 WebSocket 端口
+INSTANCE_ATR1000_PORT = 60001
+
+# 日志文件目录
+INSTANCE_LOG_DIR = /path/to/logs
+
+# Unix Socket 路径（用于 ATR-1000 通信）
+INSTANCE_UNIX_SOCKET = /tmp/mrrc_radio1.sock
+```
+
+### 访问多实例
+
+启动后通过不同端口访问：
+
+| 实例 | URL | 说明 |
+|------|-----|------|
+| radio1 | `https://your-server:8891/mobile_modern.html` | 主电台 |
+| radio2 | `https://your-server:8892/mobile_modern.html` | 备用电台 |
+| radio3 | `https://your-server:8893/mobile_modern.html` | 第三个电台 |
+
+### 手动配置方式（不使用脚本）
+
+如果你更喜欢手动配置，也可以直接复制和编辑配置文件：
+
+```bash
+# 复制主配置
+cp MRRC.conf MRRC.radio1.conf
+
+# 编辑配置
+nano MRRC.radio1.conf
+```
+
+关键修改项：
+```ini
+[SERVER]
+port = 8891  # 确保每个实例端口不同
+
+[HAMLIB]
+rig_pathname = /dev/cu.usbserial-230  # 第一个电台串口
+
+# 添加 [INSTANCE_SETTINGS] 节（可选，用于 mrrc_multi.sh）
+[INSTANCE_SETTINGS]
+INSTANCE_NAME = radio1
+INSTANCE_PORT = 8891
+INSTANCE_RIGCTL_PORT = 4531
+```
+
+手动启动：
+```bash
+# 启动 rigctld（指定不同端口）
+rigctld -m 3073 -r /dev/cu.usbserial-230 -s 4800 -t 4531 &
+
+# 启动 MRRC（指定配置文件）
+python3 MRRC MRRC.radio1.conf &
+```
+
+### 多实例天调数据
+
+每个实例的天调学习数据独立存储：
+
+```
+atr1000_tuner.json          # 默认实例
+atr1000_radio1.json         # radio1 实例
+atr1000_radio2.json         # radio2 实例
+```
+
+在 `atr1000_proxy.py` 启动时通过 `--instance` 参数指定：
+
+```bash
+python3 atr1000_proxy.py --instance radio1
+```
+
+### 故障排查
+
+#### 问题：端口冲突
+
+**症状**: 启动时提示 "Address already in use"
+
+**解决**:
+```bash
+# 检查端口占用
+lsof -i :8891  # macOS
+netstat -tlnp | grep 8891  # Linux
+
+# 修改配置文件使用其他端口
+nano MRRC.radio1.conf
+# 修改 port = 8893
+```
+
+#### 问题：rigctld 冲突
+
+**症状**: 多个实例使用同一个 rigctld
+
+**解决**:
+```bash
+# 确保每个实例的 INSTANCE_RIGCTL_PORT 不同
+# radio1: 4531
+# radio2: 4532
+# radio3: 4533
+```
+
+#### 问题：音频设备冲突
+
+**症状**: 两个实例使用同一个音频设备导致错误
+
+**解决**:
+- 每个实例必须使用不同的音频设备
+- 或使用虚拟音频设备（如 BlackHole on macOS）
+
+#### 问题：权限不足（Linux）
+
+**症状**: 无法访问串口设备
+
+**解决**:
+```bash
+# 添加用户到 dialout 组
+sudo usermod -a -G dialout $USER
+# 重新登录后生效
+```
 
 [HAMLIB]
 # 实例2连接的电台
@@ -703,11 +970,99 @@ nano MRRC.conf
 
 ## 服务管理
 
-### macOS (launchd)
+MRRC 提供了 `mrrc_control.sh` 脚本用于日常服务管理，以及系统服务配置脚本 `mrrc_setup.sh`。
+
+### 控制脚本 `mrrc_control.sh`
+
+`mrrc_control.sh` 是日常管理 MRRC 服务的主要工具，适合开发和测试环境。
+
+#### 基本用法
 
 ```bash
-# 安装服务
+./mrrc_control.sh <命令> [参数]
+```
+
+#### 可用命令
+
+| 命令 | 说明 | 示例 |
+|------|------|------|
+| `start` | 启动所有服务 | `./mrrc_control.sh start` |
+| `stop` | 停止所有服务 | `./mrrc_control.sh stop` |
+| `restart` | 重启所有服务 | `./mrrc_control.sh restart` |
+| `status` | 查看服务状态 | `./mrrc_control.sh status` |
+| `logs [n]` | 查看日志（最后n行） | `./mrrc_control.sh logs 50` |
+| `start-rigctld` | 仅启动 rigctld | `./mrrc_control.sh start-rigctld` |
+| `stop-rigctld` | 仅停止 rigctld | `./mrrc_control.sh stop-rigctld` |
+| `start-mrrc` | 仅启动 MRRC | `./mrrc_control.sh start-mrrc` |
+| `stop-mrrc` | 仅停止 MRRC | `./mrrc_control.sh stop-mrrc` |
+| `start-atr1000` | 仅启动 ATR-1000 代理 | `./mrrc_control.sh start-atr1000` |
+| `stop-atr1000` | 仅停止 ATR-1000 代理 | `./mrrc_control.sh stop-atr1000` |
+
+#### 使用示例
+
+**启动所有服务**:
+```bash
+./mrrc_control.sh start
+
+# 输出示例：
+# [INFO] 2026-03-15 14:30:00 - 启动 MRRC 服务...
+# [INFO] 2026-03-15 14:30:00 - 启动 rigctld...
+# [SUCCESS] 2026-03-15 14:30:03 - rigctld 已启动 (PID: 12340)
+# [INFO] 2026-03-15 14:30:03 - 启动 MRRC...
+# [SUCCESS] 2026-03-15 14:30:05 - MRRC 已启动 (PID: 12345)
+# [INFO] 2026-03-15 14:30:05 - MRRC 服务启动完成
+# [SUCCESS] 2026-03-15 14:30:05 - MRRC 运行中，访问: https://localhost:8877
+```
+
+**查看状态**:
+```bash
+./mrrc_control.sh status
+
+# 输出示例：
+# [INFO] 2026-03-15 14:30:10 - 检查 MRRC 服务状态...
+# rigctld: 运行中 (PID: 12340)
+# MRRC: 运行中 (PID: 12345)
+# ATR-1000: 运行中 (PID: 12350)
+```
+
+**查看日志**:
+```bash
+# 查看最后 20 行（默认）
+./mrrc_control.sh logs
+
+# 查看最后 100 行
+./mrrc_control.sh logs 100
+```
+
+**单独控制服务**（用于调试）:
+```bash
+# 仅启动 rigctld（调试用）
+./mrrc_control.sh start-rigctld
+
+# 仅启动 MRRC
+./mrrc_control.sh start-mrrc
+
+# 单独停止并重启 MRRC
+./mrrc_control.sh stop-mrrc
+./mrrc_control.sh start-mrrc
+```
+
+### 系统服务配置（生产环境）
+
+对于长期运行的生产环境，建议配置为系统服务。
+
+#### macOS (launchd)
+
+使用 `mrrc_setup.sh` 脚本配置系统服务：
+
+```bash
+# 安装并配置 launchd 服务
 ./mrrc_setup.sh install
+
+# 服务安装后会：
+# 1. 复制 plist 文件到 ~/Library/LaunchAgents/
+# 2. 设置正确的路径和工作目录
+# 3. 加载服务配置
 
 # 启动服务
 launchctl start com.user.mrrc
@@ -718,14 +1073,47 @@ launchctl stop com.user.mrrc
 # 查看状态
 launchctl list | grep mrrc
 
+# 查看日志
+tail -f ~/Library/Logs/mrrc.log
+
 # 卸载服务
 launchctl unload ~/Library/LaunchAgents/com.user.mrrc.plist
 rm ~/Library/LaunchAgents/com.user.mrrc.plist
 ```
 
-### Linux (systemd)
+**launchd 服务特点**:
+- 用户登录后自动启动
+- 崩溃后自动重启（如果配置了 KeepAlive）
+- 适合 macOS 服务器或常开机的 Mac
+
+#### Linux (systemd)
+
+创建 systemd 服务文件：
 
 ```bash
+# 创建服务文件
+sudo tee /etc/systemd/system/mrrc.service << 'EOF'
+[Unit]
+Description=MRRC Radio Control Service
+After=network.target
+
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/home/pi/UHRR_mac
+ExecStart=/usr/bin/python3 /home/pi/UHRR_mac/MRRC
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+# 重新加载 systemd
+sudo systemctl daemon-reload
+
 # 启动服务
 sudo systemctl start mrrc
 
@@ -745,26 +1133,40 @@ sudo journalctl -u mrrc -f
 sudo systemctl enable mrrc
 ```
 
-### 使用控制脚本
+**systemd 服务特点**:
+- 系统启动时自动启动
+- 崩溃后自动重启
+- 完善的日志管理（journalctl）
+- 适合 Linux 服务器
 
-```bash
-# 启动所有服务（rigctld + MRRC + ATR-1000代理）
-./mrrc_control.sh start
+### 服务管理对比
 
-# 停止所有服务
-./mrrc_control.sh stop
+| 管理方式 | 适用场景 | 自动重启 | 开机启动 |
+|----------|----------|----------|----------|
+| `mrrc_control.sh` | 开发/测试 | ❌ | ❌ |
+| macOS launchd | macOS 服务器 | ✅ | ✅（用户登录） |
+| Linux systemd | Linux 服务器 | ✅ | ✅（系统启动） |
+| `mrrc_multi.sh` | 多实例管理 | ❌ | ❌ |
 
-# 查看状态
-./mrrc_control.sh status
+### 日志文件位置
 
-# 查看日志
-./mrrc_control.sh logs
+不同方式启动的日志存储位置：
 
-# 单独控制服务
-./mrrc_control.sh start-rigctld
-./mrrc_control.sh start-mrrc
-./mrrc_control.sh start-atr1000
-```
+**`mrrc_control.sh` 启动**:
+- rigctld 日志: `/tmp/rigctld.log`
+- MRRC 日志: `MRRC.log`（项目目录）
+- ATR-1000 日志: `atr1000_proxy.log`
+
+**launchd 服务**:
+- 日志: `~/Library/Logs/mrrc.log`
+
+**systemd 服务**:
+- 日志: `sudo journalctl -u mrrc`
+
+**`mrrc_multi.sh` 多实例**:
+- rigctld 日志: `rigctld_<实例名>.log`
+- MRRC 日志: `mrrc_<实例名>.log`
+- ATR-1000 日志: `atr1000_<实例名>.log`
 
 ---
 
