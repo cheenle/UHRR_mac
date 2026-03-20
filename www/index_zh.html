@@ -1,0 +1,337 @@
+<html>
+	<head>
+		<meta charset="UTF-8">
+		<title>业余电台远程控制 - MRRC</title>
+		<link rel="stylesheet" type="text/css" href="style.css">
+	</head>
+	</head>
+	<body onload="bodyload();">
+	
+		<a href="#fermer" id="ombre-body"></a>
+		<div id="pop-upspinner"> 
+                <img alt="" src="img/spinner.gif"> 
+				<p  id="socketsate"><center>等待连接中....</center></p>
+        </div>
+	
+		<div id="div-princ">
+			<img onclick="powertogle(event);" id="button_power" alt="点击连接或断开界面" src="img/poweroff.png">
+			
+			<form id="RX-GAIN_control">
+				接收音量:<input oninput="AudioRX_SetGAIN();setCookie('C_af', this.value, 180);" onchange="AudioRX_SetGAIN();setCookie('C_af', this.value, 180);" value="250" step="5" type="range" id="C_af" name="volume" min="0" max="1000">
+			</form>
+			
+			<div id="Rxmeters">
+				<div id="Rxinstant">
+					<div class="label">接收音量:</div>
+					<meter low="10" high="70" max="100" value="0"></meter>
+					<div class="value"></div>
+				</div>
+			</div>
+			
+			<form id="TX-GAIN_control">
+				发射音量:<input oninput="AudioTX_SetGAIN(this.value/100);setCookie('C_mg', this.value, 180);" onchange="AudioTX_SetGAIN(this.value/100);setCookie('C_mg', this.value, 180);" value="50" step="5" type="range" id="C_mg" name="volume" min="0" max="200">
+			</form>
+			
+			<div id="Txmeters">
+				<div id="Txinstant">
+					<div class="label">发射音量:</div>
+					<meter low="10" high="50" max="100" value="0"></meter>
+					<div class="value"></div>
+				</div>
+			</div>
+			
+			<div id="div-freq">
+				<ul id="freq_but">
+				  <li onmousedown="button_pressed();rotatefreq();" onmouseup="button_unpressed();" class="button_unpressed" digit="cmhz" v=100000000>▲</li>
+				  <li onmousedown="button_pressed();rotatefreq();" onmouseup="button_unpressed();" class="button_unpressed" digit="dmhz" v=10000000>▲</li>
+				  <li onmousedown="button_pressed();rotatefreq();" onmouseup="button_unpressed();" class="button_unpressed" digit="umhz" v=1000000>▲</li>
+				  <li onmousedown="button_pressed();rotatefreq();" onmouseup="button_unpressed();"> </li>
+				  <li onmousedown="button_pressed();rotatefreq();" onmouseup="button_unpressed();" class="button_unpressed" digit="ckhz" v=100000>▲</li>
+				  <li onmousedown="button_pressed();rotatefreq();" onmouseup="button_unpressed();" class="button_unpressed" digit="dkhz" v=10000>▲</li>
+				  <li onmousedown="button_pressed();rotatefreq();" onmouseup="button_unpressed();" class="button_unpressed" digit="ukhz" v=1000>▲</li>
+				  <li onmousedown="button_pressed();rotatefreq();" onmouseup="button_unpressed();"> </li>
+				  <li onmousedown="button_pressed();rotatefreq();" onmouseup="button_unpressed();" class="button_unpressed" digit="chz" v=100>▲</li>
+				  <li onmousedown="button_pressed();rotatefreq();" onmouseup="button_unpressed();" class="button_unpressed" digit="dhz" v=10>▲</li>
+				  <li onmousedown="button_pressed();rotatefreq();" onmouseup="button_unpressed();" class="button_unpressed" digit="uhz" v=1>▲</li>
+				</ul>
+				<ul ondblclick="changeinputfreqstyle(event);document.getElementById('freq_disp_input_text').focus();document.getElementById('freq_disp_input_text').select();" id="freq_disp" onwheel="freq_digit_scroll()">
+				  <input onkeypress="changeinputfreqstyle(event);" onkeydown="validateNumber(event);"/  id="freq_disp_input_text" type="text" minlength="4" maxlength="8" size="10">
+				  <li class="freq_digit" onmouseenter="select_digit();" onmouseleave="clear_select_digit();" id="cmhz" v=100000000>0</li>
+				  <li class="freq_digit" onmouseenter="select_digit();" onmouseleave="clear_select_digit();" id="dmhz" v=10000000>0</li>
+				  <li class="freq_digit" onmouseenter="select_digit();" onmouseleave="clear_select_digit();" id="umhz" v=1000000>0</li>
+				  <li class="freq_digit">.</li>
+				  <li class="freq_digit" onmouseenter="select_digit();" onmouseleave="clear_select_digit();" id="ckhz" v=100000>0</li>
+				  <li class="freq_digit" onmouseenter="select_digit();" onmouseleave="clear_select_digit();" id="dkhz" v=10000>0</li>
+				  <li class="freq_digit" onmouseenter="select_digit();" onmouseleave="clear_select_digit();" id="ukhz" v=1000>0</li>
+				  <li class="freq_digit">.</li>
+				  <li class="freq_digit" onmouseenter="select_digit();" onmouseleave="clear_select_digit();" id="chz" v=100>0</li>
+				  <li class="freq_digit" onmouseenter="select_digit();" onmouseleave="clear_select_digit();" id="dhz" v=10>0</li>
+				  <li class="freq_digit" onmouseenter="select_digit();" onmouseleave="clear_select_digit();" id="uhz" v=1>0</li>
+				</ul>
+				<ul id="freq_but">
+				  <li onmousedown="button_pressed();rotatefreq();" onmouseup="button_unpressed();" class="button_unpressed" digit="cmhz" v=-100000000>▼</li>
+				  <li onmousedown="button_pressed();rotatefreq();" onmouseup="button_unpressed();" class="button_unpressed" digit="dmhz" v=-10000000>▼</li>
+				  <li onmousedown="button_pressed();rotatefreq();" onmouseup="button_unpressed();" class="button_unpressed" digit="umhz" v=-1000000>▼</li>
+				  <li onmousedown="button_pressed();rotatefreq();" onmouseup="button_unpressed();"> </li>
+				  <li onmousedown="button_pressed();rotatefreq();" onmouseup="button_unpressed();" class="button_unpressed" digit="ckhz" v=-100000>▼</li>
+				  <li onmousedown="button_pressed();rotatefreq();" onmouseup="button_unpressed();" class="button_unpressed" digit="dkhz" v=-10000>▼</li>
+				  <li onmousedown="button_pressed();rotatefreq();" onmouseup="button_unpressed();" class="button_unpressed" digit="ukhz" v=-1000>▼</li>
+				  <li onmousedown="button_pressed();rotatefreq();" onmouseup="button_unpressed();" > </li>
+				  <li onmousedown="button_pressed();rotatefreq();" onmouseup="button_unpressed();" class="button_unpressed" digit="chz" v=-100>▼</li>
+				  <li onmousedown="button_pressed();rotatefreq();" onmouseup="button_unpressed();" class="button_unpressed" digit="dhz" v=-10>▼</li>
+				  <li onmousedown="button_pressed();rotatefreq();" onmouseup="button_unpressed();" class="button_unpressed" digit="uhz" v=-1>▼</li>
+				</ul>
+			</div>
+			
+			<div id="div-bandshortcut">
+				<ul id="band_but">
+				  <li onmousedown="button_pressed();recall_hambands();" onmouseup="button_unpressed();" class="button_unpressed" v="001845500">160m</li>
+				  <li onmousedown="button_pressed();recall_hambands();" onmouseup="button_unpressed();" class="button_unpressed" v="003850000">80m</li>
+				  <li onmousedown="button_pressed();recall_hambands();" onmouseup="button_unpressed();" class="button_unpressed" v="007050000">40m</li>
+				  <li onmousedown="button_pressed();recall_hambands();" onmouseup="button_unpressed();" class="button_unpressed" v="010140000">30m</li>
+				  <li onmousedown="button_pressed();recall_hambands();" onmouseup="button_unpressed();" class="button_unpressed" v="014270000">20m</li>
+				  <li onmousedown="button_pressed();recall_hambands();" onmouseup="button_unpressed();" class="button_unpressed" v="018132500">17m</li>
+				  <li onmousedown="button_pressed();recall_hambands();" onmouseup="button_unpressed();" class="button_unpressed" v="021400000">15m</li>
+				  <li onmousedown="button_pressed();recall_hambands();" onmouseup="button_unpressed();" class="button_unpressed" v="027085000">11m</li>
+				  <li onmousedown="button_pressed();recall_hambands();" onmouseup="button_unpressed();" class="button_unpressed" v="024952500">12m</li>
+				  <li onmousedown="button_pressed();recall_hambands();" onmouseup="button_unpressed();" class="button_unpressed" v="028450000">10m</li>
+				  <li onmousedown="button_pressed();recall_hambands();" onmouseup="button_unpressed();" class="button_unpressed" v="050202500">6m</li>
+				  <li onmousedown="button_pressed();recall_hambands();" onmouseup="button_unpressed();" class="button_unpressed" v="070202500">4m</li>
+				  <li onmousedown="button_pressed();recall_hambands();" onmouseup="button_unpressed();" class="button_unpressed" v="144300000">2m</li>
+				  <li onmousedown="button_pressed();recall_hambands();" onmouseup="button_unpressed();" class="button_unpressed" v="432200000">70cm</li>
+				  <li onmousedown="button_pressed();recall_hambands();" onmouseup="button_unpressed();" class="button_unpressed" v="010000000">网页</li>
+				</ul>
+			</div>
+			
+			<div id="div-filtershortcut">
+				<ul id="band_but">
+				  <li onclick="if(poweron)togle_li();setaudiofilter();" class="button_pressed" lichecked="" fq="0" fg="0" ft="highshelf" frq="22000">无</li>
+				  <li onclick="if(poweron)togle_li();setaudiofilter();" class="button_unpressed" fq="0" fg="-20" ft="highshelf" frq="4400">低通4.4k</li>
+				  <li onclick="if(poweron)togle_li();setaudiofilter();" class="button_unpressed" fq="0" fg="-20" ft="highshelf" frq="3300">低通3.3k</li>
+				  <li onclick="if(poweron)togle_li();setaudiofilter();" class="button_unpressed" fq="0" fg="-20" ft="highshelf" frq="2700">低通2.7k</li>
+				  <li onclick="if(poweron)togle_li();setaudiofilter();" class="button_unpressed" fq="0" fg="-20" ft="highshelf" frq="2100">低通2.1k</li>
+				  <li onclick="if(poweron)togle_li();setaudiofilter();" class="button_unpressed" fq="0" fg="-20" ft="highshelf" frq="1000">低通1.0k</li>
+				  <li onclick="if(poweron)togle_li();setaudiofilter();" class="button_unpressed" fq="50" fg="-100" ft="bandpass" frq="300">带通300Hz</li>
+				  <li onclick="if(poweron)togle_li();setaudiofilter();" class="button_unpressed" fq="50" fg="-100" ft="bandpass" frq="500">带通500Hz</li>
+				  <li onclick="if(poweron)togle_li();setaudiofilter();" class="button_unpressed" fq="50" fg="-100" ft="bandpass" frq="800">带通800Hz</li>
+				  <li onclick="if(poweron)togle_li();setaudiofilter();" class="button_unpressed" fq="50" fg="-100" ft="bandpass" frq="1000">带通1kHz</li>
+				  <li onclick="if(poweron)togle_li();setaudiofilter();" class="button_unpressed" id="custom_filter_click" fq="0" fg="0" ft="highshelf" frq="22000">带通点击</li>
+				  <li onclick="if(poweron)togle_li();document.getElementById('div-customfilter').style.display = 'block';" class="button_unpressed" fq="0" fg="0" ft="highshelf" frq="22000">自定义</li>
+				</ul>
+			</div>
+			
+			<div id="div-customfilter">
+				滤波器类型:<select id="customfilter_T">
+					<option >--请选择滤波器类型--</option>
+					<option value="lowpass">低通</option>
+					<option value="highpass">高通</option>
+					<option value="bandpass">带通</option>
+					<option value="lowshelf">低架</option>
+					<option value="highshelf">高架</option>
+					<option value="peaking">峰值</option>
+					<option value="notch">陷波</option>
+					<option value="allpass">全通</option>
+				</select><br>
+				频率:<input type="text" id="customfilter_F" value="点击FFT设置">Hz<br>
+				Q值:<input type ="text" id="customfilter_Q" value="50"><br>
+				增益:<input type ="text" id="customfilter_G" value="50"><br>
+				<input value="确定" type ="button" onclick="document.getElementById('div-customfilter').style.display = 'none';setcustomaudiofilter();">
+			</div>
+			
+			
+			<form id="SQUELCH_control">
+				静噪:<input oninput="if(poweron)drawRXSmeter();setCookie('SQUELCH', this.value, 180);" onchange="if(poweron)drawRXSmeter();setCookie('SQUELCH', this.value, 180);" value="0" step="5" type="range" id="SQUELCH" name="SQUELCH" min="0" max="100">
+			</form>			
+			
+			<form id="personalfrequency">
+			  <label>个人频率</label>
+			  <select id="selectpersonalfrequency">
+			  </select>
+			  <label onclick="recall_freqfromcokkies();">调用</label>
+			  <label onclick="delete_freqfromcokkies();">&nbsp;删除</label>
+			  <label onclick="save_freqtocokkies();">&nbsp;保存</label>
+			</form>
+			
+			<canvas class="visualizer" id="canBFSPC" width="1024" ></canvas>
+			<canvas class="visualizer" id="canBFFFT" width="2048" ></canvas>
+			<input class="slider-wrapper slider-wrapper_floor" value="0" step="5" type="range" id="canBFFFT_scale_floor" min="-100" max="100">
+			<input class="slider-wrapper slider-wrapper_multdb" value="0" step="5" type="range" id="canBFFFT_scale_multdb" min="-100" max="100">
+			<input class="slider-wrapper slider-wrapper_start" value="0" step="5" type="range" id="canBFFFT_scale_start" min="-200" max="200">
+			<input class="slider-wrapper slider-wrapper_multhz" value="0" step="5" type="range" id="canBFFFT_scale_multhz" min="-200" max="200">
+			<label id="canvasBFFFT_coord"></label>
+			
+			<label id="callsign"></label>
+			
+			<div id="div-conf"><a href="/CONFIG" target="_MRRCconfig"><img src="img/config.png"></a></div>
+			<div id="div-panfft"><a onclick="panfft = window.open( this.href, 'MRRCpanfft', 'width=1000, height=1000, menubar=no, toolbar=no, location=no, resizable=yes, scrollbars=no, status=no, dependent=yes'); return false;" href="/panfft.html" target="_MRRCpanfft"><img src="img/panfft.png"></a></div>
+			
+			<canvas id="canRXsmeter" width=250 height=50 ></canvas>
+			
+			<div id="div-smeterdigitRX">S9+40dB</div>
+						<div id="div-mode_menu">
+				<ul>
+				  <li onclick="togle_li();sendTRXmode();" class="button_mode button_pressed" lichecked="">USB</li>
+				  <li onclick="togle_li();sendTRXmode();" class="button_mode button_unpressed">LSB</li>
+				  <li onclick="togle_li();sendTRXmode();" class="button_mode button_unpressed">CW</li>
+				  <li onclick="togle_li();sendTRXmode();" class="button_mode button_unpressed">AM</li>
+				  <li onclick="togle_li();sendTRXmode();" class="button_mode button_unpressed">FM</li>
+				</ul>
+			</div>
+			
+			<div id="div-TX">
+							<span class="button_unpressed" id="TX-record">发射</span>
+							<span onclick="TXtogle();" class="button_unpressed" id="TX-record-lock">发射锁定</span>
+							<div id="ptt-status-indicator" style="display: inline-block; margin-left: 10px; color: #ff4444; font-weight: bold;">PTT: 关闭</div>
+							<form id="TX-record_record_opus">
+								<input type="checkbox" id="encode" class=none alt="使用opus编码发射" checked>编码发射</input><br>
+							</form>
+						</div>
+			
+						<div id="div-Tune-Control" style="margin-top: 10px; padding: 10px; background: rgba(255, 152, 0, 0.1); border: 1px solid #FF9800; border-radius: 5px;">
+							<div style="display: flex; align-items: center; gap: 10px;">
+								<span style="font-weight: bold; color: #FF9800;">🎵 天调:</span>
+								<span onmousedown="startTune();" onmouseup="stopTune();" ontouchstart="startTune();" ontouchend="stopTune();" class="button_unpressed" id="Tune-button" style="background: #FF9800; color: white; padding: 8px 20px; cursor: pointer;">长按发射1kHz单音</span>
+								<span id="tune-status" style="color: #ff4444; font-weight: bold;">停止</span>
+							</div>
+						</div>
+
+						<div id="div-CQ-Control" style="margin-top: 10px; padding: 10px; background: rgba(76, 175, 80, 0.1); border: 1px solid #4CAF50; border-radius: 5px;">
+							<div style="display: flex; align-items: center; gap: 10px;">
+								<span style="font-weight: bold; color: #4CAF50;">📻 CQ:</span>
+								<span onclick="startCQ();" class="button_unpressed" id="CQ-button" style="background: #4CAF50; color: white; padding: 8px 20px; cursor: pointer;">点击播放CQ</span>
+								<span id="cq-status" style="color: #ff4444; font-weight: bold;">停止</span>
+							</div>
+						</div>
+
+							</div>
+							</div>
+						</div>
+			
+			
+			
+						<div id="div-scoketscontrols">				<p id="indwsAudioTX"><img src="img/critsred.png">发射音频</p>
+				<p id="indwsAudioRX"><img src="img/critsred.png">接收音频</p>
+				<p id="indwsControlTRX"><img src="img/critsred.png">控制</p>
+			</div>
+			
+			<div id="div-latencymeter">延迟:∞</div>
+			<div id="div-bitrates">接收码率: 0.0 kbps | 发射码率: 0.0 kbps</div>
+			
+		</div>	
+		
+		<script src="controls.js"></script>
+		<script src="tx_button_optimized.js"></script>
+
+		
+		<script>
+			// 添加ATU控制按钮事件监听器
+			document.addEventListener('DOMContentLoaded', function() {
+				// ATU调谐按钮
+				const tuneBtn = document.getElementById('atu-tune-btn');
+				if (tuneBtn) {
+					tuneBtn.addEventListener('click', function() {
+						if (typeof atuTester !== 'undefined' && atuTester && atuTester.isConnected) {
+							atuTester.startFullTune();
+						} else if (typeof atuSocket !== 'undefined' && atuSocket && atuSocket.readyState === WebSocket.OPEN) {
+							// 发送完整调谐命令
+							const tuneCommand = {
+								type: 'command',
+								command: 'tune_mode',
+								value: 2 // 2 = 完整调谐
+							};
+							atuSocket.send(JSON.stringify(tuneCommand));
+							
+							// 发送调谐状态命令
+							const statusCommand = {
+								type: 'command',
+								command: 'tune_status',
+								value: 1 // 1 = 调谐状态
+							};
+							atuSocket.send(JSON.stringify(statusCommand));
+							
+							console.log('📤 发送ATU调谐命令');
+						} else {
+							console.log('❌ ATU未连接');
+						}
+					});
+				}
+				
+				// ATU直通按钮
+				const bypassBtn = document.getElementById('atu-bypass-btn');
+				if (bypassBtn) {
+					bypassBtn.addEventListener('click', function() {
+						if (typeof atuTester !== 'undefined' && atuTester && atuTester.isConnected) {
+							atuTester.setBypass();
+						} else if (typeof atuSocket !== 'undefined' && atuSocket && atuSocket.readyState === WebSocket.OPEN) {
+							// 发送直通状态命令
+							const statusCommand = {
+								type: 'command',
+								command: 'tune_status',
+								value: 0 // 0 = 直通状态
+							};
+							atuSocket.send(JSON.stringify(statusCommand));
+							
+							console.log('📤 发送ATU直通命令');
+						} else {
+							console.log('❌ ATU未连接');
+						}
+					});
+				}
+				
+				// ATU重置按钮
+				const resetBtn = document.getElementById('atu-reset-btn');
+				if (resetBtn) {
+					resetBtn.addEventListener('click', function() {
+						if (typeof atuTester !== 'undefined' && atuTester && atuTester.isConnected) {
+							atuTester.setTuneMode(0); // 重置模式
+						} else if (typeof atuSocket !== 'undefined' && atuSocket && atuSocket.readyState === WebSocket.OPEN) {
+							// 发送重置命令
+							const resetCommand = {
+								type: 'command',
+								command: 'tune_mode',
+								value: 0 // 0 = 重置
+							};
+							atuSocket.send(JSON.stringify(resetCommand));
+							
+							console.log('📤 发送ATU重置命令');
+						} else {
+							console.log('❌ ATU未连接');
+						}
+					});
+				}
+				
+				// 自动调谐切换按钮
+				const autotuneToggle = document.getElementById('atu-autotune-toggle');
+				if (autotuneToggle) {
+					autotuneToggle.addEventListener('click', function() {
+						if (typeof atuAutoTune !== 'undefined') {
+							if (atuAutoTune.isEnabled) {
+								atuAutoTune.disable();
+								autotuneToggle.textContent = '自动调谐: 关闭';
+								autotuneToggle.style.background = '#9C27B0';
+							} else {
+								atuAutoTune.enable();
+								autotuneToggle.textContent = '自动调谐: 开启';
+								autotuneToggle.style.background = '#4CAF50';
+							}
+						}
+					});
+				}
+				
+				// 如果atuTester可用，尝试连接
+				if (typeof atuTester !== 'undefined') {
+					// 延迟连接以确保服务器已启动
+					setTimeout(() => {
+						atuTester.connect();
+					}, 2000);
+				}
+				
+				// 如果ATU显示系统可用，初始化它
+				if (typeof initAtuDisplay !== 'undefined') {
+					// 尽早初始化ATU显示以确保在用户操作前准备好
+					initAtuDisplay();
+				}
+			});
+		</script>
+	</body>
+</html>

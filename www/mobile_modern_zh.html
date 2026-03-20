@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="业余电台">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#1a1a1a">
+    <title>现代移动端业余电台</title>
+    <link rel="apple-touch-icon" href="favicon.png">
+    <link rel="manifest" href="manifest.json">
+    <link rel="stylesheet" type="text/css" href="mobile_modern.css">
+</head>
+<body>
+    <!-- Safe area insets for iPhone X+ -->
+    <div class="safe-area-top"></div>
+    
+    <!-- 隐藏的桌面版兼容元素（controls.js 需要） -->
+    <canvas id="canRXsmeter" width="250" height="50" style="display:none;"></canvas>
+    <meter id="RXinstant" style="display:none;"><meter></meter></meter>
+    <meter id="Txinstant" style="display:none;"><meter></meter></meter>
+    <div id="div-filtershortcut" style="display:none;"></div>
+    <div id="div-mode_menu" style="display:none;"></div>
+    <div id="ombre-body" style="display:none;"></div>
+    <div id="pop-upspinner" style="display:none;"></div>
+    <div id="div-latencymeter" style="display:none;"></div>
+    <div id="div-smeterdigitRX" style="display:none;"></div>
+    <div id="div-bitrates" style="display:none;"></div>
+    <span id="callsign" style="display:none;"></span>
+    <!-- 音频增益和静噪隐藏元素 -->
+    <input type="range" id="C_af" min="0" max="1000" value="500" style="display:none;">
+    <input type="range" id="SQUELCH" min="0" max="100" value="0" style="display:none;">
+    <!-- Opus编码开关（移动端默认启用） -->
+    <input type="checkbox" id="encode" class="none" alt="Encode TX with opus codec" checked style="display:none;">
+    
+    <!-- Main container with bottom navigation -->
+    <div class="mobile-modern-container">
+        <!-- Header with essential controls -->
+        <header class="app-header">
+            <div class="header-main">
+                <button id="menu-toggle" class="header-btn menu-btn" aria-label="菜单">
+                    <span class="hamburger"></span>
+                </button>
+                
+                <div class="frequency-display-large">
+                    <div class="freq-main" id="freq-main-display">
+                        <span class="freq-digit" id="freq-10mhz">0</span>
+                        <span class="freq-digit" id="freq-1mhz">7</span>
+                        <span class="freq-digit" id="freq-100khz">0</span>
+                        <span class="freq-digit" id="freq-10khz">5</span>
+                        <span class="freq-digit" id="freq-1khz">0</span>
+                        <span class="freq-decimal">.</span>
+                        <span class="freq-digit freq-hz" id="freq-100hz">0</span>
+                        <span class="freq-digit freq-hz" id="freq-10hz">0</span>
+                    </div>
+                    <!-- 频率输入框（默认隐藏） -->
+                    <input type="text" id="freq-input" class="freq-input-hidden" placeholder="输入频率 (kHz)" inputmode="numeric" pattern="[0-9]*">
+                </div>
+                
+                <button id="power-btn" class="header-btn power-btn" aria-label="电源">
+                    <span class="power-icon">⏻</span>
+                </button>
+            </div>
+            
+            <!-- Status indicators - 居中显示，简洁风格 -->
+            <div class="status-bar">
+                <div class="status-item" id="status-ctrl"><span class="status-dot"></span>控制</div>
+                <div class="status-item" id="status-rx"><span class="status-dot"></span>接收</div>
+                <div class="status-item" id="status-tx"><span class="status-dot"></span>发射</div>
+                <div class="status-item" id="status-atu"><span class="status-dot"></span>天调</div>
+                <div class="status-item mode-indicator" id="mode-indicator">USB</div>
+            </div>
+        </header>
+        
+        <!-- Main content area -->
+        <main class="main-content">
+            <!-- S-Meter & Power/SWR visualization -->
+            <div class="meter-display-frame">
+                <section class="s-meter-section">
+                    <div class="s-meter-container">
+                        <canvas id="s-meter-canvas" width="300" height="30"></canvas>
+                        <span class="s-meter-value" id="s-meter-value">S0</span>
+                    </div>
+                    <div class="s-meter-labels">
+                        <span>S1</span>
+                        <span>S3</span>
+                        <span>S5</span>
+                        <span>S7</span>
+                        <span>S9</span>
+                        <span>+20</span>
+                        <span>+40</span>
+                        <span>+60</span>
+                    </div>
+                </section>
+                <!-- ATR-1000 Power/SWR Display (放在S表下边) -->
+                <div class="atr-under-meter" id="atr-meter-section">
+                    <div class="atr-under-row">
+                        <span id="atr-device-status" class="atr-status-icon" title="设备状态">○</span>
+                        <span class="atr-under-label">功率</span>
+                        <span class="atr-under-value" id="atr-power">--</span>
+                        <span class="atr-under-unit">W</span>
+                        <div class="atr-under-bar">
+                            <div class="atr-power-bar-compact" id="atr-power-bar"></div>
+                        </div>
+                        <span class="atr-under-divider">|</span>
+                        <span class="atr-under-label">驻波</span>
+                        <span class="atr-under-value" id="atr-swr">--</span>
+                        <div class="atr-under-bar">
+                            <div class="atr-swr-bar-compact" id="atr-swr-bar"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Quick controls - 精简版 -->
+            <section class="quick-controls">
+                <div class="control-row">
+                    <button class="quick-btn mode-btn" id="mode-btn">USB</button>
+                    <button class="quick-btn band-btn" id="band-btn">20m</button>
+                    <button class="quick-btn filter-btn" id="filter-btn">中</button>
+                    <button class="quick-btn cw-btn" id="cw-btn" onclick="window.location.href='cw_live.html'">CW</button>
+                    <button class="quick-btn ft8-btn" id="ft8-btn" onclick="window.location.href='ft8_ultron.html'">FT8</button>
+                </div>
+            </section>
+
+            <!-- DSP Controls - 显式WDSP控制面板 (高品质手机端测试用) -->
+            <section class="dsp-controls-section" id="dsp-controls">
+                <div class="dsp-header">
+                    <span class="dsp-title">🎛️ DSP</span>
+                    <label class="dsp-switch">
+                        <input type="checkbox" id="dsp-main-toggle">
+                        <span class="dsp-slider"></span>
+                    </label>
+                </div>
+                <div class="dsp-buttons-row" id="dsp-buttons">
+                    <button class="dsp-btn" id="dsp-nr2-btn">
+                        <span class="dsp-btn-icon">🔇</span>
+                        <span class="dsp-btn-label">NR2</span>
+                        <span class="dsp-btn-status" id="dsp-nr2-status">低</span>
+                    </button>
+                    <button class="dsp-btn" id="dsp-nb-btn">
+                        <span class="dsp-btn-icon">⚡</span>
+                        <span class="dsp-btn-label">NB</span>
+                        <span class="dsp-btn-status" id="dsp-nb-status">关</span>
+                    </button>
+                    <button class="dsp-btn" id="dsp-anf-btn">
+                        <span class="dsp-btn-icon">🎯</span>
+                        <span class="dsp-btn-label">ANF</span>
+                        <span class="dsp-btn-status" id="dsp-anf-status">关</span>
+                    </button>
+                    <button class="dsp-btn" id="dsp-agc-btn">
+                        <span class="dsp-btn-icon">📊</span>
+                        <span class="dsp-btn-label">AGC</span>
+                        <span class="dsp-btn-status" id="dsp-agc-status">中</span>
+                    </button>
+                </div>
+            </section>
+
+            <!-- Volume Control - 精简版 -->
+            <section class="volume-control-compact">
+                <div class="volume-row-compact">
+                    <span class="volume-icon-small">🔊</span>
+                    <input type="range" id="main-af-gain" class="volume-slider-compact" min="0" max="100" value="50" oninput="setMainAFGain(this.value)">
+                    <span class="volume-value-small" id="main-af-value">50%</span>
+                </div>
+            </section>
+            
+            <!-- Frequency tuning - 单行布局（左右调谐） -->
+            <section class="frequency-tuning-grid">
+                <div class="tuning-row single-row">
+                    <button class="tune-btn-grid tune-btn-minus" id="tune-left-fast" data-step="-5000">◀◀</button>
+                    <button class="tune-btn-grid tune-btn-minus" id="tune-left-slow" data-step="-1000">◀</button>
+                    <button class="tune-step-display" id="step-btn" type="button">1kHz</button>
+                    <button class="tune-btn-grid tune-btn-plus" id="tune-right-slow" data-step="1000">▶</button>
+                    <button class="tune-btn-grid tune-btn-plus" id="tune-right-fast" data-step="5000">▶▶</button>
+                </div>
+            </section>
+        </main>
+        
+        <!-- PTT Section - 底部PTT/TUNE按钮区域 -->
+        <footer class="ptt-section">
+            <div class="ptt-container">
+                <!-- 左侧：PTT 大按钮 -->
+                <button id="ptt-btn" class="ptt-button" aria-label="按键发射">
+                    <span class="ptt-label">发射</span>
+                </button>
+                <!-- 右侧：录音/TUNE/CQCQCQ 垂直排列 -->
+                <div class="side-controls">
+                    <div class="side-controls-row">
+                        <button id="record-btn" class="record-button-footer" aria-label="录音">
+                            <span class="record-icon">●</span>
+                            <span class="record-label">录音</span>
+                        </button>
+                        <button id="tune-btn" class="tune-button-footer" aria-label="天调">
+                            <span class="tune-label">天调</span>
+                        </button>
+                    </div>
+                    <button id="cq-btn" class="cq-button-wide" aria-label="CQCQCQ">
+                        <span class="cq-label-wide">📻 呼叫</span>
+                    </button>
+                </div>
+            </div>
+        </footer>
+    </div>
+    
+    <!-- Off-canvas menu -->
+    <div class="off-canvas-menu" id="main-menu">
+        <div class="menu-header">
+            <h2>菜单</h2>
+            <button id="menu-close" class="menu-close-btn">×</button>
+        </div>
+        <div class="menu-content">
+            <ul class="menu-list">
+                <li><a href="#" class="menu-item" data-action="bands">波段选择</a></li>
+                <li><a href="#" class="menu-item" data-action="modes">模式选择</a></li>
+                <li><a href="#" class="menu-item" data-action="memory">存储管理</a></li>
+                <li><a href="#" class="menu-item" data-action="settings">电台设置</a></li>
+                <li><a href="#" class="menu-item" data-action="audio">音频控制</a></li>
+                <li><a href="#" class="menu-item" data-action="txeq">发射均衡器</a></li>
+                <li><a href="#" class="menu-item" data-action="digital">数字模式</a></li>
+                <li><a href="cw_live.html" class="menu-item">📡 CW解码器</a></li>
+                <li><a href="ft8_ultron.html" class="menu-item">📻 FT8 ULTRON</a></li>
+                <li><a href="recordings.html" class="menu-item">录音列表</a></li>
+                <li><a href="#" class="menu-item" data-action="logbook">日志簿</a></li>
+                <li><a href="#" class="menu-item" data-action="about">关于</a></li>
+                <li><a href="#" class="menu-item" id="fullscreen-btn" data-action="fullscreen">⛶ 全屏模式</a></li>
+            </ul>
+            <div class="menu-footer">
+                <span class="version-text">MRRC V4.9.2</span>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Overlay for off-canvas menu -->
+    <div class="menu-overlay" id="menu-overlay"></div>
+    
+    <!-- Safe area insets for iPhone X+ -->
+    <div class="safe-area-bottom"></div>
+    
+    <!-- 核心脚本加载顺序重要 -->
+    <script src="ui_utils.js"></script>
+    <script src="controls.js"></script>
+    <script src="mobile_modern.js?v=4.8.0"></script>
+    <script src="tx_button_optimized.js"></script>
+</body>
+</html>
