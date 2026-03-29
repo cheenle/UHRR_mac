@@ -63,19 +63,13 @@
                 </button>
             </div>
             
-            <!-- Status indicators -->
+            <!-- Status indicators - 居中显示，简洁风格 -->
             <div class="status-bar">
-                <div class="status-item connected" id="status-ctrl">CTRL</div>
-                <div class="status-item" id="status-rx">RX</div>
-                <div class="status-item" id="status-tx">TX</div>
-                <!-- Opus 编码状态指示 -->
-                <div class="status-item opus-indicator" id="status-opus" title="Opus 编码已启用">🎤</div>
-                <!-- Audio connection status indicators -->
-                <div class="status-item" id="indwsControlTRX" style="display:none;"><img src="img/critsred.png">wsCtrl</div>
-                <div class="status-item" id="indwsAudioRX"><img src="img/critsred.png">wsRX</div>
-                <div class="status-item" id="indwsAudioTX"><img src="img/critsred.png">wsTX</div>
-                <!-- 模式指示器 -->
-                <span class="mode-indicator-header" id="mode-indicator">USB</span>
+                <div class="status-item" id="status-ctrl"><span class="status-dot"></span>CTL</div>
+                <div class="status-item" id="status-rx"><span class="status-dot"></span>RX</div>
+                <div class="status-item" id="status-tx"><span class="status-dot"></span>TX</div>
+                <div class="status-item" id="status-atu"><span class="status-dot"></span>ATU</div>
+                <div class="status-item mode-indicator" id="mode-indicator">USB</div>
             </div>
         </header>
         
@@ -126,6 +120,7 @@
                     <button class="quick-btn band-btn" id="band-btn">20m</button>
                     <button class="quick-btn filter-btn" id="filter-btn">MID</button>
                     <button class="quick-btn cw-btn" id="cw-btn" onclick="window.location.href='cw_live.html'">CW</button>
+                    <button class="quick-btn ft8-btn" id="ft8-btn" onclick="window.location.href='ft8_ultron.html'">FT8</button>
                 </div>
             </section>
 
@@ -225,6 +220,7 @@
                 <li><a href="#" class="menu-item" data-action="txeq">TX Equalizer</a></li>
                 <li><a href="#" class="menu-item" data-action="digital">Digital Modes</a></li>
                 <li><a href="cw_live.html" class="menu-item">📡 CW 解码器</a></li>
+                <li><a href="ft8_ultron.html" class="menu-item">📻 FT8 ULTRON</a></li>
                 <li><a href="recordings.html" class="menu-item">录音列表</a></li>
                 <li><a href="#" class="menu-item" data-action="logbook">Logbook</a></li>
                 <li><a href="#" class="menu-item" data-action="about">About</a></li>

@@ -1,6 +1,6 @@
 # WDSP Digital Signal Processing Manual
 
-**Version**: V4.9.1 (2026-03-15)  
+**Version**: V4.9.3 (2026-03-29)  
 **Update**: Library path optimization, log cleanup
 
 ## Overview

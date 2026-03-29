@@ -326,65 +326,75 @@ body {
     font-family: var(--font-mono);
 }
 
-/* Status Bar - 统一蓝色风格 */
+/* Status Bar - 居中显示，简洁风格 */
 .status-bar {
     display: flex;
-    justify-content: flex-start;
+    flex-direction: row;
+    justify-content: center;
     align-items: center;
-    gap: var(--space-xs);
-    padding: var(--space-xs) 0;
-    flex-wrap: wrap;
+    gap: 8px;
+    padding: 6px 0;
+    flex-wrap: nowrap;
 }
 
 .status-item {
-    font-size: 11px;
-    padding: 2px 6px;
-    border-radius: var(--radius-full);
-    background: var(--bg-tertiary);
-    border: 1px solid var(--border-color);
-    display: flex;
+    font-size: 10px;
+    padding: 3px 10px;
+    border-radius: 4px;
+    background: rgba(30, 30, 30, 0.8);
+    border: 1px solid #444;
+    display: inline-flex;
     align-items: center;
-    gap: 2px;
-    color: var(--text-secondary);
+    gap: 5px;
+    color: #888;
+    white-space: nowrap;
+    font-weight: 500;
+    transition: all 0.3s ease;
 }
 
+/* 状态指示点样式 - 红点=断开，绿点=连接 */
+.status-item .status-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #ff4444;
+    flex-shrink: 0;
+    transition: all 0.3s ease;
+    box-shadow: 0 0 3px rgba(255, 68, 68, 0.5);
+}
+
+/* 连接状态 - 绿点 + 蓝色风格 */
 .status-item.connected {
-    background: rgba(0, 212, 255, 0.2);
-    border-color: var(--accent-secondary);
-    color: var(--accent-secondary);
+    color: #00d4ff;
+    border-color: rgba(0, 212, 255, 0.5);
+    background: rgba(0, 212, 255, 0.1);
 }
 
+.status-item.connected .status-dot {
+    background: #44ff44;
+    box-shadow: 0 0 4px rgba(68, 255, 68, 0.6);
+}
+
+/* TX发射状态 - 红色闪烁 */
 .status-item#status-tx.active {
-    background: rgba(255, 107, 107, 0.2);
-    border-color: var(--accent-tx);
-    color: var(--accent-tx);
+    color: #ff6b6b;
+    border-color: rgba(255, 107, 107, 0.5);
+    background: rgba(255, 107, 107, 0.15);
+}
+
+.status-item#status-tx.active .status-dot {
+    background: #ff4444;
     animation: pulse 1s infinite;
+    box-shadow: 0 0 4px rgba(255, 68, 68, 0.6);
 }
 
-/* Opus 编码状态指示器 */
-.status-item.opus-indicator {
-    font-size: 14px;
-    padding: 2px 6px;
-    background: var(--bg-tertiary);
-    border: 1px solid var(--border-color);
-    opacity: 0.5;
-    transition: opacity var(--transition-fast);
-}
-
-.status-item.opus-indicator.active {
-    opacity: 1;
-    background: rgba(0, 212, 255, 0.2);
-    border-color: var(--accent-secondary);
-    color: var(--accent-secondary);
-}
-
-#indwsAudioRX, #indwsAudioTX {
-    padding: 2px 4px;
-}
-
-#indwsAudioRX img, #indwsAudioTX img {
-    width: 10px;
-    height: 10px;
+/* 模式指示器 - 高亮显示 */
+.status-item.mode-indicator {
+    font-weight: bold;
+    color: #00ffff;
+    border-color: rgba(0, 255, 255, 0.6);
+    background: rgba(0, 255, 255, 0.2);
+    text-shadow: 0 0 4px rgba(0, 255, 255, 0.5);
 }
 
 
@@ -551,6 +561,19 @@ body {
 .quick-btn.cw-btn:active {
     background: linear-gradient(135deg, rgba(0, 212, 255, 0.3), rgba(0, 212, 255, 0.2));
     border-color: var(--accent-secondary);
+}
+
+/* FT8按钮样式 - 橙色数字模式风格 */
+.quick-btn.ft8-btn {
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.2), rgba(245, 158, 11, 0.1));
+    border-color: rgba(245, 158, 11, 0.4);
+    color: var(--accent-warning);
+    font-weight: 600;
+}
+
+.quick-btn.ft8-btn:active {
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.3), rgba(245, 158, 11, 0.2));
+    border-color: var(--accent-warning);
 }
 
 /* Volume Control - 音量控制 - 统一蓝色风格 */

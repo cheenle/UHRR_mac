@@ -41,7 +41,7 @@ STORAGE_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'atr1000
 
 # SWR 学习阈值
 SWR_LEARN_MIN = 1.0   # 最小 SWR 阈值
-SWR_LEARN_MAX = 1.5   # 最大 SWR 阈值
+SWR_LEARN_MAX = 1.8   # 最大 SWR 阈值（与 atr1000_proxy.py 一致）
 SWR_OPTIMAL_MIN = 1.01  # 最优值最小阈值，排除 SWR=1.0 的假数据
 
 # 频率匹配容差

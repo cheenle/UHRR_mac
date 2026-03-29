@@ -4,7 +4,7 @@
 
 This document describes the mobile-optimized web interface designed specifically for iPhone 15 and other modern mobile browsers. The interface maintains full compatibility with the existing MRRC backend while providing an enhanced user experience for mobile users.
 
-**Version**: V4.9.1 (2026-03-15)
+**Version**: V4.9.3 (2026-03-29)
 
 ## Features
 

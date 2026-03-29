@@ -1,14 +1,14 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="MRRC - Mobile Remote Radio Control. 业余无线电，随时随地。超低延迟远程电台控制解决方案">
-    <meta name="keywords" content="HAM Radio, 业余无线电, 远程控制, WebSDR, 短波">
+    <meta name="description" content="MRRC - Mobile Remote Radio Control. Amateur Radio, Anytime, Anywhere. Ultra-low latency remote transceiver control solution">
+    <meta name="keywords" content="HAM Radio, Amateur Radio, Remote Control, WebSDR, Shortwave">
     <meta name="author" content="BG1SB">
     <meta name="theme-color" content="#000000">
     
-    <title>MRRC | 业余无线电，随时随地</title>
+    <title>MRRC | Amateur Radio, Anytime, Anywhere</title>
     
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -32,17 +32,18 @@
             </a>
             
             <ul class="nav-links">
-                <li><a href="#features">功能</a></li>
-                <li><a href="#demo">演示</a></li>
-                <li><a href="docs/installation.html">安装</a></li>
-                <li><a href="docs/design.html">设计&工程</a></li>
-                <li><a href="docs/docs.html">文档</a></li>
+                <li><a href="#features">Features</a></li>
+                <li><a href="#demo">Demo</a></li>
+                <li><a href="docs/installation.html">Installation</a></li>
+                <li><a href="docs/design.html">Design</a></li>
+                <li><a href="docs/docs.html">Docs</a></li>
                 <li><a href="https://github.com/cheenle/UHRR_mac" target="_blank" rel="noopener">
                     <i class="fab fa-github"></i> GitHub
                 </a></li>
             </ul>
             
             <div class="nav-actions">
+                <a href="zh/index.html" class="lang-toggle">中文</a>
                 <button class="mobile-menu-toggle">
                     <i class="fas fa-bars"></i>
                 </button>
@@ -53,43 +54,47 @@
     <!-- Hero Section -->
     <section class="hero">
         <div class="hero-content">
-                            <div class="hero-badge">
-                            <i class="fas fa-satellite-dish"></i>
-                            <span>V4.9 已发布</span>
-                        </div>            
+            <div class="hero-badge">
+                <i class="fas fa-satellite-dish"></i>
+                <span>V4.9.3 Released</span>
+            </div>            
             <h1 class="hero-title">
-                业余无线电<br>
-                <span class="gradient">随时随地</span>
+                Amateur Radio<br>
+                <span class="gradient">Anytime, Anywhere</span>
             </h1>
             
             <p class="hero-subtitle">
-                MRRC - 现代 Web 远程电台控制系统。手机、平板、电脑随时操控您的短波电台。
-                超低延迟音频传输，专业级 DSP 降噪，AI 语音助手。
+                MRRC - Modern Web-based remote transceiver control system. Control your HF radio from phone, tablet, or computer. 
+                Ultra-low latency audio streaming, professional DSP noise reduction, AI voice assistant.
             </p>
             
             <div class="hero-actions">
                 <a href="https://radio.vlsc.net:8877/mobile_modern.html" class="btn btn-primary btn-large" target="_blank">
                     <i class="fas fa-play"></i>
-                    立即体验
+                    Try Now
                 </a>
                 <a href="https://github.com/cheenle/UHRR_mac" class="btn btn-secondary btn-large" target="_blank" rel="noopener">
                     <i class="fab fa-github"></i>
-                    源码
+                    Source
                 </a>
             </div>
             
             <div class="hero-stats">
                 <div class="stat-item">
                     <span class="stat-value">&lt;100ms</span>
-                    <span class="stat-label">TX/RX 切换</span>
+                    <span class="stat-label">TX/RX Switch</span>
                 </div>
                 <div class="stat-item">
                     <span class="stat-value">99%+</span>
-                    <span class="stat-label">PTT 可靠性</span>
+                    <span class="stat-label">PTT Reliability</span>
                 </div>
                 <div class="stat-item">
                     <span class="stat-value">15-20dB</span>
-                    <span class="stat-label">WDSP 降噪</span>
+                    <span class="stat-label">WDSP NR</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-value">DXCC</span>
+                    <span class="stat-label">Smart Tracking</span>
                 </div>
             </div>
         </div>
@@ -99,8 +104,8 @@
     <section class="section" id="features">
         <div class="container">
             <div class="section-header">
-                <span class="section-label">核心功能</span>
-                <h2 class="section-title">为现代 HAM Radio 打造</h2>
+                <span class="section-label">Core Features</span>
+                <h2 class="section-title">Built for Modern HAM Radio</h2>
             </div>
             
             <div class="features-grid">
@@ -108,9 +113,9 @@
                     <div class="card-icon">
                         <i class="fas fa-mobile-alt"></i>
                     </div>
-                    <h3 class="card-title">移动优先</h3>
+                    <h3 class="card-title">Mobile First</h3>
                     <p class="card-text">
-                        专为触摸屏优化的界面，PWA 支持添加到主屏幕，iPhone/Android 完美适配。
+                        Touch-optimized interface, PWA support for home screen, perfect for iPhone/Android.
                     </p>
                 </article>
                 
@@ -118,9 +123,9 @@
                     <div class="card-icon">
                         <i class="fas fa-bolt"></i>
                     </div>
-                    <h3 class="card-title">超低延迟</h3>
+                    <h3 class="card-title">Ultra Low Latency</h3>
                     <p class="card-text">
-                        TX/RX 切换 &lt;100ms，Opus 编码优化，AudioWorklet 播放，专业级实时体验。
+                        TX/RX switch &lt;100ms, Opus codec optimization, AudioWorklet playback, professional real-time experience.
                     </p>
                 </article>
                 
@@ -128,9 +133,9 @@
                     <div class="card-icon">
                         <i class="fas fa-brain"></i>
                     </div>
-                    <h3 class="card-title">WDSP 专业降噪</h3>
+                    <h3 class="card-title">WDSP Professional NR</h3>
                     <p class="card-text">
-                        集成 OpenHPSDR WDSP 库，NR2 频谱降噪 15-20dB，AGC/ANF/NB 全面支持。
+                        Integrated OpenHPSDR WDSP library, NR2 spectral NR 15-20dB, full AGC/ANF/NB support.
                     </p>
                 </article>
                 
@@ -138,9 +143,9 @@
                     <div class="card-icon">
                         <i class="fas fa-microphone-alt"></i>
                     </div>
-                    <h3 class="card-title">AI 语音助手</h3>
+                    <h3 class="card-title">AI Voice Assistant</h3>
                     <p class="card-text">
-                        Whisper 语音识别 + Qwen3-TTS 合成，语音控制电台，呼号自动解释法。
+                        Whisper speech recognition + Qwen3-TTS synthesis, voice control, automatic phonetic callsigns.
                     </p>
                 </article>
                 
@@ -148,9 +153,9 @@
                     <div class="card-icon">
                         <i class="fas fa-wave-square"></i>
                     </div>
-                    <h3 class="card-title">CW 实时解码</h3>
+                    <h3 class="card-title">CW Real-time Decode</h3>
                     <p class="card-text">
-                        前端 ONNX 推理 (&lt;2MB)，双模式架构，QSO 状态机智能回复建议。
+                        Frontend ONNX inference (&lt;2MB), dual-mode architecture, QSO state machine smart reply suggestions.
                     </p>
                 </article>
                 
@@ -158,9 +163,9 @@
                     <div class="card-icon">
                         <i class="fas fa-chart-line"></i>
                     </div>
-                    <h3 class="card-title">ATR-1000 集成</h3>
+                    <h3 class="card-title">ATR-1000 Integration</h3>
                     <p class="card-text">
-                        实时功率/SWR 显示，天调智能学习，自动调谐参数存储与快速调用。
+                        Real-time power/SWR display, smart tuner learning, auto-tune parameter storage and quick recall.
                     </p>
                 </article>
                 
@@ -168,9 +173,29 @@
                     <div class="card-icon">
                         <i class="fas fa-server"></i>
                     </div>
-                    <h3 class="card-title">多实例支持</h3>
+                    <h3 class="card-title">Multi-Instance Support</h3>
                     <p class="card-text">
-                        单服务器运行多个独立实例，各电台独立控制，差异化天调参数学习。
+                        Run multiple independent instances on a single server, independent radio control, differentiated tuner learning.
+                    </p>
+                </article>
+                
+                <article class="card">
+                    <div class="card-icon">
+                        <i class="fas fa-broadcast-tower"></i>
+                    </div>
+                    <h3 class="card-title">FT8 Integration</h3>
+                    <p class="card-text">
+                        ULTRON automation tool, JTDX/WSJT-X linkage support, DXCC target tracking, smart QSO.
+                    </p>
+                </article>
+                
+                <article class="card">
+                    <div class="card-icon">
+                        <i class="fas fa-chart-area"></i>
+                    </div>
+                    <h3 class="card-title">NanoVNA Integration</h3>
+                    <p class="card-text">
+                        Built-in vector network analyzer Web interface, PWA offline support, antenna parameter analysis.
                     </p>
                 </article>
             </div>
@@ -181,8 +206,8 @@
     <section class="section" id="demo" style="background: var(--bg-secondary);">
         <div class="container">
             <div class="section-header">
-                <span class="section-label">在线演示</span>
-                <h2 class="section-title">亲身体验</h2>
+                <span class="section-label">Live Demo</span>
+                <h2 class="section-title">Experience It Yourself</h2>
             </div>
             
             <div class="demo-grid">
@@ -190,10 +215,10 @@
                     <div class="card-icon">
                         <i class="fas fa-mobile-alt"></i>
                     </div>
-                    <h3 class="card-title">移动端</h3>
-                    <p class="card-text">触摸优化的现代界面</p>
+                    <h3 class="card-title">Mobile UI</h3>
+                    <p class="card-text">Touch-optimized modern interface</p>
                     <span class="arrow">
-                        体验 <i class="fas fa-arrow-right"></i>
+                        Try <i class="fas fa-arrow-right"></i>
                     </span>
                 </a>
                 
@@ -201,10 +226,10 @@
                     <div class="card-icon">
                         <i class="fas fa-microphone"></i>
                     </div>
-                    <h3 class="card-title">语音助手</h3>
-                    <p class="card-text">AI 语音识别与合成</p>
+                    <h3 class="card-title">Voice Assistant</h3>
+                    <p class="card-text">AI speech recognition & synthesis</p>
                     <span class="arrow">
-                        体验 <i class="fas fa-arrow-right"></i>
+                        Try <i class="fas fa-arrow-right"></i>
                     </span>
                 </a>
                 
@@ -212,10 +237,10 @@
                     <div class="card-icon">
                         <i class="fas fa-wave-square"></i>
                     </div>
-                    <h3 class="card-title">CW 解码</h3>
-                    <p class="card-text">实时摩尔斯电码 AI 解码</p>
+                    <h3 class="card-title">CW Decode</h3>
+                    <p class="card-text">Real-time Morse code AI decoding</p>
                     <span class="arrow">
-                        体验 <i class="fas fa-arrow-right"></i>
+                        Try <i class="fas fa-arrow-right"></i>
                     </span>
                 </a>
                 
@@ -223,10 +248,32 @@
                     <div class="card-icon">
                         <i class="fas fa-record-vinyl"></i>
                     </div>
-                    <h3 class="card-title">录音回放</h3>
-                    <p class="card-text">通联录音与分享</p>
+                    <h3 class="card-title">Recordings</h3>
+                    <p class="card-text">QSO recording and playback</p>
                     <span class="arrow">
-                        体验 <i class="fas fa-arrow-right"></i>
+                        Try <i class="fas fa-arrow-right"></i>
+                    </span>
+                </a>
+                
+                <a href="https://radio.vlsc.net:8877/ft8_ultron.html" target="_blank" class="demo-link">
+                    <div class="card-icon">
+                        <i class="fas fa-broadcast-tower"></i>
+                    </div>
+                    <h3 class="card-title">FT8 Console</h3>
+                    <p class="card-text">ULTRON automation tool</p>
+                    <span class="arrow">
+                        Try <i class="fas fa-arrow-right"></i>
+                    </span>
+                </a>
+                
+                <a href="https://radio.vlsc.net:8877/sdr_modern.html" target="_blank" class="demo-link">
+                    <div class="card-icon">
+                        <i class="fas fa-signal"></i>
+                    </div>
+                    <h3 class="card-title">SDR Interface</h3>
+                    <p class="card-text">Modern SDR control interface</p>
+                    <span class="arrow">
+                        Try <i class="fas fa-arrow-right"></i>
                     </span>
                 </a>
             </div>
@@ -236,18 +283,18 @@
     <!-- CTA Section -->
     <section class="section section-cta">
         <div class="container" style="text-align: center;">
-            <h2 class="section-title" style="margin-bottom: 1rem;">开始使用</h2>
+            <h2 class="section-title" style="margin-bottom: 1rem;">Get Started</h2>
             <p class="section-subtitle" style="margin-bottom: 3rem;">
-                5 分钟内搭建完整的远程电台控制系统
+                Set up a complete remote radio control system in 5 minutes
             </p>
             <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
                 <a href="docs/installation.html" class="btn btn-primary btn-large">
                     <i class="fas fa-download"></i>
-                    安装指南
+                    Installation Guide
                 </a>
                 <a href="https://github.com/cheenle/UHRR_mac/blob/main/README.md" class="btn btn-secondary btn-large" target="_blank">
                     <i class="fas fa-book"></i>
-                    文档
+                    Documentation
                 </a>
             </div>
         </div>
@@ -261,25 +308,25 @@
                     <h4>MRRC</h4>
                     <p>
                         Mobile Remote Radio Control<br>
-                        业余无线电，随时随地
+                        Amateur Radio, Anytime, Anywhere
                     </p>
                 </div>
                 <div class="footer-section">
-                    <h4>快速链接</h4>
+                    <h4>Quick Links</h4>
                     <ul>
-                        <li><a href="#features">功能特性</a></li>
-                        <li><a href="#demo">在线演示</a></li>
-                        <li><a href="docs/installation.html">安装指南</a></li>
-                        <li><a href="docs/design.html">设计&工程</a></li>
-                        <li><a href="docs/docs.html">技术文档</a></li>
+                        <li><a href="#features">Features</a></li>
+                        <li><a href="#demo">Live Demo</a></li>
+                        <li><a href="docs/installation.html">Installation</a></li>
+                        <li><a href="docs/design.html">Design</a></li>
+                        <li><a href="docs/docs.html">Documentation</a></li>
                     </ul>
                 </div>
                 <div class="footer-section">
-                    <h4>资源</h4>
+                    <h4>Resources</h4>
                     <ul>
                         <li><a href="https://github.com/cheenle/UHRR_mac" target="_blank">GitHub</a></li>
-                        <li><a href="https://github.com/cheenle/UHRR_mac/issues" target="_blank">问题反馈</a></li>
-                        <li><a href="https://radio.vlsc.net:8877/" target="_blank">在线系统</a></li>
+                        <li><a href="https://github.com/cheenle/UHRR_mac/issues" target="_blank">Issue Tracker</a></li>
+                        <li><a href="https://radio.vlsc.net:8877/" target="_blank">Live System</a></li>
                     </ul>
                 </div>
             </div>

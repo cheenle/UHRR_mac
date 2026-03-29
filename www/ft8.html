@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="FT8">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#0a0a0f">
+    <title>FT8 模式 - MRRC</title>
+    <link rel="stylesheet" type="text/css" href="ft8.css">
+</head>
+<body>
+    <!-- Safe Area Top -->
+    <div class="safe-area-top"></div>
+    
+    <!-- 隐藏的兼容元素 -->
+    <canvas id="canRXsmeter" width="250" height="50" style="display:none;"></canvas>
+    <input type="checkbox" id="encode" class="none" alt="Encode TX with opus codec" checked style="display:none;">
+    
+    <!-- Main Container -->
+    <div class="ft8-container">
+        <!-- Header -->
+        <header class="ft8-header">
+            <div class="header-row">
+                <button id="back-btn" class="header-btn" onclick="window.location.href='mobile_modern.html'">
+                    <span>←</span>
+                </button>
+                
+                <div class="freq-display">
+                    <span class="freq-value" id="freq-display">14.074</span>
+                    <span class="freq-unit">MHz</span>
+                </div>
+                
+                <div class="header-status">
+                    <div class="status-dot" id="ws-status"></div>
+                    <span class="status-text" id="status-text">离线</span>
+                </div>
+            </div>
+            
+            <!-- 状态栏 -->
+            <div class="status-bar-ft8">
+                <div class="status-item-ft8" id="mode-indicator">FT8</div>
+                <div class="status-item-ft8" id="tx-status">RX</div>
+                <div class="status-item-ft8" id="time-display">--:--:--</div>
+                <div class="status-item-ft8 cycle-indicator" id="cycle-indicator">
+                    <span class="cycle-bar"></span>
+                </div>
+            </div>
+        </header>
+        
+        <!-- 瀑布图区域 -->
+        <section class="waterfall-section">
+            <div class="waterfall-container">
+                <canvas id="waterfall-canvas"></canvas>
+                <div class="waterfall-overlay" id="waterfall-overlay">
+                    <!-- 解码标记将动态添加 -->
+                </div>
+            </div>
+            <div class="freq-scale" id="freq-scale">
+                <!-- 频率刻度 -->
+            </div>
+        </section>
+        
+        <!-- 解码消息列表 -->
+        <section class="decode-section">
+            <div class="decode-header">
+                <span class="decode-title">📡 解码消息</span>
+                <div class="decode-controls">
+                    <button class="decode-btn" id="clear-decode-btn" onclick="clearDecodes()">清除</button>
+                    <button class="decode-btn" id="filter-btn" onclick="toggleFilter()">
+                        <span id="filter-icon">🔍</span>
+                    </button>
+                </div>
+            </div>
+            <div class="decode-list" id="decode-list">
+                <div class="decode-empty">等待解码...</div>
+            </div>
+        </section>
+        
+        <!-- QSO 状态面板 -->
+        <section class="qso-section" id="qso-section">
+            <div class="qso-header">
+                <span class="qso-title">📻 当前QSO</span>
+                <span class="qso-status" id="qso-status">空闲</span>
+            </div>
+            <div class="qso-content">
+                <div class="qso-info">
+                    <div class="qso-row">
+                        <span class="qso-label">对方呼号:</span>
+                        <span class="qso-value" id="qso-callsign">-</span>
+                    </div>
+                    <div class="qso-row">
+                        <span class="qso-label">网格定位:</span>
+                        <span class="qso-value" id="qso-grid">-</span>
+                    </div>
+                    <div class="qso-row">
+                        <span class="qso-label">SNR:</span>
+                        <span class="qso-value" id="qso-snr">-</span>
+                    </div>
+                </div>
+                <div class="qso-suggested" id="qso-suggested">
+                    <span class="suggested-label">建议回复:</span>
+                    <span class="suggested-text" id="suggested-reply">-</span>
+                </div>
+            </div>
+        </section>
+        
+        <!-- 发送控制面板 -->
+        <section class="tx-section">
+            <div class="tx-tabs">
+                <button class="tx-tab active" data-tab="cq">CQ</button>
+                <button class="tx-tab" data-tab="reply">回复</button>
+                <button class="tx-tab" data-tab="custom">自定义</button>
+            </div>
+            
+            <!-- CQ 面板 -->
+            <div class="tx-panel active" id="panel-cq">
+                <div class="cq-presets">
+                    <button class="cq-btn" onclick="sendCQ('CQ')">CQ</button>
+                    <button class="cq-btn" onclick="sendCQ('CQ DX')">CQ DX</button>
+                    <button class="cq-btn" onclick="sendCQ('CQ AS')">CQ AS</button>
+                </div>
+                <div class="auto-cq">
+                    <label class="auto-cq-toggle">
+                        <input type="checkbox" id="auto-cq-enabled">
+                        <span class="toggle-slider"></span>
+                        <span class="toggle-label">自动 CQ</span>
+                    </label>
+                    <select id="auto-cq-interval" class="interval-select">
+                        <option value="1">每 15 秒</option>
+                        <option value="2">每 30 秒</option>
+                        <option value="3" selected>每 1 分钟</option>
+                        <option value="6">每 3 分钟</option>
+                    </select>
+                </div>
+            </div>
+            
+            <!-- 回复面板 -->
+            <div class="tx-panel" id="panel-reply">
+                <div class="reply-input-group">
+                    <input type="text" id="reply-callsign" class="reply-input" placeholder="对方呼号">
+                    <input type="text" id="reply-grid" class="reply-input" placeholder="网格 (可选)">
+                </div>
+                <div class="reply-presets">
+                    <button class="reply-btn" onclick="sendReply(1)">① 回复 1</button>
+                    <button class="reply-btn" onclick="sendReply(2)">② 回复 2</button>
+                    <button class="reply-btn" onclick="sendReply(3)">③ RR73</button>
+                </div>
+            </div>
+            
+            <!-- 自定义面板 -->
+            <div class="tx-panel" id="panel-custom">
+                <textarea id="custom-message" class="custom-input" placeholder="输入自定义消息 (最多13字符)" maxlength="13"></textarea>
+                <div class="custom-presets">
+                    <button class="preset-btn" onclick="insertPreset('73')">73</button>
+                    <button class="preset-btn" onclick="insertPreset('TNX')">TNX</button>
+                    <button class="preset-btn" onclick="insertPreset('GL')">GL</button>
+                    <button class="preset-btn" onclick="insertPreset('HW?')">HW?</button>
+                </div>
+                <button class="send-custom-btn" onclick="sendCustom()">发送</button>
+            </div>
+        </section>
+        
+        <!-- 底部控制栏 -->
+        <footer class="ft8-footer">
+            <div class="footer-controls">
+                <button class="footer-btn" id="settings-btn" onclick="toggleSettings()">
+                    <span class="footer-icon">⚙️</span>
+                    <span class="footer-label">设置</span>
+                </button>
+                <button class="footer-btn primary" id="tx-btn" onclick="toggleTX()">
+                    <span class="footer-icon">📡</span>
+                    <span class="footer-label" id="tx-label">发射</span>
+                </button>
+                <button class="footer-btn" id="log-btn" onclick="showLog()">
+                    <span class="footer-icon">📝</span>
+                    <span class="footer-label">日志</span>
+                </button>
+            </div>
+        </footer>
+    </div>
+    
+    <!-- 设置面板 -->
+    <div class="settings-overlay" id="settings-overlay">
+        <div class="settings-panel">
+            <div class="settings-header">
+                <h3>FT8 设置</h3>
+                <button class="close-btn" onclick="toggleSettings()">×</button>
+            </div>
+            <div class="settings-content">
+                <div class="setting-group">
+                    <label class="setting-label">我的呼号</label>
+                    <input type="text" id="my-callsign" class="setting-input" placeholder="YOURCALL">
+                </div>
+                <div class="setting-group">
+                    <label class="setting-label">我的网格定位</label>
+                    <input type="text" id="my-grid" class="setting-input" placeholder="PM95jd" maxlength="6">
+                </div>
+                <div class="setting-group">
+                    <label class="setting-label">发射功率 (W)</label>
+                    <input type="range" id="tx-power" class="setting-slider" min="1" max="100" value="50">
+                    <span class="slider-value" id="tx-power-value">50W</span>
+                </div>
+                <div class="setting-group">
+                    <label class="setting-label">音频偏移 (Hz)</label>
+                    <input type="range" id="audio-offset" class="setting-slider" min="200" max="3000" value="1500">
+                    <span class="slider-value" id="audio-offset-value">1500 Hz</span>
+                </div>
+                <div class="setting-group">
+                    <label class="setting-label">自动日志</label>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="auto-log" checked>
+                        <span class="toggle-slider-setting"></span>
+                    </label>
+                </div>
+                <div class="setting-group">
+                    <label class="setting-label">过滤已通联</label>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="filter-worked">
+                        <span class="toggle-slider-setting"></span>
+                    </label>
+                </div>
+            </div>
+            <button class="save-btn" onclick="saveSettings()">保存设置</button>
+        </div>
+    </div>
+    
+    <!-- 日志面板 -->
+    <div class="log-overlay" id="log-overlay">
+        <div class="log-panel">
+            <div class="log-header">
+                <h3>FT8 日志</h3>
+                <button class="close-btn" onclick="showLog()">×</button>
+            </div>
+            <div class="log-content">
+                <div class="log-list" id="log-list">
+                    <div class="log-empty">暂无日志</div>
+                </div>
+            </div>
+            <div class="log-actions">
+                <button class="log-action-btn" onclick="exportLogADIF()">导出 ADIF</button>
+                <button class="log-action-btn" onclick="clearLog()">清除日志</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 核心脚本 -->
+    <script src="ui_utils.js"></script>
+    <script src="controls.js"></script>
+    <script src="ft8.js"></script>
+    
+    <!-- Safe Area Bottom -->
+    <div class="safe-area-bottom"></div>
+</body>
+</html>

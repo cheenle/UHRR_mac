@@ -11,6 +11,38 @@ const IS_MOBILE = (function (a) {
 })(navigator.userAgent || navigator.vendor || window.opera)
 /* eslint-enable */
 
+// WebSocket 状态指示器更新函数
+function setWSStatus(elementId, status) {
+	var el = document.getElementById(elementId);
+	if (!el) return;
+	
+	// 移除所有状态类
+	el.classList.remove('connected', 'connecting', 'error');
+	
+	// 更新点的样式 - 使用 .status-dot
+	var dot = el.querySelector('.status-dot');
+	if (dot) {
+		dot.classList.remove('connected');
+		if (status === 'connected') {
+			dot.classList.add('connected');
+			el.classList.add('connected');
+		} else if (status === 'connecting') {
+			el.classList.add('connecting');
+		} else if (status === 'error') {
+			el.classList.add('error');
+		}
+	} else {
+		// 如果没有点，只更新元素本身的类
+		if (status === 'connected') {
+			el.classList.add('connected');
+		} else if (status === 'connecting') {
+			el.classList.add('connecting');
+		} else if (status === 'error') {
+			el.classList.add('error');
+		}
+	}
+}
+
 //Extra Generals///////////////////////////////////////////////////////////////////////////
 
 function bodyload(){
@@ -182,7 +214,13 @@ var AudioRX_OpusDecoder = null;
 var AudioRX_opusDecode = false;  // 是否启用 Opus 解码
 
 function AudioRX_start(){
-	safeSetInnerHTML("indwsAudioRX", '<img src="img/critsgrey.png">wsRX');
+	// 避免重复创建连接
+	if (wsAudioRX && wsAudioRX.readyState !== WebSocket.CLOSED) {
+		console.log('⏭️ AudioRX WebSocket已在连接中或已连接，跳过重复创建');
+		return;
+	}
+	
+	setWSStatus('status-rx', 'connecting');
 	AudioRX_audiobuffer = [];var lenglitchbuf = 2;
 	
 	// 读取 Opus 编码复选框状态，同步到 RX 解码
@@ -194,10 +232,10 @@ function AudioRX_start(){
 
 	wsAudioRX = new WebSocket( 'wss://' + window.location.href.split( '/' )[2] + '/WSaudioRX' );
 	wsAudioRX.binaryType = 'arraybuffer';
-	// onmessage 将在下方根据 iOS Safari/桌面端分支设置
 	wsAudioRX.onopen = wsAudioRXopen;
 	wsAudioRX.onclose = wsAudioRXclose;
 	wsAudioRX.onerror = wsAudioRXerror;
+	// onmessage 将在下方根据 iOS Safari/桌面端分支设置
 
 	// 每秒打印一次码率（RX/TX）
 	if (!window.__brTimer) {
@@ -348,8 +386,9 @@ function AudioRX_start(){
                 await AudioRX_context.audioWorklet.addModule('rx_worklet_processor.js');
                 const rxNode = new AudioWorkletNode(AudioRX_context, 'rx-player');
                 AudioRX_source_node = rxNode;
-                // 优化：min:2(只要有数据就播放), max:20(约320ms缓冲)
-                try { rxNode.port.postMessage({ type: 'config', min: 2, max: 20 }); } catch(_){}
+                // V4.5.23: 优化缓冲配置，减少 TX→RX 切换延迟
+                // min:2(快速开始播放), max:30(约60ms缓冲)
+                try { rxNode.port.postMessage({ type: 'config', min: 2, max: 30 }); } catch(_){}
                 window.__pushRxFrame = function(f32) {
                     rxNode.port.postMessage({ type: 'push', payload: f32 });
                 };
@@ -388,8 +427,9 @@ function AudioRX_start(){
             AudioRX_source_node = AudioRX_context.createScriptProcessor(BUFF_SIZE, 1, 1);
             
             // 累积缓冲区 - 用于平滑播放
-            var accumulatedBuffer = [];
-            var totalSamples = 0;
+            // 关键修复：暴露到 window 对象，确保 TX 释放时能正确清除
+            window.__rxAccumulatedBuffer = [];
+            window.__rxTotalSamples = 0;
             var underrunCount = 0;
             
             AudioRX_source_node.onaudioprocess = function(event) {
@@ -397,22 +437,28 @@ function AudioRX_start(){
                 var samplesNeeded = out.length;
                 var samplesWritten = 0;
                 
-                // 从累积缓冲区填充输出
-                while (samplesWritten < samplesNeeded && accumulatedBuffer.length > 0) {
-                    var cur = accumulatedBuffer[0];
+                // 从累积缓冲区填充输出（使用 window 暴露的变量）
+                var accBuf = window.__rxAccumulatedBuffer;
+                var totSamples = window.__rxTotalSamples;
+                
+                while (samplesWritten < samplesNeeded && accBuf.length > 0) {
+                    var cur = accBuf[0];
                     var samplesToCopy = Math.min(cur.length, samplesNeeded - samplesWritten);
                     
                     // 复制数据到输出
                     out.set(cur.subarray(0, samplesToCopy), samplesWritten);
                     samplesWritten += samplesToCopy;
-                    totalSamples -= samplesToCopy;
+                    totSamples -= samplesToCopy;
                     
                     if (samplesToCopy >= cur.length) {
-                        accumulatedBuffer.shift();
+                        accBuf.shift();
                     } else {
-                        accumulatedBuffer[0] = cur.subarray(samplesToCopy);
+                        accBuf[0] = cur.subarray(samplesToCopy);
                     }
                 }
+                
+                // 更新 window 变量
+                window.__rxTotalSamples = totSamples;
                 
                 // 如果数据不足，用静音填充剩余部分
                 if (samplesWritten < samplesNeeded) {
@@ -422,7 +468,7 @@ function AudioRX_start(){
                     underrunCount++;
                     // 每 50 次欠载打印一次日志
                     if (underrunCount % 50 === 0) {
-                        console.log('⚠️ 缓冲区欠载，累计:', underrunCount, ', 当前缓冲:', accumulatedBuffer.length);
+                        console.log('⚠️ 缓冲区欠载，累计:', underrunCount, ', 当前缓冲:', accBuf.length);
                     }
                 }
             };
@@ -442,16 +488,17 @@ function AudioRX_start(){
                     float32Data = decodeInt16Audio(msg.data);
                 }
                 if (float32Data) {
-                    accumulatedBuffer.push(float32Data);
-                    totalSamples += float32Data.length;
+                    // 使用 window 暴露的变量
+                    window.__rxAccumulatedBuffer.push(float32Data);
+                    window.__rxTotalSamples += float32Data.length;
                     
                     // 缓冲区管理：保持在目标范围内
                     // 最大保留约 200ms 音频（9600 样本 @ 48kHz）
                     // 提供足够的缓冲应对网络抖动，同时保持低延迟
                     var maxSamples = 9600;
-                    while (totalSamples > maxSamples && accumulatedBuffer.length > 1) {
-                        var removed = accumulatedBuffer.shift();
-                        totalSamples -= removed.length;
+                    while (window.__rxTotalSamples > maxSamples && window.__rxAccumulatedBuffer.length > 1) {
+                        var removed = window.__rxAccumulatedBuffer.shift();
+                        window.__rxTotalSamples -= removed.length;
                     }
                 }
             };
@@ -529,7 +576,7 @@ function AudioRX_SetGAIN( vol="None" ){
 
 function wsAudioRXopen(){
 	console.log('DEBUG: WebSocket audio RX connection opened');
-	safeSetInnerHTML("indwsAudioRX", '<img src="img/critsgreen.png">wsRX');
+	setWSStatus('status-rx', 'connected');
 	
 	// 发送 Opus 编码请求到后端
 	var encodeElement = document.getElementById("encode");
@@ -546,13 +593,65 @@ function wsAudioRXopen(){
 }
 
 function wsAudioRXclose(){
-	safeSetInnerHTML("indwsAudioRX", '<img src="img/critsred.png">wsRX');
-	AudioRX_stop();
+	console.log('🔌 WebSocket RX连接已关闭');
+	setWSStatus('status-rx', 'error');
+	// 自动重连：如果电源仍开启，尝试重连
+	if (typeof poweron !== 'undefined' && poweron) {
+		console.log('🔄 电源开启中，3秒后尝试重连RX WebSocket...');
+		if (window._audioRXReconnectTimer) {
+			clearTimeout(window._audioRXReconnectTimer);
+		}
+		window._audioRXReconnectTimer = setTimeout(function() {
+			if (typeof poweron !== 'undefined' && poweron) {
+				// 检查 AudioContext 是否存在且可用
+				var contextValid = AudioRX_context && AudioRX_context.state !== 'closed';
+				if (!contextValid) {
+					console.log('🔄 AudioContext 不可用，完整重建...');
+					AudioRX_start();
+				} else if (wsAudioRX && wsAudioRX.readyState === WebSocket.CLOSED) {
+					console.log('🔄 只重连 WebSocket...');
+					// 保存旧的 onmessage
+					var oldOnMessage = wsAudioRX.onmessage;
+					wsAudioRX = new WebSocket('wss://' + window.location.href.split('/')[2] + '/WSaudioRX');
+					wsAudioRX.binaryType = 'arraybuffer';
+					wsAudioRX.onopen = wsAudioRXopen;
+					wsAudioRX.onclose = wsAudioRXclose;
+					wsAudioRX.onerror = wsAudioRXerror;
+					wsAudioRX.onmessage = oldOnMessage;
+				}
+			}
+		}, 3000);
+	}
 }
 
 function wsAudioRXerror(err){
-	safeSetInnerHTML("indwsAudioRX", '<img src="img/critsred.png">wsRX');
-	AudioRX_stop();
+	console.error('❌ WebSocket RX连接错误:', err);
+	setWSStatus('status-rx', 'error');
+	// 防抖重连：避免频繁重连
+	if (typeof poweron !== 'undefined' && poweron) {
+		if (window._audioRXErrorReconnectTimer) {
+			clearTimeout(window._audioRXErrorReconnectTimer);
+		}
+		window._audioRXErrorReconnectTimer = setTimeout(function() {
+			if (typeof poweron !== 'undefined' && poweron) {
+				// 检查 AudioContext 是否存在且可用
+				var contextValid = AudioRX_context && AudioRX_context.state !== 'closed';
+				if (!contextValid) {
+					console.log('🔄 AudioContext 不可用，完整重建...');
+					AudioRX_start();
+				} else if (!wsAudioRX || wsAudioRX.readyState === WebSocket.CLOSED) {
+					console.log('🔄 错误后重连RX WebSocket...');
+					var oldOnMessage = wsAudioRX ? wsAudioRX.onmessage : null;
+					wsAudioRX = new WebSocket('wss://' + window.location.href.split('/')[2] + '/WSaudioRX');
+					wsAudioRX.binaryType = 'arraybuffer';
+					wsAudioRX.onopen = wsAudioRXopen;
+					wsAudioRX.onclose = wsAudioRXclose;
+					wsAudioRX.onerror = wsAudioRXerror;
+					if (oldOnMessage) wsAudioRX.onmessage = oldOnMessage;
+				}
+			}
+		}, 1000);
+	}
 }
 
 function AudioRX_stop()
@@ -571,8 +670,12 @@ function AudioRX_stop()
 
 var muteRX=false;
 function toggleaudioRX(stat="None"){
-	muteRX=!muteRX;
-	if(stat != "None"){muteRX=stat;}
+	// 只有未传参数时才切换状态，传参数时直接设置
+	if(stat === "None"){
+		muteRX = !muteRX;
+	} else {
+		muteRX = stat;
+	}
 	if(muteRX){
 		AudioRX_SetGAIN(0);
 		console.log('🔇 RX音频静音');
@@ -737,10 +840,13 @@ function showRXvol(){
 var wsControlTRX = "";
 
 function ControlTRX_start(){
-	var indwsControlTRX = document.getElementById("indwsControlTRX");
-	if (indwsControlTRX) {
-		indwsControlTRX.innerHTML='<img src="img/critsgrey.png">wsCtrl';
+	// 避免重复创建连接：如果已经连接或正在连接，跳过
+	if (wsControlTRX && wsControlTRX.readyState !== WebSocket.CLOSED) {
+		console.log('⏭️ WebSocket已在连接中或已连接，跳过重复创建');
+		return;
 	}
+	
+	setWSStatus('status-ctrl', 'connecting');
 	const wsUrl = 'wss://' + window.location.href.split( '/' )[2] + '/WSCTRX';
 	console.log('🔌 尝试连接WebSocket:', wsUrl);
 	wsControlTRX = new WebSocket( wsUrl );
@@ -762,100 +868,104 @@ function ControlTRX_start(){
 
 var SignalLevel=0;
 function wsControlTRXcrtol( msg ){
-	words = String(msg.data).split(':');
-	if(words[0] == "PONG"){showlatency();}
-	else if(words[0] == "getFreq"){showTRXfreq(words[1]);TRXfrequency=parseInt(words[1]);if (typeof panfft !== 'undefined') {panfft.setcenterfrequency(words[1]);}}
-	else if(words[0] == "getMode"){showTRXmode(words[1]);}
-	else if(words[0] == "getSignalLevel"){SignalLevel=words[1];drawRXSmeter();}
-	else if(words[0] == "getPTT"){updatePTTStatus(words[1] === "true");}
-	else if(words[0] == "panfft"){document.getElementById("div-panfft").style.display = "block";}
-	else if(words[0] == "cq"){
-		console.log('📻 收到CQ消息:', words[1]);
-		if(words[1] === "complete"){
+	var data = String(msg.data);
+	var colonIndex = data.indexOf(':');
+	var action = colonIndex > 0 ? data.substring(0, colonIndex) : data;
+	var param = colonIndex > 0 ? data.substring(colonIndex + 1) : '';
+	
+	if(action == "PONG"){showlatency();}
+	else if(action == "getFreq"){showTRXfreq(param);TRXfrequency=parseInt(param);if (typeof panfft !== 'undefined') {panfft.setcenterfrequency(param);}}
+	else if(action == "getMode"){showTRXmode(param);}
+	else if(action == "getSignalLevel"){SignalLevel=param;drawRXSmeter();}
+	else if(action == "getPTT"){updatePTTStatus(param === "true");}
+	else if(action == "panfft"){document.getElementById("div-panfft").style.display = "block";}
+	else if(action == "cq"){
+		console.log('📻 收到CQ消息:', param);
+		if(param === "complete"){
 			console.log('📻 CQ播放完成，调用onCQComplete');
 			onCQComplete();
 		}
 	}
 	// WDSP 状态响应 (支持多端同步)
-	else if(words[0] == "wdspStatus" || words[0] == "getWDSPStatus"){
-        console.log('🔧 收到 WDSP 状态消息:', words[1] ? words[1].substring(0, 100) + '...' : 'empty');
+	else if(action == "wdspStatus" || action == "getWDSPStatus"){
+        console.log('🔧 收到 WDSP 状态消息:', param ? param.substring(0, 100) + '...' : 'empty');
         if(typeof handleWDSPStatus === 'function') {
             console.log('🔧 调用 handleWDSPStatus');
-            handleWDSPStatus(words[1]);
+            handleWDSPStatus(param);
         } else {
             console.warn('⚠️ handleWDSPStatus 函数未定义');
         }
     }
-    else if(words[0] == "setWDSPEnabled"){
-        console.log('🔧 WDSP 状态:', words[1]);
+    else if(action == "setWDSPEnabled"){
+        console.log('🔧 WDSP 状态:', param);
         // 更新 UI
         if(typeof window.updateWDSPEnabledUI === 'function') {
-            window.updateWDSPEnabledUI(words[1] === 'enabled' || words[1] === 'true');
+            window.updateWDSPEnabledUI(param === 'enabled' || param === 'true');
         }
         // 请求最新状态以同步 UI
         if(wsControlTRX && wsControlTRX.readyState === WebSocket.OPEN) {
             wsControlTRX.send("getWDSPStatus:");
         }
     }
-    else if(words[0] == "setWDSPNR2Level"){
-        console.log('🔧 WDSP NR2 Level 广播:', words[1]);
+    else if(action == "setWDSPNR2Level"){
+        console.log('🔧 WDSP NR2 Level 广播:', param);
         if(typeof window.updateNR2LevelUI === 'function') {
             console.log('🔧 调用 window.updateNR2LevelUI');
-            window.updateNR2LevelUI(parseInt(words[1]));
+            window.updateNR2LevelUI(parseInt(param));
         } else {
             console.warn('⚠️ window.updateNR2LevelUI 函数未定义');
         }
     }
-    else if(words[0] == "setWDSPNR2GainMethod"){
-        console.log('🔧 WDSP NR2 GainMethod:', words[1]);
+    else if(action == "setWDSPNR2GainMethod"){
+        console.log('🔧 WDSP NR2 GainMethod:', param);
     }
-    else if(words[0] == "setWDSPNR2NpeMethod"){
-        console.log('🔧 WDSP NR2 NpeMethod:', words[1]);
+    else if(action == "setWDSPNR2NpeMethod"){
+        console.log('🔧 WDSP NR2 NpeMethod:', param);
     }
-    else if(words[0] == "setWDSPNR2AeRun"){
-        console.log('🔧 WDSP NR2 AeRun:', words[1]);
+    else if(action == "setWDSPNR2AeRun"){
+        console.log('🔧 WDSP NR2 AeRun:', param);
     }
-    else if(words[0] == "setWDSPNB"){
-        console.log('🔧 WDSP NB 广播:', words[1]);
+    else if(action == "setWDSPNB"){
+        console.log('🔧 WDSP NB 广播:', param);
         if(typeof window.updateNBUI === 'function') {
             console.log('🔧 调用 window.updateNBUI');
-            window.updateNBUI(words[1] === 'true');
+            window.updateNBUI(param === 'true');
         } else {
             console.warn('⚠️ window.updateNBUI 函数未定义');
         }
     }
-    else if(words[0] == "setWDSPANF"){
-        console.log('🔧 WDSP ANF:', words[1]);
+    else if(action == "setWDSPANF"){
+        console.log('🔧 WDSP ANF:', param);
         if(typeof window.updateANFUI === 'function') {
-            window.updateANFUI(words[1] === 'true');
+            window.updateANFUI(param === 'true');
         }
     }
-    else if(words[0] == "setWDSPAGCMode" || words[0] == "setWDSPAGC"){
-        // console.log('🔧 WDSP AGC:', words[1]);
+    else if(action == "setWDSPAGCMode" || action == "setWDSPAGC"){
+        // console.log('🔧 WDSP AGC:', param);
         if(typeof window.updateAGCUI === 'function') {
-            window.updateAGCUI(parseInt(words[1]));
+            window.updateAGCUI(parseInt(param));
         }
     }
-    else if(words[0] == "setWDSPBandpass"){
-        console.log('🔧 WDSP Bandpass:', words[1]);
+    else if(action == "setWDSPBandpass"){
+        console.log('🔧 WDSP Bandpass:', param);
         if(typeof window.updateBandpassUI === 'function') {
-            const parts = words[1].split(',');
+            const parts = param.split(',');
             if(parts.length === 2) {
                 window.updateBandpassUI(parseFloat(parts[0]), parseFloat(parts[1]));
             }
         }
     }
     // 录音状态消息处理
-    else if(words[0] == "recordingStatus"){
-        console.log('🔴 录音状态:', words[1]);
+    else if(action == "recordingStatus"){
+        console.log('🔴 录音状态:', param);
         if(typeof window.handleRecordingStatus === 'function') {
-            window.handleRecordingStatus(words[1]);
+            window.handleRecordingStatus(param);
         }
     }
-    else if(words[0] == "recordingSaved"){
-        console.log('✅ 录音已保存:', words[1]);
+    else if(action == "recordingSaved"){
+        console.log('✅ 录音已保存:', param);
         if(typeof window.handleRecordingSaved === 'function') {
-            window.handleRecordingSaved(words[1]);
+            window.handleRecordingSaved(param);
         }
     }
 }
@@ -878,7 +988,7 @@ function ControlTRX_getFreq(){
 
 function wsControlTRXopen(){
 	console.log('✅ WebSocket控制连接成功建立');
-	safeSetInnerHTML("indwsControlTRX", '<img src="img/critsgreen.png">wsCtrl');
+	setWSStatus('status-ctrl', 'connected');
 	wsControlTRX.send("getFreq:");
 	wsControlTRX.send("getMode:");
 	// 连接建立后立即查询PTT状态
@@ -899,7 +1009,8 @@ function wsControlTRXopen(){
 }
 
 function wsControlTRXclose(){
-	safeSetInnerHTML("indwsControlTRX", '<img src="img/critsred.png">wsCtrl');
+	console.log('🔌 WebSocket控制连接已关闭');
+	setWSStatus('status-ctrl', 'error');
 	// 清理PTT状态查询定时器
 	if (window.pttQueryInterval) {
 		clearInterval(window.pttQueryInterval);
@@ -912,21 +1023,63 @@ function wsControlTRXclose(){
 	}
 	// 重置PTT状态显示
 	updatePTTStatus(false);
+	
+	// 自动重连：如果电源仍开启，尝试重连
+	if (typeof poweron !== 'undefined' && poweron) {
+		console.log('🔄 电源开启中，3秒后尝试重连控制WebSocket...');
+		if (window._controlReconnectTimer) {
+			clearTimeout(window._controlReconnectTimer);
+		}
+		window._controlReconnectTimer = setTimeout(function() {
+			if (typeof poweron !== 'undefined' && poweron) {
+				console.log('🔄 正在重连控制WebSocket...');
+				ControlTRX_start();
+			}
+		}, 3000);
+	}
 }
 
 function wsControlTRXerror(err){
 	console.error('❌ WebSocket控制连接错误:', err);
-    wsControlTRX.close();
-	safeSetInnerHTML("indwsControlTRX", '<img src="img/critsred.png">wsCtrl');
-	ControlTRX_start();
+	setWSStatus('status-ctrl', 'error');
+	// 防抖重连：避免频繁重连
+	if (typeof poweron !== 'undefined' && poweron) {
+		if (window._controlErrorReconnectTimer) {
+			clearTimeout(window._controlErrorReconnectTimer);
+		}
+		window._controlErrorReconnectTimer = setTimeout(function() {
+			if (typeof poweron !== 'undefined' && poweron) {
+				if (!wsControlTRX || wsControlTRX.readyState === WebSocket.CLOSED) {
+					console.log('🔄 错误后重连控制WebSocket...');
+					ControlTRX_start();
+				}
+			}
+		}, 1000);
+	}
 }
 
 var startTime;
 function checklatency() {
 	setTimeout(function () {
-		startTime = Date.now();
-		if (wsControlTRX.readyState === WebSocket.OPEN) {wsControlTRX.send("PING");}
-		if(poweron == true){checklatency();}
+		// 检查 WebSocket 状态，断开时自动重连
+		if (typeof poweron !== 'undefined' && poweron) {
+			if (wsControlTRX) {
+				if (wsControlTRX.readyState === WebSocket.OPEN) {
+					startTime = Date.now();
+					wsControlTRX.send("PING");
+				} else if (wsControlTRX.readyState === WebSocket.CLOSED) {
+					// WebSocket 已关闭但电源仍开启，尝试重连
+					console.log('🔄 心跳检测：WebSocket已关闭，尝试重连...');
+					ControlTRX_start();
+				}
+				// CONNECTING(0) 或 CLOSING(2) 状态不做处理，等待状态变化
+			} else {
+				// wsControlTRX 未定义，尝试重连
+				console.log('🔄 心跳检测：WebSocket未定义，尝试重连...');
+				ControlTRX_start();
+			}
+			checklatency();
+		}
 	}, 5000);
 }
 
@@ -1544,11 +1697,16 @@ function setAttr(div,mode){
 }
 
 function blikcritik(elemtID){
-	document.getElementById(elemtID).classList.add("blink");
-	document.getElementById(elemtID).style.color="red";
+	var el = document.getElementById(elemtID);
+	if (!el) {
+		console.warn('⚠️ blikcritik: 元素不存在:', elemtID);
+		return;
+	}
+	el.classList.add("blink");
+	el.style.color="red";
 	setTimeout(function(){ 
-		document.getElementById(elemtID).classList.remove("blink"); 
-		document.getElementById(elemtID).style.color="white";
+		el.classList.remove("blink"); 
+		el.style.color="white";
 	}, 3000);
 }
 
@@ -1654,18 +1812,62 @@ var OpusEncoder = (function () {
         this.out_ptr = _malloc(this.out_bytes);
         this.out_buf = HEAPU8.subarray(this.out_ptr, this.out_ptr + this.out_bytes);
         
-        // WebRTC 最佳实践优化参数
-        // OPUS_SET_COMPLEXITY_REQUEST = 4010, 降低编码复杂度 (0-10, 默认10)
+        // ========== Opus WebRTC 最佳实践优化 ==========
+        // 参考: https://wiki.xiph.org/Opus_Recommended_Settings
+        // 参考: https://opus-codec.org/docs/opus_api-1.5/group__opus__encoderctls.html
+        
+        // OPUS_SET_COMPLEXITY_REQUEST = 4010
+        // 编码复杂度 (0-10, 默认10)
+        // 移动端推荐 5-7，桌面端推荐 10
         var complexity_ptr = allocate(4, 'i32', ALLOC_STACK);
-        setValue(complexity_ptr, 5, 'i32');  // 复杂度 5，平衡 CPU 和音质
+        setValue(complexity_ptr, 5, 'i32');
         _opus_encoder_ctl(this.handle, 4010, complexity_ptr);
         
-        // OPUS_SET_DTX_REQUEST = 4016, 开启 DTX 静音检测
+        // OPUS_SET_BITRATE_REQUEST = 4002
+        // 目标比特率 (默认自动)
+        // VoIP 推荐 10-24kbps，短波语音 16-20kbps 足够
+        var bitrate_ptr = allocate(4, 'i32', ALLOC_STACK);
+        setValue(bitrate_ptr, 20000, 'i32');  // 20kbps
+        _opus_encoder_ctl(this.handle, 4002, bitrate_ptr);
+        
+        // OPUS_SET_VBR_REQUEST = 4004
+        // 可变比特率 (默认开启)
+        // 根据内容复杂度调整比特率，节省带宽
+        var vbr_ptr = allocate(4, 'i32', ALLOC_STACK);
+        setValue(vbr_ptr, 1, 'i32');  // 1 = 开启 VBR
+        _opus_encoder_ctl(this.handle, 4004, vbr_ptr);
+        
+        // OPUS_SET_INBAND_FEC_REQUEST = 4012
+        // 前向纠错 (默认关闭)
+        // 在当前帧中嵌入前一帧的低码率副本，丢包时可恢复
+        // 弱网环境关键，但会增加约 20% 码率
+        var fec_ptr = allocate(4, 'i32', ALLOC_STACK);
+        setValue(fec_ptr, 1, 'i32');  // 1 = 开启 FEC
+        _opus_encoder_ctl(this.handle, 4012, fec_ptr);
+        
+        // OPUS_SET_PACKET_LOSS_PERC_REQUEST = 4014
+        // 预期丢包率 (默认 0%)
+        // 配合 FEC 使用，设置越高 FEC 冗余越多
+        // 短波/移动网络推荐 10-20%
+        var loss_ptr = allocate(4, 'i32', ALLOC_STACK);
+        setValue(loss_ptr, 15, 'i32');  // 15% 丢包率预期
+        _opus_encoder_ctl(this.handle, 4014, loss_ptr);
+        
+        // OPUS_SET_DTX_REQUEST = 4016
+        // 静音检测传输 (默认关闭)
+        // 静音时只发送舒适噪声帧，节省 50-80% 带宽
         var dtx_ptr = allocate(4, 'i32', ALLOC_STACK);
         setValue(dtx_ptr, 1, 'i32');  // 1 = 开启 DTX
         _opus_encoder_ctl(this.handle, 4016, dtx_ptr);
         
-        console.log('🎵 Opus 编码器优化: complexity=5, DTX=enabled');
+        // OPUS_SET_SIGNAL_REQUEST = 4024
+        // 信号类型提示 (自动检测)
+        // OPUS_SIGNAL_VOICE = 3001 语音优化
+        var signal_ptr = allocate(4, 'i32', ALLOC_STACK);
+        setValue(signal_ptr, 3001, 'i32');  // VOICE
+        _opus_encoder_ctl(this.handle, 4024, signal_ptr);
+        
+        console.log('🎵 Opus 编码器优化: complexity=5, bitrate=20kbps, VBR=ON, FEC=ON(15%), DTX=ON');
     }
     OpusEncoder.prototype.encode = function (pcm) {
         var output = [];
@@ -1784,6 +1986,28 @@ var OpusDecoder = (function () {
         var ret = _opus_decode_float(this.handle, this.in_ptr, packet.byteLength, this.out_ptr, this.out_len, 0);
         if (ret < 0)
             throw 'opus_decode failed: ' + ret;
+        var samples = new Float32Array(ret * this.channels);
+        samples.set(this.out_f32.subarray(0, samples.length));
+        return samples;
+    };
+    // ========== Opus PLC (Packet Loss Concealment) ==========
+    // 当检测到丢包时调用，使用前一帧信息生成补偿帧
+    // 参考: https://opus-codec.org/docs/opus_api-1.5/group__opus__decoder.html
+    // 传入 null/空数据时，Opus 解码器会自动进行 PLC
+    OpusDecoder.prototype.decode_plc = function () {
+        // decode_fec: 0 = 正常解码, 1 = 解码 FEC 帧
+        // 这里传入 0，但 packet 长度为 0，触发 PLC
+        var ret = _opus_decode(this.handle, 0, 0, this.out_ptr, this.out_len, 0);
+        if (ret < 0)
+            throw 'opus_decode_plc failed: ' + ret;
+        var samples = new Int16Array(ret * this.channels);
+        samples.set(this.out_i16.subarray(0, samples.length));
+        return samples;
+    };
+    OpusDecoder.prototype.decode_plc_float = function () {
+        var ret = _opus_decode_float(this.handle, 0, 0, this.out_ptr, this.out_len, 0);
+        if (ret < 0)
+            throw 'opus_decode_plc_float failed: ' + ret;
         var samples = new Float32Array(ret * this.channels);
         samples.set(this.out_f32.subarray(0, samples.length));
         return samples;
@@ -1997,7 +2221,8 @@ var AudioTX_analyser = "";
 var AudioTX_eqLow = null;      // 低频衰减 @ 100Hz (切除超低频噪声)
 var AudioTX_eqMid = null;      // 中频增强 @ 1500Hz (语音中心频率)
 var AudioTX_eqHigh = null;     // 高频衰减 @ 2700Hz (切除高频噪声)
-var AudioTX_antiAlias = null;  // 抗混叠低通滤波器 (降采样前滤波)
+var AudioTX_antiAlias = null;  // 抗混叠低通滤波器第一级
+var AudioTX_antiAlias2 = null; // 抗混叠低通滤波器第二级 (更陡峭滚降)
 
 // TX EQ 预设 - 针对短波通信优化
 // 参数说明：
@@ -2005,39 +2230,26 @@ var AudioTX_antiAlias = null;  // 抗混叠低通滤波器 (降采样前滤波)
 //   mid:  中频 (1500Hz) 增益量，正值增强 (如 +6dB 增强语音清晰度)
 //   high: 高频 (>2700Hz) 衰减量，负值衰减 (如 -20dB 切除高频噪声)
 // 短波通信核心频段：100Hz - 2700Hz (保留语音厚度)
+// 简化为三个预设：默认、中、强
 var TX_EQ_PRESETS = {
     'DEFAULT': { 
         name: '默认', 
         low: 0, mid: 0, high: 0, 
         desc: '无EQ处理，原始音频' 
     },
-    'HF_VOICE': { 
-        name: '短波语音', 
-        low: -20,    // 切除 100Hz 以下超低频噪声
-        mid: 6,      // 增强 1500Hz 语音中心频率
-        high: -20,   // 切除 2700Hz 以上高频噪声
-        desc: '短波通信标准：100-2700Hz 带通，语音厚实'
+    'MEDIUM': { 
+        name: '中', 
+        low: -15,    // 适度切除超低频
+        mid: 10,     // 中频增强，提高清晰度
+        high: -20,   // 适度高频衰减
+        desc: '适中调节：平衡清晰度与厚度'
     },
-    'MOBILE': { 
-        name: '手机优化', 
-        low: -15,    // 切除超低频噪声 (手机低频较弱，衰减少一点)
-        mid: 8,      // 较强中频增强，补偿手机麦克风
-        high: -24,   // 更强高频衰减，解决手机麦克风"尖"的问题
-        desc: '手机专用：强力高频衰减，语音圆润'
-    },
-    'DX_WEAK': { 
-        name: '弱信号', 
-        low: -20,    // 低频切除，减少低频噪声
-        mid: 10,     // 强调中频，提高可读性
-        high: -25,   // 更强高频切除，减少高频噪声
-        desc: 'DX通信：强调语音，最大化可读性'
-    },
-    'CONTEST': { 
-        name: '比赛模式', 
-        low: -15,    // 适度低频切除
-        mid: 6,      // 中频增强
-        high: -15,   // 适度高频切除
-        desc: '比赛：均衡处理，快速通联'
+    'STRONG': { 
+        name: '强', 
+        low: -20,    // 切除超低频噪声
+        mid: 12,     // 强调中频
+        high: -35,   // 最强高频衰减，消除尖锐音
+        desc: '强力处理：iPhone/手机专用'
     }
 };
 
@@ -2050,11 +2262,17 @@ function initTX_EQ(context) {
     // ========== 抗混叠低通滤波器 ==========
     // 目的：在降采样前滤除高于目标 Nyquist 频率的成分
     // 降采样 48kHz → 16kHz，目标 Nyquist = 8kHz
-    // 设置截止频率 6kHz，留有一定余量避免混叠
+    // 设置截止频率 5kHz，更积极滤除高频，减少尖锐音
     AudioTX_antiAlias = context.createBiquadFilter();
     AudioTX_antiAlias.type = 'lowpass';
-    AudioTX_antiAlias.frequency.setValueAtTime(6000, context.currentTime);
+    AudioTX_antiAlias.frequency.setValueAtTime(5000, context.currentTime);
     AudioTX_antiAlias.Q.setValueAtTime(0.707, context.currentTime); // Butterworth Q值
+    
+    // 第二级低通滤波器 - 更陡峭的滚降
+    AudioTX_antiAlias2 = context.createBiquadFilter();
+    AudioTX_antiAlias2.type = 'lowpass';
+    AudioTX_antiAlias2.frequency.setValueAtTime(4500, context.currentTime);
+    AudioTX_antiAlias2.Q.setValueAtTime(0.707, context.currentTime);
     
     // 创建三个BiquadFilter节点 - 针对短波通信优化
     AudioTX_eqLow = context.createBiquadFilter();
@@ -2155,10 +2373,11 @@ MediaHandler.prototype.callback = function( stream )
     // 初始化 TX EQ
     initTX_EQ(this.context);
     
-    // 音频链: micSource → antiAlias → eqLow → eqMid → eqHigh → gain_node → processor
-    // 抗混叠滤波器在最前面，滤除高于6kHz的成分，防止降采样混叠
+    // 音频链: micSource → antiAlias → antiAlias2 → eqLow → eqMid → eqHigh → gain_node → processor
+    // 双级抗混叠滤波器在最前面，更彻底滤除高频，防止降采样混叠
     this.micSource.connect(AudioTX_antiAlias);
-    AudioTX_antiAlias.connect(AudioTX_eqLow);
+    AudioTX_antiAlias.connect(AudioTX_antiAlias2);
+    AudioTX_antiAlias2.connect(AudioTX_eqLow);
     AudioTX_eqLow.connect(AudioTX_eqMid);
     AudioTX_eqMid.connect(AudioTX_eqHigh);
     AudioTX_eqHigh.connect(this.gain_node);
@@ -2175,10 +2394,32 @@ MediaHandler.prototype.callback = function( stream )
     
 	this.gain_node.connect( AudioTX_analyser );
     
-    // 从Cookie恢复EQ预设
+    // 从Cookie恢复EQ预设，或根据设备类型自动设置
     var savedPreset = typeof getCookie === 'function' ? getCookie('TX_EQ_Preset') : '';
+    
     if (savedPreset && TX_EQ_PRESETS[savedPreset]) {
+        // 用户已保存过预设，恢复它
         setTX_EQ_Preset(savedPreset);
+    } else {
+        // 没有保存的预设，自动检测设备类型并应用合适的预设
+        var userAgent = navigator.userAgent || '';
+        var isIPhone = /iPhone|iPod/.test(userAgent);
+        var isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent) 
+                       || (navigator.maxTouchPoints && navigator.maxTouchPoints > 2);
+        
+        if (isIPhone) {
+            // iPhone 使用"强"预设（最强高频衰减）
+            setTX_EQ_Preset('STRONG');
+            console.log('📱 检测到 iPhone，自动应用 STRONG TX EQ 预设 (-35dB 高频衰减)');
+        } else if (isMobile) {
+            // 其他移动设备使用"中"预设
+            setTX_EQ_Preset('MEDIUM');
+            console.log('📱 检测到移动设备，自动应用 MEDIUM TX EQ 预设 (-20dB 高频衰减)');
+        } else {
+            // 桌面设备默认无处理
+            setTX_EQ_Preset('DEFAULT');
+            console.log('🖥️ 检测到桌面设备，使用 DEFAULT TX EQ 预设');
+        }
     }
     
     console.log( '✅ MediaHandler.callback: 麦克风设置完成 (含TX EQ)' );
@@ -2220,29 +2461,73 @@ const TXinstantMeter = document.querySelector('#Txinstant meter');
 
 function AudioTX_start()
 {
-isRecording = false;
-encode = false;
-safeSetInnerHTML("indwsAudioTX", '<img src="img/critsgrey.png">wsTX');
-wsAudioTX = new WebSocket( 'wss://' + window.location.href.split( '/' )[2] + '/WSaudioTX' );
-wsAudioTX.onopen = appendwsAudioTXOpen;
-wsAudioTX.onerror = appendwsAudioTXError;
-wsAudioTX.onclose = appendwsAudioTXclose;
-ap = new OpusEncoderProcessor( wsAudioTX );
-mh = new MediaHandler( ap );
+	// 避免重复创建连接
+	if (wsAudioTX && wsAudioTX.readyState !== WebSocket.CLOSED) {
+		console.log('⏭️ AudioTX WebSocket已在连接中或已连接，跳过重复创建');
+		return;
+	}
+	
+	isRecording = false;
+	encode = false;
+	setWSStatus('status-tx', 'connecting');
+	wsAudioTX = new WebSocket( 'wss://' + window.location.href.split( '/' )[2] + '/WSaudioTX' );
+	wsAudioTX.onopen = appendwsAudioTXOpen;
+	wsAudioTX.onerror = appendwsAudioTXError;
+	wsAudioTX.onclose = appendwsAudioTXclose;
+	ap = new OpusEncoderProcessor( wsAudioTX );
+	mh = new MediaHandler( ap );
 }
 
 function appendwsAudioTXclose(){
-	safeSetInnerHTML("indwsAudioTX", '<img src="img/critsred.png">wsTX');
+	console.log('🔌 WebSocket TX连接已关闭');
+	setWSStatus('status-tx', 'error');
+	// 自动重连：如果电源仍开启，尝试重连
+	if (typeof poweron !== 'undefined' && poweron) {
+		console.log('🔄 电源开启中，3秒后尝试重连TX WebSocket...');
+		if (window._audioTXReconnectTimer) {
+			clearTimeout(window._audioTXReconnectTimer);
+		}
+		window._audioTXReconnectTimer = setTimeout(function() {
+			if (typeof poweron !== 'undefined' && poweron) {
+				if (!wsAudioTX || wsAudioTX.readyState === WebSocket.CLOSED) {
+					console.log('🔄 正在重连TX WebSocket...');
+					// 保存旧的引用
+					var oldOnOpen = wsAudioTX ? wsAudioTX.onopen : null;
+					var oldOnError = wsAudioTX ? wsAudioTX.onerror : null;
+					var oldOnClose = wsAudioTX ? wsAudioTX.onclose : null;
+					wsAudioTX = new WebSocket('wss://' + window.location.href.split('/')[2] + '/WSaudioTX');
+					wsAudioTX.onopen = appendwsAudioTXOpen;
+					wsAudioTX.onerror = appendwsAudioTXError;
+					wsAudioTX.onclose = appendwsAudioTXclose;
+					// 重新绑定编码器
+					if (typeof ap !== 'undefined' && ap) {
+						ap.ws = wsAudioTX;
+					}
+				}
+			}
+		}, 3000);
+	}
 }
 
 function appendwsAudioTXOpen(){
-	safeSetInnerHTML("indwsAudioTX", '<img src="img/critsgreen.png">wsTX');
+	setWSStatus('status-tx', 'connected');
 }
 
 function appendwsAudioTXError(err){
-	safeSetInnerHTML("indwsAudioTX", '<img src="img/critsred.png">wsTX');
-    wsAudioTX.close();
-	AudioTX_start();
+	console.error('❌ WebSocket TX连接错误:', err);
+	setWSStatus('status-tx', 'error');
+	// 防抖重连：避免频繁重连
+	if (typeof poweron !== 'undefined' && poweron) {
+		if (window._audioTXErrorReconnectTimer) {
+			clearTimeout(window._audioTXErrorReconnectTimer);
+		}
+		window._audioTXErrorReconnectTimer = setTimeout(function() {
+			if (typeof poweron !== 'undefined' && poweron && (!wsAudioTX || wsAudioTX.readyState === WebSocket.CLOSED)) {
+				console.log('🔄 错误后重连TX WebSocket...');
+				AudioTX_start();
+			}
+		}, 1000);
+	}
 }
 
 function AudioTX_stop()

@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>安装指南 - MRRC 移动远程电台控制</title>
+    <meta name="description" content="MRRC详细安装指南：macOS/Linux系统配置、硬件连接、软件依赖、服务启动等完整步骤">
+    <link rel="stylesheet" href="../../css/style.css">
+    <link rel="stylesheet" href="../../css/docs.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="container header-content">
+            <a href="../../index.html" class="logo">
+                <span class="logo-icon">📻</span>
+                <span>MRRC</span>
+            </a>
+            <nav class="nav">
+                <a href="../../index.html" data-i18n="nav_home">首页</a>
+                <a href="features.html" data-i18n="nav_features">功能特性</a>
+                <a href="installation.html" class="active" data-i18n="nav_install">安装指南</a>
+                <a href="docs.html" data-i18n="nav_docs">技术文档</a>
+            </nav>
+            <div class="lang-switch">
+                <button class="lang-btn" data-lang="en"><a href="../../docs/installation.html" style="color:inherit;text-decoration:none;">English</a></button>
+                <button class="lang-btn active" data-lang="zh">中文</button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Hero -->
+    <section class="hero">
+        <div class="hero-bg"></div>
+        <div class="container">
+            <h1 class="hero-title">安装指南</h1>
+            <p class="hero-subtitle">从硬件连接到软件配置，5分钟内搭建完整的远程电台控制系统</p>
+        </div>
+    </section>
+
+    <!-- Installation Guide -->
+    <section class="section">
+        <div class="container">
+            <!-- TOC -->
+            <div class="toc">
+                <h3>目录</h3>
+                <ul>
+                    <li><a href="#hardware">硬件准备</a></li>
+                    <li><a href="#system">系统要求</a></li>
+                    <li><a href="#install">安装步骤</a></li>
+                    <li><a href="#config">配置文件</a></li>
+                    <li><a href="#start">启动服务</a></li>
+                    <li><a href="#multi">多实例部署</a></li>
+                    <li><a href="#docker">Docker部署</a></li>
+                    <li><a href="#troubleshoot">故障排查</a></li>
+                </ul>
+            </div>
+
+            <!-- Hardware -->
+            <div class="doc-section" id="hardware">
+                <h2>📦 硬件准备</h2>
+                
+                <h3>必需硬件</h3>
+                <table class="hardware-table">
+                    <tr>
+                        <th>设备</th>
+                        <th>规格/要求</th>
+                        <th>说明</th>
+                    </tr>
+                    <tr>
+                        <td>电台设备</td>
+                        <td>支持CAT控制的业余电台</td>
+                        <td>IC-7100、FT-991A、IC-R9000等</td>
+                    </tr>
+                    <tr>
+                        <td>计算机</td>
+                        <td>macOS或Linux</td>
+                        <td>推荐8GB+内存，有USB接口</td>
+                    </tr>
+                    <tr>
+                        <td>USB声卡</td>
+                        <td>支持16kHz采样率</td>
+                        <td>推荐USB Audio CODEC</td>
+                    </tr>
+                    <tr>
+                        <td>串口线</td>
+                        <td>USB转串口(RS-232)</td>
+                        <td>用于电台控制</td>
+                    </tr>
+                    <tr>
+                        <td>音频线</td>
+                        <td>3.5mm音频线</td>
+                        <td>电台音频输入/输出</td>
+                    </tr>
+                </table>
+
+                <h3>可选硬件</h3>
+                <table class="hardware-table">
+                    <tr>
+                        <th>设备</th>
+                        <th>用途</th>
+                    </tr>
+                    <tr>
+                        <td>ATR-1000 天调</td>
+                        <td>自动天调、功率/SWR监测</td>
+                    </tr>
+                    <tr>
+                        <td>RTL-SDR</td>
+                        <td>频谱显示</td>
+                    </tr>
+                    <tr>
+                        <td>NanoVNA</td>
+                        <td>天线分析</td>
+                    </tr>
+                </table>
+
+                <h3>连接示意图</h3>
+                <div class="connection-diagram">
+                    <pre class="diagram">
+    ┌─────────────┐      USB串口       ┌──────────┐
+    │   电台设备   │◄──────────────────►│  计算机   │
+    │  (IC-7100)  │      USB音频       │ (macOS)  │
+    └──────┬──────┘◄──────────────────►└────┬─────┘
+           │                                   │
+           │ 射频                                │ 网络
+           │                                   │
+    ┌──────▼──────┐                      ┌────▼─────┐
+    │    天线     │                      │  手机/平板 │
+    └─────────────┘                      └──────────┘
+                    </pre>
+                </div>
+            </div>
+
+            <!-- System Requirements -->
+            <div class="doc-section" id="system">
+                <h2>💻 系统要求</h2>
+                
+                <h3>支持的操作系统</h3>
+                <div class="os-support">
+                    <div class="os-item">
+                        <span class="os-icon">🍎</span>
+                        <div>
+                            <strong>macOS</strong>
+                            <p>10.15+ (Catalina及以上)</p>
+                            <span class="tag recommended">推荐</span>
+                        </div>
+                    </div>
+                    <div class="os-item">
+                        <span class="os-icon">🐧</span>
+                        <div>
+                            <strong>Linux</strong>
+                            <p>Ubuntu 20.04+, Debian 10+</p>
+                            <span class="tag supported">支持</span>
+                        </div>
+                    </div>
+                </div>
+
+                <h3>软件依赖</h3>
+                <table class="requirements-table">
+                    <tr>
+                        <th>软件</th>
+                        <th>最低版本</th>
+                        <th>用途</th>
+                        <th>安装命令</th>
+                    </tr>
+                    <tr>
+                        <td>Python</td>
+                        <td>3.9+</td>
+                        <td>后端运行</td>
+                        <td><code>brew install python@3.12</code></td>
+                    </tr>
+                    <tr>
+                        <td>Hamlib</td>
+                        <td>4.0+</td>
+                        <td>电台控制</td>
+                        <td><code>brew install hamlib</code></td>
+                    </tr>
+                    <tr>
+                        <td>PyAudio</td>
+                        <td>0.2.11+</td>
+                        <td>音频采集</td>
+                        <td><code>pip3 install pyaudio</code></td>
+                    </tr>
+                    <tr>
+                        <td>Tornado</td>
+                        <td>6.0+</td>
+                        <td>Web服务器</td>
+                        <td><code>pip3 install tornado</code></td>
+                    </tr>
+                </table>
+            </div>
+
+            <!-- Installation Steps -->
+            <div class="doc-section" id="install">
+                <h2>🚀 安装步骤</h2>
+
+                <div class="step">
+                    <div class="step-number">1</div>
+                    <div class="step-content">
+                        <h3>克隆仓库</h3>
+                        <pre class="code-block"><code>git clone https://github.com/cheenle/UHRR_mac.git
+cd UHRR_mac</code></pre>
+                    </div>
+                </div>
+
+                <div class="step">
+                    <div class="step-number">2</div>
+                    <div class="step-content">
+                        <h3>安装系统依赖 (macOS)</h3>
+                        <pre class="code-block"><code># 安装Homebrew (如果未安装)
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+
+# 安装依赖
+brew install python@3.12 hamlib portaudio ffmpeg
+
+# 安装Python包
+pip3 install pyaudio tornado numpy sounddevice soundfile</code></pre>
+                    </div>
+                </div>
+
+                <div class="step">
+                    <div class="step-number">3</div>
+                    <div class="step-content">
+                        <h3>安装WDSP (可选，推荐)</h3>
+                        <pre class="code-block"><code># 下载WDSP源码
+cd /tmp
+git clone https://github.com/g0orx/wdsp.git
+cd wdsp
+make
+
+# 安装库
+sudo cp libwdsp.dylib /usr/local/lib/
+
+# Linux用户
+# sudo cp libwdsp.so /usr/local/lib/ && sudo ldconfig</code></pre>
+                        <p class="note">💡 WDSP提供专业的NR2频谱降噪，显著提升接收音质</p>
+                    </div>
+                </div>
+
+                <div class="step">
+                    <div class="step-number">4</div>
+                    <div class="step-content">
+                        <h3>配置电台参数</h3>
+                        <p>编辑 <code>MRRC.conf</code> 文件：</p>
+                        <pre class="code-block"><code># 电台配置
+[HAMLIB]
+rig_pathname = /dev/cu.usbserial-230  # 根据实际修改
+rig_model = IC_M710                   # 电台型号
+rig_rate = 4800                       # 波特率
+stop_bits = 2
+
+# 音频设备
+[AUDIO]
+outputdevice = USB Audio CODEC
+inputdevice = USB Audio CODEC
+
+# 服务器配置
+[SERVER]
+port = 8877
+certfile = certs/fullchain.pem
+keyfile = certs/radio.vlsc.net.key</code></pre>
+                    </div>
+                </div>
+
+                <div class="step">
+                    <div class="step-number">5</div>
+                    <div class="step-content">
+                        <h3>启动rigctld（电台控制守护进程）</h3>
+                        <pre class="code-block"><code># IC-7100示例
+rigctld -m 3070 -r /dev/cu.usbserial-230 -s 4800 -C stop_bits=2
+
+# 或使用控制脚本
+./mrrc_control.sh start-rigctld</code></pre>
+                        <p class="tip">📌 常用电台型号代码：IC-7100=3070, FT-991A=1035, IC-R9000=30003</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Configuration -->
+            <div class="doc-section" id="config">
+                <h2>⚙️ 配置文件详解</h2>
+
+                <h3>MRRC.conf 完整配置</h3>
+                <pre class="code-block"><code>[SERVER]
+port = 8877                           # Web服务器端口
+certfile = certs/fullchain.pem        # TLS证书路径
+keyfile = certs/radio.vlsc.net.key    # TLS私钥路径
+auth = FILE                           # 认证方式: FILE/PAM
+db_users_file = MRRC_users.db         # 用户数据库
+debug = False                         # 调试模式
+
+[AUDIO]
+outputdevice = USB Audio CODEC        # 音频输出设备
+inputdevice = USB Audio CODEC         # 音频输入设备
+sample_rate = 48000                   # 采样率
+buffer_size = 256                     # 缓冲区大小
+
+[HAMLIB]
+rig_pathname = /dev/cu.usbserial-230  # 电台串口设备
+rig_model = IC_M710                   # 电台型号代码
+rig_rate = 4800                       # 波特率
+data_bits = 8
+stop_bits = 2
+serial_handshake = None
+
+[CTRL]
+interval_smeter_update = 0.5          # S表更新间隔(秒)
+
+[PANADAPTER]
+sample_rate = 960000
+center_freq = 68330000
+gain = 10
+
+[WDSP]
+enabled = True
+sample_rate = 48000
+buffer_size = 256
+nr2_enabled = True                    # 频谱降噪
+nb_enabled = True                     # 噪声抑制
+anf_enabled = False                   # 自动陷波
+agc_mode = 3                          # AGC模式
+bandpass_low = 300.0                  # 低切频率
+bandpass_high = 2700.0                # 高切频率</code></pre>
+
+                <h3>查找音频设备</h3>
+                <pre class="code-block"><code>python3 -c "
+import pyaudio
+p = pyaudio.PyAudio()
+for i in range(p.get_device_count()):
+    info = p.get_device_info_by_index(i)
+    print(f'{i}: {info[\"name\"]} (in:{info[\"maxInputChannels\"]}, out:{info[\"maxOutputChannels\"]})')
+p.terminate()
+"</code></pre>
+            </div>
+
+            <!-- Start Service -->
+            <div class="doc-section" id="start">
+                <h2>▶️ 启动服务</h2>
+
+                <h3>方法一：使用控制脚本（推荐）</h3>
+                <pre class="code-block"><code># 启动所有服务
+./mrrc_control.sh start
+
+# 查看状态
+./mrrc_control.sh status
+
+# 查看日志
+./mrrc_control.sh logs 50</code></pre>
+
+                <h3>方法二：手动启动</h3>
+                <pre class="code-block"><code># 1. 启动rigctld
+rigctld -m 3070 -r /dev/cu.usbserial-230 -s 4800
+
+# 2. 启动MRRC主服务
+python3 ./MRRC
+
+# 3. 启动ATR-1000代理（可选）
+./mrrc_control.sh start-atr1000</code></pre>
+
+                <h3>配置为系统服务（macOS）</h3>
+                <pre class="code-block"><code># 使用安装脚本
+./mrrc_setup.sh install
+
+# 或使用launchd
+launchctl load ~/Library/LaunchAgents/com.user.mrrc.plist
+launchctl start com.user.mrrc</code></pre>
+
+                <h3>访问系统</h3>
+                <ul>
+                    <li><strong>桌面端</strong>：https://your-server:8877/</li>
+                    <li><strong>移动端</strong>：https://your-server:8877/mobile_modern.html</li>
+                    <li><strong>NanoVNA</strong>：https://your-server:8877/nanovna/NanoVNA/</li>
+                </ul>
+            </div>
+
+            <!-- Multi-Instance Deployment -->
+            <div class="doc-section" id="multi">
+                <h2>🔀 多实例部署</h2>
+                
+                <p>MRRC 支持在一台服务器上运行多个独立实例，每个实例连接不同的电台设备/声卡。</p>
+
+                <h3>创建新实例</h3>
+                <pre class="code-block"><code># 创建新实例（自动生成配置文件）
+./mrrc_multi.sh create radio1
+
+# 配置实例参数
+# 编辑 MRRC.radio1.conf 设置音频设备、串口等</code></pre>
+
+                <h3>实例控制命令</h3>
+                <pre class="code-block"><code># 启动指定实例
+./mrrc_multi.sh start radio1
+
+# 停止指定实例
+./mrrc_multi.sh stop radio1
+
+# 查看所有实例状态
+./mrrc_multi.sh status
+
+# 查看实例日志
+./mrrc_multi.sh logs radio1 50
+
+# 列出所有实例
+./mrrc_multi.sh list</code></pre>
+
+                <h3>端口分配规则</h3>
+                <table class="hardware-table">
+                    <tr>
+                        <th>实例名</th>
+                        <th>Web端口</th>
+                        <th>rigctld端口</th>
+                        <th>Socket路径</th>
+                    </tr>
+                    <tr>
+                        <td>radio1</td>
+                        <td>8891</td>
+                        <td>4531</td>
+                        <td>/tmp/mrrc_radio1.sock</td>
+                    </tr>
+                    <tr>
+                        <td>radio2</td>
+                        <td>8892</td>
+                        <td>4532</td>
+                        <td>/tmp/mrrc_radio2.sock</td>
+                    </tr>
+                    <tr>
+                        <td>radio3</td>
+                        <td>8893</td>
+                        <td>4533</td>
+                        <td>/tmp/mrrc_radio3.sock</td>
+                    </tr>
+                </table>
+
+                <p class="tip">📌 每个实例有独立的天调学习参数，存储在 atr1000_tuner.json</p>
+            </div>
+
+            <!-- Docker Deployment -->
+            <div class="doc-section" id="docker">
+                <h2>🐳 Docker 部署</h2>
+
+                <h3>快速启动</h3>
+                <pre class="code-block"><code># 构建镜像
+docker-compose build
+
+# 启动服务
+docker-compose up -d
+
+# 查看日志
+docker-compose logs -f</code></pre>
+
+                <h3>多实例 Docker 部署</h3>
+                <pre class="code-block"><code># 使用多实例配置
+docker-compose -f docker-compose.multi.yml up -d</code></pre>
+
+                <h3>注意事项</h3>
+                <ul>
+                    <li>需要将串口设备映射到容器：<code>devices: - /dev/cu.usbserial-230:/dev/ttyUSB0</code></li>
+                    <li>音频设备需要 PulseAudio 或 ALSA 配置</li>
+                    <li>建议使用 host 网络模式以获得最佳性能</li>
+                </ul>
+            </div>
+
+            <!-- Troubleshooting -->
+            <div class="doc-section" id="troubleshoot">
+                <h2>🔧 故障排查</h2>
+
+                <div class="troubleshoot-item">
+                    <h4>❌ 无法连接WebSocket</h4>
+                    <p><strong>症状</strong>：页面显示"连接断开"</p>
+                    <p><strong>解决</strong>：</p>
+                    <ul>
+                        <li>检查防火墙是否开放8877端口</li>
+                        <li>确认TLS证书路径正确</li>
+                        <li>查看MRRC日志：<code>./mrrc_control.sh logs</code></li>
+                    </ul>
+                </div>
+
+                <div class="troubleshoot-item">
+                    <h4>❌ 电台无响应</h4>
+                    <p><strong>症状</strong>：频率/模式无法改变</p>
+                    <p><strong>解决</strong>：</p>
+                    <ul>
+                        <li>检查串口设备路径：<code>ls /dev/cu.*</code></li>
+                        <li>确认rigctld已启动：<code>ps aux | grep rigctld</code></li>
+                        <li>测试rigctl：<code>rigctl -m 3070 f</code></li>
+                    </ul>
+                </div>
+
+                <div class="troubleshoot-item">
+                    <h4>❌ 无音频输出</h4>
+                    <p><strong>症状</strong>：听不到接收音频</p>
+                    <p><strong>解决</strong>：</p>
+                    <ul>
+                        <li>检查音频设备名称是否正确</li>
+                        <li>测试音频设备：<code>./dev_tools/test_audio.py</code></li>
+                        <li>检查系统音量设置</li>
+                    </ul>
+                </div>
+
+                <div class="troubleshoot-item">
+                    <h4>❌ PTT不工作</h4>
+                    <p><strong>症状</strong>：按住发射无反应</p>
+                    <p><strong>解决</strong>：</p>
+                    <ul>
+                        <li>确认页面电源按钮已开启</li>
+                        <li>检查WebSocket连接状态</li>
+                        <li>查看PTT日志：<code>./mrrc_control.sh logs | grep PTT</code></li>
+                    </ul>
+                </div>
+
+                <h3>调试工具</h3>
+                <pre class="code-block"><code># 测试音频
+python3 dev_tools/test_audio.py
+
+# 测试连接
+python3 dev_tools/test_connection.py
+
+# 调试音频页面
+open dev_tools/debug_audio.html</code></pre>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA -->
+    <section class="section section-cta">
+        <div class="container">
+            <h2 class="cta-title">遇到问题？</h2>
+            <p class="cta-text">查看技术文档或加入社区讨论</p>
+            <div class="cta-buttons">
+                <a href="docs.html" class="btn btn-primary">技术文档</a>
+                <a href="https://github.com/cheenle/UHRR_mac/issues" class="btn btn-secondary" target="_blank">GitHub Issues</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-grid">
+                <div class="footer-section">
+                    <h4>MRRC</h4>
+                    <p>Mobile Remote Radio Control<br>随时随地，畅享业余无线电</p>
+                </div>
+                <div class="footer-section">
+                    <h4>快速链接</h4>
+                    <ul>
+                        <li><a href="../../index.html">首页</a></li>
+                        <li><a href="features.html">功能特性</a></li>
+                        <li><a href="installation.html">安装指南</a></li>
+                        <li><a href="docs.html">技术文档</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h4>资源</h4>
+                    <ul>
+                        <li><a href="https://github.com/cheenle/UHRR_mac" target="_blank">GitHub仓库</a></li>
+                        <li><a href="https://github.com/cheenle/UHRR_mac/issues" target="_blank">问题反馈</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2024 MRRC Project. Open Source under GPL-3.0 License.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="../js/main.js"></script>
+</body>
+</html>

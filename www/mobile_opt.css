@@ -1,0 +1,766 @@
+/**
+ * MRRC Optimized - CSS 样式
+ * 基于现代移动端最佳实践
+ */
+
+/* ========== CSS 变量 ========== */
+:root {
+    /* 颜色 - SDR 专业风格 */
+    --bg-primary: #0a0a0f;
+    --bg-secondary: #12121a;
+    --bg-card: #1a1a25;
+    --bg-button: #252535;
+    --bg-active: #3a3a55;
+    
+    /* 强调色 */
+    --accent: #00d4ff;
+    --accent-glow: rgba(0, 212, 255, 0.3);
+    --accent-dim: rgba(0, 212, 255, 0.1);
+    --warning: #f59e0b;
+    --danger: #ef4444;
+    --success: #22c55e;
+    
+    /* 文字 */
+    --text-primary: #ffffff;
+    --text-secondary: #a0a0b0;
+    --text-muted: #606070;
+    
+    /* 边框 */
+    --border: #2a2a3a;
+    
+    /* 尺寸 */
+    --radius-sm: 6px;
+    --radius-md: 10px;
+    --radius-lg: 14px;
+    --radius-full: 50%;
+    
+    /* 间距 */
+    --space-xs: 4px;
+    --space-sm: 8px;
+    --space-md: 12px;
+    --space-lg: 16px;
+    
+    /* 动画 */
+    --transition: 150ms ease;
+    
+    /* 安全区域 */
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+    --safe-left: env(safe-area-inset-left, 0px);
+    --safe-right: env(safe-area-inset-right, 0px);
+}
+
+/* ========== 基础重置 ========== */
+*, *::before, *::after {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html, body {
+    height: 100%;
+    width: 100%;
+    overflow: hidden;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    -webkit-font-smoothing: antialiased;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+    user-select: none;
+}
+
+/* 安全区域 */
+.safe-area-top {
+    height: var(--safe-top);
+    background: var(--bg-secondary);
+}
+
+.safe-area-bottom {
+    height: var(--safe-bottom);
+    background: var(--bg-secondary);
+}
+
+/* ========== 主容器 ========== */
+#app-container {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    height: 100dvh;
+    padding-left: var(--safe-left);
+    padding-right: var(--safe-right);
+}
+
+/* ========== 头部 ========== */
+.app-header {
+    background: var(--bg-secondary);
+    padding: var(--space-sm) var(--space-md);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+}
+
+.header-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-md);
+}
+
+/* 图标按钮 */
+.icon-btn {
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg-button);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: all var(--transition);
+}
+
+.icon-btn:active {
+    transform: scale(0.95);
+    background: var(--bg-active);
+}
+
+.icon-btn svg {
+    width: 22px;
+    height: 22px;
+}
+
+/* 电源按钮 */
+.power-btn.active {
+    background: var(--accent-dim);
+    border-color: var(--accent);
+    color: var(--accent);
+    box-shadow: 0 0 12px var(--accent-glow);
+}
+
+/* 频率显示 */
+.freq-display {
+    flex: 1;
+    text-align: center;
+    font-family: 'SF Mono', 'Menlo', monospace;
+    font-weight: 700;
+    font-size: 36px;
+    letter-spacing: 2px;
+    color: var(--accent);
+    text-shadow: 0 0 10px var(--accent-glow);
+    background: var(--bg-card);
+    padding: var(--space-sm) var(--space-md);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border);
+}
+
+.freq-mhz {
+    font-size: 1em;
+}
+
+.freq-khz {
+    font-size: 0.7em;
+    opacity: 0.8;
+}
+
+.freq-unit {
+    font-size: 0.4em;
+    margin-left: var(--space-sm);
+    color: var(--text-secondary);
+    font-weight: 400;
+}
+
+/* 状态栏 */
+.status-bar {
+    display: flex;
+    justify-content: center;
+    gap: var(--space-sm);
+    margin-top: var(--space-sm);
+}
+
+.status-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+    font-size: 11px;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: var(--radius-sm);
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+}
+
+.status-item .dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--danger);
+    transition: all var(--transition);
+}
+
+.status-item.connected {
+    color: var(--accent);
+    border-color: var(--accent);
+    background: var(--accent-dim);
+}
+
+.status-item.connected .dot {
+    background: var(--success);
+    box-shadow: 0 0 4px var(--success);
+}
+
+.status-item.mode {
+    color: var(--accent);
+    font-weight: 700;
+    border-color: rgba(0, 212, 255, 0.4);
+}
+
+/* ========== 主内容 ========== */
+.main-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: var(--space-md);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+    -webkit-overflow-scrolling: touch;
+}
+
+/* 仪表区域 */
+.meter-section {
+    background: var(--bg-card);
+    border-radius: var(--radius-lg);
+    padding: var(--space-md);
+    border: 1px solid var(--border);
+}
+
+/* S表 */
+.s-meter {
+    margin-bottom: var(--space-md);
+}
+
+.meter-bar {
+    height: 8px;
+    background: var(--bg-secondary);
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: var(--space-xs);
+}
+
+.meter-fill {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, var(--accent) 0%, var(--accent) 60%, var(--warning) 80%, var(--danger) 100%);
+    border-radius: 4px;
+    transition: width 100ms ease;
+}
+
+.meter-labels {
+    display: flex;
+    justify-content: space-between;
+    font-size: 9px;
+    color: var(--text-muted);
+    margin-bottom: var(--space-xs);
+}
+
+.meter-value {
+    display: block;
+    text-align: right;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--accent);
+    font-family: 'SF Mono', monospace;
+}
+
+/* 功率/驻波 */
+.power-row {
+    display: flex;
+    justify-content: center;
+    gap: var(--space-xl);
+}
+
+.power-item {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-xs);
+}
+
+.power-item .label {
+    font-size: 11px;
+    color: var(--text-muted);
+}
+
+.power-item .value {
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--accent);
+    font-family: 'SF Mono', monospace;
+}
+
+.power-item .unit {
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+/* 快捷控制 */
+.quick-controls {
+    display: flex;
+    gap: var(--space-sm);
+}
+
+.ctrl-btn {
+    flex: 1;
+    padding: var(--space-md) var(--space-sm);
+    background: var(--bg-button);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    color: var(--text-primary);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all var(--transition);
+    min-height: 44px;
+}
+
+.ctrl-btn:active {
+    transform: scale(0.97);
+    background: var(--bg-active);
+}
+
+.ctrl-btn.active {
+    background: var(--accent-dim);
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+.ctrl-btn.dsp {
+    background: rgba(34, 197, 94, 0.1);
+    border-color: rgba(34, 197, 94, 0.3);
+    color: var(--success);
+}
+
+.ctrl-btn.dsp:active {
+    background: rgba(34, 197, 94, 0.2);
+}
+
+/* 音量控制 */
+.volume-section {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+    background: var(--bg-card);
+    padding: var(--space-md);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border);
+}
+
+.vol-icon {
+    font-size: 18px;
+}
+
+#volume-slider {
+    flex: 1;
+    height: 6px;
+    -webkit-appearance: none;
+    appearance: none;
+    background: linear-gradient(90deg, var(--accent), var(--warning), var(--danger));
+    border-radius: 3px;
+    outline: none;
+}
+
+#volume-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 22px;
+    height: 22px;
+    background: var(--text-primary);
+    border-radius: 50%;
+    cursor: pointer;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+}
+
+.vol-value {
+    min-width: 40px;
+    text-align: right;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--accent);
+}
+
+/* 频率调节 */
+.tuning-section {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-sm);
+}
+
+.tune-btn {
+    width: 50px;
+    height: 44px;
+    background: var(--bg-button);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    color: var(--text-primary);
+    font-size: 18px;
+    cursor: pointer;
+    transition: all var(--transition);
+}
+
+.tune-btn:active {
+    transform: scale(0.95);
+    background: var(--bg-active);
+}
+
+.step-display {
+    padding: var(--space-sm) var(--space-md);
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--accent);
+    min-width: 70px;
+    text-align: center;
+    cursor: pointer;
+}
+
+/* 延迟显示 */
+.latency-section {
+    display: flex;
+    justify-content: center;
+    gap: var(--space-xl);
+    font-size: 11px;
+    color: var(--text-muted);
+}
+
+/* ========== 底部控制 ========== */
+.footer-controls {
+    background: var(--bg-secondary);
+    padding: var(--space-md);
+    padding-bottom: calc(var(--space-md) + var(--safe-bottom));
+    border-top: 1px solid var(--border);
+    flex-shrink: 0;
+}
+
+.footer-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+}
+
+/* PTT 按钮 */
+.ptt-btn {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 30% 30%, #ff6b6b, #cc0000);
+    border: 3px solid rgba(255,255,255,0.8);
+    color: white;
+    font-size: 20px;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 15px rgba(255, 68, 68, 0.4);
+    transition: all 100ms;
+    touch-action: manipulation;
+}
+
+.ptt-btn:active,
+.ptt-btn.pressed {
+    transform: scale(0.95);
+    box-shadow: 0 2px 8px rgba(255, 68, 68, 0.6);
+    background: radial-gradient(circle at 30% 30%, #ff8888, #ee0000);
+}
+
+.ptt-btn.pressed {
+    animation: ptt-pulse 1s infinite;
+}
+
+@keyframes ptt-pulse {
+    0%, 100% { box-shadow: 0 0 15px rgba(255, 68, 68, 0.6); }
+    50% { box-shadow: 0 0 25px rgba(255, 68, 68, 0.8); }
+}
+
+.ptt-text {
+    font-size: 18px;
+    letter-spacing: 2px;
+}
+
+/* 侧边按钮 */
+.side-btns {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+    flex: 1;
+}
+
+.side-btn {
+    padding: var(--space-md);
+    background: var(--bg-button);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    color: var(--text-primary);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all var(--transition);
+}
+
+.side-btn:active {
+    transform: scale(0.97);
+}
+
+.side-btn.tune {
+    background: rgba(245, 158, 11, 0.1);
+    border-color: rgba(245, 158, 11, 0.3);
+    color: var(--warning);
+}
+
+.side-btn.record {
+    background: rgba(239, 68, 68, 0.1);
+    border-color: rgba(239, 68, 68, 0.3);
+    color: var(--danger);
+}
+
+.side-btn.record.recording {
+    animation: record-blink 1s infinite;
+}
+
+@keyframes record-blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+/* ========== 菜单面板 ========== */
+.menu-panel {
+    position: fixed;
+    top: 0;
+    left: -300px;
+    width: 280px;
+    height: 100%;
+    background: var(--bg-secondary);
+    z-index: 1001;
+    transition: left 250ms ease;
+    display: flex;
+    flex-direction: column;
+    padding-top: var(--safe-top);
+    padding-bottom: var(--safe-bottom);
+    box-shadow: 2px 0 20px rgba(0,0,0,0.5);
+}
+
+.menu-panel.open {
+    left: 0;
+}
+
+.menu-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--space-md);
+    border-bottom: 1px solid var(--border);
+}
+
+.menu-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--accent);
+}
+
+.close-btn {
+    width: 36px;
+    height: 36px;
+    background: var(--bg-button);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    color: var(--text-primary);
+    font-size: 24px;
+    cursor: pointer;
+}
+
+.menu-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: var(--space-md);
+}
+
+.menu-group {
+    margin-bottom: var(--space-lg);
+}
+
+.menu-group-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: var(--space-sm);
+}
+
+.menu-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--space-sm);
+}
+
+.menu-grid button {
+    padding: var(--space-md) var(--space-sm);
+    background: var(--bg-button);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    color: var(--text-primary);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all var(--transition);
+}
+
+.menu-grid button:active {
+    background: var(--bg-active);
+}
+
+.menu-grid button.active {
+    background: var(--accent-dim);
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+/* DSP 选项 */
+.dsp-options {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+}
+
+.dsp-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--space-sm) var(--space-md);
+    background: var(--bg-card);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border);
+}
+
+.dsp-label {
+    font-size: 13px;
+    color: var(--text-primary);
+}
+
+.dsp-toggle {
+    width: 44px;
+    height: 24px;
+    background: var(--bg-button);
+    border-radius: 12px;
+    position: relative;
+    cursor: pointer;
+    transition: background var(--transition);
+}
+
+.dsp-toggle.active {
+    background: var(--accent);
+}
+
+.dsp-toggle::after {
+    content: '';
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    background: white;
+    border-radius: 50%;
+    top: 2px;
+    left: 2px;
+    transition: left var(--transition);
+}
+
+.dsp-toggle.active::after {
+    left: 22px;
+}
+
+.menu-footer {
+    padding: var(--space-md);
+    text-align: center;
+    border-top: 1px solid var(--border);
+    font-size: 11px;
+    color: var(--text-muted);
+}
+
+/* 遮罩 */
+.overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.7);
+    z-index: 1000;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 250ms ease;
+    backdrop-filter: blur(4px);
+}
+
+.overlay.show {
+    opacity: 1;
+    visibility: visible;
+}
+
+/* ========== 响应式 ========== */
+@media (min-width: 428px) {
+    .freq-display {
+        font-size: 42px;
+    }
+    
+    .ptt-btn {
+        width: 120px;
+        height: 120px;
+    }
+}
+
+@media (min-width: 768px) {
+    #app-container {
+        max-width: 450px;
+        margin: 0 auto;
+        box-shadow: 0 0 30px rgba(0,0,0,0.5);
+    }
+}
+
+/* 横屏 */
+@media (orientation: landscape) and (max-height: 500px) {
+    .app-header {
+        padding: var(--space-xs) var(--space-md);
+    }
+    
+    .main-content {
+        padding: var(--space-sm);
+        gap: var(--space-sm);
+    }
+    
+    .meter-section {
+        padding: var(--space-sm);
+    }
+    
+    .ptt-btn {
+        width: 80px;
+        height: 80px;
+    }
+    
+    .footer-controls {
+        padding: var(--space-sm);
+    }
+}
+
+/* 减少动画 */
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.01ms !important;
+    }
+}

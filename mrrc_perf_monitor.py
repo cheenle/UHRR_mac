@@ -5,8 +5,10 @@ MRRC 性能监控脚本
 实时监控 MRRC、ATR-1000代理、rigctld 的 CPU、内存、网络、IO
 
 用法:
-    python3 mrrc_perf_monitor.py          # 实时监控
-    python3 mrrc_perf_monitor.py --record # 记录到文件
+    python3 mrrc_perf_monitor.py                    # 监控主实例
+    python3 mrrc_perf_monitor.py --instance radio1  # 监控 radio1 实例
+    python3 mrrc_perf_monitor.py --all              # 监控所有实例
+    python3 mrrc_perf_monitor.py --record           # 记录到文件
     python3 mrrc_perf_monitor.py --analyze perf_data.json # 分析数据
 """
 
@@ -17,12 +19,16 @@ import time
 import argparse
 import subprocess
 import threading
+import glob
 from datetime import datetime
 from collections import deque
 
 # 配置
 MONITOR_INTERVAL = 1.0  # 监控间隔（秒）
 HISTORY_SIZE = 300      # 保留历史记录数（5分钟@1s间隔）
+
+# 项目根目录
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 class ProcessMonitor:
     """进程监控器"""
@@ -196,9 +202,18 @@ class LogMonitor:
 class ATR1000DeviceMonitor:
     """ATR-1000 设备监控器 - 监控设备压力和通讯状态"""
     
-    def __init__(self, device_ip='192.168.1.63', device_port=60001):
+    def __init__(self, device_ip='192.168.1.63', device_port=60001, log_suffix=''):
+        """
+        初始化 ATR-1000 设备监控器
+        
+        Args:
+            device_ip: 设备 IP 地址
+            device_port: 设备端口
+            log_suffix: 日志文件后缀 (如 '_radio1')
+        """
         self.device_ip = device_ip
         self.device_port = device_port
+        self.log_suffix = log_suffix
         self.history = deque(maxlen=HISTORY_SIZE)
         
         # 统计计数器
@@ -210,8 +225,11 @@ class ATR1000DeviceMonitor:
         self.last_ping_ms = None        # 最后 ping 延迟
         self.connected = False          # 连接状态
         
-        # 从日志解析统计
-        self.log_path = '/Users/cheenle/UHRR/MRRC/atr1000_proxy.log'
+        # 从日志解析统计 - 支持多实例日志文件
+        if log_suffix:
+            self.log_path = os.path.join(SCRIPT_DIR, f'atr1000{log_suffix}.log')
+        else:
+            self.log_path = os.path.join(SCRIPT_DIR, 'atr1000_proxy.log')
         self.last_log_pos = 0
         self.last_log_check = time.time()
         
@@ -388,39 +406,161 @@ class ATR1000DeviceMonitor:
 class PerformanceAnalyzer:
     """性能分析器"""
     
-    def __init__(self):
-        # 进程匹配 pattern：
-        # - MRRC: 匹配 "Python .../MRRC" 但排除 atr1000_proxy
-        # - 使用负向前瞻排除包含 atr1000 的进程
-        self.mrrc = ProcessMonitor('MRRC', 'Python.*/MRRC$')
-        self.atr1000 = ProcessMonitor('ATR-1000', 'atr1000_proxy')
-        self.rigctld = ProcessMonitor('rigctld', 'rigctld')
-        self.network = NetworkMonitor()
-        self.mrrc_log = LogMonitor('/Users/cheenle/UHRR/MRRC/mrrc.log')
-        self.atr1000_log = LogMonitor('/Users/cheenle/UHRR/MRRC/atr1000_proxy.log')
-        self.debug_log = LogMonitor('/Users/cheenle/UHRR/MRRC/mrrc_debug.log')
+    def __init__(self, instance=None, monitor_all=False):
+        """
+        初始化性能分析器
         
-        # ATR-1000 设备监控（网络、通讯、压力）
-        self.atr1000_device = ATR1000DeviceMonitor('192.168.1.63', 60001)
-        
+        Args:
+            instance: 实例名称 (如 'radio1', 'radio2')，None 表示主实例
+            monitor_all: 是否监控所有实例
+        """
+        self.instance = instance
+        self.monitor_all = monitor_all
         self.recording = False
         self.record_data = []
+        
+        if monitor_all:
+            # 多实例监控模式
+            self._init_multi_instance()
+        else:
+            # 单实例监控模式
+            self._init_single_instance(instance)
+    
+    def _init_single_instance(self, instance):
+        """初始化单实例监控"""
+        if instance:
+            # 指定实例 (如 radio1)
+            config_file = os.path.join(SCRIPT_DIR, f'MRRC.{instance}.conf')
+            log_prefix = f'_{instance}'
+            # 进程匹配：
+            # - MRRC: 匹配配置文件路径 MRRC.{instance}.conf
+            # - ATR-1000: 匹配 unix-socket 参数
+            # - rigctld: 匹配端口号 (radio1=4531, radio2=4532, etc.)
+            mrrc_pattern = f'MRRC.{instance}.conf'
+            atr1000_pattern = f'atr1000_proxy.*--unix-socket.*mrrc_{instance}.sock'
+            # 计算端口号：radio1=4531, radio2=4532, ...
+            port_num = self._get_rigctld_port(instance)
+            rigctld_pattern = f'rigctld.*-t {port_num}'
+        else:
+            # 主实例
+            config_file = os.path.join(SCRIPT_DIR, 'MRRC.conf')
+            log_prefix = ''
+            # 主实例匹配：MRRC 后面没有配置文件，或使用默认配置
+            mrrc_pattern = 'Python.*/MRRC\\s*$|Python.*/MRRC\\s+[^/]'
+            atr1000_pattern = 'atr1000_proxy(?!.*--unix-socket.*mrrc_)'
+            rigctld_pattern = 'rigctld(?!.*-t 453)'
+        
+        # 进程监控器
+        self.mrrc = ProcessMonitor(f'MRRC{log_prefix}', mrrc_pattern)
+        self.atr1000 = ProcessMonitor(f'ATR-1000{log_prefix}', atr1000_pattern)
+        self.rigctld = ProcessMonitor(f'rigctld{log_prefix}', rigctld_pattern)
+        
+        # 网络监控
+        self.network = NetworkMonitor()
+        
+        # 日志监控
+        self.mrrc_log = LogMonitor(os.path.join(SCRIPT_DIR, f'mrrc{log_prefix}.log'))
+        self.atr1000_log = LogMonitor(os.path.join(SCRIPT_DIR, f'atr1000{log_prefix}.log'))
+        self.debug_log = LogMonitor(os.path.join(SCRIPT_DIR, 'mrrc_debug.log'))
+        
+        # ATR-1000 设备监控
+        self.atr1000_device = ATR1000DeviceMonitor('192.168.1.63', 60001, log_prefix)
+    
+    def _get_rigctld_port(self, instance):
+        """获取实例对应的 rigctld 端口号"""
+        # 从配置文件读取端口，或使用默认规则
+        # radio1=4531, radio2=4532, radio3=4533, ...
+        instance_num = 0
+        if instance and instance.startswith('radio'):
+            try:
+                instance_num = int(instance.replace('radio', ''))
+            except ValueError:
+                pass
+        return 4530 + instance_num
+    
+    def _init_multi_instance(self):
+        """初始化多实例监控"""
+        # 查找所有实例配置文件
+        config_files = glob.glob(os.path.join(SCRIPT_DIR, 'MRRC.*.conf'))
+        self.instances = []
+        
+        # 添加主实例（排除特殊情况如 bak, 9000 等）
+        # 主实例特征：不使用 MRRC.xxx.conf 配置文件
+        self.instances.append({
+            'name': 'main',
+            'mrrc': ProcessMonitor('MRRC', 'Python.*/MRRC\\s*$|Python.*/MRRC\\s+[^/]'),
+            'atr1000': ProcessMonitor('ATR-1000', 'atr1000_proxy(?!.*--unix-socket.*mrrc_)'),
+            'rigctld': ProcessMonitor('rigctld', 'rigctld(?!.*-t 453)'),
+            'mrrc_log': LogMonitor(os.path.join(SCRIPT_DIR, 'mrrc.log')),
+            'atr1000_log': LogMonitor(os.path.join(SCRIPT_DIR, 'atr1000_proxy.log')),
+            'atr1000_device': ATR1000DeviceMonitor('192.168.1.63', 60001, ''),
+        })
+        
+        # 添加其他实例
+        for config_file in sorted(config_files):
+            basename = os.path.basename(config_file)
+            # MRRC.radio1.conf -> radio1
+            instance_name = basename.replace('MRRC.', '').replace('.conf', '')
+            log_prefix = f'_{instance_name}'
+            
+            # 计算端口号
+            port_num = self._get_rigctld_port(instance_name)
+            
+            self.instances.append({
+                'name': instance_name,
+                'mrrc': ProcessMonitor(f'MRRC_{instance_name}', f'MRRC.{instance_name}.conf'),
+                'atr1000': ProcessMonitor(f'ATR-1000_{instance_name}', f'atr1000_proxy.*--unix-socket.*mrrc_{instance_name}.sock'),
+                'rigctld': ProcessMonitor(f'rigctld_{instance_name}', f'rigctld.*-t {port_num}'),
+                'mrrc_log': LogMonitor(os.path.join(SCRIPT_DIR, f'mrrc{log_prefix}.log')),
+                'atr1000_log': LogMonitor(os.path.join(SCRIPT_DIR, f'atr1000{log_prefix}.log')),
+                'atr1000_device': ATR1000DeviceMonitor('192.168.1.63', 60001, log_prefix),
+            })
+        
+        # 全局网络监控
+        self.network = NetworkMonitor()
+        self.debug_log = LogMonitor(os.path.join(SCRIPT_DIR, 'mrrc_debug.log'))
     
     def collect(self):
         """收集所有监控数据"""
-        return {
-            'time': datetime.now().isoformat(),
-            'mrrc': self.mrrc.get_stats(),
-            'atr1000': self.atr1000.get_stats(),
-            'rigctld': self.rigctld.get_stats(),
-            'network': self.network.get_stats(),
-            'logs': {
-                'mrrc': self.mrrc_log.get_stats(),
-                'atr1000': self.atr1000_log.get_stats(),
+        if self.monitor_all:
+            # 多实例模式
+            instances_data = []
+            for inst in self.instances:
+                instances_data.append({
+                    'name': inst['name'],
+                    'mrrc': inst['mrrc'].get_stats(),
+                    'atr1000': inst['atr1000'].get_stats(),
+                    'rigctld': inst['rigctld'].get_stats(),
+                    'logs': {
+                        'mrrc': inst['mrrc_log'].get_stats(),
+                        'atr1000': inst['atr1000_log'].get_stats(),
+                    },
+                    'atr1000_device': inst['atr1000_device'].get_stats()
+                })
+            return {
+                'time': datetime.now().isoformat(),
+                'mode': 'multi',
+                'instances': instances_data,
+                'network': self.network.get_stats(),
                 'debug': self.debug_log.get_stats()
-            },
-            'atr1000_device': self.atr1000_device.get_stats()
-        }
+            }
+        else:
+            # 单实例模式
+            return {
+                'time': datetime.now().isoformat(),
+                'mode': 'single',
+                'instance': self.instance or 'main',
+                'mrrc': self.mrrc.get_stats(),
+                'atr1000': self.atr1000.get_stats(),
+                'rigctld': self.rigctld.get_stats(),
+                'network': self.network.get_stats(),
+                'logs': {
+                    'mrrc': self.mrrc_log.get_stats(),
+                    'atr1000': self.atr1000_log.get_stats(),
+                    'debug': self.debug_log.get_stats()
+                },
+                'atr1000_device': self.atr1000_device.get_stats()
+            }
     
     def analyze_bottlenecks(self):
         """分析性能瓶颈"""
@@ -473,9 +613,23 @@ class PerformanceAnalyzer:
     
     def print_status(self, data):
         """打印状态"""
-        # os.system('clear')  # 禁用清屏，保留调试输出
         print("\n" + "=" * 70)
         print(f"MRRC 性能监控 - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+        
+        # 多实例模式
+        if data.get('mode') == 'multi':
+            self._print_multi_instance_status(data)
+        else:
+            self._print_single_instance_status(data)
+        
+        print("\n" + "=" * 70)
+        print("按 Ctrl+C 退出 | 正在记录: {}".format("是" if self.recording else "否"))
+    
+    def _print_single_instance_status(self, data):
+        """打印单实例状态"""
+        instance_name = data.get('instance', 'main')
+        if instance_name != 'main':
+            print(f"实例: {instance_name}")
         print("=" * 70)
         
         # 进程状态
@@ -505,35 +659,12 @@ class PerformanceAnalyzer:
             print(f"mrrc.log:      {data['logs']['mrrc']['size_mb']:.2f} MB (增长: {data['logs']['mrrc']['growth_rate_kbps']:.1f} KB/s)")
         if data['logs']['atr1000']:
             print(f"atr1000.log:   {data['logs']['atr1000']['size_mb']:.2f} MB (增长: {data['logs']['atr1000']['growth_rate_kbps']:.1f} KB/s)")
-        if data['logs']['debug']:
+        if data['logs'].get('debug'):
             print(f"debug.log:     {data['logs']['debug']['size_mb']:.2f} MB (增长: {data['logs']['debug']['growth_rate_kbps']:.1f} KB/s)")
         
         # ATR-1000 设备状态
         if 'atr1000_device' in data and data['atr1000_device']:
-            dev = data['atr1000_device']
-            print("\n📡 ATR-1000 设备状态:")
-            print("-" * 70)
-            status = "🟢 已连接" if dev.get('connected') else "🔴 未连接"
-            print(f"设备: {dev.get('device_ip', 'N/A')}:{dev.get('device_port', 'N/A')} {status}")
-            
-            # 网络状态
-            net_status = "🟢 正常" if dev.get('network_ok') else "🔴 不可达"
-            port_status = "🟢 开放" if dev.get('port_ok') else "🔴 关闭"
-            ping = f"{dev.get('ping_ms', 0):.1f}ms" if dev.get('ping_ms') else "超时"
-            print(f"网络: {net_status} | 端口: {port_status} | Ping: {ping}")
-            
-            # 通讯统计
-            print(f"请求: {dev.get('request_count', 0)} | 响应: {dev.get('response_count', 0)} | 超时: {dev.get('timeout_count', 0)} | 重连: {dev.get('reconnect_count', 0)}")
-            
-            # 压力指标
-            response_rate = dev.get('response_rate', 0)
-            pressure = dev.get('pressure_score', 0)
-            pressure_level = "🟢 正常" if pressure < 5 else ("🟡 中等" if pressure < 15 else "🔴 过高")
-            print(f"响应率: {response_rate:.1f}% | 设备压力: {pressure:.1f} ({pressure_level})")
-            
-            # 数据流统计
-            if 'data_rate' in dev:
-                print(f"数据流: {dev['data_rate']:.1f} 条/秒 | 最后数据: {dev.get('last_data_age', 0):.1f}秒前")
+            self._print_atr1000_device_status(data['atr1000_device'])
         
         # 性能瓶颈分析
         issues = self.analyze_bottlenecks()
@@ -542,9 +673,77 @@ class PerformanceAnalyzer:
             print("-" * 70)
             for issue in issues:
                 print(issue)
+    
+    def _print_multi_instance_status(self, data):
+        """打印多实例状态"""
+        print(f"多实例模式 - 共 {len(data['instances'])} 个实例")
+        print("=" * 70)
         
-        print("\n" + "=" * 70)
-        print("按 Ctrl+C 退出 | 正在记录: {}".format("是" if self.recording else "否"))
+        for inst in data['instances']:
+            name = inst['name']
+            print(f"\n📦 实例: {name}")
+            print("-" * 50)
+            
+            # 进程状态
+            procs = []
+            if inst['mrrc']:
+                procs.append(f"MRRC: {inst['mrrc']['cpu_percent']:.1f}%CPU, {inst['mrrc']['rss_mb']:.1f}MB")
+            else:
+                procs.append("MRRC: 未运行")
+            
+            if inst['atr1000']:
+                procs.append(f"ATR: {inst['atr1000']['cpu_percent']:.1f}%CPU")
+            else:
+                procs.append("ATR: 未运行")
+            
+            if inst['rigctld']:
+                procs.append(f"rigctld: {inst['rigctld']['cpu_percent']:.1f}%CPU")
+            else:
+                procs.append("rigctld: 未运行")
+            
+            print("  " + " | ".join(procs))
+            
+            # ATR-1000 设备状态
+            if inst.get('atr1000_device'):
+                dev = inst['atr1000_device']
+                status = "🟢" if dev.get('connected') else "🔴"
+                pressure = dev.get('pressure_score', 0)
+                pressure_icon = "🟢" if pressure < 5 else ("🟡" if pressure < 15 else "🔴")
+                print(f"  设备: {status} {'已连接' if dev.get('connected') else '未连接'} | 压力: {pressure_icon} {pressure:.1f}")
+        
+        # 全局网络状态
+        print("\n🌐 全局网络状态:")
+        print("-" * 70)
+        if data['network']:
+            net = data['network']
+            print(f"入站流量: {net['total_in_mb']:.1f} MB ({net['rate_in_kbps']:.1f} KB/s)")
+            print(f"出站流量: {net['total_out_mb']:.1f} MB ({net['rate_out_kbps']:.1f} KB/s)")
+    
+    def _print_atr1000_device_status(self, dev):
+        """打印 ATR-1000 设备状态"""
+        print("\n📡 ATR-1000 设备状态:")
+        print("-" * 70)
+        status = "🟢 已连接" if dev.get('connected') else "🔴 未连接"
+        print(f"设备: {dev.get('device_ip', 'N/A')}:{dev.get('device_port', 'N/A')} {status}")
+        
+        # 网络状态
+        net_status = "🟢 正常" if dev.get('network_ok') else "🔴 不可达"
+        port_status = "🟢 开放" if dev.get('port_ok') else "🔴 关闭"
+        ping = f"{dev.get('ping_ms', 0):.1f}ms" if dev.get('ping_ms') else "超时"
+        print(f"网络: {net_status} | 端口: {port_status} | Ping: {ping}")
+        
+        # 通讯统计
+        print(f"请求: {dev.get('request_count', 0)} | 响应: {dev.get('response_count', 0)} | 超时: {dev.get('timeout_count', 0)} | 重连: {dev.get('reconnect_count', 0)}")
+        
+        # 压力指标
+        response_rate = dev.get('response_rate', 0)
+        pressure = dev.get('pressure_score', 0)
+        pressure_level = "🟢 正常" if pressure < 5 else ("🟡 中等" if pressure < 15 else "🔴 过高")
+        print(f"响应率: {response_rate:.1f}% | 设备压力: {pressure:.1f} ({pressure_level})")
+        
+        # 数据流统计
+        if 'data_rate' in dev:
+            print(f"数据流: {dev['data_rate']:.1f} 条/秒 | 最后数据: {dev.get('last_data_age', 0):.1f}秒前")
     
     def run(self, record=False, duration=0):
         """运行监控"""
@@ -618,14 +817,20 @@ def analyze_file(filename):
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='MRRC 性能监控')
+    parser = argparse.ArgumentParser(description='MRRC 性能监控 - 多实例支持')
     parser.add_argument('--record', action='store_true', help='记录数据到文件')
     parser.add_argument('--duration', type=int, default=0, help='运行时长(秒)，0表示持续运行')
     parser.add_argument('--analyze', type=str, help='分析指定的数据文件')
+    parser.add_argument('--instance', '-i', type=str, default=None, 
+                        help='指定监控的实例名称 (如 radio1, radio2)')
+    parser.add_argument('--all', '-a', action='store_true', 
+                        help='监控所有实例（默认行为）')
     args = parser.parse_args()
     
     if args.analyze:
         analyze_file(args.analyze)
     else:
-        analyzer = PerformanceAnalyzer()
+        # 默认监控所有实例，除非指定了 --instance
+        monitor_all = args.all or (args.instance is None)
+        analyzer = PerformanceAnalyzer(instance=args.instance, monitor_all=monitor_all)
         analyzer.run(record=args.record, duration=args.duration)

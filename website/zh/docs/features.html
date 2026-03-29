@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>功能详解 - MRRC 移动远程电台控制</title>
+    <meta name="description" content="MRRC完整功能介绍：超低延迟、WDSP降噪、移动端优化、ATR-1000集成、语音助手等核心功能详解">
+    <link rel="stylesheet" href="../../css/style.css">
+    <link rel="stylesheet" href="../../css/docs.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="container header-content">
+            <a href="../../index.html" class="logo">
+                <span class="logo-icon">📻</span>
+                <span>MRRC</span>
+            </a>
+            <nav class="nav">
+                <a href="../../index.html" data-i18n="nav_home">首页</a>
+                <a href="features.html" class="active" data-i18n="nav_features">功能特性</a>
+                <a href="../installation.html" data-i18n="nav_install">安装指南</a>
+                <a href="docs.html" data-i18n="nav_docs">技术文档</a>
+            </nav>
+            <div class="lang-switch">
+                <button class="lang-btn" data-lang="en"><a href="../../docs/features.html" style="color:inherit;text-decoration:none;">English</a></button>
+                <button class="lang-btn active" data-lang="zh">中文</button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Hero -->
+    <section class="hero">
+        <div class="hero-bg"></div>
+        <div class="container">
+            <h1 class="hero-title" data-i18n="features_title">功能特性详解</h1>
+            <p class="hero-subtitle" data-i18n="features_subtitle">深入了解MRRC的每一个核心功能，释放业余无线电的无限可能</p>
+        </div>
+    </section>
+
+    <!-- Features Detail -->
+    <section class="section">
+        <div class="container">
+            <!-- 超低延迟音频 -->
+            <div class="doc-section" id="latency">
+                <h2><span class="feature-icon">⚡</span> 超低延迟音频传输</h2>
+                <div class="feature-highlight">
+                    <div class="metric-card">
+                        <div class="metric-value">&lt;100ms</div>
+                        <div class="metric-label">TX/RX切换延迟</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value">~65ms</div>
+                        <div class="metric-label">TX发射延迟</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value">~51ms</div>
+                        <div class="metric-label">RX接收延迟</div>
+                    </div>
+                </div>
+                
+                <h3>技术实现</h3>
+                <ul>
+                    <li><strong>AudioWorklet播放器</strong>：使用Web Audio API的AudioWorklet降低主线程抖动，实现低延迟音频播放</li>
+                    <li><strong>区间缓冲</strong>：16/32帧配置，平衡延迟与稳定性</li>
+                    <li><strong>PTT防抖机制</strong>：50ms防抖延迟，防止重复命令</li>
+                    <li><strong>缓冲区清除优化</strong>：TX释放时立即清除RX缓冲区</li>
+                    <li><strong>Int16编码</strong>：相比Float32减少50%带宽</li>
+                </ul>
+
+                <h3>优化对比</h3>
+                <table class="comparison-table">
+                    <tr>
+                        <th>指标</th>
+                        <th>传统方案</th>
+                        <th>MRRC优化后</th>
+                    </tr>
+                    <tr>
+                        <td>TX→RX切换</td>
+                        <td>2-3秒</td>
+                        <td class="highlight">&lt;100ms</td>
+                    </tr>
+                    <tr>
+                        <td>PTT可靠性</td>
+                        <td>95%</td>
+                        <td class="highlight">99%+</td>
+                    </tr>
+                    <tr>
+                        <td>音频带宽</td>
+                        <td>256kbps</td>
+                        <td class="highlight">128kbps</td>
+                    </tr>
+                </table>
+            </div>
+
+            <!-- WDSP降噪 -->
+            <div class="doc-section" id="wdsp">
+                <h2><span class="feature-icon">🔧</span> WDSP专业降噪处理</h2>
+                <p>集成Warren Pratt's Digital Signal Processing库，这是OpenHPSDR项目的高性能DSP库，广泛应用于Thetis、piHPSDR等专业业余无线电软件。</p>
+                
+                <h3>核心功能</h3>
+                <div class="feature-grid">
+                    <div class="feature-card">
+                        <div class="feature-icon-large">🔇</div>
+                        <h4>NR2 频谱降噪</h4>
+                        <p>基于谱减法的降噪算法，15-20dB降噪深度，语音保真度极高，专门针对SSB语音优化</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon-large">⚡</div>
+                        <h4>NB 噪声抑制</h4>
+                        <p>消除脉冲干扰，有效抑制电器火花、雷电等突发噪声</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon-large">🎯</div>
+                        <h4>ANF 自动陷波</h4>
+                        <p>自动消除单频干扰，适用于CW报音、载波干扰等场景</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon-large">📊</div>
+                        <h4>AGC 自动增益</h4>
+                        <p>4种模式可选：LONG/SLOW/MED/FAST，适应不同信号环境</p>
+                    </div>
+                </div>
+
+                <h3>与RNNoise对比</h3>
+                <table class="comparison-table">
+                    <tr>
+                        <th>特性</th>
+                        <th>WDSP (NR2)</th>
+                        <th>RNNoise</th>
+                    </tr>
+                    <tr>
+                        <td>降噪深度</td>
+                        <td class="highlight">15-20 dB</td>
+                        <td>10-15 dB</td>
+                    </tr>
+                    <tr>
+                        <td>语音保真度</td>
+                        <td class="highlight">⭐⭐⭐⭐⭐</td>
+                        <td>⭐⭐⭐</td>
+                    </tr>
+                    <tr>
+                        <td>SSB优化</td>
+                        <td class="highlight">✅ 专门优化</td>
+                        <td>❌ 通用语音</td>
+                    </tr>
+                    <tr>
+                        <td>延迟</td>
+                        <td class="highlight">&lt; 20ms</td>
+                        <td>30-50ms</td>
+                    </tr>
+                </table>
+            </div>
+
+            <!-- 移动端优化 -->
+            <div class="doc-section" id="mobile">
+                <h2><span class="feature-icon">📱</span> 移动端深度优化</h2>
+                
+                <h3>触摸优化</h3>
+                <ul>
+                    <li><strong>大尺寸PTT按钮</strong>：底部居中设计，适配拇指操作区域</li>
+                    <li><strong>触摸增强</strong>：300ms防误触，长按/短按区分</li>
+                    <li><strong>触觉反馈</strong>：PTT按钮震动反馈（iOS/Android支持）</li>
+                    <li><strong>安全区域适配</strong>：自动适配刘海屏和底部指示器</li>
+                </ul>
+
+                <h3>PWA支持</h3>
+                <ul>
+                    <li><strong>添加到主屏幕</strong>：支持作为独立应用运行</li>
+                    <li><strong>离线访问</strong>：Service Worker缓存关键资源</li>
+                    <li><strong>快速启动</strong>：优化的启动流程，秒开应用</li>
+                </ul>
+
+                <h3>设备兼容性</h3>
+                <div class="compatibility-grid">
+                    <div class="device-item">
+                        <span class="device-icon">📱</span>
+                        <span>iPhone 15系列</span>
+                        <span class="status supported">✓ 完美支持</span>
+                    </div>
+                    <div class="device-item">
+                        <span class="device-icon">📱</span>
+                        <span>iPhone 12/13/14</span>
+                        <span class="status supported">✓ 完美支持</span>
+                    </div>
+                    <div class="device-item">
+                        <span class="device-icon">📱</span>
+                        <span>Android旗舰</span>
+                        <span class="status supported">✓ 完美支持</span>
+                    </div>
+                    <div class="device-item">
+                        <span class="device-icon">📱</span>
+                        <span>iPad/平板</span>
+                        <span class="status supported">✓ 支持</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ATR-1000集成 -->
+            <div class="doc-section" id="atr1000">
+                <h2><span class="feature-icon">📊</span> ATR-1000 功率计/天调集成</h2>
+                
+                <h3>实时监测</h3>
+                <ul>
+                    <li><strong>功率显示</strong>：0-200W实时前向功率显示</li>
+                    <li><strong>SWR监测</strong>：1.0-9.99实时驻波比显示</li>
+                    <li><strong>继电器状态</strong>：LC/CL网络、电感/电容值显示</li>
+                    <li><strong>显示延迟</strong>：&lt;200ms实时更新</li>
+                </ul>
+
+                <h3>智能天调学习</h3>
+                <div class="tech-detail">
+                    <h4>学习条件</h4>
+                    <ul>
+                        <li>SWR 在 1.0 ~ 1.5 之间</li>
+                        <li>前向功率 > 5W</li>
+                        <li>连续 5 次采样满足条件才记录</li>
+                    </ul>
+                    
+                    <h4>快速调谐</h4>
+                    <ul>
+                        <li>切换频率时自动应用已学习的天调参数</li>
+                        <li>±10kHz容差范围查找</li>
+                        <li>参数持久化到JSON文件</li>
+                    </ul>
+                </div>
+
+                <h3>协议细节</h3>
+                <pre class="code-block"><code>通信协议：WebSocket + JSON
+数据帧格式：FF CMD LEN DATA...
+响应示例：ff050701031b1e000e01
+  → SW=CL, IND=30(0.3uH), CAP=27(270pF)</code></pre>
+            </div>
+
+            <!-- 语音助手 -->
+            <div class="doc-section" id="voice">
+                <h2><span class="feature-icon">🎙️</span> AI语音助手</h2>
+                
+                <h3>语音识别 (ASR)</h3>
+                <ul>
+                    <li><strong>Whisper本地模型</strong>：OpenAI Whisper base模型，150MB，完全本地运行</li>
+                    <li><strong>实时识别</strong>：电台接收语音实时转文字</li>
+                    <li><strong>多语言支持</strong>：中文、英文、日文等</li>
+                    <li><strong>呼号识别</strong>：自动识别呼号格式</li>
+                </ul>
+
+                <h3>语音合成 (TTS)</h3>
+                <ul>
+                    <li><strong>Qwen3-TTS集成</strong>：阿里巴巴1.7B模型，真正男中音</li>
+                    <li><strong>字母解释法</strong>：呼号自动转换为国际字母解释法发音</li>
+                    <li><strong>智能切换</strong>：中英文自动选择最佳语音</li>
+                    <li><strong>PTT联动</strong>：按住发射按钮自动合成并发射</li>
+                </ul>
+
+                <h3>使用场景</h3>
+                <div class="use-case">
+                    <div class="use-case-item">
+                        <strong>接收识别：</strong>对方语音 → 文字显示在对话框
+                    </div>
+                    <div class="use-case-item">
+                        <strong>回复合成：</strong>输入文字 → 合成语音 → 按住PTT发射
+                    </div>
+                    <div class="use-case-item">
+                        <strong>呼号优化：</strong>"BG1SB" → "BG1SB (Bravo Golf One Sierra Bravo)"
+                    </div>
+                </div>
+            </div>
+
+            <!-- TX均衡器 -->
+            <div class="doc-section" id="eq">
+                <h2><span class="feature-icon">🎚️</span> TX发射均衡器</h2>
+                <p>三段均衡器优化发射音频质量，专为短波通信语音优化。</p>
+
+                <h3>预设模式</h3>
+                <table class="comparison-table">
+                    <tr>
+                        <th>预设</th>
+                        <th>低频 (&lt;100Hz)</th>
+                        <th>中频 (1500Hz)</th>
+                        <th>高频 (&gt;2700Hz)</th>
+                        <th>适用场景</th>
+                    </tr>
+                    <tr>
+                        <td>默认</td>
+                        <td>0dB</td>
+                        <td>0dB</td>
+                        <td>0dB</td>
+                        <td>无处理</td>
+                    </tr>
+                    <tr>
+                        <td class="highlight">短波语音</td>
+                        <td>-20dB</td>
+                        <td>+6dB</td>
+                        <td>-20dB</td>
+                        <td>标准短波通信</td>
+                    </tr>
+                    <tr>
+                        <td class="highlight">手机优化</td>
+                        <td>-15dB</td>
+                        <td>+8dB</td>
+                        <td>-24dB</td>
+                        <td>手机麦克风专用</td>
+                    </tr>
+                    <tr>
+                        <td class="highlight">弱信号</td>
+                        <td>-20dB</td>
+                        <td>+10dB</td>
+                        <td>-25dB</td>
+                        <td>DX弱信号通信</td>
+                    </tr>
+                </table>
+
+                <h3>抗混叠滤波</h3>
+                <p>采用6kHz低通滤波器，在降采样前滤除高频，解决iPhone麦克风高频强调导致的尖锐问题。</p>
+            </div>
+
+            <!-- 频谱显示 -->
+            <div class="doc-section" id="panadapter">
+                <h2><span class="feature-icon">📈</span> 实时频谱显示</h2>
+                <ul>
+                    <li><strong>WebGL加速</strong>：GPU渲染，流畅显示</li>
+                    <li><strong>瀑布图</strong>：时间-频率-强度三维显示</li>
+                    <li><strong>可配置参数</strong>：采样率、中心频率、增益</li>
+                    <li><strong>RTL-SDR支持</strong>：支持RTL-SDR设备</li>
+                </ul>
+            </div>
+
+            <!-- CW 解码 -->
+            <div class="doc-section" id="cw">
+                <h2><span class="feature-icon">📡</span> CW 实时解码系统</h2>
+                <p>基于深度学习的摩尔斯电码实时解码，支持前端 ONNX 推理和后端 PyTorch 解码双模式。</p>
+                
+                <h3>技术架构</h3>
+                <ul>
+                    <li><strong>Browser-First AI</strong>：AI 能力下沉到浏览器端，零后端依赖</li>
+                    <li><strong>双模式解码</strong>：前端 ONNX (2MB) + 后端 morse-deep-learning</li>
+                    <li><strong>超低延迟</strong>：前端推理 &lt;50ms，端到端 &lt;100ms</li>
+                    <li><strong>高准确率</strong>：字符错误率 (CER) &lt;3% @ SNR&gt;-5dB</li>
+                </ul>
+
+                <h3>核心功能</h3>
+                <div class="feature-grid">
+                    <div class="feature-card">
+                        <div class="feature-icon-large">🧠</div>
+                        <h4>AI 解码引擎</h4>
+                        <p>web-deep-cw-decoder 轻量模型，CRNN + CTC 架构，浏览器端直接运行</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon-large">📱</div>
+                        <h4>QSO 状态机</h4>
+                        <p>智能识别呼号/RST/QTH/NAME，自动生成回复建议，符合 HAM Radio 规范</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon-large">📤</div>
+                        <h4>CW 发送</h4>
+                        <p>文本转摩尔斯码，支持 10-40 WPM 速度可调，侧音频率可配置</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon-large">🎚️</div>
+                        <h4>滤波器控制</h4>
+                        <p>支持 500Hz / 1KHz / 2.4KHz 带宽切换，专用 CW 窄带优化</p>
+                    </div>
+                </div>
+
+                <h3>在线体验</h3>
+                <div class="demo-links">
+                    <a href="https://radio.vlsc.net:8877/cw_live.html" target="_blank" class="btn btn-primary">
+                        <i class="fas fa-satellite-dish"></i> CW 实时解码
+                    </a>
+                    <a href="https://radio.vlsc.net:8877/cw_test.html" target="_blank" class="btn btn-secondary">
+                        <i class="fas fa-vial"></i> CW 测试
+                    </a>
+                </div>
+            </div>
+
+            <!-- NanoVNA -->
+            <div class="doc-section" id="nanovna">
+                <h2><span class="feature-icon">📉</span> NanoVNA矢量网络分析仪</h2>
+                <ul>
+                    <li><strong>Web界面</strong>：内置NanoVNA Web控制界面</li>
+                    <li><strong>独立PWA</strong>：可添加到主屏幕作为独立应用</li>
+                    <li><strong>实时测量</strong>：S11、S21参数实时显示</li>
+                    <li><strong>史密斯圆图</strong>：支持史密斯圆图显示</li>
+                </ul>
+            </div>
+
+            <!-- FT8/ULTRON -->
+            <div class="doc-section" id="ft8">
+                <h2><span class="feature-icon">📻</span> FT8/ULTRON 自动化工具</h2>
+                <p>ULTRON Enhanced 是 MRRC V4.9 新增的 FT8 数字模式自动化工具，支持 JTDX、WSJT-X、MSHV 软件联动。</p>
+                
+                <h3>核心功能</h3>
+                <div class="feature-grid">
+                    <div class="feature-card">
+                        <div class="feature-icon-large">📢</div>
+                        <h4>自动 CQ</h4>
+                        <p>空闲时自动呼叫 CQ，智能等待响应，超时后重新呼叫</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon-large">🎯</div>
+                        <h4>DXCC 目标追踪</h4>
+                        <p>实体白名单、波段策略、日志分析、自动推荐未通联实体</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon-large">🤝</div>
+                        <h4>智能响应</h4>
+                        <p>自动识别来电呼叫，智能应答，识别 73/RRR/RR73 结束</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon-large">📋</div>
+                        <h4>Waitlist 管理</h4>
+                        <p>30分钟排除机制，避免重复呼叫无响应台站</p>
+                    </div>
+                </div>
+
+                <h3>支持的软件</h3>
+                <table class="comparison-table">
+                    <tr>
+                        <th>软件</th>
+                        <th>协议</th>
+                        <th>状态</th>
+                    </tr>
+                    <tr>
+                        <td>JTDX</td>
+                        <td>UDP 2237</td>
+                        <td class="highlight">✓ 完全支持</td>
+                    </tr>
+                    <tr>
+                        <td>WSJT-X</td>
+                        <td>UDP 2237</td>
+                        <td class="highlight">✓ 完全支持</td>
+                    </tr>
+                    <tr>
+                        <td>MSHV</td>
+                        <td>UDP 2237</td>
+                        <td class="highlight">✓ 完全支持</td>
+                    </tr>
+                </table>
+
+                <h3>运行方式</h3>
+                <pre class="code-block"><code># Python 版本 (推荐)
+cd ft8
+python run_ultron.py
+
+# DXCC 增强模式
+python ultron_dxcc.py
+
+# 分析已通联实体
+python dxcc_analyzer.py</code></pre>
+
+                <h3>在线体验</h3>
+                <div class="demo-links">
+                    <a href="https://radio.vlsc.net:8877/ft8_ultron.html" target="_blank" class="btn btn-primary">
+                        <i class="fas fa-broadcast-tower"></i> FT8 控制台
+                    </a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA -->
+    <section class="section section-cta">
+        <div class="container">
+            <h2 class="cta-title">准备好开始使用了吗？</h2>
+            <p class="cta-text">按照安装指南，5分钟内即可搭建完整的远程电台控制系统</p>
+            <div class="cta-buttons">
+                <a href="../installation.html" class="btn btn-primary" data-i18n="cta_install">查看安装指南</a>
+                <a href="docs.html" class="btn btn-secondary" data-i18n="cta_docs">阅读技术文档</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-grid">
+                <div class="footer-section">
+                    <h4>MRRC</h4>
+                    <p>Mobile Remote Radio Control<br>随时随地，畅享业余无线电</p>
+                </div>
+                <div class="footer-section">
+                    <h4>快速链接</h4>
+                    <ul>
+                        <li><a href="../../index.html">首页</a></li>
+                        <li><a href="features.html">功能特性</a></li>
+                        <li><a href="../installation.html">安装指南</a></li>
+                        <li><a href="docs.html">技术文档</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h4>资源</h4>
+                    <ul>
+                        <li><a href="https://github.com/cheenle/UHRR_mac" target="_blank">GitHub仓库</a></li>
+                        <li><a href="https://github.com/cheenle/UHRR_mac/issues" target="_blank">问题反馈</a></li>
+                        <li><a href="https://radio.vlsc.net:8877/" target="_blank">在线演示</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2024 MRRC Project. Open Source under GPL-3.0 License.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="../js/main.js"></script>
+</body>
+</html>

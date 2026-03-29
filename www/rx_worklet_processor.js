@@ -5,10 +5,10 @@ class RxPlayerProcessor extends AudioWorkletProcessor {
   constructor() {
     super();
     this.queue = [];
-    // 增加缓冲区大小以减少抖动
-    // min:10帧开始播放, max:60帧(约60ms@16kHz)
-    this.targetMinFrames = 10;
-    this.targetMaxFrames = 60;
+    // V4.5.23: 降低最小缓冲以减少 TX→RX 切换延迟
+    // min:2帧开始播放, max:30帧(约60ms@16kHz)
+    this.targetMinFrames = 2;
+    this.targetMaxFrames = 30;
     
     // 统计计数器
     this._processCount = 0;
@@ -31,7 +31,15 @@ class RxPlayerProcessor extends AudioWorkletProcessor {
         // 清空队列（PTT释放时使用）
         this.queue.length = 0;
         this._underrunCount = 0;
+        console.log('AudioWorklet 缓冲区已清空 (flush)');
       } 
+      else if (data && data.type === 'reset') {
+        // 重置状态（PTT释放时使用）
+        this.queue.length = 0;
+        this._underrunCount = 0;
+        this._processCount = 0;
+        console.log('AudioWorklet 状态已重置 (reset)');
+      }
       else if (data && data.type === 'config') {
         // 配置参数
         if (typeof data.min === 'number') {
@@ -51,7 +59,7 @@ class RxPlayerProcessor extends AudioWorkletProcessor {
     
     this._processCount++;
 
-    // 如果队列为空或数据不足，输出静音
+    // 如果队列为空，输出静音
     if (this.queue.length === 0) {
       for (let i = 0; i < out.length; i++) {
         out[i] = 0;
@@ -64,9 +72,14 @@ class RxPlayerProcessor extends AudioWorkletProcessor {
       return true;
     }
 
-    // 如果数据不足最小缓冲，等待（不输出，保持前一帧）
-    if (this.queue.length < this.targetMinFrames) {
-      // 不输出，等待更多数据
+    // V4.5.22: 当 min=1 时立即播放，不等待缓冲
+    // 这样 TX→RX 切换后能立即听到声音
+    // 只有当 min > 1 且数据不足时才等待
+    if (this.targetMinFrames > 1 && this.queue.length < this.targetMinFrames) {
+      // 数据不足最小缓冲，输出静音等待
+      for (let i = 0; i < out.length; i++) {
+        out[i] = 0;
+      }
       return true;
     }
 

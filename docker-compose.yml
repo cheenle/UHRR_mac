@@ -1,10 +1,81 @@
+version: '3.8'
+
 services:
-  uhrh:
-    build: .
-    container_name: uhrh
-    restart: always
+  mrrc:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: mrrc:latest
+    container_name: mrrc
+    restart: unless-stopped
+    
+    # 特权模式（访问 USB 设备必需）
+    privileged: true
+    
+    # 设备映射
     devices:
-      - /dev/snd:/dev/snd
-      - /dev/ttyUSB0:/dev/ttyUSB0
+      - /dev/snd:/dev/snd      # 音频设备
+      # - /dev/ttyUSB0:/dev/ttyUSB0  # 电台串口（根据实际情况调整）
+    
+    # 卷挂载
+    volumes:
+      # 配置文件（只读）
+      - ./MRRC.conf:/uhrh/MRRC.conf:ro
+      
+      # TLS 证书（只读）
+      - ./certs:/uhrh/certs:ro
+      
+      # 天调学习数据（可读写，持久化）
+      - ./atr1000_tuner.json:/uhrh/atr1000_tuner.json
+      
+      # 用户数据库（可读写）
+      - ./MRRC_users.db:/uhrh/MRRC_users.db
+      
+      # 日志目录
+      - ./logs:/uhrh/logs
+      
+      # 设备目录
+      - /dev:/dev
+    
+    # 端口映射
     ports:
-      - 8888:8888
+      - "8877:8877"
+      # ATR-1000 Unix Socket 通过卷共享，不需要暴露端口
+    
+    # 环境变量
+    environment:
+      - PYTHONUNBUFFERED=1
+      - PYTHONDONTWRITEBYTECODE=1
+      - TZ=Asia/Shanghai
+    
+    # 网络配置
+    networks:
+      - mrrc-network
+    
+    # 健康检查
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider --no-check-certificate https://localhost:8877/ || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    
+    # 日志配置
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+        labels: "service_name,environment"
+
+networks:
+  mrrc-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+
+# 可选：使用外部卷持久化数据
+# volumes:
+#   mrrc-data:
+#     driver: local

@@ -257,6 +257,18 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
     
+    // 初始化状态栏 - 重置所有指示器为断开状态
+    try {
+        if (typeof setWSStatus === 'function') {
+            			setWSStatus('status-ctrl', 'error');
+            			setWSStatus('status-rx', 'error');
+            			setWSStatus('status-tx', 'error');
+            			setWSStatus('status-atu', 'error');            console.log('🔄 状态栏已重置');
+        }
+    } catch (e) {
+        console.warn('状态栏初始化失败:', e);
+    }
+    
     console.log('✅ Mobile Modern 界面初始化完成');
 });
 
@@ -357,10 +369,10 @@ function loadAudioSettingsFromCookies() {
                          || (navigator.maxTouchPoints && navigator.maxTouchPoints > 2);
     
     if (!savedTX_EQ && isMobileDevice) {
-        // 移动设备首次使用，自动设置"手机优化"预设
-        console.log('📱 检测到移动设备，自动设置"手机优化" TX EQ 预设');
+        // 移动设备首次使用，自动设置"中"预设
+        console.log('📱 检测到移动设备，自动设置"中" TX EQ 预设');
         if (typeof setTX_EQ_Preset === 'function') {
-            setTX_EQ_Preset('MOBILE');
+            setTX_EQ_Preset('MEDIUM');
         }
     }
     
@@ -620,23 +632,41 @@ function setupEventListeners() {
     
     // 底部 TUNE 按钮 - 长按发射1kHz单音
     if (domElements.tuneButton) {
-        // 触摸开始
+        // 使用标志防止重复触发
+        let tuneTouchStarted = false;
+        
+        // 触摸开始 - 使用 passive 避免阻塞滚动
         domElements.tuneButton.addEventListener('touchstart', function(e) {
-            e.preventDefault();
+            if (tuneTouchStarted) return;
+            tuneTouchStarted = true;
             this.classList.add('active');
-            if (typeof startTune === 'function') {
-                startTune();
-            }
-        });
+            // 异步执行，不阻塞主线程
+            setTimeout(function() {
+                if (typeof startTune === 'function') {
+                    startTune();
+                }
+            }, 0);
+        }, { passive: true });
         
         // 触摸结束
         domElements.tuneButton.addEventListener('touchend', function(e) {
-            e.preventDefault();
+            if (!tuneTouchStarted) return;
+            tuneTouchStarted = false;
             this.classList.remove('active');
             if (typeof stopTune === 'function') {
                 stopTune();
             }
-        });
+        }, { passive: true });
+        
+        // 触摸取消
+        domElements.tuneButton.addEventListener('touchcancel', function(e) {
+            if (!tuneTouchStarted) return;
+            tuneTouchStarted = false;
+            this.classList.remove('active');
+            if (typeof stopTune === 'function') {
+                stopTune();
+            }
+        }, { passive: true });
         
         // 鼠标按下
         domElements.tuneButton.addEventListener('mousedown', function(e) {
@@ -1001,7 +1031,8 @@ function syncWDSPStateToBackend() {
             // 如果WDSP启用，再发送其他设置
             if (wdspState.enabled) {
                 setTimeout(function() {
-                    sendCommand('setWDSPNR2Level', wdspState.nr2Level.toString());
+                    var level = (wdspState.nr2Level !== undefined && wdspState.nr2Level !== null) ? wdspState.nr2Level : 1;
+                    sendCommand('setWDSPNR2Level', level.toString());
                 }, 100);
                 setTimeout(function() {
                     sendCommand('setWDSPNB', wdspState.nb ? 'true' : 'false');
@@ -1010,7 +1041,8 @@ function syncWDSPStateToBackend() {
                     sendCommand('setWDSPANF', wdspState.anf ? 'true' : 'false');
                 }, 300);
                 setTimeout(function() {
-                    sendCommand('setWDSPAGC', wdspState.agcMode.toString());
+                    var agcMode = (wdspState.agcMode !== undefined && wdspState.agcMode !== null) ? wdspState.agcMode : 3;
+                    sendCommand('setWDSPAGC', agcMode.toString());
                 }, 400);
             }
         } else if (retryCount < maxRetries) {
@@ -2199,10 +2231,8 @@ function showTXEQPanel() {
     const currentPreset = typeof getTX_EQ_Preset === 'function' ? getTX_EQ_Preset() : 'DEFAULT';
     const presets = typeof getTX_EQ_Presets === 'function' ? getTX_EQ_Presets() : {
         'DEFAULT': { name: '默认', low: 0, mid: 0, high: 0, desc: '无EQ处理' },
-        'HF_VOICE': { name: '短波语音', low: -20, mid: 6, high: -20, desc: '100-2700Hz 带通' },
-        'MOBILE': { name: '手机优化', low: -15, mid: 8, high: -24, desc: '强力高频衰减' },
-        'DX_WEAK': { name: '弱信号', low: -20, mid: 10, high: -25, desc: '最大化可读性' },
-        'CONTEST': { name: '比赛模式', low: -15, mid: 6, high: -15, desc: '均衡处理' }
+        'MEDIUM': { name: '中', low: -15, mid: 10, high: -20, desc: '平衡清晰度与厚度' },
+        'STRONG': { name: '强', low: -20, mid: 12, high: -35, desc: 'iPhone/手机专用' }
     };
     
     let html = '<div class="modal-panel"><h3>🎙️ 发射均衡器</h3>';
@@ -2526,6 +2556,11 @@ const ATR1000 = {
                 console.log('✅ ATR-1000 后端代理已连接');
                 this.updateStatus('已连接');
                 
+                // 更新状态栏指示器
+                if (typeof setWSStatus === 'function') {
+                    setWSStatus('status-atu', 'connected');
+                }
+                
                 // 启动心跳保活（连接成功就启动，不只是在 TX 期间）
                 this._startHeartbeat();
                 
@@ -2552,6 +2587,11 @@ const ATR1000 = {
                 this.isConnected = false;
                 console.log('🔴 ATR-1000 后端代理断开');
                 this.updateStatus('断开');
+                
+                // 更新状态栏指示器
+                if (typeof setWSStatus === 'function') {
+                    setWSStatus('status-atu', 'error');
+                }
                 
                 // 停止心跳
                 this._stopHeartbeat();
@@ -2640,16 +2680,19 @@ const ATR1000 = {
             this._updateDeviceStatus(true);
         }
         
-        // V4.5.18: 平滑系数 0.97（新数据权重 97%，旧数据权重 3%）
+        // V4.5.22: 直接显示原始数据，不平滑（减少滞后）
         const rawPower = msg.power || 0;
         const rawSWR = msg.swr || 1.0;
-        const smoothFactor = 0.97;
         
-        this._smoothPower = this._smoothPower * (1 - smoothFactor) + rawPower * smoothFactor;
-        this._smoothSWR = this._smoothSWR * (1 - smoothFactor) + rawSWR * smoothFactor;
-        
-        this.lastPower = Math.round(this._smoothPower);
-        this.lastSWR = Math.round(this._smoothSWR * 100) / 100;
+        // 只在数据变化较大时更新，减少抖动但保持响应速度
+        if (Math.abs(rawPower - this.lastPower) > 1 || Math.abs(rawSWR - this.lastSWR) > 0.1) {
+            this.lastPower = Math.round(rawPower);
+            this.lastSWR = Math.round(rawSWR * 100) / 100;
+        } else {
+            // 小变化时直接显示
+            this.lastPower = Math.round(rawPower);
+            this.lastSWR = Math.round(rawSWR * 100) / 100;
+        }
         
         // 更新继电器状态
         if (msg.sw !== undefined) {
@@ -2977,16 +3020,16 @@ const ATR1000 = {
     },
     
     // 启动心跳保活 - 发送 sync 请求最新数据
-    // V4.5.12: sync 间隔调整为 1 秒，与代理 SYNC 节流匹配
-    _syncInterval: 1000,  // 默认 1 秒（减少设备压力）
+    // V4.5.18: 进一步降低 sync 频率，减轻设备压力
+    _syncInterval: 2000,  // 默认 2 秒（进一步降低设备压力）
     _startHeartbeat: function() {
         this._stopHeartbeat();  // 先停止旧的心跳
         this._lastSyncTime = 0;  // 初始化上次同步时间
-        this._syncInterval = 1000;  // 默认 1 秒
+        this._syncInterval = 2000;  // 默认 2 秒
         this._heartbeatInterval = setInterval(() => {
             if (this.ws && this.ws.readyState === WebSocket.OPEN) {
                 const now = Date.now();
-                // V4.5.12: 动态 sync 间隔
+                // V4.5.18: 动态 sync 间隔（更长间隔减少压力）
                 if (now - this._lastSyncTime >= this._syncInterval) {
                     try {
                         this.ws.send(JSON.stringify({action: 'sync'}));
@@ -2996,7 +3039,7 @@ const ATR1000 = {
                     }
                 }
             }
-        }, 100);  // 检查间隔 100ms
+        }, 200);  // 检查间隔 200ms（降低检查频率）
         console.log('💓 ATR-1000 心跳已启动 (' + this._syncInterval + 'ms sync)');
     },
     
@@ -3076,7 +3119,7 @@ const ATR1000 = {
         }
         this._txActive = true;
         
-        // V4.5.12: PTT/TUNE 期间使用 500ms sync，平衡刷新速度和设备压力
+        // V4.5.18: PTT/TUNE 期间使用 500ms sync，平衡刷新速度与不设备压力
         this._syncInterval = 500;
         console.log('📻 TX 开始 (sync: 500ms)');
         
@@ -3109,9 +3152,9 @@ const ATR1000 = {
         }
         this._txActive = false;
         
-        // V4.5.12: 恢复平时 sync 间隔 1 秒（降低设备压力）
-        this._syncInterval = 1000;
-        console.log('📻 TX 结束 (sync: 1000ms)');
+        // V4.5.18: 恢复平时 sync 间隔 2 秒（进一步降低设备压力）
+        this._syncInterval = 2000;
+        console.log('📻 TX 结束 (sync: 2000ms)');
         
         // 清理重试定时器
         if (this._startRetryTimer) {
@@ -3133,7 +3176,7 @@ const ATR1000 = {
     clearDisplay: function() {
         console.log('🧹 ATR-1000 清零显示');
         
-        // 设置忽略数据保护期（500ms 内忽略新数据）
+        // V4.5.23: 缩短保护期到500ms，避免数字延迟
         this._ignoreDataUntil = Date.now() + 500;
         
         // 清零内部状态
@@ -3142,9 +3185,9 @@ const ATR1000 = {
         this._smoothPower = 0;  // V4.5.10: 重置平滑值
         this._smoothSWR = 1.0;  // V4.5.10: 重置平滑值
         
-        // 清零 DOM 显示
-        const powerEl = document.getElementById('atr-power-value');
-        const swrEl = document.getElementById('atr-swr-value');
+        // 清零 DOM 显示 - V4.5.23: 修正 ID 错误
+        const powerEl = document.getElementById('atr-power');
+        const swrEl = document.getElementById('atr-swr');
         const powerBar = document.getElementById('atr-power-bar');
         const swrBar = document.getElementById('atr-swr-bar');
         
@@ -3329,7 +3372,16 @@ function getWDSPStatus() {
 // 处理 WDSP 状态响应
 function handleWDSPStatus(status) {
     try {
-        const data = JSON.parse(status);
+        // 调试：打印原始数据
+        console.log('🔧 WDSP 原始状态:', status);
+        
+        // 如果 status 不是字符串，尝试转换
+        var statusStr = status;
+        if (typeof status !== 'string') {
+            statusStr = JSON.stringify(status);
+        }
+        
+        const data = JSON.parse(statusStr);
         wdspState.enabled = data.enabled;
         
         // 更新 UI
@@ -3391,6 +3443,7 @@ function handleWDSPStatus(status) {
         console.log('🔧 WDSP 状态已更新:', data);
     } catch (e) {
         console.error('WDSP 状态解析错误:', e);
+        console.error('原始数据:', status);
     }
 }
 

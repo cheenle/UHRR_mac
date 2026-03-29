@@ -20,7 +20,9 @@
 - **完整控制**：频率、模式、PTT、天调等完整电台功能
 - **AI语音助手**：Whisper语音识别 + Qwen3-TTS语音合成
 - **CW实时解码**：ONNX前端推理，QSO状态机智能建议
+- **FT8自动化**：ULTRON工具，智能DXCC目标定位
 - **多实例支持**：单服务器多电台独立控制
+- **第三方软件联动**：支持JTDX、flrig、wfview等软件频率同步
 
 ### 历史改进
 - **增强的PTT可靠性机制**：按下即发送PTT命令，并立即发送预热帧确保后端收到音频数据
@@ -34,7 +36,10 @@
 - **语音助手**：Whisper + Qwen3-TTS 完整集成
 - **CW解码**：ONNX实时推理，QSO状态机
 - **SDR界面**：全新现代SDR控制界面
+- **FT8自动化**：ULTRON工具，智能DXCC目标定位
 - **多实例**：独立配置，独立天调学习
+- **第三方软件联动**：支持JTDX、flrig、wfview等软件频率同步
+- **蓝色系UI改版**：专业风格，SDR数码管频率显示
 
 ## 目录结构要点
 
@@ -49,9 +54,13 @@ MRRC/
 ├── atr1000_proxy.py              # ATR-1000独立代理程序
 ├── atr1000_tuner.py              # 天调存储模块
 ├── atr1000_tuner.json            # 天调参数数据文件
+├── voice_assistant_service.py    # AI语音助手服务（Whisper ASR + Qwen3-TTS）
+├── ft8_decoder.py                # FT8解码器
+├── ft8_integration.py            # FT8集成模块
 ├── mrrc_control.sh               # 系统控制脚本（启动/停止/状态）
 ├── mrrc_monitor.sh               # 系统监控脚本
 ├── mrrc_setup.sh                 # 系统安装配置脚本
+├── mrrc_multi.sh                 # 多实例管理脚本
 ├── www/                          # 前端页面与脚本
 │   ├── controls.js               # 音频与控制主逻辑
 │   ├── tx_button_optimized.js    # TX按钮事件与时序优化
@@ -59,8 +68,19 @@ MRRC/
 │   ├── aac_encoder.js            # AAC/ADPCM音频编码器
 │   ├── atu.js                    # ATU功率和驻波比显示管理
 │   ├── mobile_modern.html        # 现代移动端界面 (iPhone 15优化)
+│   ├── mobile_modern_zh.html     # 现代移动端界面（中文版）
 │   ├── mobile_modern.js          # 移动端界面逻辑
 │   ├── mobile_modern.css         # 移动端界面样式
+│   ├── mobile_voice_assistant.html # 语音助手界面
+│   ├── mobile_voice_text.html    # 语音文字界面
+│   ├── cw_dsp.html               # CW DSP界面
+│   ├── cw_generator.html         # CW信号发生器
+│   ├── cw_live.html              # CW实时解码
+│   ├── cw_simple.html            # CW简单测试
+│   ├── cw_test.html              # CW测试页面
+│   ├── sdr_modern.html           # SDR现代界面
+│   ├── ft8.html                  # FT8界面
+│   ├── ft8_ultron.html           # FT8 ULTRON自动化界面
 │   ├── mobile_audio_direct_copy.js # 移动端音频处理
 │   ├── control_trx.js            # 电台控制逻辑
 │   ├── ui_utils.js               # UI工具函数
@@ -105,20 +125,42 @@ MRRC/
 │       └── sw.js                 # Service Worker
 ├── docs/                         # 技术文档
 │   ├── System_Architecture_Design.md      # 系统架构设计文档
+│   ├── System_Architecture_Design_en.md   # 系统架构设计文档（英文版）
 │   ├── PTT_Audio_Postmortem_and_Best_Practices.md # PTT/音频稳定性复盘
+│   ├── PTT_Audio_Postmortem_and_Best_Practices_en.md # PTT/音频稳定性复盘（英文版）
 │   ├── latency_optimization_guide.md       # TX/RX切换延迟优化指南
+│   ├── latency_optimization_guide_en.md    # TX/RX切换延迟优化指南（英文版）
 │   ├── mobile_modern_interface.md          # 现代移动端界面文档
 │   ├── Mobile_User_Manual.md               # 移动端用户手册
+│   ├── Mobile_User_Manual_en.md            # 移动端用户手册（英文版）
 │   ├── Mobile_User_Manual.html             # 移动端用户手册(HTML)
 │   ├── Performance_Optimization_Guide.md   # 性能优化指南
+│   ├── Performance_Optimization_Guide_en.md # 性能优化指南（英文版）
+│   ├── Multi_Instance_Setup.md             # 多实例部署指南
+│   ├── Multi_Instance_Setup_en.md          # 多实例部署指南（英文版）
+│   ├── WDSP_Manual.md                      # WDSP使用手册
+│   ├── WDSP_Manual_en.md                   # WDSP使用手册（英文版）
 │   ├── Component_Detailed_Analysis.md      # 组件详细分析
 │   ├── Comprehensive_Architecture_Analysis.md # 综合架构分析
 │   ├── End_to_End_Analysis_Report.md       # 端到端分析报告
 │   ├── ATR1000_Display_Issue_Analysis.md   # ATR-1000显示问题分析
+│   ├── ATR1000_Tuner_Auto_Learning.md      # ATR-1000天调自动学习
 │   ├── ATR1000_PTT_Delay_Troubleshooting_Journey.md # ATR-1000 PTT延迟调试历程
 │   ├── CODE_REVIEW_REPORT.md               # 代码审查报告
 │   ├── iphone15_mobile_interface_analysis.md # iPhone 15界面分析
-│   └── mobile_interface_enhancement_summary.md # 移动界面增强总结
+│   ├── mobile_interface_enhancement_summary.md # 移动界面增强总结
+│   └── WebAudio_Skill.md                   # WebAudio技能文档
+├── ft8/                          # FT8自动模式（ULTRON）
+│   ├── ultron.py                 # ULTRON Python实现
+│   ├── robot.php                 # ULTRON PHP实现
+│   ├── dxcc_config.py            # DXCC配置
+│   └── base.json                 # DXCC实体数据库
+├── website/                      # 项目网站
+│   ├── index.html                # 网站首页
+│   ├── zh/                       # 中文版网站
+│   │   ├── index.html            # 中文首页
+│   │   └── docs/                 # 中文文档
+│   └── docs/                     # 英文文档页面
 ├── opus/                         # Opus编解码器Python绑定
 ├── DESIGN/                       # 工程设计文档 (Vibe-SDD方法论)
 │   ├── MRRC_SDD.md               # 软件设计说明 (IBM TeamSD)
@@ -361,6 +403,56 @@ MRRC/
 ./mrrc_control.sh stop-mrrc
 ./mrrc_control.sh stop-atr1000
 ```
+
+### 多实例部署（单服务器多电台）
+
+MRRC 支持在一台服务器上运行多个独立实例，每个实例连接不同的电台设备/声卡。
+
+**多实例控制脚本：**
+```bash
+# 创建新实例（自动生成配置文件，端口号根据实例名自动分配）
+./mrrc_multi.sh create radio1
+
+# 启动指定实例
+./mrrc_multi.sh start radio1
+
+# 停止指定实例
+./mrrc_multi.sh stop radio1
+
+# 重启指定实例
+./mrrc_multi.sh restart radio1
+
+# 查看指定实例状态
+./mrrc_multi.sh status radio1
+
+# 查看所有实例状态
+./mrrc_multi.sh status
+
+# 查看实例日志
+./mrrc_multi.sh logs radio1 50
+
+# 列出所有实例
+./mrrc_multi.sh list
+
+# 删除实例（会先停止）
+./mrrc_multi.sh delete radio1
+```
+
+**实例配置说明：**
+- 每个实例需要独立的配置文件 `MRRC.<实例名>.conf`
+- 端口号自动生成规则：`radio1` → 8891, `radio2` → 8892
+- rigctld 端口：`radio1` → 4531, `radio2` → 4532
+- 独立的 Unix Socket：`/tmp/mrrc_radio1.sock`
+- 独立的日志文件：`mrrc_radio1.log`, `rigctld_radio1.log`, `atr1000_radio1.log`
+
+**配置步骤：**
+1. 创建实例：`./mrrc_multi.sh create radio1`
+2. 编辑配置文件 `MRRC.radio1.conf`，设置：
+   - 音频输入/输出设备名称
+   - 电台串口设备路径
+   - ATR-1000 设备 IP（如果使用）
+3. 启动实例：`./mrrc_multi.sh start radio1`
+4. 访问：`https://<服务器IP>:8891/mobile_modern.html`
 
 ### Docker部署
 
@@ -1249,8 +1341,12 @@ cat certs/fullchain.pem | openssl x509 -text -noout
 | TX→RX切换 | <100ms |
 | PTT可靠性 | 99%+ |
 | 功率显示延迟 | <200ms |
-| 音频采样率 | 16kHz |
+| 音频采样率 | 16kHz（传输）/ 48kHz（WDSP处理） |
 | 音频编码 | Int16/ADPCM/Opus |
+| 频率同步间隔 | 2秒（第三方软件联动） |
+| 天调快速调谐 | <500ms |
+| WDSP延迟 | <20ms |
+| S表更新间隔 | 100ms |
 
 ## 许可证
 
@@ -1841,6 +1937,83 @@ agc_mode = 3
 
 ---
 
+### V4.9.3 频率同步线程 - 第三方软件联动修复 (2026-03-16)
+
+**问题修复**:
+- **修复JTDX/flrig频率联动失效**: 原频率同步逻辑依赖WebSocket客户端连接，无客户端时不工作
+- **添加独立频率同步线程**: 新增 `FrequencySyncThread` 类，独立于WebSocket连接运行
+- **支持第三方软件联动**: JTDX、flrig、wfview等软件改变频率时自动同步天调
+
+**技术实现**:
+- 新增 `FrequencySyncThread` 线程类（daemon模式）
+- 每2秒检测频率变化（可配置）
+- 频率变化时自动调用 `sync_freq_to_atr1000()` 同步到ATR-1000代理
+- 启动时自动运行，无需客户端连接
+
+**测试验证**:
+- 7.074 MHz → 14.150 MHz → 3.850 MHz → 7.074 MHz 频率切换测试通过
+- 天调参数自动调整正常
+
+**文件变更**:
+- `MRRC` - 添加 `FrequencySyncThread` 类和启动代码
+
+---
+
+### V4.9.2 UI风格改版与功能修复 (2026-03-15)
+
+**蓝色系专业风格UI改版**:
+- 全新蓝色系配色方案（青色 #00d4ff 为主色调）
+- CSS 变量系统化重构，支持主题定制
+- 频率显示改为 SDR 风格蓝色数码管效果
+- 按钮、菜单、弹窗统一蓝色风格
+- 信号强度表(S-Meter)视觉优化
+
+**S表显示优化**:
+- 创建独立的 S 表分析器（不受音量控制影响）
+- 音频链优化：滤波器后连接独立分析器
+- 移动端 S 表更新支持
+
+**CQ功能修复**:
+- 修复 CQ 播放完成后自动停止逻辑
+- 支持移动端 CQ 按钮状态同步
+- 添加 `handleCQCompleteMobile` 移动端处理函数
+- 完善 CQ 状态日志输出
+
+**全屏模式功能**:
+- 菜单中添加全屏模式按钮
+- 支持一键进入/退出全屏
+- 菜单按钮文字根据全屏状态自动更新
+- 兼容 iOS Safari 和 Android Chrome
+
+**WDSP DSP设置增强**:
+- 在设置面板的WDSP区域添加'⚙️ 高级设置...'链接
+- 新增高级设置面板，包含详细WDSP参数配置：
+  - NR2 降噪强度选择（关闭/极温和/低/中/高）
+  - WDSP 各功能独立开关
+  - AGC 模式详细说明
+- 默认NR2启用（nr2: true），默认级别 level=1（极温和）
+- 新增 `setWDSPNR2Level()` 函数用于调节NR2强度
+- 优化 `setWDSPNR2()` 函数，启用时自动设置默认level=1
+
+**频率步进调整**:
+- 默认步进从 100Hz (0.1kHz) 调整为 1kHz
+- `mobileState.tuneStep` 默认值改为 1
+- `mobileState.tuneStepIndex` 改为 1
+- 更适合日常频率调整习惯
+
+**天调数据更新**:
+- `atr1000_tuner.json` 数据更新（样本数、SWR平均值等）
+
+**文件变更**:
+- `www/mobile_modern.css` - 蓝色系UI改版
+- `www/mobile_modern.html` - 对应HTML结构调整，添加全屏按钮
+- `www/mobile_modern.js` - 功能逻辑更新，添加全屏功能、WDSP高级设置、步进调整
+- `www/controls.js` - S表和CQ功能修复
+- `MRRC.radio1.conf` - NR设置优化
+- `atr1000_tuner.json` - 天调数据更新
+
+---
+
 ### V4.9.1 多实例支持深度优化 (2026-03-15)
 
 **多实例架构修复**:
@@ -1849,7 +2022,7 @@ agc_mode = 3
 - **Socket 路径修复**: 修复硬编码的 Unix Socket 路径
   - `sync_freq_to_atr1000` 函数现在使用 `INSTANCE_UNIX_SOCKET` 配置
 
-#### 文件变更
+**文件变更**:
 - `MRRC` - 配置键和 Socket 路径修复
 
 ---
@@ -1883,7 +2056,7 @@ agc_mode = 3
 
 ---
 
-**最后更新**：2026年3月16日  
+**最后更新**：2026年3月29日  
 **文档版本**：v4.9.3  
 **发布版本**：V4.9.3  
 **维护者**：MRRC开发团队

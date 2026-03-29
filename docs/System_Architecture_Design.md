@@ -1,7 +1,7 @@
 # Mobile Remote Radio Control (MRRC) 系统架构设计文档
 
 ## 文档信息
-- **版本**: v4.9.1 (2026-03-15)
+- **版本**: v4.9.3 (2026-03-29)
 - **作者**: System Architecture Team
 - **状态**: 生产就绪
 - **分类**: 机密/内部
@@ -22,12 +22,14 @@
 - **🔒 安全连接**: TLS加密传输，用户认证保护
 - **🎛️ 完整控制**: 频率、模式、PTT、天调等完整电台功能
 - **📊 功率监测**: ATR-1000集成，实时显示功率和SWR
-- **🎵 音频优化**: TX均衡器，短波语音增强
+- **🎵 音频优化**: TX均衡器，抗混叠滤波，短波语音增强
 - **💾 天调存储**: 频率-参数智能匹配
 - **🔇 WDSP降噪**: 专业级NR2频谱降噪，SSB语音更清晰
 - **🎙️ AI语音助手**: Whisper语音识别 + Qwen3-TTS语音合成
 - **📡 CW实时解码**: ONNX前端推理，QSO状态机智能建议
 - **🖥️ 多实例支持**: 单服务器多电台独立控制，差异化天调
+- **📻 SDR现代界面**: 全新SDR控制界面，现代化设计
+- **🔢 FT8自动模式**: ULTRON自动化工具，智能DXCC目标定位
 
 ### 1.3 系统范围
 - 支持主流业余电台设备（通过Hamlib rigctld）
@@ -37,11 +39,12 @@
 - 用户认证与会话管理
 - 频谱显示与监控
 - ATR-1000功率计/天调集成
-- TX发射音频均衡器
+- TX发射音频均衡器（三段EQ + 抗混叠滤波）
 - 天调参数智能存储
-- AI语音助手服务（Whisper + Qwen3-TTS）
-- CW实时解码（ONNX前端推理）
+- AI语音助手服务（Whisper ASR + Qwen3-TTS）
+- CW实时解码（ONNX前端推理，QSO状态机）
 - SDR现代控制界面
+- FT8自动化工具（ULTRON，智能DXCC目标定位）
 - 多实例独立部署支持
 
 ---
@@ -231,10 +234,10 @@
 
 ```
 音频TX流:
-麦克风 → Web Audio API → TX均衡器 → Int16编码 → WebSocket(TX) → 服务器解码 → PyAudio → 电台
+麦克风 → Web Audio API → TX均衡器(抗混叠+三段EQ) → Int16编码 → WebSocket(TX) → 服务器解码 → PyAudio → 电台
 
 音频RX流:
-电台 → PyAudio采集 → WebSocket(RX) → 浏览器解码 → AudioWorklet → 扬声器
+电台 → PyAudio采集 → WDSP降噪处理 → Int16编码 → WebSocket(RX) → 浏览器解码 → AudioWorklet → 扬声器
 
 控制流:
 用户操作 → WebSocket(控制) → 服务器 → rigctld → 电台设备
@@ -247,6 +250,15 @@ ATR-1000设备 → 独立代理(atr1000_proxy.py) → Unix Socket → MRRC桥接
 
 天调存储流:
 频率变化 → 查找天调参数 → atr1000_tuner.json → 加载参数 → ATR-1000设备
+
+语音助手流:
+麦克风 → Web Audio API → WebSocket → Whisper ASR → 文字 → Qwen3-TTS → 音频 → 扬声器
+
+CW解码流:
+电台音频 → ONNX模型(浏览器端) → CW字符解码 → QSO状态机 → 界面显示
+
+FT8 ULTRON流:
+JTDX/WSJT-X → UDP(2237) → ULTRON → 自动应答 → UDP → JTDX/WSJT-X
 ```
 
 ### 3.3 部署架构图
@@ -396,6 +408,48 @@ ATR-1000设备 → 独立代理(atr1000_proxy.py) → Unix Socket → MRRC桥接
 - **JSON持久化**: 频率-LC/CL参数存储
 - **智能匹配**: 查找最接近频率的参数（±50kHz容差）
 - **自动保存**: 天调成功后自动记录
+
+#### 4.2.7 语音助手服务 (`voice_assistant_service.py`)
+- **语音识别**: Whisper ASR 引擎（支持中英文）
+- **语音合成**: Qwen3-TTS 文本转语音
+- **WebSocket接口**: 实时语音流处理
+- **模式切换**: 支持语音转文字和文字转语音
+- **关键文件**:
+  - `voice_assistant_service.py`: 后端服务主程序
+  - `www/mobile_voice_assistant.html`: 语音助手界面
+  - `start_voice_assistant.sh`: 启动脚本
+
+#### 4.2.8 CW解码模块 (`ft8_decoder.py`, `ft8_integration.py`)
+- **ONNX前端推理**: 浏览器端实时解码（模型<2MB）
+- **QSO状态机**: 智能建议下一步操作
+- **双模式架构**: 前端解码 + 后端处理
+- **关键文件**:
+  - `www/cw_dsp.html`: CW DSP界面
+  - `www/cw_live.html`: CW实时解码界面
+  - `www/cw_generator.html`: CW信号发生器
+  - `ft8_decoder.py`: FT8解码器
+  - `ft8_integration.py`: FT8集成模块
+
+#### 4.2.9 SDR控制模块 (`www/sdr_modern.*`)
+- **现代界面**: 全新SDR控制界面设计
+- **实时频谱**: 频谱显示和瀑布图
+- **多模式支持**: USB/LSB/CW/AM/FM
+- **关键文件**:
+  - `www/sdr_modern.html`: SDR界面
+  - `www/sdr_modern.js`: SDR控制逻辑
+  - `www/sdr_modern.css`: SDR样式
+
+#### 4.2.10 FT8 ULTRON集成 (`ft8/`)
+- **自动化工具**: ULTRON FT8自动应答
+- **DXCC目标定位**: 智能国家/实体追踪
+- **双语言实现**: Python + PHP版本
+- **UDP协议**: 与JTDX/WSJT-X/MSHV通信
+- **关键文件**:
+  - `ft8/ultron.py`: Python主程序
+  - `ft8/robot.php`: PHP实现
+  - `ft8/dxcc_analyzer.py`: DXCC分析工具
+  - `ft8/base.json`: DXCC实体数据库
+  - `www/ft8_ultron.html`: FT8界面
 
 ### 4.3 外部系统集成
 
@@ -853,10 +907,12 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 | v4.2.0 | 2026-03 | TX EQ均衡器，短波语音优化 | 生产就绪 |
 | v4.3.0 | 2026-03 | ATR-1000架构分离，独立代理 | 生产就绪 |
 | v4.4.0 | 2026-03-05 | ATR-1000实时显示重大修复 | 生产就绪 |
-| v4.9.1 | 2026-03-15 | 多实例支持深度优化 | 当前版本 |
+| v4.5.0 | 2026-03-06 | ATR-1000实时功率显示稳定版 | 历史版本 |
+| v4.6.0 | 2026-03-09 | WDSP数字信号处理集成 | 生产就绪 |
 | v4.9.0 | 2026-03-14 | 语音助手、CW模式、SDR界面 | 生产就绪 |
-| v4.5.4 | 2026-03-06 | ATR-1000实时功率显示稳定版 | 历史版本 |
-| v4.5.4 | 2026-03-06 | 频率调整按钮布局优化 | 当前版本 |
+| v4.9.1 | 2026-03-15 | 多实例支持深度优化 | 生产就绪 |
+| v4.9.2 | 2026-03-16 | FT8 ULTRON集成优化 | 生产就绪 |
+| v4.9.3 | 2026-03-29 | 文档全面更新，功能完善 | 当前版本 |
 
 ---
 

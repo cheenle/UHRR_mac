@@ -1,0 +1,73 @@
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Logs
+*.log
+logs/
+.iflow_logs/
+
+# Documentation
+*.md
+!README.md
+!DOCKER_DEPLOYMENT.md
+
+# Tests
+test/
+tests/
+dev_tools/
+
+# Docker
+Dockerfile
+docker-compose*.yml
+.dockerignore
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Backup files
+*.bak
+*.bakkk
+*.backup
+
+# Other
+screenshots/
+recordings/
+website/
+models/
+*.pid
+*.sock

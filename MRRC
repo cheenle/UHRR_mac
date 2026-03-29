@@ -12,6 +12,7 @@ import threading
 import time
 import numpy 
 import gc
+import asyncio
 from opus.decoder import Decoder as OpusDecoder
 import datetime
 import configparser
@@ -33,6 +34,14 @@ logger = logging.getLogger('MRRC')
 # 关闭第三方库的DEBUG日志
 logging.getLogger('tornado').setLevel(logging.WARNING)
 logging.getLogger('PIL').setLevel(logging.WARNING)
+
+# Python 3.12+ compatibility: Ensure event loop exists before Tornado initializes
+# Fixes DeprecationWarning: There is no current event loop
+try:
+    asyncio.get_running_loop()
+except RuntimeError:
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
 # Use cross-platform Hamlib wrapper instead of direct import
 try:
     from hamlib_wrapper import HamlibWrapper
@@ -53,6 +62,41 @@ try:
 except ImportError:
     PYAUDIO_AVAILABLE = False
     print("PyAudio not available, falling back to ALSA")
+
+# Import TX Audio Analyzer (用于调试发射音质)
+try:
+    from dev_tools.tx_audio_analyzer import TXAudioAnalyzer
+    TX_AUDIO_ANALYZER_AVAILABLE = True
+except ImportError:
+    TX_AUDIO_ANALYZER_AVAILABLE = False
+    print("TX Audio Analyzer not available")
+
+# 全局 TX 音频分析器实例
+tx_audio_analyzer = None
+# V4.5.25: 禁用 TX 音频分析器以优化 TX→RX 切换延迟
+# if TX_AUDIO_ANALYZER_AVAILABLE:
+#     try:
+#         tx_audio_analyzer = TXAudioAnalyzer(sample_rate=16000)
+#         print("✅ TX 音频分析器已加载")
+#     except Exception as e:
+#         print(f"⚠️ TX 音频分析器初始化失败: {e}")
+print("⚠️ TX 音频分析器已禁用（优化 TX→RX 延迟）")
+
+# Import FT8 decoder service
+try:
+    from ft8_decoder import get_ft8_service, PYFT8_AVAILABLE
+    FT8_SERVICE_AVAILABLE = PYFT8_AVAILABLE
+except ImportError:
+    FT8_SERVICE_AVAILABLE = False
+    print("FT8 decoder service not available")
+
+# Import FT8 Integration (ULTRON Python)
+try:
+    from ft8_integration import get_ft8_integration, FT8Integration
+    FT8_INTEGRATION_AVAILABLE = True
+except ImportError as e:
+    FT8_INTEGRATION_AVAILABLE = False
+    print(f"FT8 Integration (ULTRON) not available: {e}")
 
 ############ Global variables ##################################
 CTRX=None
@@ -519,6 +563,11 @@ class WS_AudioTXHandler(tornado.websocket.WebSocketHandler):
 				self.audio_playback = PyAudioPlayback(config, itrate, is_encoded, op_rate, op_frm_dur)
 				logger.info(f'PyAudio TX initialized: rate={itrate}, encoded={is_encoded}')
 				
+				# 🎙️ TX 音频分析：开始录音
+				global tx_audio_analyzer
+				if tx_audio_analyzer:
+					tx_audio_analyzer.start_recording()
+				
 				# 使用PyAudio TX初始化作为可靠的PTT触发条件
 				# 当PyAudio TX初始化成功时，自动设置PTT=1
 				global CTRX
@@ -588,6 +637,9 @@ class WS_AudioTXHandler(tornado.websocket.WebSocketHandler):
 					self.inp = None
 			# 清除任何待播放的音频数据
 			print("🧹 清除音频缓冲区")
+			# 🎙️ TX 音频分析：停止录音
+			if tx_audio_analyzer and tx_audio_analyzer.is_recording:
+				tx_audio_analyzer.stop_recording()
 			# 关键修复：立即关闭PTT
 			if CTRX and CTRX.infos.get("PTT") == True:
 				CTRX.setPTT("false")
@@ -611,6 +663,16 @@ class WS_AudioTXHandler(tornado.websocket.WebSocketHandler):
 				# Use PyAudio
 				if hasattr(self, 'audio_playback') and self.audio_playback:
 					self.audio_playback.write(data)
+					# 🎙️ TX 音频分析：收集音频数据
+					# 注意：如果 Opus 编码开启，需要先解码再收集 PCM 数据
+					if tx_audio_analyzer and tx_audio_analyzer.is_recording:
+						if self.is_encoded and hasattr(self, 'decoder'):
+							# Opus 编码模式：解码后收集 PCM
+							pcm_data = self.decoder.decode(data, self.frame_size, False)
+							tx_audio_analyzer.add_audio_data(pcm_data)
+						else:
+							# Int16 模式：直接收集
+							tx_audio_analyzer.add_audio_data(data)
 					# V4.5.7: 移除 gc.collect() - 每秒50次gc导致CPU从12%飙升到30%
 					# Python 的 gc 会自动管理，不需要手动调用
 			else:
@@ -619,9 +681,15 @@ class WS_AudioTXHandler(tornado.websocket.WebSocketHandler):
 					if self.is_encoded and hasattr(self, 'decoder'):
 						pcm = self.decoder.decode(data, self.frame_size, False)
 						self.inp.write(pcm)
+						# 🎙️ TX 音频分析：ALSA 模式下也需要收集解码后的 PCM
+						if tx_audio_analyzer and tx_audio_analyzer.is_recording:
+							tx_audio_analyzer.add_audio_data(pcm)
 						# V4.5.7: 移除 gc.collect()
 					else :
 						self.inp.write(data)
+						# 🎙️ TX 音频分析：Int16 模式直接收集
+						if tx_audio_analyzer and tx_audio_analyzer.is_recording:
+							tx_audio_analyzer.add_audio_data(data)
 						# V4.5.7: 移除 gc.collect()
 
 	def on_close(self):
@@ -635,6 +703,9 @@ class WS_AudioTXHandler(tornado.websocket.WebSocketHandler):
 		if self in AudioTXHandlerClients:
 			AudioTXHandlerClients.remove(self)
 		if (not len(AudioTXHandlerClients)) and (CTRX.infos["PTT"]==True):
+			# 🎙️ TX 音频分析：停止录音
+			if tx_audio_analyzer and tx_audio_analyzer.is_recording:
+				tx_audio_analyzer.stop_recording()
 			CTRX.setPTT("false")
 		print('connection closed for TX socket')		
 
@@ -1103,16 +1174,23 @@ def sync_freq_to_atr1000(freq):
     import socket
     import json
     global INSTANCE_UNIX_SOCKET
+    sock = None
     try:
         sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         sock.settimeout(0.5)  # 短超时，不阻塞主程序
         sock.connect(INSTANCE_UNIX_SOCKET)
         sock.sendall(json.dumps({"action": "set_freq", "freq": freq}).encode())
-        sock.close()
-        logger.info(f"📤 频率同步给ATR-1000: {freq/1000:.1f}kHz")
+        logger.debug(f"📤 频率同步给ATR-1000: {freq/1000:.1f}kHz")
     except Exception as e:
         # 静默失败，不影响主程序
         logger.debug(f"频率同步失败: {e}")
+    finally:
+        # 确保 socket 正确关闭
+        if sock:
+            try:
+                sock.close()
+            except:
+                pass
 
 # 独立的频率同步线程 - 不依赖WebSocket客户端连接
 class FrequencySyncThread(threading.Thread):
@@ -1456,12 +1534,11 @@ class ATR1000ProxyManager:
                     except Exception as e:
                         logger.debug(f"接收数据错误: {e}")
                 
-                # 批量广播：V4.5.6 每 20ms 或累积 3 条消息时广播一次（极速模式）
-                now = time.time()
-                if message_batch and (now - last_batch_time >= 0.02 or len(message_batch) >= 3):
+                # V4.5.22: 立即广播最新数据，最小延迟
+                if message_batch:
                     self._broadcast_batch(message_batch)
                     message_batch = []
-                    last_batch_time = now
+                    last_batch_time = time.time()
                         
             except Exception as e:
                 logger.debug(f"读取循环错误: {e}")
@@ -1834,6 +1911,124 @@ class WS_ATUAutoTunerHandler(tornado.websocket.WebSocketHandler):
             except:
                 pass
 
+
+# FT8 WebSocket 客户端列表
+FT8HandlerClients = []
+
+class WS_FT8Handler(tornado.websocket.WebSocketHandler):
+    """
+    FT8/ULTRON WebSocket 处理器
+    
+    深度整合 ULTRON Python 后端与 Web 前端
+    
+    功能：
+    - UDP 监听 (2237): 接收 JTDX/WSJT-X/MSHV 数据
+    - WebSocket 桥接: 实时推送到前端
+    - 双向通信: 解码显示 + 控制命令
+    - QSO 状态管理 + DXCC 查询
+    
+    消息格式：
+    - 前端 → 后端: JSON 命令 {type: 'command', command: 'xxx', params: {}}
+    - 后端 → 前端: JSON 消息 {type: 'decode'|'status'|'qso_logged', data: {}}
+    """
+    
+    clients = []
+    ft8_integration = None
+    
+    def check_origin(self, origin):
+        return True
+    
+    def open(self):
+        if self not in WS_FT8Handler.clients:
+            WS_FT8Handler.clients.append(self)
+        logger.info(f"🔌 FT8/ULTRON 客户端连接，当前 {len(WS_FT8Handler.clients)} 个")
+        
+        # 使用新的 FT8 Integration (ULTRON)
+        if FT8_INTEGRATION_AVAILABLE:
+            if WS_FT8Handler.ft8_integration is None:
+                WS_FT8Handler.ft8_integration = get_ft8_integration()
+                WS_FT8Handler.ft8_integration.start()
+                logger.info("✅ FT8 Integration (ULTRON) 已启动")
+            
+            # 添加客户端
+            WS_FT8Handler.ft8_integration.add_websocket_client(self)
+            
+            # 发送欢迎消息
+            self.write_message(json.dumps({
+                'type': 'connected',
+                'message': 'ULTRON FT8 服务已连接',
+                'version': 'PY-20241115'
+            }))
+            
+            # 发送当前状态
+            status = WS_FT8Handler.ft8_integration._get_status()
+            self.write_message(json.dumps({
+                'type': 'status',
+                'data': status
+            }))
+            
+        else:
+            # 服务不可用
+            self.write_message(json.dumps({
+                'type': 'error',
+                'message': 'FT8 Integration 服务不可用'
+            }))
+    
+    def on_message(self, message):
+        if not FT8_INTEGRATION_AVAILABLE or WS_FT8Handler.ft8_integration is None:
+            self.write_message(json.dumps({
+                'type': 'error',
+                'message': 'FT8 Integration 服务不可用'
+            }))
+            return
+        
+        try:
+            # 解析 JSON 消息
+            if isinstance(message, str):
+                msg = json.loads(message)
+                
+                if msg.get('type') == 'command':
+                    command = msg.get('command', '')
+                    params = msg.get('params', {})
+                    
+                    # 处理命令
+                    result = WS_FT8Handler.ft8_integration.handle_web_command(command, params)
+                    
+                    # 返回结果
+                    if isinstance(result, dict):
+                        self.write_message(json.dumps({
+                            'type': 'command_ack',
+                            'data': result
+                        }))
+                
+                else:
+                    # 处理其他消息类型
+                    logger.warning(f"未知的 FT8 消息类型: {msg.get('type')}")
+            else:
+                logger.warning(f"收到非文本 FT8 消息")
+                
+        except json.JSONDecodeError as e:
+            logger.error(f"FT8 JSON 解析错误: {e}")
+            self.write_message(json.dumps({
+                'type': 'error',
+                'message': '无效的 JSON 格式'
+            }))
+        except Exception as e:
+            logger.error(f"FT8 消息处理错误: {e}")
+            self.write_message(json.dumps({
+                'type': 'error',
+                'message': str(e)
+            }))
+    
+    def on_close(self):
+        if self in WS_FT8Handler.clients:
+            WS_FT8Handler.clients.remove(self)
+        logger.info(f"🔌 FT8/ULTRON 客户端断开，剩余 {len(WS_FT8Handler.clients)} 个")
+        
+        if FT8_INTEGRATION_AVAILABLE and WS_FT8Handler.ft8_integration:
+            WS_FT8Handler.ft8_integration.remove_websocket_client(self)
+
+
 class TRXRIG:
 	def __init__(self):
 		global HAMLIB_AVAILABLE
@@ -1873,6 +2068,7 @@ class TRXRIG:
 					self.rigctld_host = "127.0.0.1"
 					self.rigctld_port = rigctld_port
 					
+										
 				except socket.error as e:
 					logger.error(f"⚠ rigctld daemon not running: {e}")
 					logger.info(f"Please start rigctld with: rigctld -m 30003 -r /dev/cu.usbserial-230 -s 4800 -C stop_bits=2 -T 127.0.0.1 -t {rigctld_port}")
@@ -1902,27 +2098,25 @@ class TRXRIG:
 			# PTT monitoring disabled to reduce rigctld load
 		else:
 			print("Running in simulation mode - radio commands will be simulated")
-		
+	
 	def _rigctld_command(self, cmd):
 		"""Send command to rigctld daemon and return the result"""
-		#logger.debug(f"Sending rigctld command: {cmd}")
 		if not self.rig or self.rig != "rigctld_daemon":
 			logger.error(f"Rigctld not available for command: {cmd}")
 			return None
+		
+		sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 		try:
-			import socket
-			sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 			sock.settimeout(3)
-			sock.connect(('127.0.0.1', self.rigctld_port))
+			sock.connect((self.rigctld_host, self.rigctld_port))
 			sock.sendall((cmd + '\n').encode())
 			response = sock.recv(1024).decode().strip()
-			sock.close()
-			#logger.debug(f"rigctld response to '{cmd}': {response}")
-			#logger.debug(f"rigctld command '{cmd}' successful")
 			return response
 		except Exception as e:
 			logger.error(f"Error communicating with rigctld for command '{cmd}': {e}")
 			return None
+		finally:
+			sock.close()
 	
 	def _rigctld_set_command(self, cmd, value):
 		"""Send set command to rigctld daemon"""
@@ -1930,15 +2124,14 @@ class TRXRIG:
 		if not self.rig or self.rig != "rigctld_daemon":
 			logger.error(f"Rigctld not available for set command: {cmd} {value}")
 			return False
+		
+		sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 		try:
-			import socket
-			sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 			sock.settimeout(3)
-			sock.connect(('127.0.0.1', self.rigctld_port))
+			sock.connect((self.rigctld_host, self.rigctld_port))
 			command = f"{cmd} {value}\n"
 			sock.sendall(command.encode())
 			response = sock.recv(1024).decode().strip()
-			sock.close()
 			logger.debug(f"rigctld set response to '{cmd} {value}': {response}")
 			if response == "RPRT 0":
 				logger.info(f"rigctld set command '{cmd} {value}' successful")
@@ -1949,18 +2142,19 @@ class TRXRIG:
 		except Exception as e:
 			logger.error(f"Error communicating with rigctld for set command '{cmd} {value}': {e}")
 			return False
+		finally:
+			sock.close()
 	
 	def _rigctld_mode_command(self, mode_cmd):
 		"""Send mode command to rigctld daemon"""
 		logger.info(f"Sending rigctld mode command: {mode_cmd}")
+		
+		sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 		try:
-			import socket
-			sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 			sock.settimeout(3)
-			sock.connect(('127.0.0.1', self.rigctld_port))
+			sock.connect((self.rigctld_host, self.rigctld_port))
 			sock.sendall((mode_cmd + '\n').encode())
 			response = sock.recv(1024).decode().strip()
-			sock.close()
 			logger.debug(f"rigctld mode response to '{mode_cmd}': {response}")
 			if response == "RPRT 0":
 				logger.info(f"rigctld mode command '{mode_cmd}' successful")
@@ -1971,6 +2165,8 @@ class TRXRIG:
 		except Exception as e:
 			logger.error(f"Error communicating with rigctld for mode command '{mode_cmd}': {e}")
 			return False
+		finally:
+			sock.close()
 	
 	def _get_default_passband(self, mode):
 		"""Get default passband for mode"""
@@ -2080,31 +2276,27 @@ class TRXRIG:
 	def setMode(self,MODE):
 		logger.info(f"Setting mode to: {MODE}")
 		if self.rig == "rigctld_daemon":
-			# IC-M710 may have limited mode support - try setting but handle gracefully
 			pb = self._get_default_passband(MODE)
 			mode_cmd = f"M {MODE.upper()} {pb}"
+			
+			sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 			try:
-				import socket
-				sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 				sock.settimeout(3)
-				sock.connect(('127.0.0.1', self.rigctld_port))
+				sock.connect((self.rigctld_host, self.rigctld_port))
 				sock.sendall((mode_cmd + '\n').encode())
 				response = sock.recv(1024).decode().strip()
-				sock.close()
 				logger.debug(f"rigctld mode response to '{mode_cmd}': {response}")
 				if response == "RPRT 0":
 					self.infos["MODE"] = MODE.upper()
 					logger.info(f"✓ Mode set to {MODE} via rigctld")
 				else:
-					# IC-M710 may not support mode setting via CAT - store locally
 					logger.warning(f"Mode setting failed via CAT: {response}, storing locally")
 					self.infos["MODE"] = MODE.upper()
-					logger.info(f"Mode stored as {MODE} (manual radio adjustment may be needed)")
 			except Exception as e:
 				logger.error(f"Error communicating with rigctld for mode command '{mode_cmd}': {e}")
-				# Fallback - store mode locally
-				self.infos["MODE"] = MODE.upper() 
-				logger.info(f"Mode stored as {MODE} due to error (manual radio adjustment may be needed)")
+				self.infos["MODE"] = MODE.upper()
+			finally:
+				sock.close()
 		elif not self.rig:
 			self.infos["MODE"] = MODE
 			logger.info(f"Simulated: Mode set to {MODE}")
@@ -2221,17 +2413,13 @@ class TRXRIG:
 	
 	def _rigctld_get_signal_strength(self):
 		"""通过 rigctld 获取信号强度，返回 dB 值或 None"""
+		sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 		try:
-			import socket
-			sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-			sock.settimeout(1)
-			sock.connect(('127.0.0.1', self.rigctld_port))
-			# 发送获取信号强度命令
+			sock.settimeout(3)
+			sock.connect((self.rigctld_host, self.rigctld_port))
 			sock.sendall(b"l STRENGTH\n")
 			response = sock.recv(1024).decode().strip()
-			sock.close()
 			
-			# 解析响应，格式通常为 "0" 到 "255" 或 "RPRT -..."
 			if response.startswith("RPRT"):
 				return None
 			
@@ -2239,8 +2427,6 @@ class TRXRIG:
 				strength = int(response)
 				if strength < 0:
 					return None
-				# rigctld STRENGTH 返回 0-255，转换为 dB
-				# 0 = -54dB (S0), 255 = +60dB (S9+60)
 				db = -54 + (strength / 255.0) * 114
 				return int(db)
 			except ValueError:
@@ -2249,6 +2435,8 @@ class TRXRIG:
 		except Exception as e:
 			logger.debug(f"rigctld 获取信号强度失败: {e}")
 			return None
+		finally:
+			sock.close()
 		
 	def setPTT(self, status):
 		ptt_state = (status == "true")
@@ -2268,25 +2456,23 @@ class TRXRIG:
 		
 		for attempt in range(max_retries):
 			if self.rig == "rigctld_daemon":
-				# Use faster, direct command for PTT to reduce lag
+				sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 				try:
-					import socket
-					sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-					sock.settimeout(1)  # Reduced timeout for faster response
-					sock.connect(('127.0.0.1', self.rigctld_port))
+					sock.settimeout(3)
+					sock.connect((self.rigctld_host, self.rigctld_port))
 					command = f"T {ptt_value}\n"
 					sock.sendall(command.encode())
 					response = sock.recv(1024).decode().strip()
-					sock.close()
 					if response == "RPRT 0":
 						self.infos["PTT"] = ptt_state
-						# logger.info(f"✓ PTT set to {status} via rigctld (fast) on attempt {attempt + 1}")
 						success = True
 						break
 					else:
 						logger.error(f"PTT command failed on attempt {attempt + 1}: {response}")
 				except Exception as e:
-					logger.error(f"Fast PTT command failed on attempt {attempt + 1}: {e}")
+					logger.error(f"PTT command failed on attempt {attempt + 1}: {e}")
+				finally:
+					sock.close()
 			elif not self.rig:
 				self.infos["PTT"] = ptt_state
 				# logger.info(f"Simulated: PTT set to {status}")
@@ -2349,25 +2535,20 @@ class TRXRIG:
 	
 	def _rigctld_get_ptt(self):
 		"""Get actual PTT state from rigctld daemon"""
-		# logger.info("Querying actual PTT state from rigctld")
+		sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 		try:
-			import socket
-			sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 			sock.settimeout(3)
-			sock.connect(('127.0.0.1', self.rigctld_port))
-			# Send 't' command to get PTT state (0 = off, 1 = on)
+			sock.connect((self.rigctld_host, self.rigctld_port))
 			sock.sendall(b"t\n")
 			response = sock.recv(1024).decode().strip()
-			sock.close()
-			# logger.debug(f"rigctld PTT response: {response}")
 			
-			# Parse response (rigctld returns 0 for off, 1 for on)
 			if response.isdigit():
 				ptt_state = bool(int(response))
-				# logger.info(f"Actual PTT state from rigctld: {ptt_state}")
 				return ptt_state
 		except Exception as e:
 			logger.error(f"Error querying PTT state from rigctld: {e}")
+		finally:
+			sock.close()
 		return None
 		
 		
@@ -2486,10 +2667,15 @@ class WS_ControlTRX(tornado.websocket.WebSocketHandler):
 			self.write_message("getPTT:"+str(CTRX.infos["PTT"]).lower())
 			
 			# V4.5.18: 定期同步频率给 ATR-1000 代理（支持外部软件控制频率）
+			# 修复：只有频率变化时才同步，避免频繁触发自动调谐
 			try:
 				current_freq = CTRX.getFreq()
 				if current_freq and current_freq > 0:
-					sync_freq_to_atr1000(current_freq)
+					# 检查频率是否变化（只有变化时才同步）
+					if not hasattr(self, 'last_atr_freq') or self.last_atr_freq != current_freq:
+						sync_freq_to_atr1000(current_freq)
+						self.last_atr_freq = current_freq
+						logger.debug(f"🔄 频率变化，同步给ATR-1000: {current_freq/1000:.1f}kHz")
 			except Exception as e:
 				logger.debug(f"同步频率给ATR-1000失败: {e}")
 			
@@ -3178,6 +3364,7 @@ if __name__ == "__main__":
 			(r'/WSpanFFT', WS_panFFTHandler),
 			(r'/WSATR1000', WS_ATR1000Handler),  # ATR-1000 天调 WebSocket
 			(r'/WSATU', WS_ATUAutoTunerHandler),  # ATU 自动调谐 WebSocket
+			(r'/WSFT8', WS_FT8Handler),  # FT8 数字模式 WebSocket
 			
 			(r'/(panfft.*)', tornado.web.StaticFileHandler, { 'path' : './www/panadapter' }),
 					(r'/CONFIG', ConfigHandler),

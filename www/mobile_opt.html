@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="MRRC Opt">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#0a0a0f">
+    <meta name="format-detection" content="telephone=no">
+    <title>MRRC Optimized</title>
+    
+    <!-- PWA -->
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="favicon.png">
+    
+    <!-- 样式 -->
+    <link rel="stylesheet" href="mobile_opt.css">
+</head>
+<body>
+    <!-- 安全区域顶部 -->
+    <div class="safe-area-top"></div>
+    
+    <!-- 主容器 -->
+    <div id="app-container">
+        <!-- 头部 -->
+        <header class="app-header">
+            <div class="header-row">
+                <!-- 菜单按钮 -->
+                <button id="btn-menu" class="icon-btn" aria-label="菜单">
+                    <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2">
+                        <line x1="3" y1="6" x2="21" y2="6"></line>
+                        <line x1="3" y1="12" x2="21" y2="12"></line>
+                        <line x1="3" y1="18" x2="21" y2="18"></line>
+                    </svg>
+                </button>
+                
+                <!-- 频率显示 -->
+                <div id="freq-display" class="freq-display">
+                    <span class="freq-mhz">7.053</span>
+                    <span class="freq-khz">.00</span>
+                    <span class="freq-unit">MHz</span>
+                </div>
+                
+                <!-- 电源按钮 -->
+                <button id="btn-power" class="icon-btn power-btn" aria-label="电源">
+                    <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2">
+                        <path d="M12 2v10M18.4 6.6a9 9 0 1 1-12.8 0"></path>
+                    </svg>
+                </button>
+            </div>
+            
+            <!-- 状态栏 -->
+            <div class="status-bar">
+                <span id="status-ctl" class="status-item"><span class="dot"></span>CTL</span>
+                <span id="status-rx" class="status-item"><span class="dot"></span>RX</span>
+                <span id="status-tx" class="status-item"><span class="dot"></span>TX</span>
+                <span id="status-mode" class="status-item mode">USB</span>
+            </div>
+        </header>
+        
+        <!-- 主内容区 -->
+        <main class="main-content">
+            <!-- 仪表显示 -->
+            <section class="meter-section">
+                <!-- S表 -->
+                <div class="s-meter">
+                    <div class="meter-bar">
+                        <div id="s-bar" class="meter-fill"></div>
+                    </div>
+                    <div class="meter-labels">
+                        <span>S1</span><span>S5</span><span>S9</span><span>+20</span><span>+40</span>
+                    </div>
+                    <span id="s-value" class="meter-value">S0</span>
+                </div>
+                
+                <!-- 功率/驻波 -->
+                <div class="power-row">
+                    <div class="power-item">
+                        <span class="label">PWR</span>
+                        <span id="pwr-value" class="value">--</span>
+                        <span class="unit">W</span>
+                    </div>
+                    <div class="power-item">
+                        <span class="label">SWR</span>
+                        <span id="swr-value" class="value">--</span>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- 快捷控制 -->
+            <section class="quick-controls">
+                <button id="btn-mode" class="ctrl-btn">USB</button>
+                <button id="btn-band" class="ctrl-btn">40m</button>
+                <button id="btn-filter" class="ctrl-btn">2.4k</button>
+                <button id="btn-dsp" class="ctrl-btn dsp">DSP</button>
+            </section>
+            
+            <!-- 音量控制 -->
+            <section class="volume-section">
+                <span class="vol-icon">🔊</span>
+                <input type="range" id="volume-slider" min="0" max="100" value="50">
+                <span id="volume-value" class="vol-value">50%</span>
+            </section>
+            
+            <!-- 频率调节 -->
+            <section class="tuning-section">
+                <button class="tune-btn" data-delta="-5000">◀◀</button>
+                <button class="tune-btn" data-delta="-1000">◀</button>
+                <span id="step-display" class="step-display">1kHz</span>
+                <button class="tune-btn" data-delta="1000">▶</button>
+                <button class="tune-btn" data-delta="5000">▶▶</button>
+            </section>
+            
+            <!-- 延迟显示 -->
+            <section class="latency-section">
+                <span>延迟: <span id="latency-value">--</span>ms</span>
+                <span>缓冲: <span id="buffer-value">--</span></span>
+            </section>
+        </main>
+        
+        <!-- 底部控制 -->
+        <footer class="footer-controls">
+            <div class="footer-row">
+                <!-- PTT 大按钮 -->
+                <button id="btn-ptt" class="ptt-btn">
+                    <span class="ptt-text">PTT</span>
+                </button>
+                
+                <!-- 右侧按钮组 -->
+                <div class="side-btns">
+                    <button id="btn-tune" class="side-btn tune">TUNE</button>
+                    <button id="btn-record" class="side-btn record">REC</button>
+                </div>
+            </div>
+        </footer>
+    </div>
+    
+    <!-- 菜单面板 -->
+    <div id="menu-panel" class="menu-panel">
+        <div class="menu-header">
+            <span class="menu-title">菜单</span>
+            <button id="btn-close-menu" class="close-btn">×</button>
+        </div>
+        <div class="menu-content">
+            <div class="menu-group">
+                <div class="menu-group-title">波段</div>
+                <div class="menu-grid" id="band-grid"></div>
+            </div>
+            <div class="menu-group">
+                <div class="menu-group-title">模式</div>
+                <div class="menu-grid" id="mode-grid"></div>
+            </div>
+            <div class="menu-group">
+                <div class="menu-group-title">滤波器</div>
+                <div class="menu-grid" id="filter-grid"></div>
+            </div>
+            <div class="menu-group">
+                <div class="menu-group-title">DSP 设置</div>
+                <div class="dsp-options" id="dsp-options"></div>
+            </div>
+        </div>
+        <div class="menu-footer">
+            <span>MRRC Optimized v1.0</span>
+        </div>
+    </div>
+    
+    <!-- 遮罩 -->
+    <div id="overlay" class="overlay"></div>
+    
+    <!-- 安全区域底部 -->
+    <div class="safe-area-bottom"></div>
+    
+    <!-- Opus 解码器 (来自 controls.js) -->
+    <script src="controls.js"></script>
+    
+    <!-- 音频引擎 -->
+    <script src="mobile_opt.js"></script>
+</body>
+</html>

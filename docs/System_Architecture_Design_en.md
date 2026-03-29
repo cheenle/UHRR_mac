@@ -1,7 +1,7 @@
 # Mobile Remote Radio Control (MRRC) System Architecture Design Document
 
 ## Document Information
-- **Version**: v4.9.1 (2026-03-15)
+- **Version**: v4.9.3 (2026-03-29)
 - **Author**: System Architecture Team
 - **Status**: Production Ready
 - **Classification**: Confidential/Internal

@@ -2,7 +2,7 @@
 
 This document systematically reviews the typical instability issues encountered when using MRRC in browsers, providing engineering countermeasures and a "working stable baseline." Focus is on achieving 100% reliable TX initiation and low-jitter RX.
 
-**Version**: V4.9.1 (2026-03-15)
+**Version**: V4.9.3 (2026-03-29)
 
 ---
 

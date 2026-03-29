@@ -1,0 +1,131 @@
+version: '3.8'
+
+# MRRC 多实例 Docker Compose 配置
+# 用于同时运行多个电台实例
+
+services:
+  # 电台1实例
+  mrrc-radio1:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: mrrc:latest
+    container_name: mrrc-radio1
+    restart: unless-stopped
+    privileged: true
+    
+    devices:
+      - /dev/snd:/dev/snd
+      # 根据实际情况调整串口设备
+      # - /dev/ttyUSB0:/dev/ttyUSB0
+    
+    volumes:
+      - ./MRRC.radio1.conf:/uhrh/MRRC.conf:ro
+      - ./certs:/uhrh/certs:ro
+      - ./atr1000_radio1.json:/uhrh/atr1000_tuner.json
+      - ./MRRC_users.db:/uhrh/MRRC_users.db
+      - ./logs:/uhrh/logs
+      - /dev:/dev
+    
+    ports:
+      - "8891:8891"
+    
+    environment:
+      - PYTHONUNBUFFERED=1
+      - INSTANCE_NAME=radio1
+    
+    networks:
+      - mrrc-network
+    
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider --no-check-certificate https://localhost:8891/ || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # 电台2实例
+  mrrc-radio2:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: mrrc:latest
+    container_name: mrrc-radio2
+    restart: unless-stopped
+    privileged: true
+    
+    devices:
+      - /dev/snd:/dev/snd
+      # 根据实际情况调整串口设备
+      # - /dev/ttyUSB1:/dev/ttyUSB1
+    
+    volumes:
+      - ./MRRC.radio2.conf:/uhrh/MRRC.conf:ro
+      - ./certs:/uhrh/certs:ro
+      - ./atr1000_radio2.json:/uhrh/atr1000_tuner.json
+      - ./MRRC_users.db:/uhrh/MRRC_users.db
+      - ./logs:/uhrh/logs
+      - /dev:/dev
+    
+    ports:
+      - "8892:8892"
+    
+    environment:
+      - PYTHONUNBUFFERED=1
+      - INSTANCE_NAME=radio2
+    
+    networks:
+      - mrrc-network
+    
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider --no-check-certificate https://localhost:8892/ || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # 电台3实例（可选）
+  # mrrc-radio3:
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile
+  #   image: mrrc:latest
+  #   container_name: mrrc-radio3
+  #   restart: unless-stopped
+  #   privileged: true
+  #   
+  #   volumes:
+  #     - ./MRRC.radio3.conf:/uhrh/MRRC.conf:ro
+  #     - ./certs:/uhrh/certs:ro
+  #     - ./atr1000_radio3.json:/uhrh/atr1000_tuner.json
+  #     - /dev:/dev
+  #   
+  #   ports:
+  #     - "8893:8893"
+  #   
+  #   networks:
+  #     - mrrc-network
+
+  # Nginx 反向代理（可选）
+  nginx:
+    image: nginx:alpine
+    container_name: mrrc-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./certs:/etc/nginx/certs:ro
+    networks:
+      - mrrc-network
+    depends_on:
+      - mrrc-radio1
+      - mrrc-radio2
+
+networks:
+  mrrc-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.21.0.0/16

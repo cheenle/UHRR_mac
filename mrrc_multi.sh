@@ -250,7 +250,7 @@ stop_rigctld() {
 start_mrrc() {
     if is_running "MRRC.*$INSTANCE"; then
         print_warning "MRRC already running"
-        return 1
+        return 0
     fi
     
     print_status "Starting MRRC server..."

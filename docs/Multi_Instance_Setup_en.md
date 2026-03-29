@@ -1,8 +1,7 @@
 # MRRC Multi-Instance Configuration Guide
 
-**Document Version**: V1.0 (2026-03-15)  
-**Corresponding MRRC Version**: V4.9.1
-
+**Document Version**: V1.1 (2026-03-29)
+**Corresponding MRRC Version**: V4.9.3
 ## Overview
 
 MRRC supports running multiple independent instances on the same server, each instance can:

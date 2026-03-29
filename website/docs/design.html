@@ -1,11 +1,11 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>设计&工程 - MRRC 移动远程电台控制</title>
-    <meta name="description" content="MRRC设计文档：软件架构设计、需求规格、API接口规范">
-    <meta name="keywords" content="MRRC, 软件架构, SDD, 系统设计, 需求规格">
+    <title>Design & Engineering - MRRC Mobile Remote Radio Control</title>
+    <meta name="description" content="MRRC design documentation: software architecture design, requirements specification, API interface specification">
+    <meta name="keywords" content="MRRC, Software Architecture, SDD, System Design, Requirements Spec">
     <link rel="stylesheet" href="../css/style.css">
     <link rel="stylesheet" href="../css/docs.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -301,6 +301,33 @@
             color: var(--primary);
         }
         
+        .lang-toggle {
+            display: flex;
+            gap: 0.5rem;
+        }
+        
+        .lang-btn {
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            background: transparent;
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 0.875rem;
+            transition: all 0.2s;
+        }
+        
+        .lang-btn.active {
+            background: var(--primary);
+            color: var(--bg-dark);
+            border-color: var(--primary);
+        }
+        
+        .lang-btn a {
+            color: inherit;
+            text-decoration: none;
+        }
+        
         .container {
             max-width: 1200px;
             margin: 0 auto;
@@ -331,22 +358,28 @@
                 <span>MRRC</span>
             </a>
             <nav class="nav">
-                <a href="../index.html">首页</a>
-                <a href="features.html">功能特性</a>
-                <a href="installation.html">安装指南</a>
-                <a href="docs.html">技术文档</a>
-                <a href="design.html" class="active">设计&工程</a>
+                <a href="../index.html">Home</a>
+                <a href="features.html">Features</a>
+                <a href="../zh/docs/installation.html">Installation</a>
+                <a href="docs.html">Documentation</a>
+                <a href="design.html" class="active">Design & Engineering</a>
             </nav>
+            <div class="lang-toggle">
+                <button class="lang-btn active">English</button>
+                <button class="lang-btn">
+                    <a href="design.html">中文</a>
+                </button>
+            </div>
         </div>
     </header>
 
     <!-- Hero -->
     <section class="hero">
         <div class="container">
-            <h1 class="hero-title">设计&工程文档</h1>
+            <h1 class="hero-title">Design & Engineering Documentation</h1>
             <p class="hero-subtitle">
-                完整呈现 MRRC 系统的软件设计说明 (SDD)、项目规格、需求矩阵、架构决策记录。
-                涵盖系统架构、组件设计、API 接口等核心技术文档。
+                Complete presentation of MRRC system's Software Design Document (SDD), project specifications, requirements matrix, and architecture decision records.
+                Covers system architecture, component design, API interfaces and other core technical documentation.
             </p>
         </div>
     </section>
@@ -356,21 +389,21 @@
         <div class="container">
             <!-- Design Documents Grid -->
             <div class="doc-section">
-                <h2><i class="fas fa-layer-group" style="color: var(--primary);"></i> 核心设计文档</h2>
+                <h2><i class="fas fa-layer-group" style="color: var(--primary);"></i> Core Design Documents</h2>
                 
                 <div class="doc-grid">
                     <!-- SDD -->
                     <a href="design/MRRC_SDD.html" class="doc-card">
                         <div class="doc-card-header">
                             <div class="doc-card-icon">📋</div>
-                            <span class="doc-card-title">软件设计说明 (SDD)</span>
+                            <span class="doc-card-title">Software Design Document (SDD)</span>
                             <span class="doc-card-badge">66KB</span>
                         </div>
                         <p class="doc-card-desc">
-                            完整的软件设计文档，包含业务方向、项目定义、系统架构、组件模型、服务模型、运营模型等14个章节。
+                            Complete software design document, containing business direction, project definition, system architecture, component model, service model, operational model and 14 chapters.
                         </p>
                         <div class="doc-card-meta">
-                            <span><i class="fas fa-book"></i> 14 章节</span>
+                            <span><i class="fas fa-book"></i> 14 Chapters</span>
                             <span><i class="fas fa-code-branch"></i> v2.3.2</span>
                         </div>
                     </a>
@@ -379,14 +412,14 @@
                     <a href="design/SPEC.html" class="doc-card">
                         <div class="doc-card-header">
                             <div class="doc-card-icon">🎯</div>
-                            <span class="doc-card-title">项目规格说明书</span>
+                            <span class="doc-card-title">Project Specification</span>
                             <span class="doc-card-badge">SPEC</span>
                         </div>
                         <p class="doc-card-desc">
-                            基于 Vibe-SDD 的项目规格文档，定义项目概述、业务背景、目标成功标准、技术约束、里程碑等核心内容。
+                            Vibe-SDD based project specification document, defining project overview, business background, target success criteria, technical constraints, milestones and other core content.
                         </p>
                         <div class="doc-card-meta">
-                            <span><i class="fas fa-bullseye"></i> 8 章节</span>
+                            <span><i class="fas fa-bullseye"></i> 8 Chapters</span>
                             <span><i class="fas fa-vihara"></i> V4.9</span>
                         </div>
                     </a>
@@ -395,15 +428,15 @@
                     <a href="design/REQUIREMENTS.html" class="doc-card">
                         <div class="doc-card-header">
                             <div class="doc-card-icon">📝</div>
-                            <span class="doc-card-title">需求矩阵</span>
+                            <span class="doc-card-title">Requirements Matrix</span>
                             <span class="doc-card-badge">REQ</span>
                         </div>
                         <p class="doc-card-desc">
-                            功能需求 (30+项) 和非功能需求矩阵，包含性能、可用性、安全性、兼容性等维度的详细规格与验证追踪。
+                            Functional requirements (30+ items) and non-functional requirements matrix, including detailed specifications and verification tracking for performance, usability, security, compatibility dimensions.
                         </p>
                         <div class="doc-card-meta">
-                            <span><i class="fas fa-list-check"></i> 30+ 需求</span>
-                            <span><i class="fas fa-check-circle"></i> 已验证</span>
+                            <span><i class="fas fa-list-check"></i> 30+ Requirements</span>
+                            <span><i class="fas fa-check-circle"></i> Verified</span>
                         </div>
                     </a>
                     
@@ -411,15 +444,15 @@
                     <a href="design/ARCH-DECISIONS.html" class="doc-card">
                         <div class="doc-card-header">
                             <div class="doc-card-icon">⚖️</div>
-                            <span class="doc-card-title">架构决策记录</span>
+                            <span class="doc-card-title">Architecture Decision Records</span>
                             <span class="doc-card-badge">ADR</span>
                         </div>
                         <p class="doc-card-desc">
-                            7个关键架构决策的完整记录，包括 WebSocket 协议、Tornado 框架、Int16 编码、WDSP 降噪、多实例部署等。
+                            Complete records of 7 key architecture decisions, including WebSocket protocol, Tornado framework, Int16 encoding, WDSP noise reduction, multi-instance deployment, etc.
                         </p>
                         <div class="doc-card-meta">
-                            <span><i class="fas fa-gavel"></i> 7 决策</span>
-                            <span><i class="fas fa-check-double"></i> 已批准</span>
+                            <span><i class="fas fa-gavel"></i> 7 Decisions</span>
+                            <span><i class="fas fa-check-double"></i> Approved</span>
                         </div>
                     </a>
                     
@@ -427,15 +460,15 @@
                     <a href="design/CONTEXT.html" class="doc-card">
                         <div class="doc-card-header">
                             <div class="doc-card-icon">🔗</div>
-                            <span class="doc-card-title">系统上下文图</span>
+                            <span class="doc-card-title">System Context Diagram</span>
                             <span class="doc-card-badge">CTX</span>
                         </div>
                         <p class="doc-card-desc">
-                            系统与外部实体的交互关系图，包含用户、电台、ATR-1000、rigctld 等外部系统的接口定义。
+                            System interaction diagram with external entities, including interface definitions for users, transceivers, ATR-1000, rigctld and other external systems.
                         </p>
                         <div class="doc-card-meta">
                             <span><i class="fas fa-project-diagram"></i> Mermaid</span>
-                            <span><i class="fas fa-external-link-alt"></i> 外部系统</span>
+                            <span><i class="fas fa-external-link-alt"></i> External Systems</span>
                         </div>
                     </a>
                     
@@ -443,14 +476,14 @@
                     <a href="design/API.html" class="doc-card">
                         <div class="doc-card-header">
                             <div class="doc-card-icon">🔌</div>
-                            <span class="doc-card-title">API 接口文档</span>
+                            <span class="doc-card-title">API Interface Documentation</span>
                             <span class="doc-card-badge">API</span>
                         </div>
                         <p class="doc-card-desc">
-                            WebSocket 控制命令、音频数据格式、ATR-1000 数据协议等接口规范的完整定义。
+                            Complete definition of WebSocket control commands, audio data formats, ATR-1000 data protocol and other interface specifications.
                         </p>
                         <div class="doc-card-meta">
-                            <span><i class="fas fa-plug"></i> 6 端点</span>
+                            <span><i class="fas fa-plug"></i> 6 Endpoints</span>
                             <span><i class="fas fa-code"></i> JSON</span>
                         </div>
                     </a>
@@ -459,118 +492,148 @@
             
             <!-- Key Specifications -->
             <div class="doc-section">
-                <h2><i class="fas fa-cog" style="color: var(--primary);"></i> 核心技术规格</h2>
+                <h2><i class="fas fa-cog" style="color: var(--primary);"></i> Core Technical Specifications</h2>
                 
-                <h3>技术栈</h3>
+                <h3>Technology Stack</h3>
                 <table class="spec-table">
                     <thead>
                         <tr>
-                            <th>层级</th>
-                            <th>技术选择</th>
-                            <th>理由</th>
+                            <th>Layer</th>
+                            <th>Technology Choice</th>
+                            <th>Rationale</th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr>
-                            <td>前端</td>
+                            <td>Frontend</td>
                             <td>HTML5/CSS3/Vanilla JS</td>
-                            <td>轻量，浏览器兼容性好</td>
+                            <td>Lightweight, good browser compatibility</td>
                         </tr>
                         <tr>
-                            <td>后端</td>
+                            <td>Backend</td>
                             <td>Python 3.12+ / Tornado</td>
-                            <td>原生 WebSocket 支持</td>
+                            <td>Native WebSocket support</td>
                         </tr>
                         <tr>
-                            <td>音频</td>
+                            <td>Audio</td>
                             <td>PyAudio</td>
-                            <td>跨平台音频 I/O</td>
+                            <td>Cross-platform audio I/O</td>
                         </tr>
                         <tr>
                             <td>DSP</td>
                             <td>WDSP</td>
-                            <td>专为 SSB 优化</td>
+                            <td>Optimized for SSB</td>
                         </tr>
                         <tr>
-                            <td>控制</td>
+                            <td>Control</td>
                             <td>Hamlib/rigctld</td>
-                            <td>电台控制标准</td>
+                            <td>Transceiver control standard</td>
+                        </tr>
+                        <tr>
+                            <td>Speech Recognition</td>
+                            <td>Whisper (OpenAI)</td>
+                            <td>Local processing, multi-language</td>
+                        </tr>
+                        <tr>
+                            <td>Speech Synthesis</td>
+                            <td>Qwen3-TTS</td>
+                            <td>Natural voice, phonetic alphabet</td>
+                        </tr>
+                        <tr>
+                            <td>CW Decoding</td>
+                            <td>ONNX Runtime</td>
+                            <td>Browser-first AI, &lt;2MB model</td>
+                        </tr>
+                        <tr>
+                            <td>FT8 Integration</td>
+                            <td>ULTRON / JTDX</td>
+                            <td>DXCC tracking, auto QSO</td>
                         </tr>
                     </tbody>
                 </table>
                 
-                <h3>性能指标</h3>
+                <h3>Performance Metrics</h3>
                 <table class="spec-table">
                     <thead>
                         <tr>
-                            <th>指标</th>
-                            <th>目标值</th>
-                            <th>状态</th>
+                            <th>Metric</th>
+                            <th>Target Value</th>
+                            <th>Status</th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr>
-                            <td>TX/RX 切换延迟</td>
+                            <td>TX/RX Switch Latency</td>
                             <td>&lt; 100ms</td>
-                            <td>✅ 已达成</td>
+                            <td>✅ Achieved</td>
                         </tr>
                         <tr>
-                            <td>PTT 响应时间</td>
+                            <td>PTT Response Time</td>
                             <td>&lt; 50ms</td>
-                            <td>✅ 已达成</td>
+                            <td>✅ Achieved</td>
                         </tr>
                         <tr>
-                            <td>PTT 可靠性</td>
+                            <td>PTT Reliability</td>
                             <td>≥ 99%</td>
-                            <td>✅ 已达成</td>
+                            <td>✅ Achieved</td>
                         </tr>
                         <tr>
-                            <td>WDSP 降噪深度</td>
+                            <td>WDSP NR Depth</td>
                             <td>15-20 dB</td>
-                            <td>✅ 已达成</td>
+                            <td>✅ Achieved</td>
                         </tr>
                         <tr>
-                            <td>系统可用性</td>
+                            <td>CW Decode Latency</td>
+                            <td>&lt; 50ms (frontend)</td>
+                            <td>✅ Achieved</td>
+                        </tr>
+                        <tr>
+                            <td>Speech Recognition Latency</td>
+                            <td>&lt; 200ms</td>
+                            <td>✅ Achieved</td>
+                        </tr>
+                        <tr>
+                            <td>System Availability</td>
                             <td>≥ 99.5%</td>
-                            <td>✅ 已达成</td>
+                            <td>✅ Achieved</td>
                         </tr>
                     </tbody>
                 </table>
                 
-                <h3>音频参数</h3>
+                <h3>Audio Parameters</h3>
                 <table class="spec-table">
                     <thead>
                         <tr>
-                            <th>参数</th>
-                            <th>值</th>
-                            <th>说明</th>
+                            <th>Parameter</th>
+                            <th>Value</th>
+                            <th>Description</th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr>
-                            <td>采样率 (处理)</td>
+                            <td>Sample Rate (Processing)</td>
                             <td>48kHz</td>
-                            <td>WDSP 处理</td>
+                            <td>WDSP processing</td>
                         </tr>
                         <tr>
-                            <td>采样率 (传输)</td>
+                            <td>Sample Rate (Transport)</td>
                             <td>16kHz</td>
-                            <td>网络传输</td>
+                            <td>Network transmission</td>
                         </tr>
                         <tr>
-                            <td>音频格式</td>
+                            <td>Audio Format</td>
                             <td>Int16 PCM</td>
-                            <td>50% 带宽节省</td>
+                            <td>50% bandwidth savings</td>
                         </tr>
                         <tr>
-                            <td>帧大小</td>
+                            <td>Frame Size</td>
                             <td>320 samples (20ms)</td>
-                            <td>WebRTC 推荐</td>
+                            <td>WebRTC recommended</td>
                         </tr>
                         <tr>
-                            <td>编码器</td>
+                            <td>Encoder</td>
                             <td>Opus</td>
-                            <td>复杂度5, DTX开启</td>
+                            <td>Complexity 5, DTX enabled</td>
                         </tr>
                     </tbody>
                 </table>
@@ -578,51 +641,56 @@
             
             <!-- Architecture Decisions Summary -->
             <div class="doc-section">
-                <h2><i class="fas fa-balance-scale" style="color: var(--primary);"></i> 架构决策摘要</h2>
+                <h2><i class="fas fa-balance-scale" style="color: var(--primary);"></i> Architecture Decision Summary</h2>
                 
                 <table class="spec-table">
                     <thead>
                         <tr>
                             <th>ID</th>
-                            <th>决策</th>
-                            <th>状态</th>
+                            <th>Decision</th>
+                            <th>Status</th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr>
                             <td>AD-001</td>
-                            <td>WebSocket 实时通信协议</td>
-                            <td>✅ 已批准</td>
+                            <td>WebSocket Real-time Communication Protocol</td>
+                            <td>✅ Approved</td>
                         </tr>
                         <tr>
                             <td>AD-002</td>
-                            <td>Tornado Web 框架选型</td>
-                            <td>✅ 已批准</td>
+                            <td>Tornado Web Framework Selection</td>
+                            <td>✅ Approved</td>
                         </tr>
                         <tr>
                             <td>AD-003</td>
-                            <td>Int16 音频编码</td>
-                            <td>✅ 已批准</td>
+                            <td>Int16 Audio Encoding</td>
+                            <td>✅ Approved</td>
                         </tr>
                         <tr>
                             <td>AD-004</td>
-                            <td>WDSP NR2 降噪集成</td>
-                            <td>✅ 已批准</td>
+                            <td>WDSP NR2 Noise Reduction Integration</td>
+                            <td>✅ Approved</td>
                         </tr>
                         <tr>
                             <td>AD-005</td>
-                            <td>多实例部署架构</td>
-                            <td>✅ 已批准</td>
+                            <td>Multi-Instance Deployment Architecture</td>
+                            <td>✅ Approved</td>
                         </tr>
                         <tr>
                             <td>AD-006</td>
-                            <td>语音助手架构 (Whisper + Qwen3-TTS)</td>
-                            <td>✅ 已批准</td>
+                            <td>Voice Assistant Architecture (Whisper + Qwen3-TTS)</td>
+                            <td>✅ Approved</td>
                         </tr>
                         <tr>
                             <td>AD-007</td>
-                            <td>CW 实时解码架构 (ONNX)</td>
-                            <td>✅ 已批准</td>
+                            <td>CW Real-time Decoding Architecture (ONNX)</td>
+                            <td>✅ Approved</td>
+                        </tr>
+                        <tr>
+                            <td>AD-008</td>
+                            <td>FT8/ULTRON Integration Architecture</td>
+                            <td>✅ Approved</td>
                         </tr>
                     </tbody>
                 </table>
@@ -630,11 +698,11 @@
             
             <!-- Download Section -->
             <div class="download-section">
-                <h3><i class="fas fa-book-reader"></i> 浏览完整设计文档</h3>
-                <p>点击上方卡片直接阅读完整的设计文档，无需下载</p>
+                <h3><i class="fas fa-book-reader"></i> Browse Complete Design Documents</h3>
+                <p>Click the cards above to read the complete design documents directly, no download required</p>
                 <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
                     <a href="design/MRRC_SDD.html" class="btn btn-primary">
-                        <i class="fas fa-book-open"></i> 阅读 SDD 完整文档
+                        <i class="fas fa-book-open"></i> Read Full SDD Document
                     </a>
                 </div>
             </div>
@@ -645,7 +713,7 @@
     <footer style="background: var(--bg-card); padding: 2rem 0; border-top: 1px solid var(--border);">
         <div class="container" style="text-align: center;">
             <p style="color: var(--text-secondary);">
-                &copy; 2024-2026 MRRC Project. 专业业余无线电远程控制软件。
+                &copy; 2024-2026 MRRC Project. Professional Amateur Radio Remote Control Software.
             </p>
             <p style="color: var(--text-secondary); font-size: 0.875rem; margin-top: 0.5rem;">
                 Open Source under GPL-3.0 License

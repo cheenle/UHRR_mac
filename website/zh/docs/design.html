@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>设计&工程 - MRRC 移动远程电台控制</title>
+    <meta name="description" content="MRRC设计文档：软件架构设计、需求规格、API接口规范">
+    <meta name="keywords" content="MRRC, 软件架构, SDD, 系统设计, 需求规格">
+    <link rel="stylesheet" href="../../css/style.css">
+    <link rel="stylesheet" href="../../css/docs.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary: #22d3ee;
+            --primary-dark: #0891b2;
+            --accent: #f59e0b;
+            --bg-dark: #0f172a;
+            --bg-card: #1e293b;
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --border: #334155;
+        }
+        
+        body {
+            background: var(--bg-dark);
+            color: var(--text-primary);
+            font-family: 'Inter', sans-serif;
+        }
+        
+        .hero {
+            background: linear-gradient(135deg, var(--bg-dark) 0%, #1e3a5f 100%);
+            padding: 4rem 0 3rem;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .hero-title {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            background: linear-gradient(90deg, var(--primary), var(--accent));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .hero-subtitle {
+            font-size: 1.125rem;
+            color: var(--text-secondary);
+            max-width: 700px;
+        }
+        
+        .section {
+            padding: 3rem 0;
+        }
+        
+        .doc-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 1.5rem;
+            margin-top: 2rem;
+        }
+        
+        .doc-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.5rem;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: block;
+        }
+        
+        .doc-card:hover {
+            border-color: var(--primary);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 30px rgba(34, 211, 238, 0.1);
+        }
+        
+        .doc-card-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+        }
+        
+        .doc-card-icon {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+        }
+        
+        .doc-card-title {
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        
+        .doc-card-badge {
+            font-size: 0.75rem;
+            padding: 0.25rem 0.5rem;
+            background: rgba(34, 211, 238, 0.1);
+            color: var(--primary);
+            border-radius: 4px;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        
+        .doc-card-desc {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            line-height: 1.6;
+            margin-bottom: 1rem;
+        }
+        
+        .doc-card-meta {
+            display: flex;
+            gap: 1rem;
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+        
+        .doc-card-meta span {
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+        
+        .doc-section {
+            margin-bottom: 3rem;
+        }
+        
+        .doc-section h2 {
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .doc-section h3 {
+            font-size: 1.125rem;
+            color: var(--text-secondary);
+            margin: 1.5rem 0 1rem;
+        }
+        
+        .spec-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0;
+            font-size: 0.875rem;
+        }
+        
+        .spec-table th,
+        .spec-table td {
+            padding: 0.75rem 1rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .spec-table th {
+            background: var(--bg-card);
+            font-weight: 600;
+            color: var(--primary);
+        }
+        
+        .spec-table tr:hover {
+            background: rgba(34, 211, 238, 0.05);
+        }
+        
+        .code-block {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1rem;
+            overflow-x: auto;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            line-height: 1.5;
+            color: var(--text-secondary);
+        }
+        
+        .feature-list {
+            list-style: none;
+            padding: 0;
+        }
+        
+        .feature-list li {
+            padding: 0.5rem 0;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--text-secondary);
+        }
+        
+        .feature-list li i {
+            color: var(--primary);
+        }
+        
+        .download-section {
+            background: linear-gradient(135deg, rgba(34, 211, 238, 0.1), rgba(245, 158, 11, 0.1));
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 2rem;
+            margin-top: 2rem;
+            text-align: center;
+        }
+        
+        .download-section h3 {
+            color: var(--text-primary);
+            margin-bottom: 0.5rem;
+        }
+        
+        .download-section p {
+            color: var(--text-secondary);
+            margin-bottom: 1.5rem;
+        }
+        
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 500;
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+        
+        .btn-primary {
+            background: var(--primary);
+            color: var(--bg-dark);
+        }
+        
+        .btn-primary:hover {
+            background: var(--primary-dark);
+        }
+        
+        .btn-outline {
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+        }
+        
+        .btn-outline:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+        
+        .header {
+            background: var(--bg-dark);
+            border-bottom: 1px solid var(--border);
+            padding: 1rem 0;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        
+        .header-content {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 1.5rem;
+        }
+        
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            text-decoration: none;
+            font-weight: 700;
+            font-size: 1.25rem;
+            color: var(--text-primary);
+        }
+        
+        .logo-icon {
+            font-size: 1.5rem;
+        }
+        
+        .nav {
+            display: flex;
+            gap: 2rem;
+        }
+        
+        .nav a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.2s;
+        }
+        
+        .nav a:hover,
+        .nav a.active {
+            color: var(--primary);
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 1.5rem;
+        }
+        
+        @media (max-width: 768px) {
+            .hero-title {
+                font-size: 1.75rem;
+            }
+            
+            .doc-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .nav {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-content">
+            <a href="../../index.html" class="logo">
+                <span class="logo-icon">📻</span>
+                <span>MRRC</span>
+            </a>
+            <nav class="nav">
+                <a href="../../index.html">首页</a>
+                <a href="features.html">功能特性</a>
+                <a href="installation.html">安装指南</a>
+                <a href="docs.html">技术文档</a>
+                <a href="design.html" class="active">设计&工程</a>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Hero -->
+    <section class="hero">
+        <div class="container">
+            <h1 class="hero-title">设计&工程文档</h1>
+            <p class="hero-subtitle">
+                完整呈现 MRRC 系统的软件设计说明 (SDD)、项目规格、需求矩阵、架构决策记录。
+                涵盖系统架构、组件设计、API 接口等核心技术文档。
+            </p>
+        </div>
+    </section>
+
+    <!-- Main Content -->
+    <section class="section">
+        <div class="container">
+            <!-- Design Documents Grid -->
+            <div class="doc-section">
+                <h2><i class="fas fa-layer-group" style="color: var(--primary);"></i> 核心设计文档</h2>
+                
+                <div class="doc-grid">
+                    <!-- SDD -->
+                    <a href="design/MRRC_SDD.html" class="doc-card">
+                        <div class="doc-card-header">
+                            <div class="doc-card-icon">📋</div>
+                            <span class="doc-card-title">软件设计说明 (SDD)</span>
+                            <span class="doc-card-badge">66KB</span>
+                        </div>
+                        <p class="doc-card-desc">
+                            完整的软件设计文档，包含业务方向、项目定义、系统架构、组件模型、服务模型、运营模型等14个章节。
+                        </p>
+                        <div class="doc-card-meta">
+                            <span><i class="fas fa-book"></i> 14 章节</span>
+                            <span><i class="fas fa-code-branch"></i> v2.3.3</span>
+                        </div>
+                    </a>
+                    
+                    <!-- SPEC -->
+                    <a href="design/SPEC.html" class="doc-card">
+                        <div class="doc-card-header">
+                            <div class="doc-card-icon">🎯</div>
+                            <span class="doc-card-title">项目规格说明书</span>
+                            <span class="doc-card-badge">SPEC</span>
+                        </div>
+                        <p class="doc-card-desc">
+                            基于 Vibe-SDD 的项目规格文档，定义项目概述、业务背景、目标成功标准、技术约束、里程碑等核心内容。
+                        </p>
+                        <div class="doc-card-meta">
+                            <span><i class="fas fa-bullseye"></i> 8 章节</span>
+                            <span><i class="fas fa-vihara"></i> V4.9</span>
+                        </div>
+                    </a>
+                    
+                    <!-- REQUIREMENTS -->
+                    <a href="design/REQUIREMENTS.html" class="doc-card">
+                        <div class="doc-card-header">
+                            <div class="doc-card-icon">📝</div>
+                            <span class="doc-card-title">需求矩阵</span>
+                            <span class="doc-card-badge">REQ</span>
+                        </div>
+                        <p class="doc-card-desc">
+                            功能需求 (30+项) 和非功能需求矩阵，包含性能、可用性、安全性、兼容性等维度的详细规格与验证追踪。
+                        </p>
+                        <div class="doc-card-meta">
+                            <span><i class="fas fa-list-check"></i> 30+ 需求</span>
+                            <span><i class="fas fa-check-circle"></i> 已验证</span>
+                        </div>
+                    </a>
+                    
+                    <!-- ARCH-DECISIONS -->
+                    <a href="design/ARCH-DECISIONS.html" class="doc-card">
+                        <div class="doc-card-header">
+                            <div class="doc-card-icon">⚖️</div>
+                            <span class="doc-card-title">架构决策记录</span>
+                            <span class="doc-card-badge">ADR</span>
+                        </div>
+                        <p class="doc-card-desc">
+                            7个关键架构决策的完整记录，包括 WebSocket 协议、Tornado 框架、Int16 编码、WDSP 降噪、多实例部署等。
+                        </p>
+                        <div class="doc-card-meta">
+                            <span><i class="fas fa-gavel"></i> 7 决策</span>
+                            <span><i class="fas fa-check-double"></i> 已批准</span>
+                        </div>
+                    </a>
+                    
+                    <!-- CONTEXT -->
+                    <a href="design/CONTEXT.html" class="doc-card">
+                        <div class="doc-card-header">
+                            <div class="doc-card-icon">🔗</div>
+                            <span class="doc-card-title">系统上下文图</span>
+                            <span class="doc-card-badge">CTX</span>
+                        </div>
+                        <p class="doc-card-desc">
+                            系统与外部实体的交互关系图，包含用户、电台、ATR-1000、rigctld 等外部系统的接口定义。
+                        </p>
+                        <div class="doc-card-meta">
+                            <span><i class="fas fa-project-diagram"></i> Mermaid</span>
+                            <span><i class="fas fa-external-link-alt"></i> 外部系统</span>
+                        </div>
+                    </a>
+                    
+                    <!-- API -->
+                    <a href="design/API.html" class="doc-card">
+                        <div class="doc-card-header">
+                            <div class="doc-card-icon">🔌</div>
+                            <span class="doc-card-title">API 接口文档</span>
+                            <span class="doc-card-badge">API</span>
+                        </div>
+                        <p class="doc-card-desc">
+                            WebSocket 控制命令、音频数据格式、ATR-1000 数据协议等接口规范的完整定义。
+                        </p>
+                        <div class="doc-card-meta">
+                            <span><i class="fas fa-plug"></i> 6 端点</span>
+                            <span><i class="fas fa-code"></i> JSON</span>
+                        </div>
+                    </a>
+                </div>
+            </div>
+            
+            <!-- Key Specifications -->
+            <div class="doc-section">
+                <h2><i class="fas fa-cog" style="color: var(--primary);"></i> 核心技术规格</h2>
+                
+                <h3>技术栈</h3>
+                <table class="spec-table">
+                    <thead>
+                        <tr>
+                            <th>层级</th>
+                            <th>技术选择</th>
+                            <th>理由</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>前端</td>
+                            <td>HTML5/CSS3/Vanilla JS</td>
+                            <td>轻量，浏览器兼容性好</td>
+                        </tr>
+                        <tr>
+                            <td>后端</td>
+                            <td>Python 3.12+ / Tornado</td>
+                            <td>原生 WebSocket 支持</td>
+                        </tr>
+                        <tr>
+                            <td>音频</td>
+                            <td>PyAudio</td>
+                            <td>跨平台音频 I/O</td>
+                        </tr>
+                        <tr>
+                            <td>DSP</td>
+                            <td>WDSP</td>
+                            <td>专为 SSB 优化</td>
+                        </tr>
+                        <tr>
+                            <td>控制</td>
+                            <td>Hamlib/rigctld</td>
+                            <td>电台控制标准</td>
+                        </tr>
+                        <tr>
+                            <td>语音识别</td>
+                            <td>Whisper</td>
+                            <td>多语言高精度 ASR</td>
+                        </tr>
+                        <tr>
+                            <td>语音合成</td>
+                            <td>Qwen3-TTS</td>
+                            <td>自然流畅的中文语音</td>
+                        </tr>
+                        <tr>
+                            <td>CW解码</td>
+                            <td>ONNX Runtime</td>
+                            <td>前端 AI 推理</td>
+                        </tr>
+                        <tr>
+                            <td>FT8</td>
+                            <td>ULTRON + JTDX</td>
+                            <td>自动化 DXCC 追踪</td>
+                        </tr>
+                    </tbody>
+                </table>
+                
+                <h3>性能指标</h3>
+                <table class="spec-table">
+                    <thead>
+                        <tr>
+                            <th>指标</th>
+                            <th>目标值</th>
+                            <th>状态</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>TX/RX 切换延迟</td>
+                            <td>&lt; 100ms</td>
+                            <td>✅ 已达成</td>
+                        </tr>
+                        <tr>
+                            <td>PTT 响应时间</td>
+                            <td>&lt; 50ms</td>
+                            <td>✅ 已达成</td>
+                        </tr>
+                        <tr>
+                            <td>PTT 可靠性</td>
+                            <td>≥ 99%</td>
+                            <td>✅ 已达成</td>
+                        </tr>
+                        <tr>
+                            <td>WDSP 降噪深度</td>
+                            <td>15-20 dB</td>
+                            <td>✅ 已达成</td>
+                        </tr>
+                        <tr>
+                            <td>CW 解码延迟</td>
+                            <td>&lt; 50ms</td>
+                            <td>✅ 已达成</td>
+                        </tr>
+                        <tr>
+                            <td>语音识别延迟</td>
+                            <td>&lt; 200ms</td>
+                            <td>✅ 已达成</td>
+                        </tr>
+                        <tr>
+                            <td>系统可用性</td>
+                            <td>≥ 99.5%</td>
+                            <td>✅ 已达成</td>
+                        </tr>
+                    </tbody>
+                </table>
+                
+                <h3>音频参数</h3>
+                <table class="spec-table">
+                    <thead>
+                        <tr>
+                            <th>参数</th>
+                            <th>值</th>
+                            <th>说明</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>采样率 (处理)</td>
+                            <td>48kHz</td>
+                            <td>WDSP 处理</td>
+                        </tr>
+                        <tr>
+                            <td>采样率 (传输)</td>
+                            <td>16kHz</td>
+                            <td>网络传输</td>
+                        </tr>
+                        <tr>
+                            <td>音频格式</td>
+                            <td>Int16 PCM</td>
+                            <td>50% 带宽节省</td>
+                        </tr>
+                        <tr>
+                            <td>帧大小</td>
+                            <td>320 samples (20ms)</td>
+                            <td>WebRTC 推荐</td>
+                        </tr>
+                        <tr>
+                            <td>编码器</td>
+                            <td>Opus</td>
+                            <td>复杂度5, DTX开启</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Architecture Decisions Summary -->
+            <div class="doc-section">
+                <h2><i class="fas fa-balance-scale" style="color: var(--primary);"></i> 架构决策摘要</h2>
+                
+                <table class="spec-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>决策</th>
+                            <th>状态</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>AD-001</td>
+                            <td>WebSocket 实时通信协议</td>
+                            <td>✅ 已批准</td>
+                        </tr>
+                        <tr>
+                            <td>AD-002</td>
+                            <td>Tornado Web 框架选型</td>
+                            <td>✅ 已批准</td>
+                        </tr>
+                        <tr>
+                            <td>AD-003</td>
+                            <td>Int16 音频编码</td>
+                            <td>✅ 已批准</td>
+                        </tr>
+                        <tr>
+                            <td>AD-004</td>
+                            <td>WDSP NR2 降噪集成</td>
+                            <td>✅ 已批准</td>
+                        </tr>
+                        <tr>
+                            <td>AD-005</td>
+                            <td>多实例部署架构</td>
+                            <td>✅ 已批准</td>
+                        </tr>
+                        <tr>
+                            <td>AD-006</td>
+                            <td>语音助手架构 (Whisper + Qwen3-TTS)</td>
+                            <td>✅ 已批准</td>
+                        </tr>
+                        <tr>
+                            <td>AD-007</td>
+                            <td>CW 实时解码架构 (ONNX)</td>
+                            <td>✅ 已批准</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Download Section -->
+            <div class="download-section">
+                <h3><i class="fas fa-book-reader"></i> 浏览完整设计文档</h3>
+                <p>点击上方卡片直接阅读完整的设计文档，无需下载</p>
+                <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
+                    <a href="design/MRRC_SDD.html" class="btn btn-primary">
+                        <i class="fas fa-book-open"></i> 阅读 SDD 完整文档
+                    </a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer style="background: var(--bg-card); padding: 2rem 0; border-top: 1px solid var(--border);">
+        <div class="container" style="text-align: center;">
+            <p style="color: var(--text-secondary);">
+                &copy; 2024-2026 MRRC Project. 专业业余无线电远程控制软件。
+            </p>
+            <p style="color: var(--text-secondary); font-size: 0.875rem; margin-top: 0.5rem;">
+                Open Source under GPL-3.0 License
+            </p>
+        </div>
+    </footer>
+</body>
+</html>
