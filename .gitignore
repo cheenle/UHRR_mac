@@ -33,3 +33,8 @@ MRRC_users.db
 
 # Audio files
 *.wav
+venv/
+logs/
+recordings/
+.iflow_logs/
+website/logs/
