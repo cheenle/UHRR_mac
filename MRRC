@@ -2833,6 +2833,98 @@ class WS_ControlTRX(tornado.websocket.WebSocketHandler):
 			PyAudioCapture.wdsp_config['anf_enabled'] = datato.lower() == "true"
 			print(f"🔧 WDSP ANF {'enabled' if PyAudioCapture.wdsp_config['anf_enabled'] else 'disabled'}")
 			yield self.send_to_all_clients(f"setWDSPANF:{datato}")
+		
+		elif(action == "setWDSPNFEnabled"):
+			# 设置 NF (手动陷波滤波器) 启用/禁用
+			from audio_interface import PyAudioCapture
+			enabled = datato.lower() == "true"
+			PyAudioCapture.wdsp_config['nf_enabled'] = enabled
+			if PyAudioCapture.wdsp_processor:
+				PyAudioCapture.wdsp_processor.set_notches_enabled(enabled)
+				print(f"🔧 WDSP NF (Notch Filter) {'enabled' if enabled else 'disabled'}")
+			else:
+				print(f"⚠️ WDSP NF: wdsp_processor 未初始化")
+			yield self.send_to_all_clients(f"setWDSPNFEnabled:{datato}")
+		
+		elif(action == "addWDSPNotch"):
+			# 添加手动陷波点 (格式: fcenter,fwidth)
+			from audio_interface import PyAudioCapture
+			try:
+				parts = datato.split(',')
+				fcenter = float(parts[0])
+				fwidth = float(parts[1]) if len(parts) > 1 else 100.0
+				print(f"🔧 WDSP NF: 尝试添加 notch at {fcenter}Hz, wdsp_processor={PyAudioCapture.wdsp_processor}")
+				if PyAudioCapture.wdsp_processor:
+					notch_idx = PyAudioCapture.wdsp_processor.add_notch(fcenter, fwidth)
+					if notch_idx >= 0:
+						print(f"🔧 WDSP NF: Added notch at {fcenter}Hz (width={fwidth}Hz, index={notch_idx})")
+						yield self.send_to_all_clients(f"addWDSPNotch:{notch_idx},{fcenter},{fwidth}")
+					else:
+						print(f"⚠️ WDSP NF: add_notch 返回错误 {notch_idx}")
+						yield self.send_to_all_clients(f"addWDSPNotch:error")
+				else:
+					print(f"⚠️ WDSP NF: wdsp_processor 未初始化")
+					yield self.send_to_all_clients(f"addWDSPNotch:error")
+			except Exception as e:
+				print(f"⚠️ WDSP NF add notch error: {e}")
+				yield self.send_to_all_clients(f"addWDSPNotch:error")
+		
+		elif(action == "editWDSPNotch"):
+			# 编辑陷波点 (格式: notch_index,fcenter,fwidth)
+			from audio_interface import PyAudioCapture
+			try:
+				parts = datato.split(',')
+				notch_idx = int(parts[0])
+				fcenter = float(parts[1])
+				fwidth = float(parts[2]) if len(parts) > 2 else 100.0
+				if PyAudioCapture.wdsp_processor:
+					success = PyAudioCapture.wdsp_processor.edit_notch(notch_idx, fcenter, fwidth)
+					if success:
+						print(f"🔧 WDSP NF: Edited notch {notch_idx} at {fcenter}Hz")
+						yield self.send_to_all_clients(f"editWDSPNotch:{notch_idx},{fcenter},{fwidth}")
+					else:
+						yield self.send_to_all_clients(f"editWDSPNotch:error")
+				else:
+					yield self.send_to_all_clients(f"editWDSPNotch:error")
+			except Exception as e:
+				print(f"⚠️ WDSP NF edit notch error: {e}")
+				yield self.send_to_all_clients(f"editWDSPNotch:error")
+		
+		elif(action == "deleteWDSPNotch"):
+			# 删除陷波点
+			from audio_interface import PyAudioCapture
+			try:
+				notch_idx = int(datato)
+				if PyAudioCapture.wdsp_processor:
+					success = PyAudioCapture.wdsp_processor.delete_notch(notch_idx)
+					if success:
+						print(f"🔧 WDSP NF: Deleted notch {notch_idx}")
+						yield self.send_to_all_clients(f"deleteWDSPNotch:{notch_idx}")
+					else:
+						yield self.send_to_all_clients(f"deleteWDSPNotch:error")
+				else:
+					yield self.send_to_all_clients(f"deleteWDSPNotch:error")
+			except Exception as e:
+				print(f"⚠️ WDSP NF delete notch error: {e}")
+				yield self.send_to_all_clients(f"deleteWDSPNotch:error")
+		
+		elif(action == "getWDSPNotches"):
+			# 获取所有陷波点
+			from audio_interface import PyAudioCapture
+			try:
+				if PyAudioCapture.wdsp_processor:
+					num_notches = PyAudioCapture.wdsp_processor.get_num_notches()
+					notches = []
+					for i in range(num_notches):
+						info = PyAudioCapture.wdsp_processor.get_notch(i)
+						if info:
+							notches.append(f"{info['fcenter']},{info['fwidth']},{info['active']}")
+					yield self.send_to_all_clients(f"getWDSPNotches:{';'.join(notches)}")
+				else:
+					yield self.send_to_all_clients(f"getWDSPNotches:")
+			except Exception as e:
+				print(f"⚠️ WDSP NF get notches error: {e}")
+				yield self.send_to_all_clients(f"getWDSPNotches:")
 			
 		elif(action == "setWDSPAGC"):
 			# 设置 AGC 模式
@@ -2912,12 +3004,13 @@ class WS_ControlTRX(tornado.websocket.WebSocketHandler):
 			from audio_interface import PyAudioCapture
 			status = {
 				'enabled': PyAudioCapture.wdsp_enabled,
-				'nr2Level': PyAudioCapture.wdsp_config.get('nr2_level', 0),
+				'nr2Level': PyAudioCapture.wdsp_config.get('nr2_level', 1),
 				'nr2GainMethod': PyAudioCapture.wdsp_config.get('nr2_gain_method', 0),
 				'nr2NpeMethod': PyAudioCapture.wdsp_config.get('nr2_npe_method', 1),
 				'nr2AeRun': PyAudioCapture.wdsp_config.get('nr2_ae_run', False),
 				'nbEnabled': PyAudioCapture.wdsp_config.get('nb_enabled', False),
 				'anfEnabled': PyAudioCapture.wdsp_config.get('anf_enabled', False),
+				'nfEnabled': PyAudioCapture.wdsp_config.get('nf_enabled', False),
 				'agcMode': PyAudioCapture.wdsp_config.get('agc_mode', 3),
 				'bpLow': PyAudioCapture.wdsp_config.get('bandpass_low', 300),
 				'bpHigh': PyAudioCapture.wdsp_config.get('bandpass_high', 2700),

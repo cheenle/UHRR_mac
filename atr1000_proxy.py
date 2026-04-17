@@ -324,17 +324,17 @@ class ATR1000Client:
             self._parse_data(data)
     
     def _poll_loop(self):
-        """主动轮询循环 - V4.5.19: 大幅优化设备压力
+        """主动轮询循环 - V4.5.28: 优化 TX 模式处理
         
-        核心优化：
+        核心策略：
         - 空闲时：60秒轮询一次
         - 有客户端连接：30秒轮询一次
-        - TX期间：不发送SYNC！设备会主动推送数据
+        - TX模式：不发送 SYNC！设备会主动推送 RELAY 数据
         
-        关键发现：ATR-1000 设备在 TX 模式下会主动持续推送数据，
-        不需要 SYNC 查询。SYNC 只用于获取初始状态和空闲时的心跳。
+        关键：TX 模式下设备会主动推送 RELAY 数据，不需要 SYNC。
+        只在设备长时间无响应（假死）时才发送 SYNC 唤醒。
         """
-        global connected, cache, client_count, is_tx
+        global connected, cache, client_count, is_tx, last_data_time
         
         # 连接后立即发送第一次 SYNC
         self._send_sync()
@@ -342,21 +342,39 @@ class ATR1000Client:
         
         last_interval = 0
         while running and connected:
-            # 根据状态选择轮询间隔
+            # 计算距离上次收到数据的时间
+            time_since_data = time.time() - last_data_time
+            
+            # 根据状态选择轮询策略
             if is_tx:
-                # TX模式下不发送SYNC，设备会主动推送数据
-                interval = 5000.0  # 只是检查连接状态
+                # TX模式：设备会主动推送 RELAY 数据，不需要 SYNC
+                # 完全不发送 SYNC，只做状态检查
+                interval = 5.0  # 每5秒检查一次状态
                 reason = 'TX模式(不发送SYNC)'
                 
-                # TX模式下等待，不发送SYNC
-                time.sleep(interval)
-                continue
+                # 不再发送 SYNC 唤醒，因为设备会主动推送数据
             elif client_count > 0:
                 interval = POLL_INTERVAL_ACTIVE
                 reason = f'有{client_count}个客户端'
+                
+                # 只有非 TX 模式才发送 SYNC
+                if connected and self.ws:
+                    try:
+                        self._send_sync()
+                    except Exception as e:
+                        logger.error(f"发送 SYNC 失败: {e}")
+                        break
             else:
                 interval = POLL_INTERVAL_IDLE
                 reason = '空闲'
+                
+                # 空闲模式才发送 SYNC
+                if connected and self.ws:
+                    try:
+                        self._send_sync()
+                    except Exception as e:
+                        logger.error(f"发送 SYNC 失败: {e}")
+                        break
             
             # 记录间隔变化
             if interval != last_interval:
@@ -364,13 +382,6 @@ class ATR1000Client:
                 last_interval = interval
             
             time.sleep(interval)
-            
-            if connected and self.ws:
-                try:
-                    self._send_sync()
-                except Exception as e:
-                    logger.error(f"发送 SYNC 失败: {e}")
-                    break
         
         logger.info("🔄 轮询线程结束")
     
@@ -821,7 +832,8 @@ def handle_unix_client(conn, addr, atr1000):
             except socket.timeout:
                 continue
             except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError) as e:
-                logger.info(f"客户端连接断开: {type(e).__name__}")
+                # 客户端正常断开（发送完命令后关闭连接），降低日志级别
+                logger.debug(f"客户端断开: {type(e).__name__}")
                 break
             except Exception as e:
                 logger.debug(f"客户端处理错误: {e}")
@@ -831,7 +843,7 @@ def handle_unix_client(conn, addr, atr1000):
         clients.remove(conn)
         client_count = len(clients)
         conn.close()
-        logger.info(f"客户端断开，剩余 {client_count} 个")
+        logger.debug(f"客户端断开，剩余 {client_count} 个")
 
 
 def run_unix_server(atr1000):

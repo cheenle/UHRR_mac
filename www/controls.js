@@ -214,6 +214,19 @@ var AudioRX_OpusDecoder = null;
 var AudioRX_opusDecode = false;  // 是否启用 Opus 解码
 
 function AudioRX_start(){
+	// V4.9.4 修复：重连时先清理旧的 AudioContext
+	// 避免旧的 AudioContext 阻塞新连接
+	if (AudioRX_context && AudioRX_context.state !== 'closed') {
+		console.log('🔄 关闭旧的 AudioContext...');
+		try {
+			AudioRX_context.close();
+		} catch(e) {
+			console.warn('关闭旧 AudioContext 失败:', e);
+		}
+		AudioRX_context = null;
+		AudioRX_source_node = null;
+	}
+	
 	// 避免重复创建连接
 	if (wsAudioRX && wsAudioRX.readyState !== WebSocket.CLOSED) {
 		console.log('⏭️ AudioRX WebSocket已在连接中或已连接，跳过重复创建');
@@ -237,14 +250,13 @@ function AudioRX_start(){
 	wsAudioRX.onerror = wsAudioRXerror;
 	// onmessage 将在下方根据 iOS Safari/桌面端分支设置
 
-	// 每秒打印一次码率（RX/TX）
+	// 每秒更新一次码率显示（RX/TX）
 	if (!window.__brTimer) {
 		window.__rxBytes = 0; window.__txBytes = 0;
 		window.__brTimer = setInterval(function(){
 			var rxkbps = (window.__rxBytes||0) * 8 / 1000; // Kbps
 			var txkbps = (window.__txBytes||0) * 8 / 1000;
 			var mode = AudioRX_opusDecode ? "Opus" : "Int16";
-			console.log(`[码率] RX: ${rxkbps.toFixed(1)} kbps (${mode}), TX: ${txkbps.toFixed(1)} kbps`);
 			var brEl = document.getElementById('div-bitrates');
 			if (brEl) { brEl.textContent = `bitrate RX: ${rxkbps.toFixed(1)} kbps (${mode}) | TX: ${txkbps.toFixed(1)} kbps`; }
 			window.__rxBytes = 0; window.__txBytes = 0;
@@ -603,22 +615,11 @@ function wsAudioRXclose(){
 		}
 		window._audioRXReconnectTimer = setTimeout(function() {
 			if (typeof poweron !== 'undefined' && poweron) {
-				// 检查 AudioContext 是否存在且可用
-				var contextValid = AudioRX_context && AudioRX_context.state !== 'closed';
-				if (!contextValid) {
-					console.log('🔄 AudioContext 不可用，完整重建...');
-					AudioRX_start();
-				} else if (wsAudioRX && wsAudioRX.readyState === WebSocket.CLOSED) {
-					console.log('🔄 只重连 WebSocket...');
-					// 保存旧的 onmessage
-					var oldOnMessage = wsAudioRX.onmessage;
-					wsAudioRX = new WebSocket('wss://' + window.location.href.split('/')[2] + '/WSaudioRX');
-					wsAudioRX.binaryType = 'arraybuffer';
-					wsAudioRX.onopen = wsAudioRXopen;
-					wsAudioRX.onclose = wsAudioRXclose;
-					wsAudioRX.onerror = wsAudioRXerror;
-					wsAudioRX.onmessage = oldOnMessage;
-				}
+				// V4.9.4 修复：总是调用 AudioRX_start() 重建完整音频链
+				// 原因：onmessage 是异步设置的，保存 oldOnMessage 可能是 null
+				// 而且 window.__pushRxFrame 引用的 AudioWorklet 可能已失效
+				console.log('🔄 重建完整音频链...');
+				AudioRX_start();
 			}
 		}, 3000);
 	}
@@ -634,21 +635,9 @@ function wsAudioRXerror(err){
 		}
 		window._audioRXErrorReconnectTimer = setTimeout(function() {
 			if (typeof poweron !== 'undefined' && poweron) {
-				// 检查 AudioContext 是否存在且可用
-				var contextValid = AudioRX_context && AudioRX_context.state !== 'closed';
-				if (!contextValid) {
-					console.log('🔄 AudioContext 不可用，完整重建...');
-					AudioRX_start();
-				} else if (!wsAudioRX || wsAudioRX.readyState === WebSocket.CLOSED) {
-					console.log('🔄 错误后重连RX WebSocket...');
-					var oldOnMessage = wsAudioRX ? wsAudioRX.onmessage : null;
-					wsAudioRX = new WebSocket('wss://' + window.location.href.split('/')[2] + '/WSaudioRX');
-					wsAudioRX.binaryType = 'arraybuffer';
-					wsAudioRX.onopen = wsAudioRXopen;
-					wsAudioRX.onclose = wsAudioRXclose;
-					wsAudioRX.onerror = wsAudioRXerror;
-					if (oldOnMessage) wsAudioRX.onmessage = oldOnMessage;
-				}
+				// V4.9.4 修复：总是调用 AudioRX_start() 重建完整音频链
+				console.log('🔄 错误后重建完整音频链...');
+				AudioRX_start();
 			}
 		}, 1000);
 	}

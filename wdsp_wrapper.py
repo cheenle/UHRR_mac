@@ -157,6 +157,7 @@ class WDSPProcessor:
         self._nr2_enabled = enable_nr2   # 修复：使用参数值
         self._nb_enabled = enable_nb     # 修复：使用参数值
         self._anf_enabled = enable_anf   # 修复：使用参数值
+        self._notches_enabled = False    # 手动陷波滤波器（NF）
         self._agc_mode = agc_mode
         # Buffers for WDSP processing (float64 - WDSP 库要求)
         self._in_buffer = np.zeros(buffer_size * 2, dtype=np.float64)
@@ -486,6 +487,172 @@ class WDSPProcessor:
             print(f"🔧 WDSP ANF {'enabled' if enabled else 'disabled'} (dynamic)")
         except Exception as e:
             print(f"⚠️ ANF dynamic control error: {e}")
+    
+    def set_notches_enabled(self, enabled: bool):
+        """
+        Enable/disable Manual Notch Filter (NF).
+        
+        手动陷波滤波器允许设置特定中心频率来消除单频干扰（如CW噪音）。
+        注意：需要启用NBP (Notched BandPass) filter才能工作。
+        
+        Args:
+            enabled: True to enable, False to disable
+        """
+        if not self._initialized:
+            return
+        
+        try:
+            # 启用NBP (Notched BandPass) filter本身
+            _wdsp.RXANBPSetRun(ctypes.c_int(self.channel), ctypes.c_int(1 if enabled else 0))
+            
+            # 启用notches
+            _wdsp.RXANBPSetNotchesRun(ctypes.c_int(self.channel), ctypes.c_int(1 if enabled else 0))
+            
+            self._notches_enabled = enabled
+            print(f"🔧 WDSP NF (Notched BandPass) {'enabled' if enabled else 'disabled'} (dynamic)")
+        except Exception as e:
+            print(f"⚠️ NF dynamic control error: {e}")
+    
+    def add_notch(self, fcenter: float, fwidth: float = 100.0, active: int = 1) -> int:
+        """
+        Add a manual notch filter at specified frequency.
+        
+        手动添加陷波点，用于消除特定频率的干扰（如CW噪音）。
+        
+        Args:
+            fcenter: Center frequency in Hz (e.g., 800 for 800Hz CW tone)
+            fwidth: Notch width in Hz (default 100Hz, range 10-1000)
+            active: 1 = active, 0 = inactive
+            
+        Returns:
+            Notch index (>=0 success, <0 error)
+        """
+        if not self._initialized:
+            return -1
+        
+        try:
+            result = _wdsp.RXANBPAddNotch(
+                ctypes.c_int(self.channel),
+                ctypes.c_int(0),  # Add at next available position
+                ctypes.c_double(fcenter),
+                ctypes.c_double(fwidth),
+                ctypes.c_int(active)
+            )
+            if result >= 0:
+                print(f"🔧 WDSP NF: Added notch at {fcenter}Hz (width={fwidth}Hz, index={result})")
+            return result
+        except Exception as e:
+            print(f"⚠️ NF add notch error: {e}")
+            return -1
+    
+    def edit_notch(self, notch: int, fcenter: float, fwidth: float = 100.0, active: int = 1) -> bool:
+        """
+        Edit an existing notch filter.
+        
+        Args:
+            notch: Notch index to edit
+            fcenter: New center frequency in Hz
+            fwidth: New notch width in Hz
+            active: 1 = active, 0 = inactive
+            
+        Returns:
+            True if success, False if error
+        """
+        if not self._initialized:
+            return False
+        
+        try:
+            result = _wdsp.RXANBPEditNotch(
+                ctypes.c_int(self.channel),
+                ctypes.c_int(notch),
+                ctypes.c_double(fcenter),
+                ctypes.c_double(fwidth),
+                ctypes.c_int(active)
+            )
+            if result == 0:
+                print(f"🔧 WDSP NF: Edited notch {notch} at {fcenter}Hz (width={fwidth}Hz)")
+            return result == 0
+        except Exception as e:
+            print(f"⚠️ NF edit notch error: {e}")
+            return False
+    
+    def delete_notch(self, notch: int) -> bool:
+        """
+        Delete a notch filter.
+        
+        Args:
+            notch: Notch index to delete
+            
+        Returns:
+            True if success, False if error
+        """
+        if not self._initialized:
+            return False
+        
+        try:
+            result = _wdsp.RXANBPDeleteNotch(
+                ctypes.c_int(self.channel),
+                ctypes.c_int(notch)
+            )
+            if result == 0:
+                print(f"🔧 WDSP NF: Deleted notch {notch}")
+            return result == 0
+        except Exception as e:
+            print(f"⚠️ NF delete notch error: {e}")
+            return False
+    
+    def get_num_notches(self) -> int:
+        """
+        Get number of configured notches.
+        
+        Returns:
+            Number of active notches
+        """
+        if not self._initialized:
+            return 0
+        
+        try:
+            nnotches = ctypes.c_int(0)
+            _wdsp.RXANBPGetNumNotches(ctypes.c_int(self.channel), ctypes.byref(nnotches))
+            return nnotches.value
+        except Exception as e:
+            print(f"⚠️ NF get num notches error: {e}")
+            return 0
+    
+    def get_notch(self, notch: int) -> dict:
+        """
+        Get notch information.
+        
+        Args:
+            notch: Notch index
+            
+        Returns:
+            Dict with 'fcenter', 'fwidth', 'active' or None if error
+        """
+        if not self._initialized:
+            return None
+        
+        try:
+            fcenter = ctypes.c_double(0)
+            fwidth = ctypes.c_double(0)
+            active = ctypes.c_int(0)
+            result = _wdsp.RXANBPGetNotch(
+                ctypes.c_int(self.channel),
+                ctypes.c_int(notch),
+                ctypes.byref(fcenter),
+                ctypes.byref(fwidth),
+                ctypes.byref(active)
+            )
+            if result == 0:
+                return {
+                    'fcenter': fcenter.value,
+                    'fwidth': fwidth.value,
+                    'active': active.value
+                }
+            return None
+        except Exception as e:
+            print(f"⚠️ NF get notch error: {e}")
+            return None
     
     def set_nr2_level(self, level: int):
         """

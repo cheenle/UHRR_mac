@@ -171,6 +171,7 @@ class PyAudioCapture(threading.Thread):
                     'nb_enabled': config['WDSP'].getboolean('nb_enabled', True),
                     'nb2_enabled': config['WDSP'].getboolean('nb2_enabled', False),
                     'anf_enabled': config['WDSP'].getboolean('anf_enabled', False),
+                    'nf_enabled': config['WDSP'].getboolean('nf_enabled', False),  # 手动陷波滤波器 (NF)
                     'agc_mode': config['WDSP'].getint('agc_mode', 3),
                     'bandpass_low': config['WDSP'].getfloat('bandpass_low', 300.0),
                     'bandpass_high': config['WDSP'].getfloat('bandpass_high', 2700.0),

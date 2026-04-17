@@ -414,8 +414,8 @@ function setMainAFGain(value) {
     if (afSlider) {
         afSlider.value = value;
     }
-    
-    console.log('🔊 AF 增益:', value + '%');
+
+    // console.log('🔊 AF 增益:', value + '%');
 }
 
 // 设置菜单项点击事件
@@ -1295,9 +1295,6 @@ function updateSMeter(level) {
         return;
     }
     
-    // 调试日志（每次显示，便于调试）
-    console.log('📊 S表接收:', 'RIG值=' + rigValue);
-    
     // 记录RIG信号值接收时间
     mobileState.lastRIGSignalTime = Date.now();
     
@@ -1313,16 +1310,12 @@ function updateSMeter(level) {
         sValue = 9 + (rigValue / 6) - 11.5;
     }
     
-    console.log('📊 S表计算:', '原始sValue=' + sValue.toFixed(2));
-    
     // 限制范围 S0 - S9+60 (最大19)
     if (sValue < 0) sValue = 0;
     if (sValue > 19) sValue = 19;
     
     // 取消平滑处理，直接显示
     mobileState.currentSMeter = sValue;
-    
-    console.log('📊 S表显示:', 'currentSMeter=' + mobileState.currentSMeter.toFixed(2));
     
     // 更新显示（包括canvas和DOM中的S值）
     drawSMeterSDR(mobileState.currentSMeter);
@@ -1394,12 +1387,6 @@ function drawSMeterSDR(sValue) {
     const width = canvas.width;
     const height = canvas.height;
     
-    // 调试日志（限制频率）
-    if (!window._drawCount) window._drawCount = 0;
-    if (++window._drawCount % 20 === 0) {
-        console.log('📊 绘制S表:', 'sValue=' + sValue.toFixed(2), 'canvas=' + width + 'x' + height);
-    }
-    
     // 清除画布
     ctx.clearRect(0, 0, width, height);
     
@@ -1424,7 +1411,6 @@ function drawSMeterSDR(sValue) {
         } else {
             displayText = `S9+${Math.round(overS9)}`;
         }
-        console.log('📊 S9+分支:', 'overS9=' + overS9, '显示=' + displayText);
     }
     
     // 绘制S表刻度线（S1-S9）- 前半段
@@ -1537,12 +1523,6 @@ function updateSMeterFromAudio() {
     
     // 计算S值
     const sValue = calculateSMeterValue(dbFS);
-    
-    // 调试日志（限制频率避免刷屏）
-    if (!window._sMeterDebugCount) window._sMeterDebugCount = 0;
-    if (++window._sMeterDebugCount % 50 === 0) {
-        console.log('📊 S表音频:', 'dbFS=' + dbFS.toFixed(1), 'sValue=' + sValue.toFixed(2));
-    }
     
     // 平滑处理
     mobileState.currentSMeter = mobileState.currentSMeter || sValue;
@@ -2077,6 +2057,37 @@ function showWDSPAdvancedSettings() {
     html += '<span class="switch-slider"></span></label>';
     html += '</div>';
 
+    // NF (手动陷波滤波器) 开关
+    html += '<div class="setting-item wdsp-item">';
+    html += '<label class="switch-label"><span>手动陷波 (NF)</span>';
+    html += '<input type="checkbox" id="wdsp-adv-nf" onchange="setWDSPNF(this.checked)" ' + (wdspState.nf ? 'checked' : '') + ' ' + (wdspState.enabled ? '' : 'disabled') + '>';
+    html += '<span class="switch-slider"></span></label>';
+    html += '</div>';
+
+    // NF 陷波点添加
+    html += '<div class="setting-item wdsp-item" id="nf-notches-section" style="display:' + (wdspState.nf ? 'block' : 'none') + ';">';
+    html += '<label>添加陷波点 (Hz)</label>';
+    html += '<div style="display:flex;gap:5px;align-items:center;">';
+    html += '<input type="number" id="nf-fcenter" placeholder="中心频率" min="100" max="4000" value="800" style="width:80px;padding:5px;border-radius:4px;border:1px solid #444;background:#222;color:#fff;">';
+    html += '<span style="color:#888;">带宽</span>';
+    html += '<input type="number" id="nf-fwidth" placeholder="宽度" min="10" max="1000" value="100" style="width:60px;padding:5px;border-radius:4px;border:1px solid #444;background:#222;color:#fff;">';
+    html += '<button onclick="addWDSPNotchFromUI()" style="padding:5px 10px;background:#4a9eff;border:none;border-radius:4px;color:#fff;cursor:pointer;">添加</button>';
+    html += '</div>';
+    html += '<div id="nf-notches-list" style="margin-top:8px;max-height:120px;overflow-y:auto;">';
+    if (wdspState.nfNotches && wdspState.nfNotches.length > 0) {
+        wdspState.nfNotches.forEach((notch, idx) => {
+            html += '<div class="notch-item" style="display:flex;justify-content:space-between;align-items:center;padding:5px;background:#2a2a3a;border-radius:4px;margin-bottom:5px;">';
+            html += '<span style="color:#ccc;">' + notch.fcenter + 'Hz (' + notch.fwidth + 'Hz)</span>';
+            html += '<button onclick="deleteWDSPNotch(' + idx + ')" style="padding:2px 8px;background:#ff4a4a;border:none;border-radius:4px;color:#fff;cursor:pointer;font-size:12px;">删除</button>';
+            html += '</div>';
+        });
+    } else {
+        html += '<span style="color:#666;font-size:12px;">暂无陷波点</span>';
+    }
+    html += '</div>';
+    html += '<p style="font-size:11px;color:#666;margin-top:5px;">输入中心频率（如800Hz）消除CW噪音</p>';
+    html += '</div>';
+
     // AGC 模式
     const agcModes = ['关闭', '长 (LONG)', '慢 (SLOW)', '中 (MED)', '快 (FAST)'];
     html += '<div class="setting-item wdsp-item">';
@@ -2094,11 +2105,78 @@ function showWDSPAdvancedSettings() {
     html += '• <strong>NR2</strong>: 频谱降噪，推荐开启（极温和）<br>';
     html += '• <strong>NB</strong>: 噪声抑制器，消除脉冲噪声<br>';
     html += '• <strong>ANF</strong>: 自动陷波，消除单频干扰<br>';
+    html += '• <strong>NF</strong>: 手动陷波，指定频率消除CW噪音<br>';
     html += '• <strong>AGC</strong>: 自动增益控制，推荐"中"模式';
     html += '</div>';
 
     html += '<button class="close-panel-btn" onclick="closeModalPanel()" style="margin-top:15px;">关闭</button></div>';
     showModalPanel(html);
+}
+
+// 从 UI 添加陷波点
+function addWDSPNotchFromUI() {
+    const fcenterInput = document.getElementById('nf-fcenter');
+    const fwidthInput = document.getElementById('nf-fwidth');
+    if (!fcenterInput || !fwidthInput) return;
+    
+    const fcenter = parseFloat(fcenterInput.value);
+    const fwidth = parseFloat(fwidthInput.value);
+    
+    if (isNaN(fcenter) || fcenter < 100 || fcenter > 4000) {
+        alert('请输入有效的中心频率 (100-4000 Hz)');
+        return;
+    }
+    if (isNaN(fwidth) || fwidth < 10 || fwidth > 1000) {
+        alert('请输入有效的陷波宽度 (10-1000 Hz)');
+        return;
+    }
+    
+    // 添加到状态
+    wdspState.nfNotches.push({fcenter: fcenter, fwidth: fwidth, active: 1});
+    saveWDSPStateToCookies();
+    
+    // 发送命令到后端
+    if (typeof sendCommand === 'function') {
+        sendCommand('addWDSPNotch', fcenter + ',' + fwidth);
+    }
+    
+    // 更新 UI
+    updateNFNotchesList();
+    console.log('🔧 WDSP NF: 添加陷波点 ' + fcenter + 'Hz, 宽度' + fwidth + 'Hz');
+}
+
+// 更新陷波点列表 UI
+function updateNFNotchesList() {
+    const list = document.getElementById('nf-notches-list');
+    if (!list) return;
+    
+    let html = '';
+    if (wdspState.nfNotches && wdspState.nfNotches.length > 0) {
+        wdspState.nfNotches.forEach((notch, idx) => {
+            html += '<div class="notch-item" style="display:flex;justify-content:space-between;align-items:center;padding:5px;background:#2a2a3a;border-radius:4px;margin-bottom:5px;">';
+            html += '<span style="color:#ccc;">' + notch.fcenter + 'Hz (' + notch.fwidth + 'Hz)</span>';
+            html += '<button onclick="deleteWDSPNotchFromUI(' + idx + ')" style="padding:2px 8px;background:#ff4a4a;border:none;border-radius:4px;color:#fff;cursor:pointer;font-size:12px;">删除</button>';
+            html += '</div>';
+        });
+    } else {
+        html += '<span style="color:#666;font-size:12px;">暂无陷波点</span>';
+    }
+    list.innerHTML = html;
+}
+
+// 从 UI 删除陷波点
+function deleteWDSPNotchFromUI(idx) {
+    if (idx >= 0 && idx < wdspState.nfNotches.length) {
+        wdspState.nfNotches.splice(idx, 1);
+        saveWDSPStateToCookies();
+        
+        if (typeof sendCommand === 'function') {
+            sendCommand('deleteWDSPNotch', idx);
+        }
+        
+        updateNFNotchesList();
+        console.log('🔧 WDSP NF: 删除陷波点 ' + idx);
+    }
 }
 
 // 设置 NR2 Level（用于高级设置面板）
@@ -2149,8 +2227,8 @@ function setAFGain(value) {
     if (typeof setCookie === 'function') {
         setCookie('C_af', parseInt(value) * 10, 180);
     }
-    
-    console.log('AF 增益:', value + '%');
+
+    // console.log('AF 增益:', value + '%');
 }
 
 function setMicGain(value) {
@@ -2655,8 +2733,8 @@ const ATR1000 = {
                 this._lastUpdateTime = Date.now();
                 this._processMessage(msg);
                 
-                // 每20条消息打印一次日志（减少控制台输出）
-                if (this._msgCount % 20 === 0) {
+                // 每100条消息打印一次日志（减少控制台输出）
+                if (this._msgCount % 100 === 0) {
                     console.log(`📊 ATR-1000 #${this._msgCount}: power=${msg.power}W`);
                 }
             }
@@ -2669,7 +2747,6 @@ const ATR1000 = {
     _processMessage: function(msg) {
         // V4.5.8: 检查是否在忽略数据期间
         if (Date.now() < this._ignoreDataUntil) {
-            console.log('🚫 ATR-1000 忽略数据（清零保护期）');
             return;
         }
         
@@ -3098,7 +3175,7 @@ const ATR1000 = {
     // 定期请求数据（已禁用 - 使用推送模式）
     startDataPolling: function() {
         // 推送模式：后端主动推送数据，无需轮询
-        console.log('📊 ATR-1000 使用推送模式（无需轮询）');
+        // console.log('📊 ATR-1000 使用推送模式（无需轮询）');
     },
     
     // 停止数据轮询
@@ -3239,6 +3316,8 @@ var wdspState = {
     nr2Level: 1,    // 默认极温和 (0=关, 1=极, 2=低, 3=中, 4=高)
     nb: true,
     anf: false,
+    nf: false,      // NF 手动陷波滤波器（用于消除特定频率 CW 噪音）
+    nfNotches: [],  // 陷波点列表 [{fcenter, fwidth, active}]
     agcMode: 3
 };
 
@@ -3254,6 +3333,8 @@ function loadWDSPStateFromCookies() {
                 wdspState.nr2Level = settings.nr2Level !== undefined ? settings.nr2Level : 1;
                 wdspState.nb = settings.nb !== undefined ? settings.nb : true;
                 wdspState.anf = settings.anf !== undefined ? settings.anf : false;
+                wdspState.nf = settings.nf !== undefined ? settings.nf : false;
+                wdspState.nfNotches = settings.nfNotches || [];
                 wdspState.agcMode = settings.agcMode !== undefined ? settings.agcMode : 3;
                 console.log('🔧 WDSP状态已从Cookie加载:', wdspState);
             }
@@ -3351,6 +3432,60 @@ function setWDSPANF(enabled) {
     console.log('🔧 WDSP ANF:', enabled ? '启用' : '禁用');
 }
 
+// 设置 NF (手动陷波滤波器) 启用/禁用
+function setWDSPNF(enabled) {
+    wdspState.nf = enabled;
+    if (typeof sendCommand === 'function') {
+        sendCommand('setWDSPNFEnabled', enabled ? 'true' : 'false');
+    }
+    
+    // 更新 NF 陷波点设置区域的显示/隐藏
+    const nfSection = document.getElementById('nf-notches-section');
+    if (nfSection) {
+        nfSection.style.display = enabled ? 'block' : 'none';
+    }
+    
+    // 更新高级设置面板中的复选框
+    const nfCheckbox = document.getElementById('wdsp-adv-nf');
+    if (nfCheckbox) {
+        nfCheckbox.checked = enabled;
+    }
+    
+    saveWDSPStateToCookies();
+    console.log('🔧 WDSP NF (Notch Filter):', enabled ? '启用' : '禁用');
+}
+
+// 添加陷波点 (格式: fcenter, fwidth)
+function addWDSPNotch(fcenter, fwidth) {
+    if (typeof sendCommand === 'function') {
+        sendCommand('addWDSPNotch', fcenter + ',' + fwidth);
+    }
+    console.log('🔧 WDSP NF: 添加陷波点', fcenter + 'Hz, 宽度' + fwidth + 'Hz');
+}
+
+// 编辑陷波点 (格式: notch_index, fcenter, fwidth)
+function editWDSPNotch(notchIndex, fcenter, fwidth) {
+    if (typeof sendCommand === 'function') {
+        sendCommand('editWDSPNotch', notchIndex + ',' + fcenter + ',' + fwidth);
+    }
+    console.log('🔧 WDSP NF: 编辑陷波点', notchIndex, fcenter + 'Hz, 宽度' + fwidth + 'Hz');
+}
+
+// 删除陷波点
+function deleteWDSPNotch(notchIndex) {
+    if (typeof sendCommand === 'function') {
+        sendCommand('deleteWDSPNotch', notchIndex);
+    }
+    console.log('🔧 WDSP NF: 删除陷波点', notchIndex);
+}
+
+// 获取所有陷波点
+function getWDSPNotches() {
+    if (typeof sendCommand === 'function') {
+        sendCommand('getWDSPNotches', '');
+    }
+}
+
 // 设置 AGC 模式
 function setWDSPAGC(mode) {
     wdspState.agcMode = parseInt(mode);
@@ -3413,6 +3548,13 @@ function handleWDSPStatus(status) {
             wdspState.anf = config.anfEnabled;
         } else if (config.anf_enabled !== undefined) {
             wdspState.anf = config.anf_enabled;
+        }
+        
+        // NF 手动陷波滤波器状态
+        if (config.nfEnabled !== undefined) {
+            wdspState.nf = config.nfEnabled;
+        } else if (config.nf_enabled !== undefined) {
+            wdspState.nf = config.nf_enabled;
         }
         
         if (config.agcMode !== undefined) {
@@ -3589,6 +3731,18 @@ function toggleWDSPANF() {
     console.log('🎛️ ANF:', wdspState.anf ? '开启' : '关闭');
 }
 
+// 切换 NF (手动陷波滤波器)
+function toggleWDSPNF() {
+    if (!wdspState.enabled) return;
+    wdspState.nf = !wdspState.nf;
+    updateDSPButtonUI('nf', wdspState.nf);
+    if (typeof sendCommand === 'function') {
+        sendCommand('setWDSPNFEnabled', wdspState.nf ? 'true' : 'false');
+    }
+    saveWDSPStateToCookies();
+    console.log('🎛️ NF (Notch Filter):', wdspState.nf ? '开启' : '关闭');
+}
+
 // 循环切换 AGC 模式
 function cycleWDSPAGC() {
     if (!wdspState.enabled) return;
@@ -3694,6 +3848,11 @@ window.toggleWDSP = toggleWDSP;
 window.setWDSPNR2 = setWDSPNR2;
 window.setWDSPNB = setWDSPNB;
 window.setWDSPANF = setWDSPANF;
+window.setWDSPNF = setWDSPNF;
+window.addWDSPNotch = addWDSPNotch;
+window.editWDSPNotch = editWDSPNotch;
+window.deleteWDSPNotch = deleteWDSPNotch;
+window.getWDSPNotches = getWDSPNotches;
 window.setWDSPAGC = setWDSPAGC;
 window.getWDSPStatus = getWDSPStatus;
 window.handleWDSPStatus = handleWDSPStatus;
@@ -3703,6 +3862,7 @@ window.toggleWDSPMain = toggleWDSPMain;
 window.cycleWDSPNR2Level = cycleWDSPNR2Level;
 window.toggleWDSPNB = toggleWDSPNB;
 window.toggleWDSPANF = toggleWDSPANF;
+window.toggleWDSPNF = toggleWDSPNF;
 window.cycleWDSPAGC = cycleWDSPAGC;
 window.initDSPControlPanel = initDSPControlPanel;
 window.updateDSPButtonsState = updateDSPButtonsState;
