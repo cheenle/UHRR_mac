@@ -221,6 +221,20 @@ body {
     border-radius: var(--radius-md);
     border: 1px solid var(--border-color);
     box-shadow: var(--shadow-sm);
+    transition: color 0.4s ease, text-shadow 0.4s ease, border-color 0.4s ease;
+}
+
+/* TX 状态 - 频率显示变红色 */
+.freq-main.tx-active {
+    color: #ff4444;
+    text-shadow: 0 0 12px rgba(255, 68, 68, 0.6);
+    border-color: rgba(255, 68, 68, 0.3);
+    animation: freq-tx-glow 2s ease-in-out infinite;
+}
+
+@keyframes freq-tx-glow {
+    0%, 100% { text-shadow: 0 0 12px rgba(255, 68, 68, 0.6); }
+    50% { text-shadow: 0 0 18px rgba(255, 68, 68, 0.8); }
 }
 
 /* 频率输入框样式 - SDR 青色风格 */
@@ -453,14 +467,17 @@ body {
     display: none; /* 隐藏标签节省空间 */
 }
 
-/* 显示区域外框 - 整体系统化布局 */
+/* 显示区域外框 - 玻璃拟态效果 */
 .meter-display-frame {
-    background: linear-gradient(135deg, var(--bg-card), var(--bg-tertiary));
+    background: rgba(30, 30, 42, 0.7);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
     border-radius: var(--radius-lg);
     padding: var(--space-sm);
     margin: var(--space-xs) 0;
-    border: 1px solid var(--border-color);
+    border: 1px solid rgba(255, 255, 255, 0.08);
     box-shadow: var(--shadow-sm);
+    contain: layout style paint;
 }
 
 /* 功率/驻波显示在S表下边 */
@@ -576,182 +593,7 @@ body {
     border-color: var(--accent-warning);
 }
 
-/* Volume Control - 音量控制 - 统一蓝色风格 */
-.volume-control {
-    background: linear-gradient(135deg, var(--bg-card), var(--bg-tertiary));
-    border-radius: var(--radius-md);
-    padding: var(--space-sm) var(--space-md);
-    margin: var(--space-xs) 0;
-    border: 1px solid var(--border-color);
-}
-
-.volume-row {
-    display: flex;
-    align-items: center;
-    gap: var(--space-sm);
-}
-
-.volume-icon {
-    font-size: 20px;
-    min-width: 28px;
-    text-align: center;
-    color: var(--accent-primary);
-}
-
-.volume-slider {
-    flex: 1;
-    height: 8px;
-    -webkit-appearance: none;
-    appearance: none;
-    background: linear-gradient(90deg, var(--accent-secondary) 0%, var(--accent-primary) 50%, var(--accent-warning) 75%, var(--accent-danger) 100%);
-    border-radius: 4px;
-    outline: none;
-    cursor: pointer;
-}
-
-.volume-slider::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    appearance: none;
-    width: 24px;
-    height: 24px;
-    background: var(--text-primary);
-    border-radius: 50%;
-    cursor: pointer;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.3);
-    transition: transform var(--transition-fast);
-}
-
-.volume-slider::-webkit-slider-thumb:active {
-    transform: scale(1.1);
-}
-
-.volume-slider::-moz-range-thumb {
-    width: 24px;
-    height: 24px;
-    background: var(--text-primary);
-    border-radius: 50%;
-    cursor: pointer;
-    border: none;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.3);
-}
-
-.volume-value {
-    min-width: 45px;
-    text-align: right;
-    font-size: 14px;
-    font-weight: bold;
-    color: var(--accent-primary);
-}
-
-/* Frequency Tuning - 优化布局 */
-.frequency-tuning {
-    margin-top: 5px;
-}
-
-.tuning-controls {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    grid-template-rows: repeat(2, 1fr);
-    gap: 8px;
-}
-
-/* 减号按钮样式（第一行） */
-.tune-btn[id^="tune-down"] {
-    background-color: #1a1a1a;
-    border: 1px solid #444;
-}
-
-/* 加号按钮样式（第二行左侧两个） */
-.tune-btn[id^="tune-up"] {
-    background-color: #1a1a1a;
-    border: 1px solid #444;
-}
-
-/* TUNE天调按钮样式（顶部控制栏） */
-.quick-btn.tune-btn-header {
-    background-color: #FF9800;
-    border: 1px solid #FF9800;
-    font-weight: bold;
-    color: #fff;
-}
-
-.quick-btn.tune-btn-header:active,
-.quick-btn.tune-btn-header.active {
-    background-color: #FF5722;
-    border-color: #FF5722;
-}
-
-.tune-btn {
-    background-color: #1a1a1a;
-    border: 1px solid #333;
-    border-radius: 10px;
-    color: #fff;
-    padding: 14px 8px;
-    font-size: 15px;
-    font-weight: 500;
-    cursor: pointer;
-    min-height: 50px;
-    transition: all 0.15s;
-    touch-action: manipulation;
-}
-
-.tune-btn:active {
-    transform: scale(0.97);
-    background-color: #2a2a2a;
-}
-
-/* PTT Section - 优化大按钮 */
-.ptt-section {
-    background-color: #1a1a1a;
-    padding: 15px 10px;
-    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.3);
-    position: sticky;
-    bottom: 0;
-    z-index: 100;
-}
-
-.ptt-container {
-    display: flex;
-    justify-content: center;
-    margin-bottom: 12px;
-}
-
-.ptt-button {
-    width: 120px;
-    height: 240px;
-    border-radius: 60px;
-    background: radial-gradient(circle at 30% 30%, #ff5555, #cc0000);
-    border: 3px solid rgba(255, 255, 255, 0.8);
-    color: white;
-    font-size: 22px;
-    font-weight: bold;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    box-shadow: 0 4px 15px rgba(255, 68, 68, 0.4);
-    transition: all 0.1s;
-    touch-action: manipulation;
-    -webkit-tap-highlight-color: transparent;
-}
-
-.ptt-button:active {
-    transform: scale(0.95);
-    background: radial-gradient(circle at 30% 30%, #ff7777, #dd0000);
-    box-shadow: 0 2px 8px rgba(255, 68, 68, 0.6);
-}
-
-.ptt-label {
-    font-size: 24px;
-    font-weight: bold;
-}
-
-.ptt-sublabel {
-    font-size: 11px;
-    opacity: 0.8;
-}
-
+/* PTT Section */
 /* Off-canvas Menu */
 .off-canvas-menu {
     position: fixed;
@@ -882,7 +724,9 @@ body {
 }
 
 .modal-panel {
-    background: linear-gradient(135deg, var(--bg-card), var(--bg-tertiary));
+    background: rgba(30, 30, 42, 0.8);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
     border-radius: var(--radius-lg);
     padding: var(--space-md);
     max-width: 320px;
@@ -890,7 +734,7 @@ body {
     max-height: 75vh;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
-    border: 1px solid var(--border-color);
+    border: 1px solid rgba(255, 255, 255, 0.1);
     box-shadow: var(--shadow-lg);
 }
 
@@ -1002,10 +846,6 @@ body {
 .close-panel-btn:active {
     background: var(--bg-button-hover);
     border-color: var(--accent-primary);
-}
-
-.close-panel-btn:active {
-    background-color: #444;
 }
 
 /* Settings Panel */
@@ -1166,7 +1006,8 @@ body {
     }
     
     .quick-btn,
-    .tune-btn {
+    .tune-btn-grid,
+    .tune-step-display {
         border: 2px solid #fff;
     }
 }
@@ -1181,217 +1022,6 @@ body {
     }
 }
 
-////////////////////////////////////////////////////////////
-// ATR-1000 功率/驻波显示样式
-////////////////////////////////////////////////////////////
-
-.atr-meter-section {
-    background: linear-gradient(180deg, #1a2a1a 0%, #0d1a0d 100%);
-    border-radius: 12px;
-    padding: 12px;
-    margin: 8px 0;
-    border: 1px solid #2a4a2a;
-}
-
-/* ATR面板隐藏状态 - 使用!important确保优先级 */
-.atr-meter-section.hidden {
-    display: none !important;
-}
-
-.atr-meter-section.visible {
-    display: block !important;
-}
-
-.atr-meter-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 10px;
-    padding-bottom: 8px;
-    border-bottom: 1px solid #2a4a2a;
-}
-
-.atr-meter-title {
-    font-size: 14px;
-    font-weight: bold;
-    color: var(--accent-primary);
-}
-
-.atr-meter-status {
-    font-size: 12px;
-    padding: 2px 8px;
-    border-radius: 10px;
-    background-color: #333;
-    color: #888;
-}
-
-.atr-meter-status.connected {
-    background-color: var(--accent-secondary);
-    color: #fff;
-}
-
-.atr-meter-status.disconnected {
-    background-color: #c62828;
-    color: #fff;
-}
-
-.atr-meter-cards {
-    display: flex;
-    gap: 12px;
-    margin-bottom: 12px;
-}
-
-.atr-card {
-    flex: 1;
-    background-color: #111;
-    border-radius: 10px;
-    padding: 12px 8px;
-    text-align: center;
-    border: 1px solid #333;
-}
-
-.atr-label {
-    display: block;
-    font-size: 12px;
-    color: #888;
-    margin-bottom: 4px;
-}
-
-.atr-value {
-    font-size: 32px;
-    font-weight: bold;
-    color: var(--accent-primary);
-    line-height: 1.1;
-}
-
-.atr-unit {
-    font-size: 12px;
-    color: #666;
-}
-
-/* 功率条形图 */
-.atr-power-bar-container {
-    margin-bottom: 8px;
-}
-
-.atr-power-bar {
-    height: 8px;
-    background-color: var(--accent-primary);
-    border-radius: 4px;
-    width: 0%;
-    transition: width 0.3s ease, background 0.3s ease;
-}
-
-.atr-power-scale {
-    display: flex;
-    justify-content: space-between;
-    font-size: 10px;
-    color: #666;
-    margin-top: 2px;
-}
-
-/* SWR 驻波条 */
-.atr-swr-bar-container {
-    margin-top: 4px;
-}
-
-.atr-swr-bar {
-    height: 6px;
-    background-color: var(--accent-primary);
-    border-radius: 3px;
-    width: 0%;
-    transition: width 0.3s ease, background 0.3s ease;
-}
-
-.atr-swr-scale {
-    display: flex;
-    justify-content: space-between;
-    font-size: 10px;
-    color: #666;
-    margin-top: 2px;
-}
-
-/* 继电器状态 */
-.atr-relay-status {
-    margin-top: 8px;
-    padding: 6px 10px;
-    background: rgba(0,0,0,0.1);
-    border-radius: 6px;
-    text-align: center;
-}
-
-.atr-relay-info {
-    font-size: 12px;
-    color: #555;
-    font-family: 'Monaco', 'Consolas', monospace;
-}
-
-/* 操作按钮 */
-.atr-action-buttons {
-    display: flex;
-    gap: 8px;
-    margin-top: 10px;
-    justify-content: center;
-}
-
-.atr-btn {
-    flex: 1;
-    max-width: 80px;
-    padding: 8px 4px;
-    border: none;
-    border-radius: 8px;
-    font-size: 11px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-.atr-btn-tune {
-    background: linear-gradient(135deg, #2196F3, #1976D2);
-    color: white;
-}
-
-.atr-btn-tune:active {
-    background: linear-gradient(135deg, #1976D2, #1565C0);
-    transform: scale(0.95);
-}
-
-.atr-btn-save {
-    background: linear-gradient(135deg, var(--accent-primary), #00d4ff);
-    color: white;
-}
-
-.atr-btn-save:active {
-    background: linear-gradient(135deg, #00d4ff, #00a8cc);
-    transform: scale(0.95);
-}
-
-.atr-btn-load {
-    background: linear-gradient(135deg, #FF9800, #F57C00);
-    color: white;
-}
-
-.atr-btn-load:active {
-    background: linear-gradient(135deg, #F57C00, #EF6C00);
-    transform: scale(0.95);
-}
-
-/* 隐藏桌面版遮罩层 - 移动端不使用 */
-#ombre-body,
-#pop-upspinner {
-    display: none !important;
-    z-index: -1 !important;
-    pointer-events: none !important;
-}
-
-/* indwsControlTRX 样式 */
-#indwsControlTRX {
-    padding: 2px 4px;
-}
-#indwsControlTRX img {
-    width: 10px;
-    height: 10px;
-}
 
 /* 隐藏 indwsControlTRX - 移动端不显示 */
 #indwsControlTRX {
@@ -1404,12 +1034,15 @@ body {
 
 /* DSP 控制区域 - SDR 风格重构 */
 .dsp-controls-section {
-    background: linear-gradient(135deg, var(--bg-card), var(--bg-tertiary));
+    background: rgba(30, 30, 42, 0.7);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
     border-radius: var(--radius-lg);
     padding: var(--space-xs) var(--space-sm);
     margin: var(--space-xs) 0;
-    border: 1px solid var(--border-color);
+    border: 1px solid rgba(255, 255, 255, 0.08);
     box-shadow: var(--shadow-sm);
+    contain: layout style paint;
 }
 
 .dsp-header {
@@ -1524,6 +1157,38 @@ body {
     font-size: 12px;
     opacity: 0.5;
     transition: opacity var(--transition-fast);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 14px;
+    height: 14px;
+}
+
+/* DSP 按钮图标 - Unicode 符号样式 */
+.nr2-icon::before {
+    content: '';
+    display: block;
+    width: 10px;
+    height: 10px;
+    background: currentColor;
+    border-radius: 50%;
+    box-shadow: -3px 0 0 currentColor, 3px 0 0 currentColor;
+}
+
+.nb-icon {
+    font-size: 14px;
+}
+
+.anf-icon {
+    font-size: 11px;
+}
+
+.nf-icon {
+    font-size: 10px;
+}
+
+.agc-icon {
+    font-size: 11px;
 }
 
 /* 开启状态图标 */
@@ -1694,71 +1359,83 @@ body {
 }
 
 .volume-icon-small {
-    font-size: 12px;
+    font-size: 14px;
     opacity: 0.6;
+    min-width: 18px;
+    text-align: center;
 }
 
 .volume-slider-compact {
     flex: 1;
-    height: 2px;
+    height: 28px;
     -webkit-appearance: none;
     appearance: none;
-    background: linear-gradient(90deg, var(--accent-secondary), var(--accent-primary));
-    border-radius: 1px;
+    background: transparent;
+    cursor: pointer;
     outline: none;
     border: none;
+    margin: 0;
+    padding: 0;
+}
+
+/* 滑块轨道 - 视觉高度2px */
+.volume-slider-compact::-webkit-slider-runnable-track {
+    height: 2px;
+    background: linear-gradient(90deg, var(--accent-secondary), var(--accent-primary));
+    border-radius: 1px;
+}
+
+.volume-slider-compact::-moz-range-track {
+    height: 2px;
+    background: linear-gradient(90deg, var(--accent-secondary), var(--accent-primary));
+    border-radius: 1px;
+    border: none;
+}
+
+.volume-slider-compact::-moz-range-progress {
+    height: 2px;
+    background: var(--accent-primary);
+    border-radius: 1px;
 }
 
 .volume-slider-compact::-webkit-slider-thumb {
     -webkit-appearance: none;
     appearance: none;
-    width: 12px;
-    height: 12px;
+    width: 16px;
+    height: 16px;
     border-radius: 50%;
     background: var(--text-secondary);
     cursor: pointer;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.4);
+    margin-top: -7px;
+    transition: background var(--transition-fast), transform var(--transition-fast);
 }
 
 .volume-slider-compact::-webkit-slider-thumb:active {
     background: var(--accent-primary);
+    transform: scale(1.15);
+}
+
+.volume-slider-compact::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--text-secondary);
+    cursor: pointer;
+    border: none;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.4);
+    transition: background var(--transition-fast), transform var(--transition-fast);
+}
+
+.volume-slider-compact::-moz-range-thumb:active {
+    background: var(--accent-primary);
+    transform: scale(1.15);
 }
 
 .volume-value-small {
     font-size: 10px;
     color: var(--text-muted);
     min-width: 28px;
-}
-
-/* 频率调谐精简版 */
-.frequency-tuning-compact {
-    padding: 8px 5px;
-    margin: 5px 0;
-}
-
-.tuning-controls-compact {
-    display: flex;
-    gap: 6px;
-    justify-content: center;
-}
-
-.tune-btn-compact {
-    flex: 1;
-    max-width: 70px;
-    padding: 10px 8px;
-    border: none;
-    border-radius: 8px;
-    background: linear-gradient(180deg, #3a3a3a, #2a2a2a);
-    color: #ccc;
-    font-size: 13px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.15s ease;
-}
-
-.tune-btn-compact:active {
-    background: linear-gradient(180deg, #4a4a4a, #3a3a3a);
-    transform: scale(0.95);
 }
 
 /* 频率调谐网格布局 - 两排 */

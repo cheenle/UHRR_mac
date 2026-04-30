@@ -1855,8 +1855,15 @@ var OpusEncoder = (function () {
         var signal_ptr = allocate(4, 'i32', ALLOC_STACK);
         setValue(signal_ptr, 3001, 'i32');  // VOICE
         _opus_encoder_ctl(this.handle, 4024, signal_ptr);
-        
-        console.log('🎵 Opus 编码器优化: complexity=5, bitrate=20kbps, VBR=ON, FEC=ON(15%), DTX=ON');
+
+        // OPUS_SET_HP_FILTER_REQUEST = 4030 (内部高通滤波器)
+        // 默认启用 ~80-120Hz 高通，会切除低频成分
+        // 设为 0 禁用以保留语音厚度
+        var hp_ptr = allocate(4, 'i32', ALLOC_STACK);
+        setValue(hp_ptr, 0, 'i32');  // 0 = 禁用高通滤波器
+        _opus_encoder_ctl(this.handle, 4030, hp_ptr);
+
+        console.log('🎵 Opus 编码器优化: complexity=5, bitrate=20kbps, VBR=ON, FEC=ON(15%), DTX=ON, HPF=OFF');
     }
     OpusEncoder.prototype.encode = function (pcm) {
         var output = [];
@@ -2048,15 +2055,19 @@ OpusEncoderProcessor.prototype.onAudioProcess = function( e )
 	var data = e.inputBuffer.getChannelData( 0 )
 	var ds = this.downSample;
 	
-	// ========== 降采样：48kHz → 16kHz ==========
-	// 计算降采样后的样本数
+	// ========== 降采样：48kHz → 16kHz (取平均法) ==========
 	var downsampledCount = Math.floor(data.length / ds);
 	var downsampledBuffer = new Float32Array(downsampledCount);
 	
 	for( var i = 0; i < downsampledCount; i++ )
 	{
 		// 简单降采样：取每第ds个样本
-		downsampledBuffer[i] = data[i * ds];
+		var sumDS = 0;
+		var base = i * ds;
+		for (var j = 0; j < ds; j++) {
+			sumDS += data[base + j];
+		}
+		downsampledBuffer[i] = sumDS / ds;
 	}
 	
 	// ========== 帧累积逻辑 ==========
@@ -2176,7 +2187,14 @@ var MediaHandler = function( audioProcessor )
     var self = this;
     if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
         console.log('🎤 MediaHandler: 使用navigator.mediaDevices.getUserMedia...');
-        navigator.mediaDevices.getUserMedia({ audio: true, video: false })
+        navigator.mediaDevices.getUserMedia({
+                    audio: {
+                        echoCancellation: false,
+                        noiseSuppression: false,
+                        autoGainControl: false
+                    },
+                    video: false
+                })
             .then(function(stream) {
                 console.log('✅ MediaHandler: 麦克风权限获取成功');
                 self.callback.bind(self)(stream);
@@ -2213,32 +2231,31 @@ var AudioTX_eqHigh = null;     // 高频衰减 @ 2700Hz (切除高频噪声)
 var AudioTX_antiAlias = null;  // 抗混叠低通滤波器第一级
 var AudioTX_antiAlias2 = null; // 抗混叠低通滤波器第二级 (更陡峭滚降)
 
-// TX EQ 预设 - 针对短波通信优化
+// TX EQ 预设 - 针对短波通信 + 手机麦克风补偿优化
 // 参数说明：
-//   low:  低频 (<100Hz) 衰减量，负值衰减 (如 -20dB 切除超低频噪声)
-//   mid:  中频 (1500Hz) 增益量，正值增强 (如 +6dB 增强语音清晰度)
-//   high: 高频 (>2700Hz) 衰减量，负值衰减 (如 -20dB 切除高频噪声)
-// 短波通信核心频段：100Hz - 2700Hz (保留语音厚度)
-// 简化为三个预设：默认、中、强
+//   low:  低频增强 @ 350Hz (dB)，正值增强语音厚度，补偿手机麦克风低频不足
+//   mid:  中频增强 @ 1500Hz (dB)，正值增强语音清晰度
+//   high: 高频衰减 @ 2700Hz (dB)，负值衰减，消除尖锐音
+// 短波通信核心频段：200Hz - 2700Hz
 var TX_EQ_PRESETS = {
-    'DEFAULT': { 
-        name: '默认', 
-        low: 0, mid: 0, high: 0, 
-        desc: '无EQ处理，原始音频' 
+    'DEFAULT': {
+        name: '默认',
+        low: 0, mid: 0, high: 0,
+        desc: '无EQ处理，原始音频'
     },
-    'MEDIUM': { 
-        name: '中', 
-        low: -15,    // 适度切除超低频
-        mid: 10,     // 中频增强，提高清晰度
-        high: -20,   // 适度高频衰减
-        desc: '适中调节：平衡清晰度与厚度'
+    'MEDIUM': {
+        name: '中',
+        low: 6,      // 适度增强低频厚度
+        mid: 8,      // 中频增强，提高清晰度
+        high: -15,   // 适度高频衰减
+        desc: '适中调节：增强厚度与清晰度'
     },
-    'STRONG': { 
-        name: '强', 
-        low: -20,    // 切除超低频噪声
-        mid: 12,     // 强调中频
-        high: -35,   // 最强高频衰减，消除尖锐音
-        desc: '强力处理：iPhone/手机专用'
+    'STRONG': {
+        name: '强',
+        low: 9,      // 强力增强低频，补偿手机麦克风
+        mid: 10,     // 强调中频
+        high: -25,   // 强力高频衰减，消除尖锐音
+        desc: '强力处理：iPhone/手机专用，补偿低频+消除尖锐'
     }
 };
 
@@ -2251,16 +2268,17 @@ function initTX_EQ(context) {
     // ========== 抗混叠低通滤波器 ==========
     // 目的：在降采样前滤除高于目标 Nyquist 频率的成分
     // 降采样 48kHz → 16kHz，目标 Nyquist = 8kHz
-    // 设置截止频率 5kHz，更积极滤除高频，减少尖锐音
+    // SSB语音仅需 300-2700Hz，降低截止频率到 3.5kHz
+    // 更彻底滤除高频噪声，防止降采样混叠和尖锐音
     AudioTX_antiAlias = context.createBiquadFilter();
     AudioTX_antiAlias.type = 'lowpass';
-    AudioTX_antiAlias.frequency.setValueAtTime(5000, context.currentTime);
+    AudioTX_antiAlias.frequency.setValueAtTime(3500, context.currentTime);
     AudioTX_antiAlias.Q.setValueAtTime(0.707, context.currentTime); // Butterworth Q值
-    
+
     // 第二级低通滤波器 - 更陡峭的滚降
     AudioTX_antiAlias2 = context.createBiquadFilter();
     AudioTX_antiAlias2.type = 'lowpass';
-    AudioTX_antiAlias2.frequency.setValueAtTime(4500, context.currentTime);
+    AudioTX_antiAlias2.frequency.setValueAtTime(3200, context.currentTime);
     AudioTX_antiAlias2.Q.setValueAtTime(0.707, context.currentTime);
     
     // 创建三个BiquadFilter节点 - 针对短波通信优化
@@ -2269,15 +2287,16 @@ function initTX_EQ(context) {
     AudioTX_eqHigh = context.createBiquadFilter();
     
     // ========== 短波通信语音滤波策略 ==========
-    // 核心频段：100Hz - 2700Hz (SSB 语音优化)
-    // <100Hz: 超低频噪声 (衰减)
-    // 100-2700Hz: 语音主频段 (保持/增强)
+    // 核心频段：200Hz - 2700Hz (SSB 语音优化)
+    // 200-500Hz: 语音厚度/温暖感 (手机麦克风弱区，需增强)
+    // 800-2200Hz: 语音清晰度 (保持/适度增强)
     // >2700Hz: 高频噪声/尖锐音 (衰减)
-    
-    // 低频衰减 - lowshelf @ 100Hz
-    // low 参数: 衰减量 (dB)，0 = 不衰减，-20 = 切除低频噪声
-    AudioTX_eqLow.type = 'lowshelf';
-    AudioTX_eqLow.frequency.setValueAtTime(100, context.currentTime);
+
+    // 低频增强 - peaking @ 350Hz (补偿手机麦克风低频不足)
+    // low 参数: 增益量 (dB)，正值增强语音厚度
+    AudioTX_eqLow.type = 'peaking';
+    AudioTX_eqLow.frequency.setValueAtTime(350, context.currentTime);
+    AudioTX_eqLow.Q.setValueAtTime(1.0, context.currentTime); // 宽Q值覆盖200-500Hz
     AudioTX_eqLow.gain.setValueAtTime(0, context.currentTime);
     
     // 中频增强 - 语音中心频率 (1500Hz)

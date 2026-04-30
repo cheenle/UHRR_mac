@@ -1,7 +1,7 @@
 # Mobile Remote Radio Control (MRRC) 系统架构设计文档
 
 ## 文档信息
-- **版本**: v4.9.3 (2026-03-29)
+- **版本**: v5.0.0 (2026-04-30)
 - **作者**: System Architecture Team
 - **状态**: 生产就绪
 - **分类**: 机密/内部
@@ -335,13 +335,21 @@ JTDX/WSJT-X → UDP(2237) → ULTRON → 自动应答 → UDP → JTDX/WSJT-X
 - **职责**: 提供用户界面和交互逻辑
 - **技术栈**: HTML5, CSS3, Vanilla JavaScript
 - **关键文件**:
-  - `mobile_modern.html`: 移动端主界面（推荐）
+  - `mobile_modern.html`: 移动端主界面（推荐，V5.0现代化改造）
   - `index.html`: 桌面端主界面
   - `controls.js`: 核心控制逻辑和音频处理
   - `tx_button_optimized.js`: PTT按钮优化逻辑
   - `rx_worklet_processor.js`: AudioWorklet音频播放器
   - `mobile_modern.js`: 移动端界面逻辑
-  - `mobile_modern.css`: 移动端界面样式
+  - `mobile_modern.css`: 移动端界面样式（V5.0玻璃拟态效果）
+
+**V5.0 前端现代化特性**:
+- **视觉设计**: 玻璃拟态效果（backdrop-filter blur）、统一青色主题
+- **图标系统**: Unicode符号替代Emoji图标，跨平台一致性
+- **触摸优化**: 音量滑块触控热区28px、WCAG标准44px最小按钮
+- **反馈增强**: Vibration API触摸震动反馈、TX状态频率红色呼吸发光
+- **性能优化**: CSS `contain`属性、冗余样式清理15%、独立卡片渲染优化
+- **语言统一**: 全部UI标签英文化（DSP状态、设置面板、菜单项等）
 
 #### 4.1.2 音频处理组件
 - **TX均衡器**: 三段音频均衡
@@ -912,7 +920,8 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 | v4.9.0 | 2026-03-14 | 语音助手、CW模式、SDR界面 | 生产就绪 |
 | v4.9.1 | 2026-03-15 | 多实例支持深度优化 | 生产就绪 |
 | v4.9.2 | 2026-03-16 | FT8 ULTRON集成优化 | 生产就绪 |
-| v4.9.3 | 2026-03-29 | 文档全面更新，功能完善 | 当前版本 |
+| v4.9.3 | 2026-03-29 | 文档全面更新，功能完善 | 历史版本 |
+| v5.0.0 | 2026-04-30 | 移动端UI全面现代化：玻璃拟态效果、Unicode图标替换、CSS瘦身15%、触摸热区优化、震动反馈、TX频率变色、英文界面统一 | 当前版本 |
 
 ---
 

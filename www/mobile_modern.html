@@ -55,11 +55,11 @@
                         <span class="freq-digit freq-hz" id="freq-10hz">0</span>
                     </div>
                     <!-- 频率输入框（默认隐藏） -->
-                    <input type="text" id="freq-input" class="freq-input-hidden" placeholder="输入频率 (kHz)" inputmode="numeric" pattern="[0-9]*">
+                    <input type="text" id="freq-input" class="freq-input-hidden" placeholder="Freq (kHz)" inputmode="numeric" pattern="[0-9]*">
                 </div>
                 
                 <button id="power-btn" class="header-btn power-btn" aria-label="Power">
-                    <span class="power-icon">⏻</span>
+                    <span class="power-icon">&#x23FB;</span>
                 </button>
             </div>
             
@@ -96,15 +96,15 @@
                 <!-- ATR-1000 Power/SWR Display (放在S表下边) -->
                 <div class="atr-under-meter" id="atr-meter-section">
                     <div class="atr-under-row">
-                        <span id="atr-device-status" class="atr-status-icon" title="设备状态">○</span>
-                        <span class="atr-under-label">功率</span>
+                        <span id="atr-device-status" class="atr-status-icon" title="Device Status">○</span>
+                        <span class="atr-under-label">PWR</span>
                         <span class="atr-under-value" id="atr-power">--</span>
                         <span class="atr-under-unit">W</span>
                         <div class="atr-under-bar">
                             <div class="atr-power-bar-compact" id="atr-power-bar"></div>
                         </div>
                         <span class="atr-under-divider">|</span>
-                        <span class="atr-under-label">驻波</span>
+                        <span class="atr-under-label">SWR</span>
                         <span class="atr-under-value" id="atr-swr">--</span>
                         <div class="atr-under-bar">
                             <div class="atr-swr-bar-compact" id="atr-swr-bar"></div>
@@ -127,7 +127,7 @@
             <!-- DSP Controls - 显式WDSP控制面板 (高品质手机端测试用) -->
             <section class="dsp-controls-section" id="dsp-controls">
                 <div class="dsp-header">
-                    <span class="dsp-title">🎛️ DSP</span>
+                    <span class="dsp-title">DSP</span>
                     <label class="dsp-switch">
                         <input type="checkbox" id="dsp-main-toggle">
                         <span class="dsp-slider"></span>
@@ -135,29 +135,29 @@
                 </div>
                 <div class="dsp-buttons-row" id="dsp-buttons">
                     <button class="dsp-btn" id="dsp-nr2-btn">
-                        <span class="dsp-btn-icon">🔇</span>
+                        <span class="dsp-btn-icon nr2-icon"></span>
                         <span class="dsp-btn-label">NR2</span>
-                        <span class="dsp-btn-status" id="dsp-nr2-status">低</span>
+                        <span class="dsp-btn-status" id="dsp-nr2-status">L</span>
                     </button>
                     <button class="dsp-btn" id="dsp-nb-btn">
-                        <span class="dsp-btn-icon">⚡</span>
+                        <span class="dsp-btn-icon nb-icon">&#x26A1;</span>
                         <span class="dsp-btn-label">NB</span>
-                        <span class="dsp-btn-status" id="dsp-nb-status">关</span>
+                        <span class="dsp-btn-status" id="dsp-nb-status">OFF</span>
                     </button>
                     <button class="dsp-btn" id="dsp-anf-btn">
-                        <span class="dsp-btn-icon">🎯</span>
+                        <span class="dsp-btn-icon anf-icon">&#x25C9;</span>
                         <span class="dsp-btn-label">ANF</span>
-                        <span class="dsp-btn-status" id="dsp-anf-status">关</span>
+                        <span class="dsp-btn-status" id="dsp-anf-status">OFF</span>
                     </button>
                     <button class="dsp-btn" id="dsp-nf-btn" onclick="toggleWDSPNF();">
-                        <span class="dsp-btn-icon">🎚️</span>
+                        <span class="dsp-btn-icon nf-icon">&#x23F8;</span>
                         <span class="dsp-btn-label">NF</span>
-                        <span class="dsp-btn-status" id="dsp-nf-status">关</span>
+                        <span class="dsp-btn-status" id="dsp-nf-status">OFF</span>
                     </button>
                     <button class="dsp-btn" id="dsp-agc-btn">
-                        <span class="dsp-btn-icon">📊</span>
+                        <span class="dsp-btn-icon agc-icon">&#x25F0;</span>
                         <span class="dsp-btn-label">AGC</span>
-                        <span class="dsp-btn-status" id="dsp-agc-status">中</span>
+                        <span class="dsp-btn-status" id="dsp-agc-status">MED</span>
                     </button>
                 </div>
             </section>
@@ -165,7 +165,7 @@
             <!-- Volume Control - 精简版 -->
             <section class="volume-control-compact">
                 <div class="volume-row-compact">
-                    <span class="volume-icon-small">🔊</span>
+                    <span class="volume-icon-small">&#x1F50A;</span>
                     <input type="range" id="main-af-gain" class="volume-slider-compact" min="0" max="100" value="50" oninput="setMainAFGain(this.value)">
                     <span class="volume-value-small" id="main-af-value">50%</span>
                 </div>
@@ -194,15 +194,15 @@
                 <div class="side-controls">
                     <div class="side-controls-row">
                         <button id="record-btn" class="record-button-footer" aria-label="Record">
-                            <span class="record-icon">●</span>
-                            <span class="record-label">录音</span>
+                            <span class="record-icon">&#x25CF;</span>
+                            <span class="record-label">REC</span>
                         </button>
                         <button id="tune-btn" class="tune-button-footer" aria-label="Tune">
                             <span class="tune-label">TUNE</span>
                         </button>
                     </div>
                     <button id="cq-btn" class="cq-button-wide" aria-label="CQCQCQ">
-                        <span class="cq-label-wide">📻 CQCQCQ</span>
+                        <span class="cq-label-wide">CQ CQ</span>
                     </button>
                 </div>
             </div>
@@ -224,12 +224,12 @@
                 <li><a href="#" class="menu-item" data-action="audio">Audio Controls</a></li>
                 <li><a href="#" class="menu-item" data-action="txeq">TX Equalizer</a></li>
                 <li><a href="#" class="menu-item" data-action="digital">Digital Modes</a></li>
-                <li><a href="cw_live.html" class="menu-item">📡 CW 解码器</a></li>
-                <li><a href="ft8_ultron.html" class="menu-item">📻 FT8 ULTRON</a></li>
-                <li><a href="recordings.html" class="menu-item">录音列表</a></li>
+                <li><a href="cw_live.html" class="menu-item">CW Decoder</a></li>
+                <li><a href="ft8_ultron.html" class="menu-item">FT8 ULTRON</a></li>
+                <li><a href="recordings.html" class="menu-item">Recordings</a></li>
                 <li><a href="#" class="menu-item" data-action="logbook">Logbook</a></li>
                 <li><a href="#" class="menu-item" data-action="about">About</a></li>
-                <li><a href="#" class="menu-item" id="fullscreen-btn" data-action="fullscreen">⛶ 全屏模式</a></li>
+                <li><a href="#" class="menu-item" id="fullscreen-btn" data-action="fullscreen">Fullscreen</a></li>
             </ul>
             <div class="menu-footer">
                 <span class="version-text">MRRC V4.9.2</span>

@@ -20,8 +20,8 @@ Universal HamRadio Remote HTML5 (MRRC) is a Python/Tornado-based server applicat
   - User authentication system in `MRRC_users.db`
 
 ### Frontend (HTML5/JavaScript)
-- **Main Interface**: `www/index.html` - Comprehensive radio operation controls with responsive design
-- **JavaScript Logic**: `www/controls.js` handling UI interactions and WebSocket communication
+- **Two core entry points**: `www/index.html` (desktop) and `www/mobile_modern.html` (mobile)
+- **Shared JavaScript**: `www/controls.js` handles WebSocket communication, UI interactions, radio control
 - **Visual Components**: Frequency display, meters, band shortcuts (160m through 70cm), mode selectors
 - **Panadapter Functionality**: Located in `www/panadapter/` for spectrum display
 - **Advanced Features**: Antenna Tuning Unit (ATU) integration with power/SWR monitoring
@@ -131,8 +131,10 @@ pip3 install pyaudio numpy tornado pyserial pyrtlsdr
 - `ATU_SERVER_WEBSOCKET.py`: Separate server for antenna tuning unit
 
 ### Web Interface (`www/`)
-- `index.html`: Main interface with radio controls
-- `controls.js`: Core JavaScript for UI interactions
+- **Core entry points (only two main interfaces — all other HTML/JS files are legacy/backup):**
+  - `index.html` — Desktop/web main interface (paired with `controls.js`)
+  - `mobile_modern.html` — Mobile main interface (paired with `mobile_modern.js` and `mobile_modern.css`)
+- `controls.js`: Shared core JavaScript for WebSocket communication, UI interactions, radio control
 - `tx_button_optimized.js`: Optimized PTT button logic
 - `atu.js`, `atu_autotune.js`: Antenna tuning unit functionality
 - `panadapter/`: Spectrum display implementation

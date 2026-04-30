@@ -94,6 +94,21 @@ const IS_MOBILE_LOCAL = typeof IS_MOBILE !== 'undefined' ? IS_MOBILE : /iPhone|i
 var audioContextInitialized = false;
 
 ////////////////////////////////////////////////////////////
+// Haptic Feedback - 触摸震动反馈
+////////////////////////////////////////////////////////////
+function hapticFeedback(pattern) {
+    if ('vibrate' in navigator) {
+        if (pattern === 'heavy') {
+            navigator.vibrate([20, 10, 20]);
+        } else if (pattern === 'medium') {
+            navigator.vibrate(15);
+        } else {
+            navigator.vibrate(8);
+        }
+    }
+}
+
+////////////////////////////////////////////////////////////
 // 移动端特定状态（不影响 controls.js 的全局变量）
 ////////////////////////////////////////////////////////////
 
@@ -1121,9 +1136,15 @@ function updateTXStatus(isTX) {
     if (isTX) {
         domElements.statusTX.classList.add('active');
         domElements.statusRX.classList.remove('active');
+        if (domElements.freqDisplay) {
+            domElements.freqDisplay.classList.add('tx-active');
+        }
     } else {
         domElements.statusTX.classList.remove('active');
         domElements.statusRX.classList.add('active');
+        if (domElements.freqDisplay) {
+            domElements.freqDisplay.classList.remove('tx-active');
+        }
     }
 }
 
@@ -1166,20 +1187,22 @@ function updateFrequencyDisplay() {
 function tuneFrequency(step) {
     // 检查 poweron 状态（来自 controls.js）
     if (typeof poweron !== 'undefined' && !poweron) return;
-    
+
+    hapticFeedback('light');
+
     // 使用 controls.js 的全局频率变量
     if (typeof TRXfrequency !== 'undefined') {
         mobileState.currentFrequency = TRXfrequency;
     }
-    
+
     mobileState.currentFrequency += step;
     if (mobileState.currentFrequency < 0) mobileState.currentFrequency = 0;
-    
+
     // 更新全局频率变量
     if (typeof TRXfrequency !== 'undefined') {
         TRXfrequency = mobileState.currentFrequency;
     }
-    
+
     updateFrequencyDisplay();
     
     // 使用 controls.js 的发送函数
@@ -1491,9 +1514,9 @@ function drawSMeterSDR(sValue) {
 // 使用独立的 AudioRX_smeter_analyser，不受音量控制影响
 function updateSMeterFromAudio() {
     // 使用独立的S表分析器（在音量控制之前）
-    const analyser = (typeof AudioRX_smeter_analyser !== 'undefined' && AudioRX_smeter_analyser) 
-        ? AudioRX_smeter_analyser 
-        : AudioRX_analyser;
+    const analyser = (typeof AudioRX_smeter_analyser !== 'undefined' && AudioRX_smeter_analyser)
+        ? AudioRX_smeter_analyser
+        : null;
     
     if (!analyser) {
         return;
@@ -1554,11 +1577,13 @@ function stopSMeterMonitoring() {
 ////////////////////////////////////////////////////////////
 
 function toggleMenu() {
+    hapticFeedback('medium');
     domElements.mainMenu.classList.toggle('open');
     domElements.menuOverlay.classList.toggle('open');
 }
 
 function closeMenu() {
+    hapticFeedback('medium');
     domElements.mainMenu.classList.remove('open');
     domElements.menuOverlay.classList.remove('open');
 }
@@ -1669,9 +1694,10 @@ function cycleFilter() {
 
 // 步进切换
 function cycleStep() {
+    hapticFeedback('medium');
     const stepBtn = document.getElementById('step-btn');
     if (!stepBtn) return;
-    
+
     // 切换到下一档
     mobileState.tuneStepIndex = (mobileState.tuneStepIndex + 1) % mobileState.tuneSteps.length;
     mobileState.tuneStep = mobileState.tuneSteps[mobileState.tuneStepIndex];
@@ -1920,91 +1946,90 @@ function showSettingsPanel() {
         console.warn('加载MIC增益失败:', e);
     }
     
-    let html = '<div class="modal-panel"><h3>音频设置</h3>';
-    
-    // AF 增益
+    let html = '<div class="modal-panel"><h3>Audio Settings</h3>';
+
+    // AF Gain
     html += '<div class="setting-item">';
-    html += '<label>AF 增益: <span id="af-value-display">' + afPercent + '%</span></label>';
+    html += '<label>AF Gain: <span id="af-value-display">' + afPercent + '%</span></label>';
     html += '<input type="range" id="mobile-af-gain" min="0" max="100" value="' + afPercent + '" oninput="setAFGain(this.value)">';
     html += '</div>';
-    
-    // MIC 增益
+
+    // MIC Gain
     html += '<div class="setting-item">';
-    html += '<label>MIC 增益: <span id="mic-value-display">' + micValue + '%</span></label>';
+    html += '<label>MIC Gain: <span id="mic-value-display">' + micValue + '%</span></label>';
     html += '<input type="range" id="mobile-mic-gain" min="0" max="200" value="' + micValue + '" oninput="setMicGain(this.value)">';
     html += '</div>';
-    
-    // 静噪
+
+    // Squelch
     html += '<div class="setting-item">';
-    html += '<label>静噪: <span id="sql-value-display">' + sqlValue + '</span></label>';
+    html += '<label>Squelch: <span id="sql-value-display">' + sqlValue + '</span></label>';
     html += '<input type="range" id="mobile-squelch" min="0" max="100" value="' + sqlValue + '" oninput="setSquelch(this.value)">';
     html += '</div>';
-    
-    html += '</div>'; // 关闭音频设置容器
-    
-    // ========== WDSP DSP 设置 ==========
-    // 从Cookie加载WDSP状态
+
+    html += '</div>'; // Close audio settings container
+
+    // ========== WDSP DSP Settings ==========
     loadWDSPStateFromCookies();
-    
+
     html += '<div class="wdsp-settings">';
-    html += '<h4>🎛️ WDSP 数字处理</h4>';
-    
-    // WDSP 启用开关
+    html += '<h4>WDSP Digital Signal Processing</h4>';
+
+    // WDSP enable
     var wdspEnabledChecked = wdspState.enabled ? 'checked' : '';
     html += '<div class="setting-item wdsp-item">';
-    html += '<label class="switch-label"><span>WDSP 处理</span>';
+    html += '<label class="switch-label"><span>WDSP Processing</span>';
     html += '<input type="checkbox" id="wdsp-enabled" onchange="toggleWDSP(this.checked)" ' + wdspEnabledChecked + '>';
     html += '<span class="switch-slider"></span></label>';
     html += '</div>';
-    
-    // NR2 频谱降噪
+
+    // NR2
     var nr2Checked = wdspState.nr2 ? 'checked' : '';
     var nr2Disabled = wdspState.enabled ? '' : 'disabled';
     html += '<div class="setting-item wdsp-item">';
-    html += '<label class="switch-label"><span>频谱降噪 (NR2)</span>';
+    html += '<label class="switch-label"><span>Spectrum Noise Reduction (NR2)</span>';
     html += '<input type="checkbox" id="wdsp-nr2" onchange="setWDSPNR2(this.checked)" ' + nr2Checked + ' ' + nr2Disabled + '>';
     html += '<span class="switch-slider"></span></label>';
     html += '</div>';
-    
-    // NB 噪声抑制器
+
+    // NB
     var nbChecked = wdspState.nb ? 'checked' : '';
     var nbDisabled = wdspState.enabled ? '' : 'disabled';
     html += '<div class="setting-item wdsp-item">';
-    html += '<label class="switch-label"><span>噪声抑制 (NB)</span>';
+    html += '<label class="switch-label"><span>Noise Blanker (NB)</span>';
     html += '<input type="checkbox" id="wdsp-nb" onchange="setWDSPNB(this.checked)" ' + nbChecked + ' ' + nbDisabled + '>';
     html += '<span class="switch-slider"></span></label>';
     html += '</div>';
-    
-    // ANF 自动陷波
+
+    // ANF
     var anfChecked = wdspState.anf ? 'checked' : '';
     var anfDisabled = wdspState.enabled ? '' : 'disabled';
     html += '<div class="setting-item wdsp-item">';
-    html += '<label class="switch-label"><span>自动陷波 (ANF)</span>';
+    html += '<label class="switch-label"><span>Auto Notch Filter (ANF)</span>';
     html += '<input type="checkbox" id="wdsp-anf" onchange="setWDSPANF(this.checked)" ' + anfChecked + ' ' + anfDisabled + '>';
     html += '<span class="switch-slider"></span></label>';
     html += '</div>';
-    
-    // AGC 模式
+
+    // AGC mode
     var agcDisabled = wdspState.enabled ? '' : 'disabled';
     html += '<div class="setting-item wdsp-item">';
-    html += '<label>AGC 模式</label>';
+    html += '<label>AGC Mode</label>';
     html += '<select id="wdsp-agc" onchange="setWDSPAGC(this.value)" ' + agcDisabled + '>';
-    html += '<option value="0"' + (wdspState.agcMode == 0 ? ' selected' : '') + '>关闭</option>';
-    html += '<option value="1"' + (wdspState.agcMode == 1 ? ' selected' : '') + '>长</option>';
-    html += '<option value="2"' + (wdspState.agcMode == 2 ? ' selected' : '') + '>慢</option>';
-    html += '<option value="3"' + (wdspState.agcMode == 3 ? ' selected' : '') + '>中</option>';
-    html += '<option value="4"' + (wdspState.agcMode == 4 ? ' selected' : '') + '>快</option>';
+    html += '<option value="0"' + (wdspState.agcMode == 0 ? ' selected' : '') + '>OFF</option>';
+    html += '<option value="1"' + (wdspState.agcMode == 1 ? ' selected' : '') + '>LONG</option>';
+    html += '<option value="2"' + (wdspState.agcMode == 2 ? ' selected' : '') + '>SLOW</option>';
+    html += '<option value="3"' + (wdspState.agcMode == 3 ? ' selected' : '') + '>MED</option>';
+    html += '<option value="4"' + (wdspState.agcMode == 4 ? ' selected' : '') + '>FAST</option>';
     html += '</select>';
     html += '</div>';
 
-    // 高级设置链接
+    // Advanced settings link
     html += '<div class="setting-item wdsp-item" style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #333;">';
-    html += '<a href="#" onclick="showWDSPAdvancedSettings(); return false;" style="color: #00d4ff; text-decoration: none; font-size: 14px;">⚙️ 高级设置...</a>';
+    html += '<a href="#" onclick="showWDSPAdvancedSettings(); return false;" style="color: #00d4ff; text-decoration: none; font-size: 14px;">Advanced Settings...</a>';
     html += '</div>';
 
-    html += '</div>'; // 关闭WDSP设置容器
+    html += '</div>'; // Close WDSP settings container
 
-    html += '<button class="close-panel-btn" onclick="closeModalPanel()">关闭</button></div>';
+    html += '<button class="close-panel-btn" onclick="closeModalPanel()">Close</button></div>';
     showModalPanel(html);
 }
 
@@ -2013,29 +2038,29 @@ function showWDSPAdvancedSettings() {
     // 重新加载WDSP状态
     loadWDSPStateFromCookies();
 
-    let html = '<div class="modal-panel"><h3>🎛️ WDSP 高级设置</h3>';
+    let html = '<div class="modal-panel"><h3>WDSP Advanced Settings</h3>';
 
-    // 说明文字
-    html += '<p style="font-size:12px;color:#888;margin-bottom:15px;">WDSP 数字信号处理详细参数配置</p>';
+    // Description
+    html += '<p style="font-size:12px;color:#888;margin-bottom:15px;">WDSP digital signal processing parameter configuration</p>';
 
-    // WDSP 主开关
+    // WDSP main switch
     html += '<div class="setting-item wdsp-item">';
-    html += '<label class="switch-label"><span>WDSP 处理总开关</span>';
+    html += '<label class="switch-label"><span>WDSP Processing</span>';
     html += '<input type="checkbox" id="wdsp-adv-enabled" onchange="toggleWDSP(this.checked)" ' + (wdspState.enabled ? 'checked' : '') + '>';
     html += '<span class="switch-slider"></span></label>';
     html += '</div>';
 
-    // NR2 开关
+    // NR2 switch
     html += '<div class="setting-item wdsp-item">';
-    html += '<label class="switch-label"><span>频谱降噪 (NR2)</span>';
+    html += '<label class="switch-label"><span>Spectrum Noise Reduction (NR2)</span>';
     html += '<input type="checkbox" id="wdsp-adv-nr2" onchange="setWDSPNR2(this.checked)" ' + (wdspState.nr2 ? 'checked' : '') + ' ' + (wdspState.enabled ? '' : 'disabled') + '>';
     html += '<span class="switch-slider"></span></label>';
     html += '</div>';
 
-    // NR2 Level 选择
-    const nr2Levels = ['关闭', '极温和', '低', '中', '高'];
+    // NR2 Level
+    const nr2Levels = ['OFF', 'Very Mild', 'Low', 'Medium', 'High'];
     html += '<div class="setting-item wdsp-item">';
-    html += '<label>NR2 降噪强度</label>';
+    html += '<label>NR2 Noise Reduction Level</label>';
     html += '<select id="wdsp-adv-nr2-level" onchange="setWDSPNR2Level(parseInt(this.value))" ' + (wdspState.enabled && wdspState.nr2 ? '' : 'disabled') + '>';
     nr2Levels.forEach((level, idx) => {
         html += '<option value="' + idx + '"' + (wdspState.nr2Level == idx ? ' selected' : '') + '>' + level + '</option>';
@@ -2043,55 +2068,55 @@ function showWDSPAdvancedSettings() {
     html += '</select>';
     html += '</div>';
 
-    // NB 开关
+    // NB switch
     html += '<div class="setting-item wdsp-item">';
-    html += '<label class="switch-label"><span>噪声抑制 (NB)</span>';
+    html += '<label class="switch-label"><span>Noise Blanker (NB)</span>';
     html += '<input type="checkbox" id="wdsp-adv-nb" onchange="setWDSPNB(this.checked)" ' + (wdspState.nb ? 'checked' : '') + ' ' + (wdspState.enabled ? '' : 'disabled') + '>';
     html += '<span class="switch-slider"></span></label>';
     html += '</div>';
 
-    // ANF 开关
+    // ANF switch
     html += '<div class="setting-item wdsp-item">';
-    html += '<label class="switch-label"><span>自动陷波 (ANF)</span>';
+    html += '<label class="switch-label"><span>Auto Notch Filter (ANF)</span>';
     html += '<input type="checkbox" id="wdsp-adv-anf" onchange="setWDSPANF(this.checked)" ' + (wdspState.anf ? 'checked' : '') + ' ' + (wdspState.enabled ? '' : 'disabled') + '>';
     html += '<span class="switch-slider"></span></label>';
     html += '</div>';
 
-    // NF (手动陷波滤波器) 开关
+    // NF (manual notch) switch
     html += '<div class="setting-item wdsp-item">';
-    html += '<label class="switch-label"><span>手动陷波 (NF)</span>';
+    html += '<label class="switch-label"><span>Manual Notch Filter (NF)</span>';
     html += '<input type="checkbox" id="wdsp-adv-nf" onchange="setWDSPNF(this.checked)" ' + (wdspState.nf ? 'checked' : '') + ' ' + (wdspState.enabled ? '' : 'disabled') + '>';
     html += '<span class="switch-slider"></span></label>';
     html += '</div>';
 
-    // NF 陷波点添加
+    // NF notch points
     html += '<div class="setting-item wdsp-item" id="nf-notches-section" style="display:' + (wdspState.nf ? 'block' : 'none') + ';">';
-    html += '<label>添加陷波点 (Hz)</label>';
+    html += '<label>Add Notch Point (Hz)</label>';
     html += '<div style="display:flex;gap:5px;align-items:center;">';
-    html += '<input type="number" id="nf-fcenter" placeholder="中心频率" min="100" max="4000" value="800" style="width:80px;padding:5px;border-radius:4px;border:1px solid #444;background:#222;color:#fff;">';
-    html += '<span style="color:#888;">带宽</span>';
-    html += '<input type="number" id="nf-fwidth" placeholder="宽度" min="10" max="1000" value="100" style="width:60px;padding:5px;border-radius:4px;border:1px solid #444;background:#222;color:#fff;">';
-    html += '<button onclick="addWDSPNotchFromUI()" style="padding:5px 10px;background:#4a9eff;border:none;border-radius:4px;color:#fff;cursor:pointer;">添加</button>';
+    html += '<input type="number" id="nf-fcenter" placeholder="Center freq" min="100" max="4000" value="800" style="width:80px;padding:5px;border-radius:4px;border:1px solid #444;background:#222;color:#fff;">';
+    html += '<span style="color:#888;">BW</span>';
+    html += '<input type="number" id="nf-fwidth" placeholder="Width" min="10" max="1000" value="100" style="width:60px;padding:5px;border-radius:4px;border:1px solid #444;background:#222;color:#fff;">';
+    html += '<button onclick="addWDSPNotchFromUI()" style="padding:5px 10px;background:#4a9eff;border:none;border-radius:4px;color:#fff;cursor:pointer;">Add</button>';
     html += '</div>';
     html += '<div id="nf-notches-list" style="margin-top:8px;max-height:120px;overflow-y:auto;">';
     if (wdspState.nfNotches && wdspState.nfNotches.length > 0) {
         wdspState.nfNotches.forEach((notch, idx) => {
             html += '<div class="notch-item" style="display:flex;justify-content:space-between;align-items:center;padding:5px;background:#2a2a3a;border-radius:4px;margin-bottom:5px;">';
             html += '<span style="color:#ccc;">' + notch.fcenter + 'Hz (' + notch.fwidth + 'Hz)</span>';
-            html += '<button onclick="deleteWDSPNotch(' + idx + ')" style="padding:2px 8px;background:#ff4a4a;border:none;border-radius:4px;color:#fff;cursor:pointer;font-size:12px;">删除</button>';
+            html += '<button onclick="deleteWDSPNotch(' + idx + ')" style="padding:2px 8px;background:#ff4a4a;border:none;border-radius:4px;color:#fff;cursor:pointer;font-size:12px;">Delete</button>';
             html += '</div>';
         });
     } else {
-        html += '<span style="color:#666;font-size:12px;">暂无陷波点</span>';
+        html += '<span style="color:#666;font-size:12px;">No notch points configured</span>';
     }
     html += '</div>';
-    html += '<p style="font-size:11px;color:#666;margin-top:5px;">输入中心频率（如800Hz）消除CW噪音</p>';
+    html += '<p style="font-size:11px;color:#666;margin-top:5px;">Enter center frequency (e.g. 800Hz) to eliminate CW noise</p>';
     html += '</div>';
 
-    // AGC 模式
-    const agcModes = ['关闭', '长 (LONG)', '慢 (SLOW)', '中 (MED)', '快 (FAST)'];
+    // AGC mode
+    const agcModes = ['OFF', 'LONG', 'SLOW', 'MED', 'FAST'];
     html += '<div class="setting-item wdsp-item">';
-    html += '<label>AGC 自动增益控制</label>';
+    html += '<label>AGC Auto Gain Control</label>';
     html += '<select id="wdsp-adv-agc" onchange="setWDSPAGC(parseInt(this.value))" ' + (wdspState.enabled ? '' : 'disabled') + '>';
     agcModes.forEach((mode, idx) => {
         html += '<option value="' + idx + '"' + (wdspState.agcMode == idx ? ' selected' : '') + '>' + mode + '</option>';
@@ -2099,17 +2124,17 @@ function showWDSPAdvancedSettings() {
     html += '</select>';
     html += '</div>';
 
-    // 说明信息
+    // Description
     html += '<div style="margin-top:15px;padding:10px;background:#1a1a2a;border-radius:8px;font-size:12px;color:#888;">';
-    html += '<strong>参数说明：</strong><br>';
-    html += '• <strong>NR2</strong>: 频谱降噪，推荐开启（极温和）<br>';
-    html += '• <strong>NB</strong>: 噪声抑制器，消除脉冲噪声<br>';
-    html += '• <strong>ANF</strong>: 自动陷波，消除单频干扰<br>';
-    html += '• <strong>NF</strong>: 手动陷波，指定频率消除CW噪音<br>';
-    html += '• <strong>AGC</strong>: 自动增益控制，推荐"中"模式';
+    html += '<strong>Parameter Guide:</strong><br>';
+    html += '• <strong>NR2</strong>: Spectrum noise reduction, recommended (Very Mild)<br>';
+    html += '• <strong>NB</strong>: Noise blanker, eliminates impulse noise<br>';
+    html += '• <strong>ANF</strong>: Auto notch filter, removes single-tone interference<br>';
+    html += '• <strong>NF</strong>: Manual notch filter, eliminates CW noise at specified frequency<br>';
+    html += '• <strong>AGC</strong>: Auto gain control, recommended "MED" mode';
     html += '</div>';
 
-    html += '<button class="close-panel-btn" onclick="closeModalPanel()" style="margin-top:15px;">关闭</button></div>';
+    html += '<button class="close-panel-btn" onclick="closeModalPanel()" style="margin-top:15px;">Close</button></div>';
     showModalPanel(html);
 }
 
@@ -3306,8 +3331,8 @@ window.ATR1000 = ATR1000;
 // WDSP 数字信号处理控制
 ////////////////////////////////////////////////////////////
 
-// NR2 强度名称
-const NR2_LEVEL_NAMES = ['关', '极', '低', '中', '高'];
+// NR2 level names
+const NR2_LEVEL_NAMES = ['OFF', 'MIN', 'LO', 'MED', 'HI'];
 
 // WDSP 状态（默认与后端配置一致）
 var wdspState = {
@@ -3493,7 +3518,7 @@ function setWDSPAGC(mode) {
         sendCommand('setWDSPAGC', mode);
     }
     saveWDSPStateToCookies();
-    const modeNames = {0: '关闭', 1: '长', 2: '慢', 3: '中', 4: '快'};
+    const modeNames = {0: 'OFF', 1: 'LONG', 2: 'SLOW', 3: 'MED', 4: 'FAST'};
     // console.log('🔧 WDSP AGC:', modeNames[wdspState.agcMode] || mode);
 }
 
@@ -3595,8 +3620,8 @@ function updateDSPPanelUI() {
     const nr2Status = document.getElementById('dsp-nr2-status');
     const nr2Btn = document.getElementById('dsp-nr2-btn');
     if (nr2Status) {
-        const levelNames = ['关', '极', '低', '中', '高'];
-        nr2Status.textContent = levelNames[wdspState.nr2Level] || '低';
+        const levelNames = ['OFF', 'MIN', 'LO', 'MED', 'HI'];
+        nr2Status.textContent = levelNames[wdspState.nr2Level] || 'LO';
     }
     if (nr2Btn) {
         nr2Btn.classList.toggle('active', wdspState.nr2Level > 0);
@@ -3606,7 +3631,7 @@ function updateDSPPanelUI() {
     const nbStatus = document.getElementById('dsp-nb-status');
     const nbBtn = document.getElementById('dsp-nb-btn');
     if (nbStatus) {
-        nbStatus.textContent = wdspState.nb ? '开' : '关';
+        nbStatus.textContent = wdspState.nb ? 'ON' : 'OFF';
     }
     if (nbBtn) {
         nbBtn.classList.toggle('active', wdspState.nb);
@@ -3616,7 +3641,7 @@ function updateDSPPanelUI() {
     const anfStatus = document.getElementById('dsp-anf-status');
     const anfBtn = document.getElementById('dsp-anf-btn');
     if (anfStatus) {
-        anfStatus.textContent = wdspState.anf ? '开' : '关';
+        anfStatus.textContent = wdspState.anf ? 'ON' : 'OFF';
     }
     if (anfBtn) {
         anfBtn.classList.toggle('active', wdspState.anf);
@@ -3626,7 +3651,7 @@ function updateDSPPanelUI() {
     const agcStatus = document.getElementById('dsp-agc-status');
     const agcBtn = document.getElementById('dsp-agc-btn');
     if (agcStatus) {
-        agcStatus.textContent = AGC_MODE_NAMES[wdspState.agcMode] || '中';
+        agcStatus.textContent = AGC_MODE_NAMES[wdspState.agcMode] || 'MED';
     }
     if (agcBtn) {
         agcBtn.classList.toggle('active', wdspState.agcMode > 0);
@@ -3644,7 +3669,7 @@ function updateDSPPanelUI() {
 ////////////////////////////////////////////////////////////
 
 // AGC 模式名称
-const AGC_MODE_NAMES = ['关', '长', '慢', '中', '快'];
+const AGC_MODE_NAMES = ['OFF', 'LONG', 'SLOW', 'MED', 'FAST'];
 
 // 切换 WDSP 主开关（显式UI版本）
 function toggleWDSPMain(enabled) {
@@ -3779,7 +3804,7 @@ function updateDSPButtonUI(type, enabled) {
         }
     }
     if (status) {
-        status.textContent = enabled ? '开' : '关';
+        status.textContent = enabled ? 'ON' : 'OFF';
     }
 }
 
@@ -3957,12 +3982,12 @@ function updateRecordingUI(recording) {
     
     if (recording) {
         btn.classList.add('recording');
-        btn.querySelector('.record-label').textContent = '停止';
-        console.log('🔴 录音状态：正在录音');
+        btn.querySelector('.record-label').textContent = 'STOP';
+        console.log('🔴 Recording status: Recording');
     } else {
         btn.classList.remove('recording');
-        btn.querySelector('.record-label').textContent = '录音';
-        console.log('⏹️ 录音状态：已停止');
+        btn.querySelector('.record-label').textContent = 'REC';
+        console.log('⏹️ Recording status: Stopped');
     }
 }
 
@@ -3979,7 +4004,7 @@ function showRecordingStatus(message, type = 'info') {
         const originalText = btn.querySelector('.record-label').textContent;
         btn.querySelector('.record-label').textContent = message;
         setTimeout(() => {
-            btn.querySelector('.record-label').textContent = isAudioRecording ? '停止' : '录音';
+            btn.querySelector('.record-label').textContent = isAudioRecording ? 'STOP' : 'REC';
         }, 2000);
     }
 }
