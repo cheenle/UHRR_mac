@@ -166,6 +166,11 @@ set_dtx = set(constants.SET_DTX_REQUEST)
 # Gets encoder's configured use of discontinuous transmission
 get_dtx = get(constants.GET_DTX_REQUEST, ctypes.c_int)
 
+# Configures the encoder's internal high-pass filter (libopus >= 1.2)
+# Note: GET_HP_FILTER_REQUEST conflicts with GET_FINAL_RANGE_REQUEST (both 4031)
+# in older libopus versions, so we only expose the setter
+set_hp_filter = set(constants.SET_HP_FILTER_REQUEST)
+
 #
 # Other stuff
 #

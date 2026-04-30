@@ -43,6 +43,7 @@ rsync -avh --progress \
     --exclude='*.pid' \
     --exclude='cq*.wav' \
     --exclude='cqcqcq*.wav' \
+    --exclude='recordings/*.wav' \
     --exclude='tune.wav' \
     --exclude='DSP/wdsp/*.o' \
     --exclude='DSP/wdsp/*.a' \

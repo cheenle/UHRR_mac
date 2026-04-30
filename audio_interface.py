@@ -438,6 +438,11 @@ class PyAudioCapture(threading.Thread):
                                     if current_ae_run != target_ae_run:
                                         self.wdsp_processor.set_nr2_ae_run(target_ae_run)
                                 
+                                # 检查并更新 NR2 启用状态
+                                if hasattr(self.wdsp_processor, '_nr2_enabled') and \
+                                   self.wdsp_processor._nr2_enabled != cfg['nr2_enabled']:
+                                    self.wdsp_processor.set_nr2_enabled(cfg['nr2_enabled'])
+
                                 # 检查并更新 NB
                                 if hasattr(self.wdsp_processor, '_nb_enabled') and \
                                    self.wdsp_processor._nb_enabled != cfg['nb_enabled']:
@@ -618,7 +623,7 @@ class PyAudioCapture(threading.Thread):
                                                     packet_loss_perc=15, # 预期15%丢包率
                                                     dtx=True             # 启用静音检测
                                                 )
-                                                print(f"🎵 Opus RX 编码器已优化: {current_opus_rate}Hz, FEC=ON, DTX=ON, 20kbps")
+                                                print(f"🎵 Opus RX 编码器已优化: {current_opus_rate}Hz, FEC=ON, DTX=ON, HPF=OFF, 20kbps")
                                             except Exception as e:
                                                 print(f"❌ Opus RX 编码器初始化失败: {e}")
                                                 PyAudioCapture.rx_opus_encode = False

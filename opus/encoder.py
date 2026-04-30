@@ -114,8 +114,12 @@ class Encoder(object):
     _set_dtx = lambda self, x: encoder.ctl(self._state, ctl.set_dtx, x)
     dtx = property(_get_dtx, _set_dtx)
 
-    def configure_for_voip(self, bitrate=20000, complexity=6, fec=True, 
-                           packet_loss_perc=15, dtx=True):
+    _get_hp_filter = lambda self: encoder.ctl(self._state, ctl.get_hp_filter)
+    _set_hp_filter = lambda self, x: encoder.ctl(self._state, ctl.set_hp_filter, x)
+    hp_filter = property(_get_hp_filter, _set_hp_filter)
+
+    def configure_for_voip(self, bitrate=20000, complexity=6, fec=True,
+                           packet_loss_perc=15, dtx=True, hp_filter=False):
         """便捷方法：配置语音通信优化参数
         
         注意：由于libopus的ctypes可变参数调用限制，某些参数可能设置失败。
@@ -128,6 +132,7 @@ class Encoder(object):
             fec: 是否启用前向纠错 (默认True，弱网环境关键)
             packet_loss_perc: 预期丢包率 (默认15%)
             dtx: 是否启用静音检测传输 (默认True，节省带宽)
+            hp_filter: 是否启用内部高通滤波器 (默认False，保留低频)
         """
         # 尝试设置参数，忽略失败
         for name, value in [
@@ -136,6 +141,7 @@ class Encoder(object):
             ('inband_fec', 1 if fec else 0),
             ('packet_loss_perc', packet_loss_perc if fec else 0),
             ('dtx', 1 if dtx else 0),
+            ('hp_filter', 1 if hp_filter else 0),
         ]:
             try:
                 setattr(self, name, value)

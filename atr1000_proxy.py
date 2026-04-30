@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-ATR-1000 天调代理程序 - V4.5.18 通讯日志版
+ATR-1000 天调代理程序 - V4.5.30 定期刷新版
 
 设计理念：动态轮询 + 缓存广播 + 智能学习 + 通讯监控
 1. 动态轮询间隔，防止设备过载：
@@ -13,6 +13,7 @@ ATR-1000 天调代理程序 - V4.5.18 通讯日志版
 4. 自动学习 SWR 1.0-1.5 的天调参数
 5. 支持快速调谐到指定频率
 6. V4.5.18: 专门的通讯日志记录，分析设备压力
+7. V4.5.30: 连接定期刷新（~55分钟），避免设备每小时断连影响 TX
 
 使用方法：
     python3 atr1000_proxy.py --device 192.168.1.63 --port 60001
@@ -251,6 +252,7 @@ class ATR1000Client:
         self.port = port
         self.ws = None
         self.thread = None
+        self.connection_time = 0  # 连接时间戳，用于定期刷新
         
     def connect(self):
         """连接到 ATR-1000 设备"""
@@ -297,7 +299,7 @@ class ATR1000Client:
     
     def _on_open(self, ws):
         """WebSocket 打开 - V4.5.17: 动态轮询模式
-        
+
         连接成功后启动主动轮询线程，动态调整轮询间隔：
         - 空闲时：3秒
         - 有客户端：1秒
@@ -306,14 +308,18 @@ class ATR1000Client:
         global connected, last_data_time, cache
         connected = True
         last_data_time = time.time()
-        
+        self.connection_time = time.time()  # 记录连接时间，用于定期刷新
+
         with cache_lock:
             cache["connected"] = True
-        
+
         logger.info("✅ ATR-1000 已连接，启动动态轮询")
-        
+
         # 启动主动轮询线程
         threading.Thread(target=self._poll_loop, daemon=True).start()
+
+        # 启动连接刷新线程（预防设备每小时主动断连）
+        threading.Thread(target=self._connection_refresh_loop, daemon=True).start()
     
     def _on_message(self, ws, data):
         """收到消息 - 更新缓存（V4.5.17: 减少日志输出）"""
@@ -384,7 +390,34 @@ class ATR1000Client:
             time.sleep(interval)
         
         logger.info("🔄 轮询线程结束")
-    
+
+    def _connection_refresh_loop(self):
+        """连接定期刷新循环 - V4.5.30
+
+        ATR-1000 设备约每 60 分钟会主动断开 WebSocket 连接。
+        此循环在连接 ~55 分钟时，若当前不在 TX 模式，
+        则主动断开并重连，避免在 TX 期间突然断连。
+        """
+        global connected
+
+        REFRESH_THRESHOLD = 3300  # 55 分钟 = 3300 秒
+
+        while running:
+            time.sleep(30)  # 每 30 秒检查一次
+
+            if not connected or not hasattr(self, 'connection_time'):
+                continue
+
+            connection_age = time.time() - self.connection_time
+            if connection_age > REFRESH_THRESHOLD and not is_tx:
+                logger.info(f"🔄 连接已持续 {connection_age:.0f} 秒，主动刷新以避免 TX 期间断连")
+                # 关闭当前连接，_run_ws 会自动在 5 秒后重连
+                try:
+                    if self.ws:
+                        self.ws.close()
+                except Exception:
+                    pass
+
     def _on_error(self, ws, error):
         """WebSocket 错误"""
         global connected, cache
@@ -397,6 +430,7 @@ class ATR1000Client:
         """WebSocket 关闭"""
         global connected, cache
         connected = False
+        self.connection_time = 0  # 重置连接时间
         with cache_lock:
             cache["connected"] = False
         logger.info("ATR-1000 连接关闭")

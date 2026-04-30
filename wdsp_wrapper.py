@@ -653,37 +653,7 @@ class WDSPProcessor:
         except Exception as e:
             print(f"⚠️ NF get notch error: {e}")
             return None
-    
-    def set_nr2_level(self, level: int):
-        """
-        Set NR2 level (if using legacy NR instead of EMNR).
-        
-        Args:
-            level: 0-3 (0=OFF, 1=LOW, 2=MED, 3=HIGH)
-        """
-        if not self._initialized:
-            return
-        
-        try:
-            # Enable ANR (LMS based NR) with specific taps/delay
-            if level > 0:
-                _wdsp.SetRXAANRRun(ctypes.c_int(self.channel), ctypes.c_int(1))
-                taps = {1: 64, 2: 128, 3: 256}.get(level, 128)
-                delay = {1: 16, 2: 32, 3: 64}.get(level, 32)
-                gain = 0.0001
-                leakage = 0.9999
-                _wdsp.SetRXAANRVals(
-                    ctypes.c_int(self.channel),
-                    ctypes.c_int(taps),
-                    ctypes.c_int(delay),
-                    ctypes.c_double(gain),
-                    ctypes.c_double(leakage)
-                )
-            else:
-                _wdsp.SetRXAANRRun(ctypes.c_int(self.channel), ctypes.c_int(0))
-        except Exception as e:
-            print(f"⚠️ NR2 level error: {e}")
-    
+
     def process(self, audio_data: np.ndarray) -> np.ndarray:
         """
         Process audio through WDSP.

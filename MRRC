@@ -1540,20 +1540,27 @@ class ATR1000ProxyManager:
                     message_batch = []
                     last_batch_time = time.time()
                         
+            except BlockingIOError:
+                # Unix Socket 设置为 non-blocking 后，select 返回 ready 但 recv 可能仍会 BlockingIOError
+                pass
+            except (ConnectionResetError, BrokenPipeError, OSError) as e:
+                logger.warning(f"⚠️ ATR-1000 Unix Socket 断开: {e}")
+                break
             except Exception as e:
                 logger.debug(f"读取循环错误: {e}")
-                break
-        
+                # 非致命错误继续循环，不 break
+                continue
+
         # 退出前广播剩余消息
         if message_batch:
             self._broadcast_batch(message_batch)
-        
+
         logger.info(f"🔄 ATR-1000 代理读取线程已退出，共处理 {self.message_count} 条消息")
-        
-        # 如果还在运行，尝试重连
+
+        # 如果还在运行，尝试重连（延长到 5 秒，避免频繁重连风暴）
         if self.running:
-            logger.info("🔄 尝试重新连接 ATR-1000 代理...")
-            threading.Timer(1.0, self._connect).start()
+            logger.info("🔄 5秒后重新连接 ATR-1000 代理...")
+            threading.Timer(5.0, self._connect).start()
     
     def _broadcast_batch(self, message_batch):
         """批量广播消息到所有前端客户端"""
