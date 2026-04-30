@@ -1,6 +1,6 @@
-# Mobile Remote Radio Control (MRRC) V4.9.3
+# Mobile Remote Radio Control (MRRC) V5.0.0
 
-[![English](https://img.shields.io/badge/lang-English-blue.svg)](README_en.md) [![中文](https://img.shields.io/badge/lang-中文-red.svg)](README_CN.md) [![Version](https://img.shields.io/badge/version-V4.9.3-green.svg)](CHANGELOG.md)
+[![English](https://img.shields.io/badge/lang-English-blue.svg)](README_en.md) [![中文](https://img.shields.io/badge/lang-中文-red.svg)](README_CN.md) [![Version](https://img.shields.io/badge/version-V5.0.0-green.svg)](CHANGELOG.md)
 
 **Amateur Radio, Anytime, Anywhere.**
 
@@ -8,12 +8,15 @@ MRRC is a modern web-based remote control system optimized for mobile devices, e
 
 > ✅ **Core Advantage**: Mobile-first design, TX→RX switching latency <100ms, PWA support for offline access, optimized for one-hand operation
 >
-> 🎉 **V4.9.3 Highlights**:
-> - 🔄 **Third-Party Software Link**: Frequency sync with JTDX/flrig/wfview
-> - 🎨 **Blue Theme UI**: SDR-style professional color scheme
-> - 📊 **S-Meter Optimization**: Independent analyzer, unaffected by volume
+> 🎉 **V5.0.0 Highlights**:
+> - 🎨 **Glassmorphism UI**: Frosted glass cards with backdrop-filter blur
+> - ✨ **Unicode Icons**: Cross-platform consistent, no emoji dependency
+> - 📱 **Touch Optimization**: 44px WCAG buttons, 28px slider targets
+> - 📳 **Haptic Feedback**: Vibration API for tactile interaction
+> - 🔴 **TX Visual Feedback**: Frequency display glows red during transmit
+> - 🗑️ **CSS Cleanup**: 15% size reduction, 324 lines removed
 >
-> Previous: V4.9.2 Blue UI | V4.9.0 Voice Assistant, CW Decoder, SDR Interface
+> Previous: V4.9.3 Frequency Sync | V4.9.2 Blue UI | V4.9.0 Voice Assistant
 
 ## 🎯 Design Philosophy
 
@@ -310,7 +313,7 @@ Based on [F4HTB/Universal_HamRadio_Remote_HTML5](https://github.com/F4HTB/Univer
 
 ---
 
-**Latest Version: V4.9.0** (2026-03-14) | [View Changelog](CHANGELOG.md)
+**Latest Version: V5.0.0** (2026-03-14) | [View Changelog](CHANGELOG.md)
 
 **MRRC - Mobile Remote Radio Control**  
 *Amateur Radio, Anytime, Anywhere.*

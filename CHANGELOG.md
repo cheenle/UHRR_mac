@@ -5,6 +5,54 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [V5.0.0] - 2026-04-30
+
+### 🎨 移动端UI全面现代化
+
+**视觉设计**:
+- 玻璃拟态效果 (Glassmorphism): 毛玻璃卡片 + backdrop-filter blur(12px)
+- S表/功率显示卡片半透明背景
+- DSP控制面板玻璃效果
+- 侧滑菜单毛玻璃背景
+
+**图标系统**:
+- 全部emoji替换为Unicode符号 + CSS着色
+- 电源: `&#x23FB;`, 音量: `&#x1F50A;`, 录音: `&#x25CF;`
+- DSP图标: NR2波形、NB闪电、ANF菱形、NF静音、AGC方格
+- 跨平台渲染一致性保证
+
+**触摸优化**:
+- 音量滑块触摸热区从2px扩展到28px (视觉保持2px轨道)
+- 所有按钮满足WCAG 44px最小触摸目标
+- `@media (hover: none)` 下触摸反馈优化
+
+**反馈增强**:
+- Vibration API 震动反馈集成
+  - 调谐按钮: 8ms 轻震
+  - 菜单开合: 15ms 中震
+  - 步长切换: 15ms 中震
+- TX状态下频率显示红色呼吸光效动画
+
+**语言统一**:
+- UI标签全部英文: PWR/SWR/REC/CQ CQ/MED/L/OFF
+- 设置面板英文化 (音频设置、WDSP设置、高级设置)
+- DSP状态名称英文: NR2 ['OFF','MIN','LO','MED','HI'], AGC ['OFF','LONG','SLOW','MED','FAST']
+
+**CSS优化**:
+- 清理约324行冗余/失效CSS代码
+- 删除: 旧调谐控件、旧PTT样式、旧音量滑块、旧ATR卡片布局
+- 文件体积从46KB降至40KB (约15%瘦身)
+- 添加 `contain: layout style paint` 优化卡片渲染性能
+
+**文件变更**:
+- `www/mobile_modern.html` - Unicode图标、英文标签
+- `www/mobile_modern.css` - 玻璃拟态、TX光效、瘦身15%
+- `www/mobile_modern.js` - 震动反馈、英文设置面板、TX状态联动
+- `www/controls.js` - 英文设置面板HTML
+- `docs/System_Architecture_Design.md` - V5.0.0版本更新
+
+---
+
 ## [V4.9.3] - 2026-03-16
 
 ### 🔄 频率同步线程 - 第三方软件联动修复

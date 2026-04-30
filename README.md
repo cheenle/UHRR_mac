@@ -1,8 +1,8 @@
-# Mobile Remote Radio Control (MRRC) V4.9.3
+# Mobile Remote Radio Control (MRRC) V5.0.0
 
 [![English](https://img.shields.io/badge/lang-English-blue.svg)](README_en.md)
 [![中文](https://img.shields.io/badge/lang-中文-red.svg)](README_CN.md)
-[![Version](https://img.shields.io/badge/version-V4.9.3-green.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-V5.0.0-green.svg)](CHANGELOG.md)
 
 ---
 
@@ -14,9 +14,9 @@ A modern web-based remote control system optimized for mobile devices, enabling 
 
 基于现代Web技术的远程电台控制系统，专为移动端优化，让您随时随地灵活操控业余电台。
 
-> 🎉 **V4.9.3 更新**: 第三方软件频率联动修复（JTDX/flrig/wfview支持）
+> 🎉 **V5.0.0 更新**: 移动端UI全面现代化 — 玻璃拟态、Unicode图标、触摸优化、震动反馈、TX频率变色
 >
-> 历史版本: V4.9.2 蓝色系UI改版 | V4.9.0 语音助手、CW解码、SDR界面
+> 历史版本: V4.9.3 频率联动 | V4.9.2 蓝色系UI改版 | V4.9.0 语音助手、CW解码
 
 ---
 
@@ -256,7 +256,7 @@ Based on [F4HTB/Universal_HamRadio_Remote_HTML5](https://github.com/F4HTB/Univer
 
 ---
 
-**Latest Release: V4.9.0** (2026-03-14) | [View Changelog](CHANGELOG.md)
+**Latest Release: V5.0.0** (2026-03-14) | [View Changelog](CHANGELOG.md)
 
 ## 🖥️ Multi-Instance Support ⭐ New
 

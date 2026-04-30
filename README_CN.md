@@ -1,6 +1,6 @@
-# Mobile Remote Radio Control (MRRC) V4.9.3
+# Mobile Remote Radio Control (MRRC) V5.0.0
 
-[![English](https://img.shields.io/badge/lang-English-blue.svg)](README_en.md) [![中文](https://img.shields.io/badge/lang-中文-red.svg)](README_CN.md) [![版本](https://img.shields.io/badge/版本-V4.9.3-green.svg)](CHANGELOG.md)
+[![English](https://img.shields.io/badge/lang-English-blue.svg)](README_en.md) [![中文](https://img.shields.io/badge/lang-中文-red.svg)](README_CN.md) [![版本](https://img.shields.io/badge/版本-V5.0.0-green.svg)](CHANGELOG.md)
 
 **随时随地，畅享业余无线电。**
 
@@ -8,12 +8,15 @@ MRRC 是一款专为移动端优化的业余电台远程控制系统。无论您
 
 > ✅ **核心优势**：移动端优先设计，TX→RX切换延迟<100ms，PWA支持离线访问，专为单手操作优化
 >
-> 🎉 **V4.9.3 更新亮点**：
-> - 🔄 **第三方软件频率联动**：支持JTDX/flrig/wfview频率同步
-> - 🎨 **蓝色系UI风格**：SDR风格蓝色专业配色
-> - 📊 **S表显示优化**：独立分析器，不受音量控制影响
+> 🎉 **V5.0.0 更新亮点**：
+> - 🎨 **玻璃拟态UI**：毛玻璃卡片效果，现代化视觉设计
+> - ✨ **Unicode图标**：跨平台一致性图标，无emoji依赖
+> - 📱 **触摸优化**：44px WCAG按钮，28px滑块热区
+> - 📳 **震动反馈**：Vibration API集成
+> - 🔴 **TX视觉反馈**：发射时频率显示红色呼吸光效
+> - 🗑️ **CSS瘦身**：清理324行冗余代码，减少15%
 >
-> 历史版本：V4.9.2 蓝色UI | V4.9.0 语音助手、CW解码、SDR界面
+> 历史版本：V4.9.3 频率联动 | V4.9.2 蓝色UI | V4.9.0 语音助手
 
 ## 🎯 设计理念
 
@@ -361,7 +364,7 @@ curl -X POST -H "Content-Type: application/json" \
 
 ---
 
-**最新版本: V4.9.0** (2026-03-14) | [查看更新日志](CHANGELOG.md)
+**最新版本: V5.0.0** (2026-03-14) | [查看更新日志](CHANGELOG.md)
 
 ## 🖥️ 多实例支持（Multi-Instance）⭐ 新功能
 
