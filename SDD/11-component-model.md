@@ -8,7 +8,7 @@
 | AudioCapture | Core | `audio_interface.py` | PyAudio audio capture, device enumeration |
 | AudioPlayer | Core | `audio_interface.py` | PyAudio audio playback, device enumeration |
 | WDSPProcessor | Core | `wdsp_wrapper.py` | WDSP DSP processing (NR2/NB/ANF/AGC) |
-| AudioEncoder | Core | `MRRC`, `opus/` | Audio encoding (Int16/Opus/ADPCM) |
+| AudioEncoder | Core | `MRRC`, `opus/` | Audio encoding (Int16/Opus) |
 | AudioDecoder | Core | `MRRC`, `opus/` | Audio decoding (Int16/Float32/Opus) |
 | HamlibClient | Core | `hamlib_wrapper.py` | rigctld TCP communication, radio control |
 | ControlHandler | Core | `MRRC` | Control command parsing and dispatching |

@@ -11,8 +11,8 @@
 | ATRProxyService | Support | ATR-1000 tuner proxy, power/SWR display, smart learning |
 | AuthService | Support | User authentication, session validation |
 | SessionService | Support | WebSocket session lifecycle, client management |
-| APIService | Extended | REST API for external software integration (port 8080) |
-| VoiceAssistantService | Extended | AI voice recognition (Whisper) and synthesis (Qwen3-TTS) |
+| APIService | Extended | REST API for ATR-1000 control and status (atr1000_api_server.py, port 8080) |
+| VoiceAssistantService | Extended | AI voice recognition (Whisper) and synthesis (Qwen3-TTS), local process invoked by MRRC |
 | CWDecoderService | Extended | Real-time CW Morse code decoding (ONNX/PyTorch) |
 | FT8Service | Extended | FT8 digital mode automation via ULTRON |
 

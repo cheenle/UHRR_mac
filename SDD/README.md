@@ -87,6 +87,6 @@
 | DSP | WDSP | NR2/NB/ANF/AGC |
 | Control | Hamlib/rigctld | Radio CAT interface |
 | Codec | Opus | Low-latency audio (16kHz, 20kbps) |
-| Voice AI | Whisper + Qwen3-TTS | Speech recognition/synthesis |
+| Voice AI | Whisper + Qwen3-TTS | Speech recognition/synthesis (local process) |
 | CW Decode | ONNX Runtime | Browser-first Morse decoding |
 | FT8 | ULTRON / JTDX | Digital mode automation |

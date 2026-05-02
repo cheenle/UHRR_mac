@@ -16,7 +16,7 @@
 │  │  │  │  ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐  │  │ │   │
 │  │  │  │  │ MRRC   │ │ rigctld │ │atr1000_ │ │ voice   │  │  │ │   │
 │  │  │  │  │Server  │ │         │ │ proxy   │ │assistant│  │  │ │   │
-│  │  │  │  │ :8877  │ │ :4532   │ │ :60001  │ │ :9090  │  │  │ │   │
+│  │  │  │  │ :8877  │ │ :4532   │ │ :60001  │ │ (local)│  │  │ │   │
 │  │  │  │  └─────────┘ └─────────┘ └─────────┘ └─────────┘  │  │ │   │
 │  │  │  │       │          │           │           │        │  │ │   │
 │  │  │  │       └──────────┼───────────┼───────────┘        │  │ │   │
@@ -49,6 +49,7 @@
 | MRRC Server | Application server | 4+ CPU cores, 8+ GB RAM | Python 3.12+, Tornado |
 | rigctld | Controller process | - | Hamlib |
 | ATR-1000 Proxy | Proxy process | - | Python, atr1000_proxy.py |
+| ATR-1000 API Server | REST API process | - | Python, atr1000_api_server.py (:8080) |
 | ATR-1000 Device | Hardware tuner | 0-200W, 1.8-54MHz | Built-in firmware |
 | Voice Assistant | AI service | GPU recommended | Whisper, Qwen3-TTS |
 | Client | Browser | Modern browser | Chrome/Safari/Edge/Firefox |
@@ -61,8 +62,8 @@
 | MRRC Server | rigctld | TCP | 4532 | Radio CAT control |
 | MRRC Server | ATR-1000 Proxy | Unix Socket | /tmp/atr1000_*.sock | Tuner data exchange |
 | ATR-1000 Proxy | ATR-1000 Device | WebSocket | 60001 | Direct hardware communication |
-| MRRC Server | Voice Assistant | HTTP | 9090 | Speech recognition/synthesis |
-| External App | REST API | HTTP | 8080 | Third-party integration |
+| MRRC Server | Voice Assistant | In-process call | - | Local Python process, no HTTP |
+| External App | ATR API Server | HTTP | 8080 | Third-party tuner control |
 
 ## 12.4 Deployment Configuration
 
@@ -80,13 +81,13 @@
 | atr1000_proxy | `python3 atr1000_proxy.py` | `atr1000_radio1.pid` | `atr1000_radio1.log` |
 | atr1000_api_server | `python3 atr1000_api_server.py` | - | stdout |
 | rigctld | `rigctld -m <model> -r <port>` | - | Hamlib log |
-| voice_assistant | `python3 voice_assistant_service.py` | - | stdout |
+| voice_assistant | `python3 voice_assistant_service.py` | - | Local process, no HTTP port |
 
 ## 12.6 SSL/TLS Configuration
 
 | Component | Certificate Path | Key Path |
 |-----------|-----------------|----------|
-| MRRC Server | `certs/` directory or `UHRH.crt` (root) | `certs/` directory or `UHRH.key` (root) |
+| MRRC Server | `certs/radio.vlsc.net.pem` | `certs/radio.vlsc.net.key` |
 | Certificate Type | Let's Encrypt (ACME) | Auto-renewal via `acme_config.sh` |
 
 ## 12.7 Backup & Maintenance

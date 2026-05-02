@@ -30,7 +30,7 @@
 |----|-------|----------|--------|------------|
 | I1 | Multi-instance Unix Socket configuration | High | Resolved | Unique socket paths per instance |
 | I2 | ATR-1000 device connection stability | Medium | Monitoring | Dynamic polling, auto-reconnect |
-| I3 | Mobile Safari AudioWorklet limitations | Medium | Resolved | Fallback to ScriptProcessorNode |
+| I3 | Mobile Safari AudioWorklet limitations | Medium | Resolved | Dedicated AudioWorklet processors (rx_worklet_processor.js, tx_worklet_processor.js) |
 | I4 | WDSP library installation on non-Linux | Medium | Resolved | macOS support via Homebrew |
 
 ## 13.4 Dependencies

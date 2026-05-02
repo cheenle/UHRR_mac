@@ -41,7 +41,7 @@
 | ATR-1000 Proxy | Unix Socket | /tmp/atr1000_*.sock | Internal proxy communication |
 | ATR-1000 Device | WebSocket | 192.168.1.63:60001 | Tuner hardware connection |
 | rigctld | TCP | 4532 | Radio CAT control via Hamlib |
-| Voice Assistant | HTTP | 9090 | Whisper ASR + Qwen3-TTS service |
+| Voice Assistant | In-process | - | Whisper ASR + Qwen3-TTS, local invocation by MRRC |
 | FT8/ULTRON | UDP | 2237 | JTDX/WSJT-X integration |
 
 ## 4.3 Data Flow
