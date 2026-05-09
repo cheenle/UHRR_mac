@@ -2349,7 +2349,9 @@ function showTXEQPanel() {
         html += `<button class="txeq-select-btn ${activeClass}" onclick="selectTX_EQ('${key}')">`;
         html += `<strong>${preset.name}</strong>`;
         html += `<br><span style="font-size:11px;color:#aaa;">${preset.desc}</span>`;
-        if (key !== 'DEFAULT') {
+        if (key === 'RAGCHEW') {
+            html += `<br><span style="font-size:10px;color:#666;">低切${preset.lowCut}Hz 高切${preset.highCut / 1000}kHz 压缩3:1</span>`;
+        } else if (key !== 'DEFAULT') {
             // 显示格式：低频衰减 / 中频增益 / 高频衰减
             const lowStr = preset.low < 0 ? preset.low : '+' + preset.low;
             const highStr = preset.high < 0 ? preset.high : '+' + preset.high;

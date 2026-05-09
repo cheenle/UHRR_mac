@@ -2049,7 +2049,39 @@ OpusEncoderProcessor.prototype.onAudioProcess = function( e )
 {
 	this.instant = 0.0;
 	const that = this;
-	
+
+	// ====== Noise Gate (RagChew 模式) ======
+	// 在音频链末端，基于信号电平控制噪声门增益
+	if (isRagchewMode && AudioTX_noiseGate) {
+		var gateData = e.inputBuffer.getChannelData(0);
+		var rms = 0;
+		for (var g = 0; g < gateData.length; g++) {
+			rms += gateData[g] * gateData[g];
+		}
+		rms = Math.sqrt(rms / gateData.length);
+
+		// 噪声门阈值: -50dB (~0.003 线性)
+		var gateThreshold = 0.003;
+		var gateAttack = 0.01;  // 10ms 快速打开
+		var gateRelease = 0.3;  // 300ms 缓慢关闭，避免断字
+
+		if (!window._gateState) { window._gateState = 1; window._gateHold = 0; }
+
+		if (rms > gateThreshold) {
+			// 信号高于阈值：打开门
+			window._gateState = 1;
+			window._gateHold = Date.now();
+		} else if (window._gateHold && (Date.now() - window._gateHold > gateRelease * 1000)) {
+			// 持续低于阈值超过释放时间：关门
+			window._gateState = 0;
+		}
+
+		var targetGain = window._gateState > 0 ? 1.0 : 0.0;
+		if (Math.abs(AudioTX_noiseGate.gain.value - targetGain) > 0.01) {
+			AudioTX_noiseGate.gain.linearRampToValueAtTime(targetGain, AudioTX_noiseGate.context.currentTime + gateAttack);
+		}
+	}
+
 	    if( isRecording )
     {
 	var data = e.inputBuffer.getChannelData( 0 )
@@ -2232,6 +2264,14 @@ var AudioTX_antiAlias = null;  // 抗混叠低通滤波器第一级
 var AudioTX_antiAlias2 = null; // 抗混叠低通滤波器第二级 (更陡峭滚降)
 var AudioTX_preamp = null;     // TX 前置放大器（实质性提升发射功率）
 
+// RagChew 专用节点
+var AudioTX_highCut = null;    // 高切低通 @ 3kHz
+var AudioTX_midCut = null;     // 中低频衰减 @ 500Hz
+var AudioTX_presence = null;   // 高频存在感 @ 2.4kHz
+var AudioTX_compressor = null; // 动态压缩器
+var AudioTX_noiseGate = null;  // 噪声门（gain 节点）
+var isRagchewMode = false;     // 当前是否为 RagChew 模式
+
 // TX EQ 预设 - 针对短波通信 + 手机麦克风补偿优化
 // 参数说明：
 //   low:  低频增强 @ 350Hz (dB)，正值增强语音厚度，补偿手机麦克风低频不足
@@ -2257,6 +2297,15 @@ var TX_EQ_PRESETS = {
         mid: 12,     // 强调中频
         high: -18,   // 强力高频衰减，消除尖锐音
         desc: '最大发射功率：iPhone/手机专用'
+    },
+    'RAGCHEW': {
+        name: 'RagChew',
+        low: 0, mid: 0, high: 0,
+        lowCut: 150,    // 低切频率 Hz
+        midCutFreq: 500, midCutGain: -2,  // 400-600Hz 浊音区衰减
+        presenceFreq: 2400, presenceGain: 3,  // 2.4kHz 清晰度提升
+        highCut: 3000,  // 高切频率 Hz
+        desc: '本地强信号：温暖自然，平稳舒适，纯净背景'
     }
 };
 
@@ -2313,8 +2362,36 @@ function initTX_EQ(context) {
     AudioTX_eqHigh.type = 'highshelf';
     AudioTX_eqHigh.frequency.setValueAtTime(2700, context.currentTime);
     AudioTX_eqHigh.gain.setValueAtTime(0, context.currentTime);
-    
-    console.log('✅ TX EQ 初始化完成 (短波语音 100-2700Hz 带通 + 抗混叠 6kHz)');
+
+    // ========== RagChew 专用节点 ==========
+    AudioTX_highCut = context.createBiquadFilter();
+    AudioTX_highCut.type = 'lowpass';
+    AudioTX_highCut.frequency.setValueAtTime(3000, context.currentTime);
+    AudioTX_highCut.Q.setValueAtTime(0.707, context.currentTime);
+
+    AudioTX_midCut = context.createBiquadFilter();
+    AudioTX_midCut.type = 'peaking';
+    AudioTX_midCut.frequency.setValueAtTime(500, context.currentTime);
+    AudioTX_midCut.Q.setValueAtTime(1.0, context.currentTime);
+    AudioTX_midCut.gain.setValueAtTime(0, context.currentTime);
+
+    AudioTX_presence = context.createBiquadFilter();
+    AudioTX_presence.type = 'peaking';
+    AudioTX_presence.frequency.setValueAtTime(2400, context.currentTime);
+    AudioTX_presence.Q.setValueAtTime(1.4, context.currentTime);
+    AudioTX_presence.gain.setValueAtTime(0, context.currentTime);
+
+    AudioTX_compressor = context.createDynamicsCompressor();
+    AudioTX_compressor.threshold.setValueAtTime(-24, context.currentTime);
+    AudioTX_compressor.knee.setValueAtTime(30, context.currentTime);
+    AudioTX_compressor.ratio.setValueAtTime(3, context.currentTime);
+    AudioTX_compressor.attack.setValueAtTime(0.003, context.currentTime);
+    AudioTX_compressor.release.setValueAtTime(0.25, context.currentTime);
+
+    AudioTX_noiseGate = context.createGain();
+    AudioTX_noiseGate.gain.setValueAtTime(1, context.currentTime);
+
+    console.log('✅ TX EQ 初始化完成 (短波语音 100-2700Hz 带通 + 抗混叠 6kHz + RagChew 节点)');
 }
 
 // 应用 TX EQ 预设
@@ -2324,30 +2401,111 @@ function setTX_EQ_Preset(presetName) {
         console.warn('TX EQ 预设不存在:', presetName);
         return;
     }
-    
+
     currentTX_EQ_Preset = presetName;
-    
-    // 检查EQ节点是否存在
-    if (!AudioTX_eqLow || !AudioTX_eqMid || !AudioTX_eqHigh) {
-        console.warn('TX EQ 节点未初始化');
+
+    // 检查核心EQ节点是否存在
+    if (!AudioTX_eqLow || !AudioTX_eqMid || !AudioTX_eqHigh || !AudioTX_antiAlias || !AudioTX_antiAlias2) {
+        console.warn('TX EQ 节点未初始化，跳过预设:', presetName);
         return;
     }
-    
+
     // 获取AudioContext
     var ctx = AudioTX_eqLow.context;
-    if (!ctx) return;
-    
-    // 应用EQ设置
-    AudioTX_eqLow.gain.setValueAtTime(preset.low, ctx.currentTime);
-    AudioTX_eqMid.gain.setValueAtTime(preset.mid, ctx.currentTime);
-    AudioTX_eqHigh.gain.setValueAtTime(preset.high, ctx.currentTime);
-    
+    if (!ctx) {
+        console.warn('AudioContext 不存在，跳过预设:', presetName);
+        return;
+    }
+
+    if (presetName === 'RAGCHEW') {
+        // ====== RagChew 模式 ======
+        isRagchewMode = true;
+
+        // 标准3段EQ设为直通
+        AudioTX_eqLow.gain.setValueAtTime(0, ctx.currentTime);
+        AudioTX_eqMid.gain.setValueAtTime(0, ctx.currentTime);
+        AudioTX_eqHigh.gain.setValueAtTime(0, ctx.currentTime);
+
+        // antiAlias / antiAlias2 设为直通（极高截止频率的低通 = 直通）
+        AudioTX_antiAlias.type = 'lowpass';
+        AudioTX_antiAlias.frequency.setValueAtTime(22000, ctx.currentTime);
+        AudioTX_antiAlias.Q.setValueAtTime(0.707, ctx.currentTime);
+        AudioTX_antiAlias2.type = 'lowpass';
+        AudioTX_antiAlias2.frequency.setValueAtTime(22000, ctx.currentTime);
+        AudioTX_antiAlias2.Q.setValueAtTime(0.707, ctx.currentTime);
+
+        // 低切 150Hz — 使用 AudioTX_highCut 节点（不动态改变 filter type）
+        if (AudioTX_highCut) {
+            AudioTX_highCut.type = 'highpass';
+            AudioTX_highCut.frequency.setValueAtTime(preset.lowCut, ctx.currentTime);
+            AudioTX_highCut.Q.setValueAtTime(0.707, ctx.currentTime);
+            AudioTX_highCut.gain.setValueAtTime(0, ctx.currentTime);
+        }
+
+        // 中低频衰减 500Hz -2dB
+        if (AudioTX_midCut) {
+            AudioTX_midCut.gain.setValueAtTime(preset.midCutGain, ctx.currentTime);
+            AudioTX_midCut.frequency.setValueAtTime(preset.midCutFreq, ctx.currentTime);
+        }
+
+        // 高频增强 2.4kHz +3dB (Presence)
+        if (AudioTX_presence) {
+            AudioTX_presence.gain.setValueAtTime(preset.presenceGain, ctx.currentTime);
+            AudioTX_presence.frequency.setValueAtTime(preset.presenceFreq, ctx.currentTime);
+        }
+
+        // 高切 3kHz — 在 presence 之后再加一级低通
+        // 使用 AudioTX_highCut 串联 antiAlias2 实现: highCut(highpass @ 150) → midCut → presence → antiAlias2(lowpass @ 3k)
+
+        // 压缩器: Ratio 3:1, 温和压缩
+        if (AudioTX_compressor) {
+            AudioTX_compressor.threshold.setValueAtTime(-24, ctx.currentTime);
+            AudioTX_compressor.knee.setValueAtTime(30, ctx.currentTime);
+            AudioTX_compressor.ratio.setValueAtTime(3, ctx.currentTime);
+            AudioTX_compressor.attack.setValueAtTime(0.003, ctx.currentTime);
+            AudioTX_compressor.release.setValueAtTime(0.250, ctx.currentTime);
+        }
+
+        // 噪声门
+        if (AudioTX_noiseGate) {
+            AudioTX_noiseGate.gain.setValueAtTime(1, ctx.currentTime);
+        }
+
+        console.log('🎛️ TX EQ RagChew: 低切=' + preset.lowCut + 'Hz, 500Hz=' + preset.midCutGain + 'dB, 2.4kHz=' + preset.presenceGain + 'dB, 高切=' + preset.highCut + 'Hz, 压缩比=3:1');
+    } else {
+        // ====== 标准模式 ======
+        isRagchewMode = false;
+
+        // 恢复 antiAlias / antiAlias2 为原始低通
+        AudioTX_antiAlias.type = 'lowpass';
+        AudioTX_antiAlias.frequency.setValueAtTime(4500, ctx.currentTime);
+        AudioTX_antiAlias.Q.setValueAtTime(0.707, ctx.currentTime);
+        AudioTX_antiAlias2.type = 'lowpass';
+        AudioTX_antiAlias2.frequency.setValueAtTime(4500, ctx.currentTime);
+        AudioTX_antiAlias2.Q.setValueAtTime(0.707, ctx.currentTime);
+
+        // RagChew 专用滤波器直通
+        if (AudioTX_highCut) {
+            AudioTX_highCut.type = 'peaking';
+            AudioTX_highCut.frequency.setValueAtTime(1000, ctx.currentTime);
+            AudioTX_highCut.Q.setValueAtTime(0.5, ctx.currentTime);
+            AudioTX_highCut.gain.setValueAtTime(0, ctx.currentTime);
+        }
+        if (AudioTX_midCut) AudioTX_midCut.gain.setValueAtTime(0, ctx.currentTime);
+        if (AudioTX_presence) AudioTX_presence.gain.setValueAtTime(0, ctx.currentTime);
+
+        // 应用标准3段EQ
+        AudioTX_eqLow.gain.setValueAtTime(preset.low, ctx.currentTime);
+        AudioTX_eqMid.gain.setValueAtTime(preset.mid, ctx.currentTime);
+        AudioTX_eqHigh.gain.setValueAtTime(preset.high, ctx.currentTime);
+
+        console.log('🎛️ TX EQ 预设:', preset.name, '- 低频:', preset.low, 'dB, 中频:', preset.mid, 'dB, 高频:', preset.high, 'dB');
+    }
+
     // 保存到Cookie
     if (typeof setCookie === 'function') {
         setCookie('TX_EQ_Preset', presetName, 180);
     }
-    
-    console.log('🎛️ TX EQ 预设:', preset.name, '- 低频:', preset.low, 'dB, 中频:', preset.mid, 'dB, 高频:', preset.high, 'dB');
 }
 
 // 获取当前TX EQ预设
@@ -2363,80 +2521,93 @@ function getTX_EQ_Presets() {
 MediaHandler.prototype.callback = function( stream )
 {
     console.log( '🎤 MediaHandler.callback: 开始设置麦克风...' );
-    
-    // iOS Safari 关键：确保AudioContext处于running状态
-    if (this.context.state === 'suspended') {
-        console.log('🎤 MediaHandler.callback: AudioContext suspended，尝试恢复...');
-        this.context.resume().then(() => {
-            console.log('✅ MediaHandler.callback: AudioContext已恢复');
-        }).catch(e => {
-            console.error('❌ MediaHandler.callback: AudioContext恢复失败:', e);
-        });
+
+    try {
+        // iOS Safari 关键：确保AudioContext处于running状态
+        if (this.context.state === 'suspended') {
+            console.log('🎤 MediaHandler.callback: AudioContext suspended，尝试恢复...');
+            this.context.resume().then(() => {
+                console.log('✅ MediaHandler.callback: AudioContext已恢复');
+            }).catch(e => {
+                console.error('❌ MediaHandler.callback: AudioContext恢复失败:', e);
+            });
+        }
+
+        AudioTX_analyser = this.context.createAnalyser();
+        this.gain_node = this.context.createGain();
+        this.micSource = this.context.createMediaStreamSource( stream );
+        this.processor = this.context.createScriptProcessor( this.audioProcessor.bufferSize, 1, 1 );
+        this.processor.onaudioprocess = this.audioProcessor.onAudioProcess.bind( this.audioProcessor );
+
+        // 初始化 TX EQ
+        initTX_EQ(this.context);
+
+        // 音频链: micSource → preamp → antiAlias → antiAlias2 → eqLow → eqMid → eqHigh → midCut → presence → compressor → noiseGate → gain_node → processor
+        // RagChew 专用节点在标准模式下设为直通（flat gain / bypass），不影响信号
+        this.micSource.connect(AudioTX_preamp);
+        AudioTX_preamp.connect(AudioTX_antiAlias);
+        AudioTX_antiAlias.connect(AudioTX_antiAlias2);
+        AudioTX_antiAlias2.connect(AudioTX_eqLow);
+        AudioTX_eqLow.connect(AudioTX_eqMid);
+        AudioTX_eqMid.connect(AudioTX_eqHigh);
+        AudioTX_eqHigh.connect(AudioTX_midCut);
+        AudioTX_midCut.connect(AudioTX_presence);
+        AudioTX_presence.connect(AudioTX_compressor);
+        AudioTX_compressor.connect(AudioTX_noiseGate);
+        AudioTX_noiseGate.connect(this.gain_node);
+        this.gain_node.connect( this.processor );
+
+        // 关键：ScriptProcessorNode 需要连接到输出才能触发 onaudioprocess
+        // 但直接连接 destination 会导致回声自激
+        // 解决方案：连接到静音节点（gain=0），再连接到 destination
+        // 这样处理器能工作，但不会有声音输出到扬声器
+        this.muteNode = this.context.createGain();
+        this.muteNode.gain.value = 0;  // 静音
+        this.processor.connect(this.muteNode);
+        this.muteNode.connect(this.context.destination);
+
+        this.gain_node.connect( AudioTX_analyser );
+    } catch (e) {
+        console.error('❌ TX 音频链初始化失败:', e);
+        this.error(e);
+        return;
     }
-    
-	AudioTX_analyser = this.context.createAnalyser();
-	this.gain_node = this.context.createGain();
-    this.micSource = this.context.createMediaStreamSource( stream );
-    this.processor = this.context.createScriptProcessor( this.audioProcessor.bufferSize, 1, 1 );
-    this.processor.onaudioprocess = this.audioProcessor.onAudioProcess.bind( this.audioProcessor );
-    
-    // 初始化 TX EQ
-    initTX_EQ(this.context);
-    
-    // 音频链: micSource → preamp → antiAlias → antiAlias2 → eqLow → eqMid → eqHigh → gain_node → processor
-    this.micSource.connect(AudioTX_preamp);
-    AudioTX_preamp.connect(AudioTX_antiAlias);
-    AudioTX_antiAlias.connect(AudioTX_antiAlias2);
-    AudioTX_antiAlias2.connect(AudioTX_eqLow);
-    AudioTX_eqLow.connect(AudioTX_eqMid);
-    AudioTX_eqMid.connect(AudioTX_eqHigh);
-    AudioTX_eqHigh.connect(this.gain_node);
-	this.gain_node.connect( this.processor );
-    
-    // 关键：ScriptProcessorNode 需要连接到输出才能触发 onaudioprocess
-    // 但直接连接 destination 会导致回声自激
-    // 解决方案：连接到静音节点（gain=0），再连接到 destination
-    // 这样处理器能工作，但不会有声音输出到扬声器
-    this.muteNode = this.context.createGain();
-    this.muteNode.gain.value = 0;  // 静音
-    this.processor.connect(this.muteNode);
-    this.muteNode.connect(this.context.destination);
-    
-	this.gain_node.connect( AudioTX_analyser );
     
     // 从Cookie恢复EQ预设，或根据设备类型自动设置
-    var savedPreset = typeof getCookie === 'function' ? getCookie('TX_EQ_Preset') : '';
-    
-    if (savedPreset && TX_EQ_PRESETS[savedPreset]) {
-        // 用户已保存过预设，恢复它
-        setTX_EQ_Preset(savedPreset);
-    } else {
-        // 没有保存的预设，自动检测设备类型并应用合适的预设
-        var userAgent = navigator.userAgent || '';
-        var isIPhone = /iPhone|iPod/.test(userAgent);
-        var isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent) 
-                       || (navigator.maxTouchPoints && navigator.maxTouchPoints > 2);
-        
-        if (isIPhone) {
-            // iPhone 使用"强"预设（最强高频衰减）
-            setTX_EQ_Preset('STRONG');
-            console.log('📱 检测到 iPhone，自动应用 STRONG TX EQ 预设 (-35dB 高频衰减)');
-        } else if (isMobile) {
-            // 其他移动设备使用"中"预设
-            setTX_EQ_Preset('MEDIUM');
-            console.log('📱 检测到移动设备，自动应用 MEDIUM TX EQ 预设 (-20dB 高频衰减)');
+    try {
+        var savedPreset = typeof getCookie === 'function' ? getCookie('TX_EQ_Preset') : '';
+
+        if (savedPreset && TX_EQ_PRESETS[savedPreset]) {
+            // 用户已保存过预设，恢复它
+            setTX_EQ_Preset(savedPreset);
         } else {
-            // 桌面设备默认无处理
-            setTX_EQ_Preset('DEFAULT');
-            console.log('🖥️ 检测到桌面设备，使用 DEFAULT TX EQ 预设');
+            // 没有保存的预设，自动检测设备类型并应用合适的预设
+            var userAgent = navigator.userAgent || '';
+            var isIPhone = /iPhone|iPod/.test(userAgent);
+            var isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent)
+                           || (navigator.maxTouchPoints && navigator.maxTouchPoints > 2);
+
+            if (isIPhone) {
+                setTX_EQ_Preset('STRONG');
+                console.log('📱 检测到 iPhone，自动应用 STRONG TX EQ 预设');
+            } else if (isMobile) {
+                setTX_EQ_Preset('MEDIUM');
+                console.log('📱 检测到移动设备，自动应用 MEDIUM TX EQ 预设');
+            } else {
+                setTX_EQ_Preset('DEFAULT');
+                console.log('🖥️ 检测到桌面设备，使用 DEFAULT TX EQ 预设');
+            }
         }
+    } catch (e) {
+        console.error('❌ TX EQ 预设应用失败:', e);
+        // 预设失败不影响音频链正常工作
     }
-    
+
     console.log( '✅ MediaHandler.callback: 麦克风设置完成 (含TX EQ)' );
 }
 
 
-MediaHandler.prototype.error = function( err ) { 
+MediaHandler.prototype.error = function( err ) {
     console.error('MediaHandler error:', err);
     // 提供更详细的错误信息
     let errorMessage = "音频设备初始化失败";
@@ -2454,8 +2625,11 @@ MediaHandler.prototype.error = function( err ) {
             case "OverconstrainedError":
                 errorMessage += "：音频设备参数不匹配";
                 break;
+            case "TypeError":
+                errorMessage += "：类型错误 — " + (err.message || err);
+                break;
             default:
-                errorMessage += "：" + err.name;
+                errorMessage += "：" + err.name + " — " + (err.message || '');
         }
     }
     alert(errorMessage);
