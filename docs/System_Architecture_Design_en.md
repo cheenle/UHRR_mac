@@ -1,7 +1,7 @@
 # Mobile Remote Radio Control (MRRC) System Architecture Design Document
 
 ## Document Information
-- **Version**: v4.9.3 (2026-03-29)
+- **Version**: v5.1.0 (2026-05-10)
 - **Author**: System Architecture Team
 - **Status**: Production Ready
 - **Classification**: Confidential/Internal
@@ -23,6 +23,7 @@
 - **🎛️ Complete Control**: Full radio control including frequency, mode, PTT, antenna tuner
 - **📊 Power Monitoring**: ATR-1000 integration, real-time power and SWR display
 - **🎵 Audio Optimization**: TX equalizer, shortwave voice enhancement
+- **🎙️ RagChew Mode**: Full-chain Web Audio API processing (EQ+compressor+noise gate) for warm, natural voice
 - **💾 Tuner Storage**: Frequency-parameter intelligent matching
 - **🔇 WDSP Noise Reduction**: Professional-grade NR2 spectral noise reduction, clearer SSB voice
 - **🎙️ AI Voice Assistant**: Whisper speech recognition + Qwen3-TTS voice synthesis
@@ -879,10 +880,12 @@ Community contributions are welcome, but please note:
 | v4.2.0 | 2026-03 | TX EQ equalizer, shortwave voice optimization | Production Ready |
 | v4.3.0 | 2026-03 | ATR-1000 architecture separation, independent proxy | Production Ready |
 | v4.4.0 | 2026-03-05 | ATR-1000 real-time display major fix | Production Ready |
-| v4.9.1 | 2026-03-15 | Multi-instance support deep optimization | Current Version |
+| v4.5.0 | 2026-03-06 | ATR-1000 real-time power display stable version | Historical Version |
+| v4.6.0 | 2026-03-09 | WDSP digital signal processing integration | Production Ready |
 | v4.9.0 | 2026-03-14 | Voice assistant, CW mode, SDR interface | Production Ready |
-| v4.5.4 | 2026-03-06 | ATR-1000 real-time power display stable version | Historical Version |
-| v4.5.4 | 2026-03-06 | Frequency adjustment button layout optimization | Current Version |
+| v4.9.1 | 2026-03-15 | Multi-instance support deep optimization | Production Ready |
+| v5.0.0 | 2026-04-30 | Mobile UI modernization: glassmorphism, Unicode icons, CSS reduction | Historical Version |
+| v5.1.0 | 2026-05-10 | RagChew TX audio preset, Web Audio full-chain processing, Safari setValueAtTime fix | Current Version |
 
 ---
 

@@ -701,6 +701,101 @@ class MRRCApp {
 
 ---
 
+## 八.5 RagChew TX 音频处理链（V5.1.0 实战案例）
+
+RagChew 是 MRRC 项目中基于 Web Audio API 的完整 TX 音频处理实现，展示了多节点协同工作的最佳实践。
+
+### 音频链路设计
+
+```
+micSource → preamp → antiAlias → antiAlias2 → eqLow → eqMid → eqHigh
+  → midCut → presence → compressor → noiseGate → gain_node → processor
+```
+
+### 关键节点创建
+
+```javascript
+// 1. 专用滤波器节点（RagChew 模式使用，标准模式为旁通）
+midCut = ctx.createBiquadFilter();
+midCut.type = 'peaking';
+midCut.frequency.value = 500;
+midCut.gain.value = 0;        // 默认旁通
+midCut.Q.setValueAtTime(1.0, ctx.currentTime);  // ⚠️ 必须传 ctx.currentTime
+
+presence = ctx.createBiquadFilter();
+presence.type = 'peaking';
+presence.frequency.value = 2400;
+presence.gain.value = 0;       // 默认旁通
+presence.Q.setValueAtTime(1.4, ctx.currentTime);
+
+highCut = ctx.createBiquadFilter();
+highCut.type = 'lowpass';
+highCut.frequency.value = 8000;  // 默认旁通（高频）
+highCut.Q.setValueAtTime(0.5, ctx.currentTime);
+
+// 2. 动态压缩器
+compressor = ctx.createDynamicsCompressor();
+compressor.threshold.value = -24;
+compressor.knee.value = 30;
+compressor.ratio.value = 1;     // 默认 1:1（旁通）
+compressor.attack.value = 0.003;
+compressor.release.value = 0.25;
+
+// 3. 噪声门（基于 ScriptProcessorNode RMS 检测）
+noiseGate = ctx.createScriptProcessor(2048, 1, 1);
+noiseGate.onaudioprocess = (e) => {
+  const input = e.inputBuffer.getChannelData(0);
+  const output = e.outputBuffer.getChannelData(0);
+  // RMS 计算 + 攻击/释放包络
+  let rms = 0;
+  for (let i = 0; i < input.length; i++) rms += input[i] * input[i];
+  rms = Math.sqrt(rms / input.length);
+  // 门控逻辑：rms < threshold 时静音
+};
+```
+
+### RagChew 模式激活
+
+```javascript
+function setRagChewMode(enabled) {
+  if (enabled) {
+    // 激活 RagChew 参数
+    eqLow.frequency.setValueAtTime(150, ctx.currentTime);
+    eqLow.gain.setValueAtTime(-12, ctx.currentTime);  // 低切效果
+    midCut.gain.setValueAtTime(-2, ctx.currentTime);
+    midCut.frequency.setValueAtTime(500, ctx.currentTime);
+    presence.gain.setValueAtTime(3, ctx.currentTime);
+    presence.frequency.setValueAtTime(2400, ctx.currentTime);
+    highCut.frequency.setValueAtTime(3000, ctx.currentTime);
+    compressor.ratio.setValueAtTime(3, ctx.currentTime);
+    noiseGateThreshold = -50;  // dB
+  } else {
+    // 恢复旁通
+    midCut.gain.setValueAtTime(0, ctx.currentTime);
+    presence.gain.setValueAtTime(0, ctx.currentTime);
+    highCut.frequency.setValueAtTime(8000, ctx.currentTime);
+    compressor.ratio.setValueAtTime(1, ctx.currentTime);
+    noiseGateThreshold = -100;  // 彻底关闭
+  }
+}
+```
+
+### ⚠️ Safari 兼容性要点
+
+**`setValueAtTime()` 必须传两个参数**：
+
+```javascript
+// ❌ 错误：Safari 会报 "not enough arguments"
+filter.Q.setValueAtTime(1.0);
+
+// ✅ 正确：必须传 context.currentTime
+filter.Q.setValueAtTime(1.0, ctx.currentTime);
+```
+
+这是 V5.1.0 修复的关键 Bug：所有 `setValueAtTime()` 调用必须包含第二个参数 `context.currentTime`，Safari 对 Web Audio API 规范执行最严格。
+
+---
+
 ## 九、故障排查指南
 
 ### 9.1 常见问题
@@ -752,6 +847,7 @@ class DebugProcessor extends AudioWorkletProcessor {
 
 ---
 
-**文档版本**: 1.0  
-**最后更新**: 2026-03-22  
-**适用于**: MRRC 项目 Web Audio 开发
+**文档版本**: 1.1 (V5.1.0)  
+**最后更新**: 2026-05-10  
+**适用于**: MRRC 项目 Web Audio 开发  
+**更新日志**: 添加 RagChew TX 音频处理链实战案例、Safari setValueAtTime 兼容性说明

@@ -4,6 +4,7 @@
 |---------|------|--------|---------|
 | SDD V1.0 | 2026-03-15 | MRRC Team | Initial SDD document, IBM TeamSD methodology, 14 chapters |
 | SDD V2.0 | 2026-05-02 | MRRC Team | Updated to V5.0.0: Mobile UI redesign, ATR-1000 anti-disconnect, Opus HPF support, spectrum analysis tool |
+| SDD V2.1 | 2026-05-10 | MRRC Team | Updated to V5.1.0: RagChew TX audio preset, Web Audio full-chain processing |
 
 ## Key Changes in V2.0 (V5.0.0)
 
@@ -23,6 +24,21 @@
 - Spectrum analysis tool integration
 - FT8/ULTRON digital mode integration
 - Remote service management (SSH-based)
+
+## Key Changes in V2.1 (V5.1.0)
+
+### Updated Sections
+- **Chapter 1**: Updated version info to V5.1.0
+- **Chapter 7**: Added TX audio processing subject area for RagChew
+- **Chapter 9**: Added Web Audio API full-chain audio processing architecture
+- **Chapter 11**: Added RagChew audio nodes in component inventory
+
+### New Features Documented
+- RagChew TX audio preset (EQ + compressor + noise gate via Web Audio API)
+- Low-cut 150Hz, mid-cut -2dB@500Hz, presence +3dB@2.4kHz, high-cut 3kHz
+- Dynamic compressor 3:1 ratio for smooth volume leveling
+- Noise gate with -50dB threshold for silent background
+- Safari setValueAtTime compatibility fix (critical bug resolution)
 
 ---
 

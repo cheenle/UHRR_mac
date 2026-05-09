@@ -1,7 +1,7 @@
 # Mobile Remote Radio Control (MRRC) 系统架构设计文档
 
 ## 文档信息
-- **版本**: v5.0.0 (2026-04-30)
+- **版本**: v5.1.0 (2026-05-10)
 - **作者**: System Architecture Team
 - **状态**: 生产就绪
 - **分类**: 机密/内部
@@ -23,6 +23,7 @@
 - **🎛️ 完整控制**: 频率、模式、PTT、天调等完整电台功能
 - **📊 功率监测**: ATR-1000集成，实时显示功率和SWR
 - **🎵 音频优化**: TX均衡器，抗混叠滤波，短波语音增强
+- **🎙️ RagChew模式**: Web Audio API全链路处理，EQ+压缩+噪声门，温暖自然人声
 - **💾 天调存储**: 频率-参数智能匹配
 - **🔇 WDSP降噪**: 专业级NR2频谱降噪，SSB语音更清晰
 - **🎙️ AI语音助手**: Whisper语音识别 + Qwen3-TTS语音合成
@@ -357,6 +358,13 @@ JTDX/WSJT-X → UDP(2237) → ULTRON → 自动应答 → UDP → JTDX/WSJT-X
   - 中频增强: peaking @ 1000Hz
   - 高频衰减: highshelf @ 2500Hz
   - 预设: 默认、短波语音、弱信号、比赛模式
+- **RagChew TX 处理链** (V5.1.0): Web Audio API 全链路音频处理
+  - 低切: BiquadFilter lowpass @ 150Hz
+  - 中频衰减: BiquadFilter peaking @ 500Hz, -2dB
+  - 临境感: BiquadFilter peaking @ 2.4kHz, +3dB
+  - 高切: BiquadFilter lowpass @ 3.0kHz
+  - 压缩器: DynamicsCompressorNode, 3:1 比率
+  - 噪声门: ScriptProcessorNode, -50dB 阈值, 10ms攻击/300ms释放
 - **Int16编码器**: TX音频编码
   - 采样率: 16kHz
   - 编码格式: Int16 PCM (50%带宽优化)
@@ -921,7 +929,8 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 | v4.9.1 | 2026-03-15 | 多实例支持深度优化 | 生产就绪 |
 | v4.9.2 | 2026-03-16 | FT8 ULTRON集成优化 | 生产就绪 |
 | v4.9.3 | 2026-03-29 | 文档全面更新，功能完善 | 历史版本 |
-| v5.0.0 | 2026-04-30 | 移动端UI全面现代化：玻璃拟态效果、Unicode图标替换、CSS瘦身15%、触摸热区优化、震动反馈、TX频率变色、英文界面统一 | 当前版本 |
+| v5.0.0 | 2026-04-30 | 移动端UI全面现代化：玻璃拟态效果、Unicode图标替换、CSS瘦身15%、触摸热区优化、震动反馈、TX频率变色、英文界面统一 | 历史版本 |
+| v5.1.0 | 2026-05-10 | RagChew TX 语音美化模式、Web Audio API 全链路处理（EQ+压缩+噪声门）、修复 Safari setValueAtTime 初始化错误 | 当前版本 |
 
 ---
 

@@ -2,8 +2,8 @@
 
 **Mobile Remote Radio Control - Mobile Operation Guide**
 
-Version: V4.9.3  
-Last Updated: March 10, 2026
+Version: V5.1.0  
+Last Updated: May 10, 2026
 
 ---
 
@@ -13,8 +13,9 @@ Last Updated: March 10, 2026
 2. [Interface Overview](#2-interface-overview)
 3. [Core Features](#3-core-features)
 4. [Advanced Features](#4-advanced-features)
-5. [Settings and Configuration](#5-settings-and-configuration)
-6. [FAQ](#6-faq)
+5. [RagChew TX Audio Preset](#5-ragchew-tx-audio-preset)
+6. [Settings and Configuration](#6-settings-and-configuration)
+7. [FAQ](#7-faq)
 
 ---
 
@@ -203,9 +204,54 @@ Via Menu → Audio Controls to adjust:
 
 ---
 
-## 5. Settings and Configuration
+## 5. RagChew TX Audio Preset
 
-### 5.1 Connection Status Indicators
+### 5.1 Overview
+
+RagChew (new in V5.1.0) is a TX transmit audio processing preset optimized for local strong signals, implemented via Web Audio API. It delivers a warm, natural voice quality ideal for casual chatting (ragchewing) sessions.
+
+### 5.2 How to Use
+
+1. On the main interface, find the **DSP** control panel
+2. Enable the DSP main switch
+3. Navigate to Menu → **TX Equalizer**
+4. Select the **RagChew** preset
+
+### 5.3 Audio Processing Chain
+
+In RagChew mode, TX audio passes through the following stages:
+
+| Processing Stage | Parameter | Effect |
+|-----------------|-----------|--------|
+| Low-cut Filter | 150Hz | Removes rumble and ambient noise |
+| Mid Attenuation | -2dB @ 500Hz | Reduces nasality, makes voice more transparent |
+| Presence Boost | +3dB @ 2.4kHz | Enhances voice presence and clarity |
+| High-cut Filter | 3.0kHz | Softens high frequencies, avoids harshness |
+| Dynamic Compression | 3:1 ratio | Smooths volume fluctuations for steady output |
+| Noise Gate | -50dB threshold | Eliminates background noise when silent |
+
+### 5.4 Use Cases
+
+- **Local strong signal QSOs**: When signal is good and you want warm, natural voice quality
+- **Casual ragchewing**: Not contesting, prioritizing comfortable listening
+- **Daily SSB communication**: Softer and warmer than default presets
+
+### 5.5 Difference from Standard TX Equalizer
+
+| Feature | Standard TX EQ | RagChew |
+|---------|---------------|---------|
+| Processing | Simple 3-band EQ | Full Web Audio processing chain |
+| Compressor | None | 3:1 dynamic compression |
+| Noise Gate | None | -50dB auto gate |
+| Voice Character | Bright, penetrating | Warm, natural, soft |
+
+> **Tip**: In RagChew mode, the standard TX Equalizer 3-band parameters are not applied. Switch back to DEFAULT/MEDIUM/STRONG presets to restore standard EQ processing.
+
+---
+
+## 6. Settings and Configuration
+
+### 6.1 Connection Status Indicators
 
 | Indicator | Status | Description |
 |-----------|--------|-------------|
@@ -215,7 +261,7 @@ Via Menu → Audio Controls to adjust:
 | PTT Button | ⚪ White | Standby |
 | S-meter | Dynamic bar | Signal strength (S0-S9+60dB) |
 
-### 5.2 WDSP Digital Processing Settings
+### 6.2 WDSP Digital Processing Settings
 
 From Menu → Settings → 🎛️ WDSP Digital Processing
 
@@ -229,7 +275,7 @@ From Menu → Settings → 🎛️ WDSP Digital Processing
 
 **WDSP Effect**: NR2 spectral noise reduction can make SSB voice sound like FM, significantly reducing background noise.
 
-### 5.3 Performance Metrics
+### 6.3 Performance Metrics
 
 | Metric | Value |
 |--------|-------|
