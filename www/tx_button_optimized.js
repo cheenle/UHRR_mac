@@ -8,20 +8,29 @@ let TXState = {
     element: null,
     touchId: null,  // 跟踪当前触摸ID
     startTime: 0,
-    isProcessing: false  // 防止状态竞争的锁
+    isProcessing: false,  // 防止状态竞争的锁
+    pendingStop: false,   // 标记是否有挂起的 stop 请求（修复 Bug 1）
+    pttWatchdogTimer: null // PTT看门狗超时定时器（修复 Bug 3）
 };
 
 // 核心TX控制函数 - 优化 TX→RX 切换
 async function TXControl(action) {
     const timestamp = new Date().toISOString().substr(11, 12);
     console.log(`[${timestamp}] 🎯 TX控制: ${action}, 当前状态: ${TXState.isPressed}, 系统状态: ${poweron}, 处理中: ${TXState.isProcessing}`);
-    
-    // 防止状态竞争：如果正在处理，等待
+
+    // Bug 1 修复：stop 请求在 isProcessing 时排队而非丢弃
+    if (TXState.isProcessing && action === 'stop' && TXState.isPressed) {
+        TXState.pendingStop = true;
+        console.log(`[${timestamp}] ⚡ stop 提前排队（start 正在处理）`);
+        return true;
+    }
+
+    // 其他动作在 isProcessing 时丢弃
     if (TXState.isProcessing) {
         console.log(`[${timestamp}] ⚠️ 忽略 ${action}：正在处理中`);
         return false;
     }
-    
+
     // 检查系统状态
     if (!poweron && action === 'start') {
         console.log(`[${timestamp}] ❌ 系统未启动，无法开始TX`);
@@ -36,11 +45,33 @@ async function TXControl(action) {
     
     if (action === 'start' && !TXState.isPressed) {
         TXState.isProcessing = true;  // 加锁
+        TXState.pendingStop = false;  // 清除任何挂起的 stop
         console.log(`[${timestamp}] 🚀 开始TX流程`);
         
         // 开始TX
         TXState.isPressed = true;
         TXState.startTime = Date.now();
+        // Bug 3: 启动 PTT 看门狗（30秒自动超时，防止卡死）
+        if (TXState.pttWatchdogTimer) {
+            clearTimeout(TXState.pttWatchdogTimer);
+        }
+        TXState.pttWatchdogTimer = setTimeout(() => {
+            if (TXState.isPressed) {
+                const elapsed = ((Date.now() - TXState.startTime) / 1000).toFixed(1);
+                console.warn(`[${new Date().toISOString().substr(11, 12)}] ⏰ PTT 看门狗超时(${elapsed}s)，强制恢复RX`);
+                TXState.isPressed = false;
+                TXState.pendingStop = false;
+                if (typeof sendTRXptt === 'function') sendTRXptt(false);
+                if (typeof toggleRecord === 'function') toggleRecord();
+                if (typeof toggleaudioRX === 'function') toggleaudioRX(false);
+                if (typeof window.updatePTTStatus === 'function') window.updatePTTStatus(false);
+                if (typeof button_unpressed === 'function') button_unpressed();
+                if (typeof window.ATR1000 !== 'undefined') {
+                    if (window.ATR1000.onTXStop) window.ATR1000.onTXStop();
+                    if (window.ATR1000.clearDisplay) window.ATR1000.clearDisplay();
+                }
+            }
+        }, 30000); // 30秒超时
         
         // 视觉反馈
         console.log(`[${timestamp}] 🎨 应用视觉反馈`);
@@ -143,15 +174,43 @@ async function TXControl(action) {
             
             console.log(`[${timestamp}] ✅ TX开始成功`);
             TXState.isProcessing = false;  // 释放锁
+            // Bug 1 修复：如果在处理期间收到了 touchend，立即执行 stop
+            if (TXState.pendingStop) {
+                TXState.pendingStop = false;
+                console.log(`[${timestamp}] ⚡ 处理完成，立即执行挂起的 stop`);
+                return TXControl('stop');
+            }
             return true;
         } catch (error) {
             console.error(`[${timestamp}] ❌ TX开始失败:`, error);
             TXState.isPressed = false;
             TXState.isProcessing = false;  // 释放锁
+            // 清除看门狗
+            if (TXState.pttWatchdogTimer) {
+                clearTimeout(TXState.pttWatchdogTimer);
+                TXState.pttWatchdogTimer = null;
+            }
+            // 即使 start 失败，也执行挂起的 stop 以清理状态
+            if (TXState.pendingStop) {
+                TXState.pendingStop = false;
+                TXState.isPressed = false;
+                sendTRXptt(false);
+                toggleRecord();
+                toggleaudioRX(false);
+                if (typeof window.updatePTTStatus === 'function') {
+                    window.updatePTTStatus(false);
+                }
+            }
             return false;
         }
     }
     else if (action === 'stop' && TXState.isPressed) {
+        // Bug 1 修复：如果正在处理中，标记挂起 stop，等待 start 完成后执行
+        if (TXState.isProcessing) {
+            TXState.pendingStop = true;
+            console.log(`[${timestamp}] ⚠️ stop 请求排队（start 正在处理中）`);
+            return true;  // 返回 true 表示请求已接收
+        }
         TXState.isProcessing = true;  // 加锁
         console.log(`[${timestamp}] 🛑 停止TX流程`);
         
@@ -238,6 +297,12 @@ async function TXControl(action) {
                     window.ATR1000.clearDisplay();
                 }
             }
+
+            // Bug 3: 清除看门狗定时器
+            if (TXState.pttWatchdogTimer) {
+                clearTimeout(TXState.pttWatchdogTimer);
+                TXState.pttWatchdogTimer = null;
+            }
             
             // 7. 其他清理（异步执行，不阻塞切换）
             if (typeof button_unpressed === 'function') {
@@ -250,6 +315,10 @@ async function TXControl(action) {
         } catch (error) {
             console.error(`[${timestamp}] ❌ TX停止失败:`, error);
             TXState.isProcessing = false;  // 释放锁
+            // 确保即使 stop 失败也恢复基本状态
+            TXState.isPressed = false;
+            if (typeof sendTRXptt === 'function') sendTRXptt(false);
+            if (typeof window.updatePTTStatus === 'function') window.updatePTTStatus(false);
             return false;
         }
     }

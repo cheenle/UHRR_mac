@@ -675,6 +675,22 @@ class WS_AudioTXHandler(tornado.websocket.WebSocketHandler):
 							tx_audio_analyzer.add_audio_data(data)
 					# V4.5.7: 移除 gc.collect() - 每秒50次gc导致CPU从12%飙升到30%
 					# Python 的 gc 会自动管理，不需要手动调用
+					# TX recording: capture browser mic for stereo right channel
+					if PyAudioCapture.recording_enabled:
+						if self.is_encoded and hasattr(self, 'decoder'):
+							pcm_data = self.decoder.decode(data, self.frame_size, False)
+							tx_int16 = np.frombuffer(pcm_data, dtype=np.int16)
+						else:
+							tx_int16 = np.frombuffer(data, dtype=np.int16)
+						# Resample to 16kHz to match RX
+						source_rate = self.frame_size // 20 if hasattr(self, 'frame_size') else 16000
+						if source_rate > 16000:
+							ratio = int(source_rate / 16000)
+							if ratio > 1:
+								tx_int16 = tx_int16[::ratio]
+						with PyAudioCapture.recording_lock:
+							if PyAudioCapture.recording_enabled:
+								PyAudioCapture.tx_recording_buffer.append(tx_int16.copy())
 			else:
 				# Fallback to ALSA
 				if hasattr(self, 'inp') and self.inp:
@@ -1411,14 +1427,15 @@ class ATR1000ProxyManager:
         if self._initialized:
             return
         self._initialized = True
-        
+
         self.unix_socket = None
         self.read_thread = None
         self.running = False
         self.message_count = 0
         self.main_ioloop = None
         self.last_data = None  # 缓存最新数据
-        
+        self.refresh_timer = None  # 定期获取数据的定时器
+
         logger.info("📡 ATR-1000 代理管理器已初始化")
     
     def start(self):
@@ -1432,7 +1449,7 @@ class ATR1000ProxyManager:
     def _connect(self):
         """连接到 ATR-1000 代理"""
         global INSTANCE_UNIX_SOCKET
-        
+
         try:
             import os
             self.unix_socket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
@@ -1440,23 +1457,34 @@ class ATR1000ProxyManager:
             self.unix_socket.connect(INSTANCE_UNIX_SOCKET)
             self.unix_socket.setblocking(False)
             logger.info(f"✅ ATR-1000 代理管理器已连接 Unix Socket: {INSTANCE_UNIX_SOCKET}")
-            
+
             # 清除重连状态
             if hasattr(self, '_reconnecting'):
                 self._reconnecting = False
             if hasattr(self, '_need_reconnect'):
                 self._need_reconnect = False
-            
+
             # 保存主线程的 IOLoop 引用
             from tornado.ioloop import IOLoop
             self.main_ioloop = IOLoop.current()
-            
+
+            # 连接成功后立即发送 get_data，触发代理返回缓存的功率/SWR 数据
+            # 代理是请求-响应模式，不主动推送数据，必须主动请求
+            try:
+                self.unix_socket.send(b'{"action":"get_data"}\n')
+                logger.info("📤 ATR-1000 代理连接后已发送 get_data 请求")
+            except Exception as e:
+                logger.warning(f"⚠️ 发送初始 get_data 失败: {e}")
+
             # 启动读取线程
             if not self.read_thread or not self.read_thread.is_alive():
                 self.read_thread = threading.Thread(target=self._read_loop, daemon=True)
                 self.read_thread.start()
             else:
                 logger.debug("ATR-1000 读取线程已在运行")
+
+            # 启动定期数据刷新（代理不主动推送，需主动请求）
+            self._start_data_refresh()
         except Exception as e:
             logger.warning(f"⚠️ ATR-1000 代理连接失败 (Socket: {INSTANCE_UNIX_SOCKET}): {e}")
             self.unix_socket = None
@@ -1466,6 +1494,37 @@ class ATR1000ProxyManager:
             # 5秒后重试
             if self.running:
                 threading.Timer(5.0, self._connect).start()
+
+    def _start_data_refresh(self):
+        """定期向代理发送 get_data 请求，确保持续有数据推送给前端"""
+        # 取消旧定时器（重连时需要重新启动）
+        if self.refresh_timer:
+            self.refresh_timer.cancel()
+
+        def _refresh():
+            if not self.running:
+                return
+            if self.unix_socket:
+                try:
+                    self.unix_socket.send(b'{"action":"get_data"}\n')
+                except Exception:
+                    pass  # 读取线程会检测到断连并重连
+            # 每2秒刷新一次
+            self.refresh_timer = threading.Timer(2.0, _refresh)
+            self.refresh_timer.daemon = True
+            self.refresh_timer.start()
+
+        self.refresh_timer = threading.Timer(0.5, _refresh)
+        self.refresh_timer.daemon = True
+        self.refresh_timer.start()
+        logger.info("🔄 ATR-1000 代理定期数据刷新已启动 (每2秒)")
+
+    def _stop_data_refresh(self):
+        """停止定期数据刷新"""
+        if self.refresh_timer:
+            self.refresh_timer.cancel()
+            self.refresh_timer = None
+            logger.info("🛑 ATR-1000 代理定期数据刷新已停止")
     
     def _read_loop(self):
         """读取代理数据并广播到所有客户端 - 优化版"""
@@ -1748,6 +1807,7 @@ class ATR1000ProxyManager:
     def stop(self):
         """停止代理连接"""
         self.running = False
+        self._stop_data_refresh()
         if self.unix_socket:
             try:
                 self.unix_socket.close()

@@ -2612,17 +2612,21 @@ const ATR1000 = {
         this._reconnectTimer = null;
         this._reconnectAttempts = 0;
         this._maxReconnectAttempts = 10;
-        
+
         // 精简版面板始终显示
         const section = document.getElementById('atr-meter-section');
         if (section) {
             section.classList.remove('hidden');
             section.classList.add('visible');
+            section.style.display = '';
+            console.log('📻 ATR-1000 面板已显示 (section.style.display=' + section.style.display + ')');
+        } else {
+            console.error('❌ ATR-1000 面板元素 #atr-meter-section 未找到！');
         }
-        
+
         // V4.5.10: 启动数据超时检测
         this._startDataTimeoutCheck();
-        
+
         // 预连接WebSocket
         this.connect();
     },
@@ -2752,19 +2756,27 @@ const ATR1000 = {
     handleMessage: function(data) {
         try {
             const msg = JSON.parse(data.trim());
-            
+
             if (msg.type === 'atr1000_meter') {
                 this._msgCount++;
                 this._lastUpdateTime = Date.now();
+
+                // 前3条消息详细打印，帮助诊断
+                if (this._msgCount <= 3) {
+                    console.log(`📊 ATR-1000 消息 #${this._msgCount}:`, JSON.stringify(msg));
+                }
+
                 this._processMessage(msg);
-                
+
                 // 每100条消息打印一次日志（减少控制台输出）
                 if (this._msgCount % 100 === 0) {
                     console.log(`📊 ATR-1000 #${this._msgCount}: power=${msg.power}W`);
                 }
+            } else {
+                console.log('📊 ATR-1000 收到未知消息类型:', msg.type, msg);
             }
         } catch (e) {
-            // 静默处理错误
+            console.error('❌ ATR-1000 handleMessage 解析错误:', e, 'data:', data);
         }
     },
     

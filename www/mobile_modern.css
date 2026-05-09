@@ -102,25 +102,26 @@ body {
 .mobile-modern-container {
     display: flex;
     flex-direction: column;
-    height: 100vh;
-    padding: 0 env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+    height: 100dvh;
+    padding: 0 env(safe-area-inset-right) 0 env(safe-area-inset-left);
     background-color: var(--bg-primary);
 }
 
 /* Header Styles - 统一蓝色风格 */
 .app-header {
     background-color: var(--bg-secondary);
-    padding: var(--space-sm) var(--space-md);
+    padding: clamp(4px, 1vh, 8px) clamp(8px, 2vw, 12px);
     border-bottom: 1px solid var(--border-color);
     box-shadow: var(--shadow-sm);
     z-index: 100;
+    flex-shrink: 0;
 }
 
 .header-main {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: var(--space-sm);
+    margin-bottom: clamp(2px, 0.5vh, 4px);
 }
 
 .header-btn {
@@ -208,7 +209,7 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 42px;
+    font-size: clamp(56px, 14vw, 84px);
     font-weight: 700;
     letter-spacing: 3px;
     font-variant-numeric: tabular-nums;
@@ -217,7 +218,7 @@ body {
     color: #00d4ff;
     text-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
     background: linear-gradient(135deg, var(--bg-secondary), var(--bg-tertiary));
-    padding: 12px 24px;
+    padding: clamp(6px, 1.5vh, 12px) clamp(12px, 3vw, 24px);
     border-radius: var(--radius-md);
     border: 1px solid var(--border-color);
     box-shadow: var(--shadow-sm);
@@ -346,8 +347,8 @@ body {
     flex-direction: row;
     justify-content: center;
     align-items: center;
-    gap: 8px;
-    padding: 6px 0;
+    gap: clamp(4px, 1vw, 8px);
+    padding: clamp(2px, 0.5vh, 4px) 0;
     flex-wrap: nowrap;
 }
 
@@ -420,12 +421,14 @@ body {
 
 /* Main Content - 统一蓝色风格 */
 .main-content {
-    flex: 1;
+    flex: 1 1 auto;
+    min-height: 0;
     overflow-y: auto;
-    padding: var(--space-md);
+    overflow-x: hidden;
+    padding: clamp(4px, 1vh, 8px) clamp(8px, 2vw, 12px);
     display: flex;
     flex-direction: column;
-    gap: var(--space-md);
+    gap: clamp(4px, 1vh, 8px);
     -webkit-overflow-scrolling: touch;
     background: var(--bg-primary);
 }
@@ -472,12 +475,13 @@ body {
     background: rgba(30, 30, 42, 0.7);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
-    border-radius: var(--radius-lg);
-    padding: var(--space-sm);
-    margin: var(--space-xs) 0;
+    border-radius: var(--radius-md);
+    padding: clamp(4px, 0.8vh, 8px);
+    margin: 0;
     border: 1px solid rgba(255, 255, 255, 0.08);
     box-shadow: var(--shadow-sm);
     contain: layout style paint;
+    flex-shrink: 0;
 }
 
 /* 功率/驻波显示在S表下边 */
@@ -531,8 +535,9 @@ body {
 .quick-controls {
     display: flex;
     flex-direction: column;
-    gap: var(--space-xs);
-    margin: var(--space-xs) 0;
+    gap: clamp(2px, 0.5vh, 4px);
+    margin: 0;
+    flex-shrink: 0;
 }
 
 .control-row {
@@ -546,12 +551,12 @@ body {
     border: 1px solid var(--border-color);
     border-radius: var(--radius-md);
     color: var(--text-primary);
-    padding: 12px 4px;
+    padding: clamp(6px, 1.2vh, 12px) 4px;
     font-size: 14px;
     font-weight: 500;
     cursor: pointer;
     transition: all var(--transition-fast);
-    min-height: 44px;
+    min-height: clamp(36px, 6vh, 44px);
     touch-action: manipulation;
 }
 
@@ -594,6 +599,13 @@ body {
 }
 
 /* PTT Section */
+.ptt-section {
+    flex-shrink: 0;
+    background-color: var(--bg-secondary);
+    border-top: 1px solid var(--border-color);
+    padding-top: clamp(4px, 1vh, 8px);
+}
+
 /* Off-canvas Menu */
 .off-canvas-menu {
     position: fixed;
@@ -881,30 +893,20 @@ body {
 
 /* 较大屏幕适配 */
 @media (min-width: 390px) {
-    .freq-main {
-        font-size: 38px;
-    }
-    
     .ptt-button {
         width: 130px;
-        height: 260px;
     }
 }
 
 @media (min-width: 428px) {
-    .freq-main {
-        font-size: 42px;
-    }
-    
     .quick-btn {
         padding: 14px 6px;
     }
-    
+
     .ptt-button {
         width: 140px;
-        height: 280px;
     }
-    
+
     .ptt-label {
         font-size: 26px;
     }
@@ -916,14 +918,62 @@ body {
         margin: 0 auto;
         box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
     }
-    
+}
+
+/* 小屏幕纵向适配 - 确保一屏显示 */
+@media (max-height: 700px) {
     .freq-main {
-        font-size: 48px;
+        font-size: clamp(48px, 12vw, 64px);
+        padding: clamp(4px, 1vh, 6px) clamp(8px, 2vw, 12px);
     }
-    
+
+    .s-meter-labels {
+        display: none;
+    }
+
+    .dsp-controls-section {
+        padding: 2px clamp(4px, 1vw, 8px);
+    }
+
+    .dsp-buttons-row {
+        gap: 2px;
+    }
+
+    .dsp-btn {
+        min-height: clamp(20px, 3.5vh, 28px);
+        padding: 2px 2px;
+    }
+
+    .dsp-btn-label {
+        display: none;
+    }
+
     .ptt-button {
-        width: 150px;
-        height: 150px;
+        height: clamp(50px, 10vh, 70px);
+    }
+
+    .quick-btn {
+        min-height: clamp(30px, 5vh, 36px);
+        padding: clamp(4px, 0.8vh, 6px) 4px;
+    }
+
+    .tuning-row.single-row {
+        gap: clamp(2px, 0.8vw, 4px);
+    }
+
+    .tune-btn-grid,
+    .tune-step-display {
+        padding: clamp(4px, 0.8vh, 6px) 4px;
+        min-height: clamp(30px, 5vh, 36px);
+    }
+
+    .volume-control-compact {
+        padding: 0 4px;
+    }
+
+    .main-content {
+        gap: clamp(2px, 0.5vh, 4px);
+        padding: clamp(2px, 0.5vh, 4px) clamp(6px, 1.5vw, 12px);
     }
 }
 
@@ -938,7 +988,7 @@ body {
     }
     
     .freq-main {
-        font-size: 32px;
+        font-size: 64px;
         margin-bottom: 2px;
     }
     
@@ -1037,12 +1087,13 @@ body {
     background: rgba(30, 30, 42, 0.7);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
-    border-radius: var(--radius-lg);
-    padding: var(--space-xs) var(--space-sm);
-    margin: var(--space-xs) 0;
+    border-radius: var(--radius-md);
+    padding: clamp(3px, 0.6vh, 6px) clamp(6px, 1.5vw, 12px);
+    margin: 0;
     border: 1px solid rgba(255, 255, 255, 0.08);
     box-shadow: var(--shadow-sm);
     contain: layout style paint;
+    flex-shrink: 0;
 }
 
 .dsp-header {
@@ -1124,7 +1175,7 @@ body {
     align-items: center;
     justify-content: center;
     gap: 4px;
-    padding: 6px 4px;
+    padding: clamp(3px, 0.6vh, 6px) 4px;
     background: linear-gradient(135deg, var(--bg-button), var(--bg-tertiary));
     border: 1px solid var(--border-color);
     border-radius: var(--radius-md);
@@ -1132,7 +1183,7 @@ body {
     font-size: 10px;
     cursor: pointer;
     transition: all var(--transition-fast);
-    min-height: 32px;
+    min-height: clamp(24px, 4vh, 32px);
 }
 
 .dsp-btn:active {
@@ -1227,6 +1278,15 @@ body {
     border: 1px solid var(--border-color);
     display: block;
     box-shadow: var(--shadow-sm);
+}
+
+/* 通用 hidden/visible 工具类 */
+.hidden {
+    display: none !important;
+}
+
+.visible {
+    display: block !important;
 }
 
 .atr-meter-section-compact.hidden {
@@ -1348,8 +1408,9 @@ body {
 
 /* 音量控制精简版 - 无边框极简 */
 .volume-control-compact {
-    padding: 2px 8px;
+    padding: clamp(1px, 0.3vh, 2px) clamp(6px, 1.5vw, 8px);
     margin: 0;
+    flex-shrink: 0;
 }
 
 .volume-row-compact {
@@ -1440,15 +1501,16 @@ body {
 
 /* 频率调谐网格布局 - 两排 */
 .frequency-tuning-grid {
-    padding: 4px 10px;
-    margin: 2px 0;
+    padding: clamp(2px, 0.5vh, 4px) clamp(8px, 2vw, 10px);
+    margin: 0;
+    flex-shrink: 0;
 }
 
 .tuning-row {
     display: flex;
-    gap: 6px;
+    gap: clamp(3px, 1vw, 6px);
     justify-content: center;
-    margin-bottom: 4px;
+    margin-bottom: clamp(2px, 0.4vh, 4px);
 }
 
 .tuning-row:last-child {
@@ -1462,7 +1524,7 @@ body {
 /* 步进显示按钮样式 - 统一蓝色风格 */
 .tune-step-display {
     min-width: 70px;
-    padding: 10px 8px;
+    padding: clamp(6px, 1.2vh, 10px) 8px;
     text-align: center;
     background: linear-gradient(135deg, var(--bg-button), var(--bg-tertiary));
     color: var(--accent-primary);
@@ -1495,7 +1557,7 @@ body {
 .tune-btn-grid {
     flex: 1;
     max-width: 75px;
-    padding: 10px 6px;
+    padding: clamp(6px, 1.2vh, 10px) 6px;
     border: none;
     border-radius: var(--radius-md);
     background: linear-gradient(135deg, var(--bg-button), var(--bg-tertiary));
@@ -1517,12 +1579,12 @@ body {
 /* 底部 TUNE 按钮 - 蓝色 */
 .tune-button-footer {
     flex: 0.6;
-    height: 47px;
+    height: clamp(36px, 6vh, 47px);
     border: none;
     border-radius: var(--radius-md);
     background: linear-gradient(180deg, rgba(0, 212, 255, 0.3), rgba(0, 212, 255, 0.2));
     color: var(--accent-secondary);
-    font-size: 14px;
+    font-size: clamp(12px, 2.5vw, 14px);
     font-weight: bold;
     cursor: pointer;
     transition: all var(--transition-fast);
@@ -1547,12 +1609,12 @@ body {
 /* 底部 CQCQCQ 宽按钮 - 蓝色 */
 .cq-button-wide {
     width: 100%;
-    height: 44px;
+    height: clamp(36px, 6vh, 44px);
     border: none;
     border-radius: var(--radius-md);
     background: linear-gradient(180deg, rgba(0, 212, 255, 0.2), rgba(0, 212, 255, 0.2));
     color: var(--accent-primary);
-    font-size: 16px;
+    font-size: clamp(14px, 3vw, 16px);
     font-weight: bold;
     cursor: pointer;
     transition: all var(--transition-fast);
@@ -1578,12 +1640,12 @@ body {
 /* 底部录音按钮 - 统一蓝色风格 */
 .record-button-footer {
     flex: 0.5;
-    height: 47px;
+    height: clamp(36px, 6vh, 47px);
     border: none;
     border-radius: var(--radius-md);
     background: linear-gradient(180deg, var(--bg-button), var(--bg-tertiary));
     color: var(--text-secondary);
-    font-size: 11px;
+    font-size: clamp(10px, 2vw, 11px);
     font-weight: bold;
     cursor: pointer;
     transition: all var(--transition-fast);
@@ -1630,11 +1692,11 @@ body {
 /* 更新 PTT 区域布局 - 统一蓝色风格 */
 .ptt-container {
     display: flex;
-    gap: var(--space-sm);
+    gap: clamp(6px, 2vw, 12px);
     justify-content: center;
     align-items: stretch;
-    padding: var(--space-sm);
-    padding-bottom: calc(var(--space-sm) + env(safe-area-inset-bottom));
+    padding: 0 clamp(8px, 2vw, 12px);
+    padding-bottom: clamp(4px, 1vh, 8px);
 }
 
 /* 右侧控制区域 - 录音/TUNE/CQCQCQ 垂直排列 */
@@ -1642,31 +1704,32 @@ body {
     flex: 1;
     display: flex;
     flex-direction: column;
-    gap: var(--space-xs);
+    gap: clamp(3px, 0.8vh, 8px);
 }
 
 /* 右侧控制区域第一行 - 录音和 TUNE 并排 */
 .side-controls-row {
     display: flex;
-    gap: var(--space-xs);
+    gap: clamp(3px, 0.8vh, 8px);
     flex: 1;
 }
 
 .side-controls-row .record-button-footer,
 .side-controls-row .tune-button-footer {
     flex: 1;
-    height: 44px;
+    height: clamp(36px, 6vh, 47px);
 }
 
 /* PTT 按钮调整 - SDR 红色渐变 */
 .ptt-button {
     flex: 1.4;
-    height: 94px;
+    height: clamp(60px, 12vh, 94px);
+    min-height: clamp(50px, 10vh, 75px);
     border: none;
     border-radius: var(--radius-lg);
     background: linear-gradient(180deg, var(--accent-danger), #b91c1c);
     color: var(--text-primary);
-    font-size: 16px;
+    font-size: clamp(14px, 3vw, 18px);
     font-weight: bold;
     cursor: pointer;
     transition: all var(--transition-fast);

@@ -127,7 +127,8 @@ class PyAudioCapture(threading.Thread):
     
     # 录音功能设置
     recording_enabled = False  # 是否启用录音
-    recording_buffer = []  # 录音数据缓冲区
+    recording_buffer = []  # RX 录音数据缓冲区（左声道）
+    tx_recording_buffer = []  # TX 录音数据缓冲区（右声道）
     recording_lock = threading.Lock()  # 录音缓冲区锁
     recording_start_time = None  # 录音开始时间
     recording_freq = 0  # 录音时的频率
@@ -740,6 +741,7 @@ class PyAudioCapture(threading.Thread):
             
             with PyAudioCapture.recording_lock:
                 PyAudioCapture.recording_buffer = []
+                PyAudioCapture.tx_recording_buffer = []
                 PyAudioCapture.recording_start_time = datetime.now()
                 PyAudioCapture.recording_freq = freq
                 PyAudioCapture.recording_enabled = True
@@ -763,15 +765,31 @@ class PyAudioCapture(threading.Thread):
         try:
             with PyAudioCapture.recording_lock:
                 PyAudioCapture.recording_enabled = False
-                
-                if not PyAudioCapture.recording_buffer:
+
+                rx_data = np.concatenate(PyAudioCapture.recording_buffer) if PyAudioCapture.recording_buffer else None
+                tx_data = np.concatenate(PyAudioCapture.tx_recording_buffer) if PyAudioCapture.tx_recording_buffer else None
+                PyAudioCapture.recording_buffer = []
+                PyAudioCapture.tx_recording_buffer = []
+
+                if rx_data is None and tx_data is None:
                     print("⚠️ 录音缓冲区为空")
                     return None
-                
-                # 合并所有音频数据
-                audio_data = np.concatenate(PyAudioCapture.recording_buffer)
-                PyAudioCapture.recording_buffer = []
-                
+
+                # 对齐 RX 和 TX 数据长度，填充较短的声道
+                max_len = max(len(rx_data) if rx_data is not None else 0,
+                              len(tx_data) if tx_data is not None else 0)
+                if rx_data is not None and len(rx_data) < max_len:
+                    rx_data = np.pad(rx_data, (0, max_len - len(rx_data)), mode='constant')
+                if tx_data is not None and len(tx_data) < max_len:
+                    tx_data = np.pad(tx_data, (0, max_len - len(tx_data)), mode='constant')
+                if rx_data is None:
+                    rx_data = np.zeros(max_len, dtype=np.int16)
+                if tx_data is None:
+                    tx_data = np.zeros(max_len, dtype=np.int16)
+
+                # 交错合并为立体声: [L0, R0, L1, R1, ...]
+                stereo_data = np.column_stack((rx_data, tx_data)).reshape(-1).astype(np.int16)
+
                 # 生成文件名: 频率(kHz)_日期_时间.wav
                 freq_khz = int(PyAudioCapture.recording_freq / 1000) if PyAudioCapture.recording_freq > 0 else 0
                 now = datetime.now()
@@ -779,16 +797,16 @@ class PyAudioCapture(threading.Thread):
                 time_str = now.strftime('%H%M%S')
                 filename = f"{freq_khz:05d}kHz_{date_str}_{time_str}.wav"
                 filepath = os.path.join(PyAudioCapture.recording_dir, filename)
-                
-                # 保存为 WAV 文件 (16kHz, 16bit, mono)
+
+                # 保存为 WAV 文件 (16kHz, 16bit, stereo)
                 with wave.open(filepath, 'wb') as wf:
-                    wf.setnchannels(1)
+                    wf.setnchannels(2)
                     wf.setsampwidth(2)  # 16-bit
                     wf.setframerate(16000)  # 16kHz
-                    wf.writeframes(audio_data.tobytes())
-                
-                duration = len(audio_data) / 16000
-                print(f"✅ 录音已保存: {filename} ({duration:.1f}秒, {os.path.getsize(filepath)} bytes)")
+                    wf.writeframes(stereo_data.tobytes())
+
+                duration = max_len / 16000
+                print(f"✅ 录音已保存 (立体声): {filename} ({duration:.1f}秒, L={len(rx_data)} R={len(tx_data)}, {os.path.getsize(filepath)} bytes)")
                 return filepath
                 
         except Exception as e:
@@ -898,13 +916,28 @@ class PyAudioPlayback:
         return None  # Use default if not found
     
     def write(self, data):
-        """Write audio data to output stream"""
+        """Write audio data to output stream with TX level normalization"""
         if self.is_encoded:
             # Decode Opus data first
             pcm = self.decoder.decode(data, self.frame_size, False)
-            self.stream.write(pcm)
         else:
-            self.stream.write(data)
+            pcm = data
+
+        # TX 音频电平归一化：实质性提升发射功率
+        # 将 Int16 PCM 数据提升到目标电平，避免削波
+        tx_int16 = np.frombuffer(pcm, dtype=np.int16)
+        if len(tx_int16) > 0:
+            max_val = np.max(np.abs(tx_int16))
+            if max_val > 0:
+                # 目标峰值电平为 85%（留出余量）
+                target_peak = int(32767 * 0.85)
+                if max_val < target_peak:
+                    # 提升增益但不超过 2.5 倍（防止过度放大）
+                    gain = min(target_peak / max_val, 2.5)
+                    tx_int16 = np.clip(tx_int16 * gain, -32767, 32767).astype(np.int16)
+            pcm = tx_int16.tobytes()
+
+        self.stream.write(pcm)
     
     def close(self):
         """Close the audio stream"""

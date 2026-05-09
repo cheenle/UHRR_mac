@@ -516,8 +516,8 @@ class ATR1000Client:
                 last_log_swr = cache["swr"]
                 
                 # V4.5.16: 智能学习天调参数
-                # 条件：功率 > 0, SWR 1.01-1.5 (排除SWR=1.0的假数据), 参数有效（ind>0 或 cap>0）, 频率 > 0
-                if power > 0 and 1.01 <= cache["swr"] <= 1.8:
+                # 条件：功率 > 0, SWR 1.0-1.5 (排除SWR=1.0的假数据), 参数有效（ind>0 或 cap>0）, 频率 > 0
+                if power > 0 and 1.0 <= cache["swr"] <= 1.8:
                     freq = cache.get("freq", 0)
                     ind = cache.get("ind", 0)
                     cap = cache.get("cap", 0)
