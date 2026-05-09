@@ -5,6 +5,42 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [V5.1.0] - 2026-05-10
+
+### 🎙️ RagChew TX 音频处理模式
+
+**新增 RagChew 预设**：专为本地强信号、ragchew 轻松聊天优化
+
+| 模块 | 参数 | 值 | 说明 |
+|------|------|-----|------|
+| **EQ 均衡器** | 低切 (HPF) | 150Hz | 保留低音底气，切除超低频噪声 |
+| | 中低频衰减 | 500Hz -2dB | 减少"浊音"区，声音更清澈 |
+| | Presence 增强 | 2.4kHz +3dB | 保证清晰度，不尖锐 |
+| | 高切 (LPF) | 3.0kHz | 带宽略宽，听感更圆润 |
+| **压缩器** | Ratio | 3:1 | 温和压缩，音量平稳 |
+| | Threshold | -24dB | 说话时自动稳幅 |
+| | Attack/Release | 3ms/250ms | 快速响应，从容释放 |
+| **噪声门** | 阈值 | -50dB RMS | 不说话时完全静音 |
+| | 释放时间 | 300ms | 避免断字 |
+
+**技术实现**：
+- 前端 Web Audio API 实现（BiquadFilter + DynamicsCompressor + Gain Gate）
+- 音频链新增：`eqHigh → midCut → presence → compressor → noiseGate → gain_node`
+- 标准模式（DEFAULT/MEDIUM/STRONG）不受影响，RagChew 节点自动设为直通
+
+**音频链修复**：
+- 修复 `setValueAtTime` 缺失第二参数导致的移动端 TypeError
+- 增加 `try/catch` 包裹整个音频链初始化
+- 改进错误提示信息，显示具体错误详情
+
+**文件变更**：
+- `www/controls.js` - RagChew 预设、压缩器、噪声门、音频链重构、错误修复
+- `www/mobile_modern.js` - RagChew 面板显示适配
+- `www/mobile_modern.html` - 版本号更新（v=4.9.0）
+- `MRRC.conf` / `MRRC.radio*.conf` - RagChew 参数记录
+
+---
+
 ## [V5.0.0] - 2026-04-30
 
 ### 🎨 移动端UI全面现代化

@@ -55,6 +55,7 @@ Universal HamRadio Remote HTML5 (MRRC) is a Python/Tornado-based server applicat
 - S-meter display and signal strength monitoring
 - PTT (Push-to-Talk) control with visual indicators
 - Audio gain control and squelch
+- **RagChew TX Audio Preset (V5.1.0)**: Web Audio API-based TX processing chain with EQ (low-cut 150Hz, mid-cut -2dB@500Hz, presence +3dB@2.4kHz, high-cut 3kHz), 3:1 dynamic compressor, and -50dB noise gate
 
 ### Advanced Features
 - **Antenna Tuning Unit (ATU) Integration**: Power/SWR monitoring, tuning controls, frequency-based presets

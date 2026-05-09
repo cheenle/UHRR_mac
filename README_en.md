@@ -1,12 +1,16 @@
-# Mobile Remote Radio Control (MRRC) V5.0.0
+# Mobile Remote Radio Control (MRRC) V5.1.0
 
-[![English](https://img.shields.io/badge/lang-English-blue.svg)](README_en.md) [![中文](https://img.shields.io/badge/lang-中文-red.svg)](README_CN.md) [![Version](https://img.shields.io/badge/version-V5.0.0-green.svg)](CHANGELOG.md)
+[![English](https://img.shields.io/badge/lang-English-blue.svg)](README_en.md) [![中文](https://img.shields.io/badge/lang-中文-red.svg)](README_CN.md) [![Version](https://img.shields.io/badge/version-V5.1.0-green.svg)](CHANGELOG.md)
 
 **Amateur Radio, Anytime, Anywhere.**
 
 MRRC is a modern web-based remote control system optimized for mobile devices, enabling flexible operation of your amateur radio station from anywhere. Built with HTML5/JS frontend and Tornado + PyAudio + rigctld (Hamlib) backend.
 
 > ✅ **Core Advantage**: Mobile-first design, TX→RX switching latency <100ms, PWA support for offline access, optimized for one-hand operation
+>
+> 🎉 **V5.1.0 Highlights**:
+> - 🎙️ **RagChew TX Audio Preset**: Warm, natural voice processing with EQ + compressor + noise gate
+> - 🔧 **Web Audio Chain Fix**: Fixed Safari setValueAtTime missing argument causing initialization failure
 >
 > 🎉 **V5.0.0 Highlights**:
 > - 🎨 **Glassmorphism UI**: Frosted glass cards with backdrop-filter blur
@@ -16,7 +20,7 @@ MRRC is a modern web-based remote control system optimized for mobile devices, e
 > - 🔴 **TX Visual Feedback**: Frequency display glows red during transmit
 > - 🗑️ **CSS Cleanup**: 15% size reduction, 324 lines removed
 >
-> Previous: V4.9.3 Frequency Sync | V4.9.2 Blue UI | V4.9.0 Voice Assistant
+> Previous: V5.0.0 Mobile UI Modernization | V4.9.3 Frequency Sync | V4.9.2 Blue UI | V4.9.0 Voice Assistant
 
 ## 🎯 Design Philosophy
 
@@ -122,6 +126,10 @@ MRRC is a modern web-based remote control system optimized for mobile devices, e
 - **Real-time S-Meter**: Accurate S0-S9+60dB signal strength display
 - **Audio Filters**: Multiple filter configurations available
 - **TX Equalizer**: 3-band EQ for TX audio, supports SSB voice/weak signal/contest modes
+- **🎙️ RagChew Mode (V5.1.0)**: TX preset optimized for local strong signals, delivering warm and natural voice quality
+  - EQ: Low-cut 150Hz, mid attenuation -2dB@500Hz, presence boost +3dB@2.4kHz, high-cut 3kHz
+  - Compressor: 3:1 ratio for smooth volume leveling
+  - Noise Gate: -50dB threshold, eliminates background noise when silent
 
 ### ATR-1000 Smart Tuner ⭐ Core Feature
 - **Real-time Power Display**: Forward power (0-200W) during TX, latency <200ms
@@ -313,7 +321,7 @@ Based on [F4HTB/Universal_HamRadio_Remote_HTML5](https://github.com/F4HTB/Univer
 
 ---
 
-**Latest Version: V5.0.0** (2026-03-14) | [View Changelog](CHANGELOG.md)
+**Latest Version: V5.1.0** (2026-05-10) | [View Changelog](CHANGELOG.md)
 
 **MRRC - Mobile Remote Radio Control**  
 *Amateur Radio, Anytime, Anywhere.*
