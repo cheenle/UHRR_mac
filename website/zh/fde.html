@@ -1,0 +1,860 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FDE 专题 — Forward Deployed Engineering 实践与思考</title>
+    <meta name="description" content="Palantir FDE 方法论如何驱动 MRRC 从 V1.0 演进到 V5.1.0 —— 9个完整 Cycle、203次提交、全套最佳实践">
+    <meta name="keywords" content="FDE, Forward Deployed Engineering, 驻场工程师, MRRC, Palantir, SDD, IBM TeamSD, 软件方法论, 最佳实践">
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="../css/docs.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary: #22d3ee;
+            --primary-dark: #0891b2;
+            --accent: #f59e0b;
+            --bg-dark: #0f172a;
+            --bg-card: #1e293b;
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --border: #334155;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            background: var(--bg-dark);
+            color: var(--text-primary);
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            line-height: 1.7;
+            -webkit-font-smoothing: antialiased;
+        }
+        .container { max-width: 1200px; margin: 0 auto; padding: 0 24px; }
+
+        .header {
+            position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
+            background: rgba(15, 23, 42, 0.92);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--border);
+        }
+        .header-content {
+            display: flex; align-items: center; justify-content: space-between;
+            height: 72px; max-width: 1200px; margin: 0 auto; padding: 0 24px;
+        }
+        .logo {
+            display: flex; align-items: center; gap: 12px;
+            font-size: 1.25rem; font-weight: 600; text-decoration: none; color: var(--text-primary);
+        }
+        .logo-icon { font-size: 1.5rem; }
+        .nav { display: flex; gap: 32px; }
+        .nav a {
+            font-size: 0.9rem; color: var(--text-secondary); text-decoration: none;
+            transition: color 0.2s; font-weight: 500;
+        }
+        .nav a:hover, .nav a.active { color: var(--primary); }
+        .lang-toggle { display: flex; gap: 8px; }
+        .lang-btn {
+            padding: 6px 14px; border-radius: 6px; border: 1px solid var(--border);
+            background: transparent; color: var(--text-secondary); cursor: pointer;
+            font-size: 0.85rem; transition: all 0.2s; text-decoration: none;
+        }
+        .lang-btn.active { background: var(--primary); color: var(--bg-dark); border-color: var(--primary); }
+        .lang-btn:hover:not(.active) { border-color: var(--primary); color: var(--primary); }
+
+        .hero {
+            padding: 160px 24px 80px; text-align: center;
+            background: radial-gradient(ellipse at 50% 30%, rgba(34,211,238,0.08) 0%, transparent 60%);
+            position: relative;
+        }
+        .hero-badge {
+            display: inline-flex; align-items: center; gap: 8px;
+            padding: 8px 18px; background: rgba(34,211,238,0.1); border: 1px solid rgba(34,211,238,0.2);
+            border-radius: 100px; font-size: 0.85rem; color: var(--primary); margin-bottom: 28px;
+        }
+        .hero-title {
+            font-size: clamp(2.5rem, 6vw, 4rem); font-weight: 700;
+            letter-spacing: -0.04em; margin-bottom: 20px; line-height: 1.15;
+        }
+        .hero-title .gradient {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+        }
+        .hero-subtitle {
+            font-size: 1.15rem; color: var(--text-secondary); max-width: 700px;
+            margin: 0 auto 40px; line-height: 1.7;
+        }
+        .hero-stats {
+            display: flex; justify-content: center; gap: 56px; margin-top: 48px;
+            padding-top: 48px; border-top: 1px solid var(--border);
+        }
+        .stat-item { text-align: center; }
+        .stat-value { display: block; font-size: 2.2rem; font-weight: 700; color: var(--primary); letter-spacing: -0.02em; }
+        .stat-label { font-size: 0.85rem; color: #525252; margin-top: 4px; }
+
+        .section { padding: 100px 0; border-bottom: 1px solid var(--border); }
+        .section:last-child { border-bottom: none; }
+        .section-header { text-align: center; margin-bottom: 64px; }
+        .section-label {
+            display: inline-block; font-size: 0.8rem; color: var(--primary);
+            text-transform: uppercase; letter-spacing: 0.12em; margin-bottom: 14px;
+        }
+        .section-title { font-size: 2.25rem; font-weight: 700; letter-spacing: -0.03em; }
+        .section-subtitle { color: var(--text-secondary); font-size: 1.05rem; margin-top: 12px; }
+
+        .tri-role {
+            display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; margin-top: 40px;
+        }
+        .role-card {
+            background: var(--bg-card); border: 1px solid var(--border); border-radius: 16px;
+            padding: 36px 28px; text-align: center; transition: all 0.3s;
+        }
+        .role-card:hover { border-color: var(--primary); transform: translateY(-4px); }
+        .role-icon {
+            width: 64px; height: 64px; margin: 0 auto 20px; border-radius: 16px;
+            display: flex; align-items: center; justify-content: center; font-size: 1.75rem;
+        }
+        .role-icon.echo { background: rgba(245,158,11,0.15); color: var(--accent); }
+        .role-icon.delta { background: rgba(34,211,238,0.15); color: var(--primary); }
+        .role-icon.product { background: rgba(167,139,250,0.15); color: #a78bfa; }
+        .role-card h3 { font-size: 1.3rem; font-weight: 600; margin-bottom: 8px; }
+        .role-card .role-tagline { color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 16px; font-style: italic; }
+        .role-card ul { list-style: none; text-align: left; }
+        .role-card li { color: var(--text-secondary); font-size: 0.88rem; padding: 6px 0; padding-left: 20px; position: relative; }
+        .role-card li::before { content: '•'; position: absolute; left: 4px; color: var(--primary); }
+
+        .formula-box {
+            background: var(--bg-card); border: 1px solid var(--border); border-radius: 16px;
+            padding: 32px 40px; text-align: center; margin: 40px 0;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .formula-box .formula {
+            font-size: 1.6rem; font-weight: 600; color: var(--primary);
+            letter-spacing: 0.02em; margin-bottom: 16px;
+        }
+        .formula-box .formula-desc { color: var(--text-secondary); font-size: 0.9rem; }
+
+        .table-wrapper { overflow-x: auto; margin: 32px 0; }
+        table {
+            width: 100%; border-collapse: collapse; font-size: 0.88rem;
+        }
+        th, td { padding: 14px 18px; text-align: left; border-bottom: 1px solid var(--border); }
+        th { font-weight: 600; color: var(--primary); background: var(--bg-card); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; }
+        td { color: var(--text-secondary); }
+        tr:hover td { background: rgba(34,211,238,0.03); }
+        .tag {
+            display: inline-block; padding: 3px 10px; border-radius: 4px;
+            font-size: 0.75rem; font-weight: 600;
+        }
+        .tag.echo { background: rgba(245,158,11,0.15); color: var(--accent); }
+        .tag.delta { background: rgba(34,211,238,0.15); color: var(--primary); }
+        .tag.product { background: rgba(167,139,250,0.15); color: #a78bfa; }
+
+        .pattern-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 24px; margin-top: 40px; }
+        .pattern-card {
+            background: var(--bg-card); border: 1px solid var(--border); border-radius: 16px;
+            padding: 32px; transition: all 0.3s;
+        }
+        .pattern-card:hover { border-color: var(--primary); }
+        .pattern-card .pattern-icon { font-size: 2rem; margin-bottom: 16px; }
+        .pattern-card h3 { font-size: 1.2rem; font-weight: 600; margin-bottom: 12px; }
+        .pattern-card p { color: var(--text-secondary); font-size: 0.92rem; line-height: 1.7; margin-bottom: 16px; }
+        .pattern-card .highlight-box {
+            background: rgba(0,0,0,0.3); border-radius: 8px; padding: 16px;
+            font-family: 'JetBrains Mono', monospace; font-size: 0.8rem;
+            color: var(--text-secondary); line-height: 1.5; white-space: pre-wrap;
+        }
+
+        .leverage-track {
+            display: flex; align-items: flex-end; gap: 16px; justify-content: center;
+            margin: 48px 0; padding: 0 20px; overflow-x: auto;
+        }
+        .leverage-bar {
+            display: flex; flex-direction: column; align-items: center; gap: 8px;
+            min-width: 70px;
+        }
+        .leverage-fill {
+            width: 48px; border-radius: 8px 8px 0 0;
+            background: linear-gradient(to top, var(--primary), var(--accent));
+            transition: height 0.6s ease;
+        }
+        .leverage-label { font-size: 0.75rem; color: #525252; font-weight: 500; }
+        .leverage-value { font-size: 1.3rem; font-weight: 700; color: var(--primary); }
+
+        .principle-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 20px; margin-top: 32px; }
+        .principle-item {
+            display: flex; gap: 16px; padding: 24px; background: var(--bg-card);
+            border: 1px solid var(--border); border-radius: 12px;
+        }
+        .principle-num {
+            width: 40px; height: 40px; border-radius: 10px; display: flex;
+            align-items: center; justify-content: center; font-weight: 700; font-size: 1.1rem;
+            background: rgba(34,211,238,0.12); color: var(--primary); flex-shrink: 0;
+        }
+        .principle-text h4 { font-size: 1.05rem; font-weight: 600; margin-bottom: 4px; }
+        .principle-text p { font-size: 0.88rem; color: var(--text-secondary); line-height: 1.6; }
+
+        .anti-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; margin-top: 32px; }
+        .anti-card {
+            background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px;
+            padding: 24px; border-left: 3px solid #ef4444;
+        }
+        .anti-card h4 { font-size: 1.05rem; font-weight: 600; margin-bottom: 8px; }
+        .anti-card .bad { color: #ef4444; font-size: 0.85rem; font-weight: 500; margin-bottom: 6px; }
+        .anti-card .good { color: #22c55e; font-size: 0.88rem; }
+
+        .cta-section {
+            padding: 100px 24px; text-align: center;
+            background: radial-gradient(ellipse at 50% 50%, rgba(34,211,238,0.06) 0%, transparent 60%);
+        }
+        .cta-section h2 { font-size: 2.25rem; font-weight: 700; margin-bottom: 16px; }
+        .cta-section p { color: var(--text-secondary); font-size: 1.05rem; margin-bottom: 36px; max-width: 600px; margin-left: auto; margin-right: auto; }
+        .btn {
+            display: inline-flex; align-items: center; gap: 8px;
+            padding: 16px 32px; border-radius: 10px; font-weight: 600; font-size: 0.95rem;
+            text-decoration: none; transition: all 0.2s;
+        }
+        .btn-primary { background: var(--primary); color: var(--bg-dark); }
+        .btn-primary:hover { background: #06b6d4; transform: translateY(-2px); }
+        .btn-outline {
+            background: transparent; border: 1px solid var(--border); color: var(--text-primary);
+        }
+        .btn-outline:hover { border-color: var(--primary); color: var(--primary); }
+
+        .footer { padding: 60px 0 32px; border-top: 1px solid var(--border); text-align: center; }
+        .footer p { color: #525252; font-size: 0.85rem; }
+        .footer a { color: var(--primary); text-decoration: none; }
+
+        .vs-table {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 0; margin: 40px 0;
+            border: 1px solid var(--border); border-radius: 16px; overflow: hidden;
+        }
+        .vs-col { padding: 32px; }
+        .vs-col:first-child { background: rgba(239,68,68,0.06); }
+        .vs-col:last-child { background: rgba(34,211,238,0.06); }
+        .vs-col h4 { font-size: 1.1rem; margin-bottom: 16px; }
+        .vs-col ul { list-style: none; }
+        .vs-col li { padding: 8px 0; color: var(--text-secondary); font-size: 0.9rem; }
+
+        @media (max-width: 768px) {
+            .nav { display: none; }
+            .hero { padding: 120px 24px 60px; }
+            .hero-stats { flex-direction: column; gap: 24px; }
+            .tri-role { grid-template-columns: 1fr; }
+            .pattern-grid, .principle-list, .anti-grid { grid-template-columns: 1fr; }
+            .leverage-track { justify-content: flex-start; }
+            .vs-table { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-content">
+            <a href="../index.html" class="logo">
+                <span class="logo-icon">📻</span>
+                <span>MRRC</span>
+            </a>
+            <nav class="nav">
+                <a href="../index.html">首页</a>
+                <a href="../docs/features.html">功能</a>
+                <a href="docs/installation.html">安装</a>
+                <a href="docs/design.html">设计与工程</a>
+                <a href="../docs/docs.html">文档</a>
+                <a href="fde.html" class="active">FDE</a>
+            </nav>
+            <div class="lang-toggle">
+                <a href="../fde.html" class="lang-btn">EN</a>
+                <a href="fde.html" class="lang-btn active">中文</a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Hero -->
+    <section class="hero">
+        <div class="container">
+            <div class="hero-badge">
+                <i class="fas fa-rocket"></i>
+                <span>FDE + MRRC 深度专题</span>
+            </div>
+            <h1 class="hero-title">
+                Forward Deployed<br>
+                <span class="gradient">Engineering</span>
+            </h1>
+            <p class="hero-subtitle">
+                以 Palantir FDE 方法论重新审视 MRRC 项目全生命周期 ——
+                9 个 FDE Cycle、203 次提交、从 V1.0 到 V5.1.0 的完整演进过程。
+                涵盖方法论基础、核心模式、最佳实践、反模式陷阱和全套实操指南。
+            </p>
+            <div class="hero-stats">
+                <div class="stat-item">
+                    <span class="stat-value">9</span>
+                    <span class="stat-label">FDE Cycle</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-value">203</span>
+                    <span class="stat-label">次提交</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-value">0→10</span>
+                    <span class="stat-label">产品杠杆增长</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-value">55+</span>
+                    <span class="stat-label">设计/技术文档</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 什么是 FDE -->
+    <section class="section">
+        <div class="container">
+            <div class="section-header">
+                <span class="section-label">方法论基础</span>
+                <h2 class="section-title">什么是 FDE？</h2>
+                <p class="section-subtitle">FDE (Forward Deployed Engineering) 源自 Palantir，是一种驻场工程师驱动的产品探索与交付模式</p>
+            </div>
+
+            <div class="vs-table">
+                <div class="vs-col">
+                    <h4 style="color: #ef4444;">传统 SaaS (PMF)</h4>
+                    <ul>
+                        <li>交付标准化软件许可证</li>
+                        <li>团队位于总部远程</li>
+                        <li>产品 → 销售 → 客户</li>
+                        <li>减少每个客户定制工作量</li>
+                        <li>可重复的小额合同</li>
+                        <li>产品团队直接做功能</li>
+                    </ul>
+                </div>
+                <div class="vs-col">
+                    <h4 style="color: var(--primary);">FDE 模式</h4>
+                    <ul>
+                        <li>交付可衡量的<strong style="color: var(--text-primary);">成果 (Outcome)</strong></li>
+                        <li><strong style="color: var(--text-primary);">驻扎客户现场</strong></li>
+                        <li>工程师直接对接 → 构建 → 抽象</li>
+                        <li>提高<strong style="color: var(--text-primary);">交付成果的价值</strong></li>
+                        <li>随价值递增的大额合同</li>
+                        <li>把现场"碎石路"抽象为"高速公路"</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="formula-box">
+                <div class="formula">FDE = Echo (需求发现) + Delta (原型交付) + Product (抽象泛化)</div>
+                <div class="formula-desc">需求发现 → 快速原型 → 抽象泛化，三阶段循环迭代</div>
+            </div>
+
+            <div class="tri-role">
+                <div class="role-card">
+                    <div class="role-icon echo"><i class="fas fa-search"></i></div>
+                    <h3>Echo — 需求发现</h3>
+                    <div class="role-tagline">"用户真正需要什么？"</div>
+                    <ul>
+                        <li>深入用户场景，嵌入式观察</li>
+                        <li>定义有价值的 Demo/用例</li>
+                        <li>客户关系管理与需求梳理</li>
+                        <li>确定每次 Cycle 的范围边界</li>
+                        <li>时间占比: ~20%</li>
+                    </ul>
+                </div>
+                <div class="role-card">
+                    <div class="role-icon delta"><i class="fas fa-bolt"></i></div>
+                    <h3>Delta — 原型交付</h3>
+                    <div class="role-tagline">"最快能跑的是什么？"</div>
+                    <ul>
+                        <li>擅长快速原型，追求速度</li>
+                        <li>在时间线内以软件形式交付成果</li>
+                        <li>代码可以粗糙但必须能跑</li>
+                        <li>快速迭代验证核心假设</li>
+                        <li>时间占比: ~55%</li>
+                    </ul>
+                </div>
+                <div class="role-card">
+                    <div class="role-icon product"><i class="fas fa-cubes"></i></div>
+                    <h3>Product — 抽象泛化</h3>
+                    <div class="role-tagline">"如何服务接下来10个客户？"</div>
+                    <ul>
+                        <li>识别可复用的通用模式</li>
+                        <li>把现场方案抽象为通用模块</li>
+                        <li>写架构决策记录和技术文档</li>
+                        <li>让下一次的边际成本接近零</li>
+                        <li>时间占比: ~25%</li>
+                    </ul>
+                </div>
+            </div>
+
+            <p style="text-align:center; color: var(--text-secondary); margin-top: 36px; max-width: 720px; margin-left: auto; margin-right: auto;">
+                <strong style="color: var(--text-primary);">FDE 不是咨询。</strong>
+                咨询是一次性服务，FDE 是产品探索过程。FDE 在现场铺<em>"碎石路"</em>，总部修<em>"高速公路"</em>。
+                交付成果的单位价值成本随时间下降，利润率从负转正。
+            </p>
+        </div>
+    </section>
+
+    <!-- 9 个 FDE Cycle -->
+    <section class="section" style="background: rgba(0,0,0,0.2);">
+        <div class="container">
+            <div class="section-header">
+                <span class="section-label">完整案例</span>
+                <h2 class="section-title">MRRC 的 9 个 FDE Cycle</h2>
+                <p class="section-subtitle">每个 Cycle 都是完整的 Echo → Delta → Product 循环。20个月从 V1.0 走到 V5.1.0</p>
+            </div>
+
+            <div style="overflow-x: auto;">
+                <table>
+                    <thead>
+                        <tr><th>#</th><th>Cycle 名称</th><th>时间</th><th>周期</th><th>版本</th><th>Echo 输入</th><th>Delta 关键挑战</th><th>Product 产出</th><th>杠杆</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>1</td><td><strong>奠基</strong></td><td>2024-10</td><td>~4周</td><td>V1.0</td>
+                            <td>评估 F4HTB 上游项目</td><td>Tornado + WebSocket 集成</td>
+                            <td>AD-001/002/003</td>
+                            <td>0→1</td>
+                        </tr>
+                        <tr>
+                            <td>2</td><td><strong>架构重构</strong></td><td>2024-11</td><td>~4周</td><td>V2.0</td>
+                            <td>Linux 独占，播放延迟高</td>
+                            <td>PyAudio 跨平台 + AudioWorklet</td>
+                            <td>audio_interface.py</td>
+                            <td>1→2</td>
+                        </tr>
+                        <tr>
+                            <td>3</td><td><strong>移动端优化</strong></td><td>2024-12</td><td>~4周</td><td>V3.0</td>
+                            <td>桌面界面手机无法操作</td>
+                            <td>iOS Safari AudioContext 修复</td>
+                            <td>mobile_modern.html</td>
+                            <td>2→3</td>
+                        </tr>
+                        <tr style="background: rgba(245,158,11,0.04);">
+                            <td>—</td><td><strong>运营维护期 (Gap)</strong></td><td>2025-01~2026-02</td><td>14个月</td><td>V3.x</td>
+                            <td colspan="2" style="color: var(--accent);">最长的 Echo 阶段 — 日常通联积累真实痛点，为后续爆发式创新蓄力</td>
+                            <td>—</td><td>—</td>
+                        </tr>
+                        <tr>
+                            <td>4</td><td><strong>延迟优化</strong></td><td>2026-03</td><td>~1周</td><td>V4.0</td>
+                            <td>PTT 延迟 2-3 秒</td>
+                            <td>预热帧 + 计数超时机制</td>
+                            <td>PTT 可靠性框架</td>
+                            <td>3→4</td>
+                        </tr>
+                        <tr>
+                            <td>5</td><td><strong>ATR-1000 天调</strong></td><td>2026-03</td><td>~3周</td><td>V4.3-4.5</td>
+                            <td>无功率/SWR 显示</td>
+                            <td>5 轮迭代找到独立代理架构</td>
+                            <td>atr1000_proxy.py</td>
+                            <td>4→5</td>
+                        </tr>
+                        <tr>
+                            <td>6</td><td><strong>DSP 与功能扩展</strong></td><td>2026-03</td><td>~2周</td><td>V4.6-4.9</td>
+                            <td>背景噪声大 + 发射音质差</td>
+                            <td>WDSP 库编译与集成</td>
+                            <td>wdsp_wrapper.py + 多实例</td>
+                            <td>5→7</td>
+                        </tr>
+                        <tr>
+                            <td>7</td><td><strong>部署自动化</strong></td><td>2026-04</td><td>~1周</td><td>V5.1.x</td>
+                            <td>手动 SSH 部署 7 步操作</td>
+                            <td>幂等性设计</td>
+                            <td>Ansible Playbook</td>
+                            <td>7→8</td>
+                        </tr>
+                        <tr>
+                            <td>8</td><td><strong>UI 现代化</strong></td><td>2026-04</td><td>~4周</td><td>V5.0</td>
+                            <td>界面陈旧，Emoji 跨平台不一致</td>
+                            <td>Unicode 图标系统</td>
+                            <td>玻璃拟态设计系统</td>
+                            <td>8→9</td>
+                        </tr>
+                        <tr>
+                            <td>9</td><td><strong>音频精化</strong></td><td>2026-05</td><td>~1.5周</td><td>V5.1</td>
+                            <td>强信号通联时声音刺耳</td>
+                            <td>Safari setValueAtTime 修复</td>
+                            <td>RagChew TX 音频预设系统</td>
+                            <td>9→10</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <p style="text-align:center; color: var(--text-secondary); margin-top: 28px; font-size: 0.9rem; max-width: 680px; margin-left: auto; margin-right: auto;">
+                <strong style="color: var(--accent);">关键洞察：</strong>运营维护期（14个月）不是"空白期"，而是<strong style="color: var(--text-primary);">最长的 Echo 阶段</strong>。
+                真正的用户痛点需要长时间运行才能暴露。从 V4.0 开始的爆发式创新期，12 周内完成 6 个次版本迭代。
+            </p>
+        </div>
+    </section>
+
+    <!-- 三大核心模式 -->
+    <section class="section">
+        <div class="container">
+            <div class="section-header">
+                <span class="section-label">核心模式</span>
+                <h2 class="section-title">FDE 三大核心模式</h2>
+                <p class="section-subtitle">从 MRRC 9 个 Cycle 中提炼的通用方法论</p>
+            </div>
+
+            <div class="pattern-grid">
+                <!-- 模式1: 碎石路 → 高速公路 -->
+                <div class="pattern-card">
+                    <div class="pattern-icon">🛤️ → 🛣️</div>
+                    <h3>碎石路 → 高速公路</h3>
+                    <p>
+                        FDE 最核心的抽象模式。Delta 阶段留下的粗糙方案（"碎石路"）在 Product 阶段
+                        被提炼为可复用的通用模块（"高速公路"），以接近零的边际成本服务后续场景。
+                    </p>
+                    <div class="highlight-box">碎石路: ALSA Linux 独占音频
+                    ↓ 抽象
+                    高速公路: PyAudio 跨平台统一音频接口
+
+                    碎石路: ATR-1000 直连导致主进程崩溃
+                    ↓ 5 轮迭代抽象
+                    高速公路: 独立代理 + 动态轮询 (15s/5s/0.5s)
+
+                    碎石路: 手动 SSH + SCP 部署 (7步)
+                    ↓ 抽象
+                    高速公路: Ansible 幂等自动化部署</div>
+                </div>
+
+                <!-- 模式2: Land & Expand -->
+                <div class="pattern-card">
+                    <div class="pattern-icon">🎯 → 🌐</div>
+                    <h3>Land &amp; Expand 着陆扩张</h3>
+                    <p>
+                        用一个具体问题进入（Land），在现场发现更多问题，自然扩展范围（Expand）。
+                        每次扩展都建立在上一个 Cycle 的产品杠杆之上。
+                    </p>
+                    <div class="highlight-box">Land: 功率/SWR 实时显示
+                    Expand: 智能学习 → 快速调谐
+                    → REST API → 第三方软件联动
+                    → 频率自动同步
+
+                    Land: 基础音频传输
+                    Expand: WDSP 降噪 → TX 均衡器
+                    → RagChew 全链路
+                    → 完整的 TX/RX 音频处理链</div>
+                </div>
+
+                <!-- 模式3: Demo 驱动 -->
+                <div class="pattern-card">
+                    <div class="pattern-icon">✨</div>
+                    <h3>Demo 驱动开发</h3>
+                    <p>
+                        Echo 阶段定义清晰的 Demo 脚本。每次迭代都通过向用户演示来验证。
+                        Demo 创造<em>渴望</em> — 这是最强的交付动力。需求文档会过时，Demo 脚本不会。
+                    </p>
+                    <div class="highlight-box">Demo: "按下 PTT 立即发射，松开立即接收"
+                    → 渴望: "终于不用等 3 秒了！"
+                    → Cycle 4: PTT 预热帧机制
+
+                    Demo: "嘈杂环境开启 NR2，SSB 听起来像 FM"
+                    → 渴望: "简直不敢相信这是短波！"
+                    → Cycle 6: WDSP NR2 降噪集成
+
+                    Demo: "声音温暖有温度，像坐在对面聊天"
+                    → 渴望: "这才是通联该有的声音"
+                    → Cycle 9: RagChew 音频链</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 抽象全景 -->
+    <section class="section" style="background: rgba(0,0,0,0.2);">
+        <div class="container">
+            <div class="section-header">
+                <span class="section-label">抽象目录</span>
+                <h2 class="section-title">碎石路 → 高速公路 全景</h2>
+                <p class="section-subtitle">每一个现场方案如何被抽象为可复用资产</p>
+            </div>
+
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr><th>碎石路 (Delta 产物)</th><th>抽象过程</th><th>高速公路 (Product 产物)</th><th>服务场景</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>ALSA Linux 独占音频</td>
+                            <td><span class="tag delta">Delta</span> PyAudio 跨平台 I/O</td>
+                            <td><code>audio_interface.py</code></td>
+                            <td>macOS / Linux / Windows</td>
+                        </tr>
+                        <tr>
+                            <td>ScriptProcessor 主线程阻塞</td>
+                            <td><span class="tag delta">Delta</span> AudioWorklet 独立音频线程</td>
+                            <td>AudioWorklet 低延迟播放架构</td>
+                            <td>所有现代浏览器</td>
+                        </tr>
+                        <tr>
+                            <td>直接 PTT sleep 等待</td>
+                            <td><span class="tag product">Product</span> 预热帧 + 计数超时框架</td>
+                            <td>PTT 可靠性框架</td>
+                            <td>所有电台型号</td>
+                        </tr>
+                        <tr>
+                            <td>ATR-1000 主进程直连崩溃</td>
+                            <td><span class="tag product">Product</span> 独立代理 + 动态轮询三态</td>
+                            <td><code>atr1000_proxy.py</code></td>
+                            <td>所有 ATR-1000 用户</td>
+                        </tr>
+                        <tr>
+                            <td>原始 libwdsp C 调用</td>
+                            <td><span class="tag product">Product</span> Python 封装统一接口</td>
+                            <td><code>wdsp_wrapper.py</code></td>
+                            <td>所有 WDSP 用户</td>
+                        </tr>
+                        <tr>
+                            <td>单实例硬编码配置</td>
+                            <td><span class="tag product">Product</span> 独立配置/端口/Socket 隔离</td>
+                            <td>多实例部署架构</td>
+                            <td>N 个独立电台</td>
+                        </tr>
+                        <tr>
+                            <td>RNNoise 通用降噪 (10-15dB)</td>
+                            <td><span class="tag delta">Delta</span> WDSP NR2 SSB 专用 (15-20dB)</td>
+                            <td>WDSP NR2 集成</td>
+                            <td>SSB 语音用户</td>
+                        </tr>
+                        <tr>
+                            <td>硬编码音频参数</td>
+                            <td><span class="tag product">Product</span> 预设系统 (DEFAULT/RAGCHEW)</td>
+                            <td>TX 音频预设系统</td>
+                            <td>可扩展到新预设</td>
+                        </tr>
+                        <tr>
+                            <td>Emoji 图标跨平台不一致</td>
+                            <td><span class="tag product">Product</span> Unicode + SVG 统一图标系统</td>
+                            <td>玻璃拟态设计系统</td>
+                            <td>所有平台 + 浏览器</td>
+                        </tr>
+                        <tr>
+                            <td>手动 SSH + SCP 部署</td>
+                            <td><span class="tag product">Product</span> Ansible 声明式幂等部署</td>
+                            <td>Ansible 自动化部署</td>
+                            <td>N 台 Web 服务器</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    <!-- 产品杠杆 -->
+    <section class="section">
+        <div class="container">
+            <div class="section-header">
+                <span class="section-label">核心指标</span>
+                <h2 class="section-title">产品杠杆演进</h2>
+                <p class="section-subtitle">衡量标准：同样的成果，后续交付需要的代码量是否减少？</p>
+            </div>
+
+            <div class="leverage-track">
+                <div class="leverage-bar"><span class="leverage-value">1</span><div class="leverage-fill" style="height:24px;"></div><span class="leverage-label">V1.0</span></div>
+                <div class="leverage-bar"><span class="leverage-value">2</span><div class="leverage-fill" style="height:48px;"></div><span class="leverage-label">V2.0</span></div>
+                <div class="leverage-bar"><span class="leverage-value">3</span><div class="leverage-fill" style="height:72px;"></div><span class="leverage-label">V3.0</span></div>
+                <div class="leverage-bar"><span class="leverage-value">4</span><div class="leverage-fill" style="height:96px;"></div><span class="leverage-label">V4.0</span></div>
+                <div class="leverage-bar"><span class="leverage-value">5</span><div class="leverage-fill" style="height:120px;"></div><span class="leverage-label">V4.3</span></div>
+                <div class="leverage-bar"><span class="leverage-value">7</span><div class="leverage-fill" style="height:160px;"></div><span class="leverage-label">V4.9</span></div>
+                <div class="leverage-bar"><span class="leverage-value">8</span><div class="leverage-fill" style="height:184px;"></div><span class="leverage-label">V5.0</span></div>
+                <div class="leverage-bar"><span class="leverage-value">9</span><div class="leverage-fill" style="height:208px;"></div><span class="leverage-label">V5.1.x</span></div>
+                <div class="leverage-bar"><span class="leverage-value">10</span><div class="leverage-fill" style="height:232px;"></div><span class="leverage-label">V5.1</span></div>
+            </div>
+
+            <p style="text-align:center; color: var(--text-secondary); margin-top: 24px; font-size: 0.9rem;">
+                <strong style="color: var(--primary);">答案是肯定的。</strong>
+                每个 Cycle 后，新增功能的边际开发成本递减。V1.0 到 V5.1.0，产品杠杆从 0 增长到 10，复用效率提升 10 倍。
+            </p>
+        </div>
+    </section>
+
+    <!-- FDE + SDD 集成 -->
+    <section class="section" style="background: rgba(0,0,0,0.2);">
+        <div class="container">
+            <div class="section-header">
+                <span class="section-label">方法论文档化</span>
+                <h2 class="section-title">FDE + IBM TeamSD (SDD) 集成</h2>
+                <p class="section-subtitle">
+                    IBM TeamSD v2.3.2 的 14 章 SDD 为 FDE 提供了结构化框架。FDE 驱动内容，SDD 提供格式。
+                </p>
+            </div>
+
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr><th>FDE 阶段</th><th>驱动哪些 SDD 章节</th><th>时机</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><span class="tag echo">Echo</span> 需求发现</td>
+                            <td>Ch4 系统上下文、Ch2 业务方向、Ch5 非功能需求、Ch6 用例模型、Ch13 可行性评估</td>
+                            <td>首次 Echo + 每次 Cycle</td>
+                        </tr>
+                        <tr>
+                            <td><span class="tag delta">Delta</span> 原型交付</td>
+                            <td>Ch7 主题域模型、Ch11 组件模型、Ch10 服务模型、Ch12 运维模型</td>
+                            <td>Cycle 中后期</td>
+                        </tr>
+                        <tr>
+                            <td><span class="tag product">Product</span> 抽象泛化</td>
+                            <td>Ch8 架构决策、Ch9 架构概览、Ch3 项目定义、Ch1 执行摘要、Ch14 版本历史</td>
+                            <td>抽象时 + 每次发布</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <p style="text-align:center; color: var(--text-secondary); margin-top: 28px; font-size: 0.9rem; max-width: 680px; margin-left: auto; margin-right: auto;">
+                <strong style="color: var(--text-primary);">核心原则：不要让文档驱动开发，让开发驱动文档。</strong>
+                每个 FDE 阶段完成后，更新对应的 SDD 章节。不要反过来。
+            </p>
+        </div>
+    </section>
+
+    <!-- 8 条最佳实践 -->
+    <section class="section">
+        <div class="container">
+            <div class="section-header">
+                <span class="section-label">最佳实践</span>
+                <h2 class="section-title">MRRC 验证的 8 条 FDE 原则</h2>
+                <p class="section-subtitle">从真实项目中提炼，可操作、可复制</p>
+            </div>
+
+            <div class="principle-list">
+                <div class="principle-item">
+                    <div class="principle-num">1</div>
+                    <div class="principle-text">
+                        <h4>从现场出发，不是从产品出发</h4>
+                        <p>每个 Cycle 都由用户场景/真实问题驱动，而非"我想加这个功能"。14 个月的 Gap Period 证明了：持续使用就是最好的需求发现。</p>
+                    </div>
+                </div>
+                <div class="principle-item">
+                    <div class="principle-num">2</div>
+                    <div class="principle-text">
+                        <h4>Demo 驱动验证，不是文档驱动</h4>
+                        <p>每次交付都用实际 Demo 验证用户渴望，而非纸上规划。需求文档会过时，Demo 脚本不会。PTT、NR2、RagChew 三次关键演示创造了强烈的用户渴望。</p>
+                    </div>
+                </div>
+                <div class="principle-item">
+                    <div class="principle-num">3</div>
+                    <div class="principle-text">
+                        <h4>及时抽象，但不提前抽象</h4>
+                        <p>每个 Cycle 后期必须有 Product 角色介入。但至少 2 个类似场景成功后再抽象。Delta 的代码是消耗品，Product 的产出才是资产。</p>
+                    </div>
+                </div>
+                <div class="principle-item">
+                    <div class="principle-num">4</div>
+                    <div class="principle-text">
+                        <h4>文档即产出，不只是代码</h4>
+                        <p>55+ 技术文档、14 章 SDD、6 个 DESIGN 文件。让 6 个月后的自己能在一小时内上手。知识必须可传承。</p>
+                    </div>
+                </div>
+                <div class="principle-item">
+                    <div class="principle-num">5</div>
+                    <div class="principle-text">
+                        <h4>跨平台从第一天开始</h4>
+                        <p>V2.0 就用 PyAudio 替代 ALSA，避免了 Linux 锁定。跨平台不是功能，是架构。</p>
+                    </div>
+                </div>
+                <div class="principle-item">
+                    <div class="principle-num">6</div>
+                    <div class="principle-text">
+                        <h4>运营期就是 Echo 期</h4>
+                        <p>14 个月的"静默期"积累了最真实的需求，为后续爆发式创新（12 周 6 个次版本）奠定了基础。不要跳过浸泡时间。</p>
+                    </div>
+                </div>
+                <div class="principle-item">
+                    <div class="principle-num">7</div>
+                    <div class="principle-text">
+                        <h4>5 轮迭代收不住就换方案</h4>
+                        <p>ATR-1000 在第 5 轮找到正确架构（独立代理）。如果超过 5 轮还不稳定，技术方案可能选错了。不要无限打磨。</p>
+                    </div>
+                </div>
+                <div class="principle-item">
+                    <div class="principle-num">8</div>
+                    <div class="principle-text">
+                        <h4>一人团队用文档做状态交接</h4>
+                        <p>角色切换是最大挑战。Echo 的问题列表 → Delta 的 todo list → Product 的抽象清单。文档就是状态机。</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 反模式 -->
+    <section class="section" style="background: rgba(0,0,0,0.2);">
+        <div class="container">
+            <div class="section-header">
+                <span class="section-label">避坑指南</span>
+                <h2 class="section-title">常见 FDE 反模式</h2>
+                <p class="section-subtitle">每个阶段最需要注意的陷阱</p>
+            </div>
+
+            <div class="anti-grid">
+                <div class="anti-card">
+                    <h4>需求膨胀 (Echo 阶段)</h4>
+                    <p class="bad">❌ Echo 阶段定义了 10 个 Demo，Scope 太大</p>
+                    <p class="good">✅ 每次只选 1 个 Demo。完成后再做下一个。</p>
+                </div>
+                <div class="anti-card">
+                    <h4>假 Echo</h4>
+                    <p class="bad">❌ 没去现场，凭想象写需求</p>
+                    <p class="good">✅ 至少在实际场景中使用 1 周再定义需求。</p>
+                </div>
+                <div class="anti-card">
+                    <h4>过早优化 (Delta 阶段)</h4>
+                    <p class="bad">❌ 第 1 个原型就写完整错误处理、日志、配置</p>
+                    <p class="good">✅ 第 1 个原型只验证最不确定的假设。工程化留给后续迭代。</p>
+                </div>
+                <div class="anti-card">
+                    <h4>无限迭代 (Delta 阶段)</h4>
+                    <p class="bad">❌ 迭代了 10 轮还在调参数</p>
+                    <p class="good">✅ 5 轮迭代后还没稳定 → 考虑换方案，不要无限打磨。</p>
+                </div>
+                <div class="anti-card">
+                    <h4>过早抽象 (Product 阶段)</h4>
+                    <p class="bad">❌ 第 1 个场景还没跑通就写通用框架</p>
+                    <p class="good">✅ 至少 2 个类似场景成功后再抽象。YAGNI。</p>
+                </div>
+                <div class="anti-card">
+                    <h4>跳过 Product 阶段</h4>
+                    <p class="bad">❌ Delta 的代码直接发布，不做抽象和文档</p>
+                    <p class="good">✅ 每个 Cycle 必须留至少 20% 时间给 Product 阶段。</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA -->
+    <section class="cta-section">
+        <div class="container">
+            <h2>将 FDE 应用到你的项目</h2>
+            <p>
+                完整的 FDE 实践指导书、9 个 Cycle 案例研究、SDD 集成模板全部开源。
+                开始你自己的 FDE 之旅。
+            </p>
+            <div style="display: flex; gap: 16px; justify-content: center; flex-wrap: wrap;">
+                <a href="https://github.com/cheenle/UHRR_mac" class="btn btn-primary" target="_blank" rel="noopener">
+                    <i class="fab fa-github"></i> 查看 GitHub 仓库
+                </a>
+                <a href="docs/design.html" class="btn btn-outline">
+                    <i class="fas fa-book"></i> 阅读 SDD 文档
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2024-2026 MRRC Project. 基于 GPL-3.0 协议开源。</p>
+            <p style="margin-top: 8px;">
+                FDE 方法论源自 Palantir。IBM TeamSD v2.3.2。 |
+                <a href="fde.html">FDE 专题</a> |
+                <a href="https://github.com/cheenle/UHRR_mac" target="_blank">GitHub</a>
+            </p>
+        </div>
+    </footer>
+</body>
+</html>
