@@ -415,8 +415,8 @@ class ATR1000Client:
                 try:
                     if self.ws:
                         self.ws.close()
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.debug(f"连接刷新关闭时出错: {e}")
 
     def _on_error(self, ws, error):
         """WebSocket 错误"""
@@ -577,8 +577,8 @@ class ATR1000Client:
         if self.ws:
             try:
                 self.ws.close()
-            except:
-                pass
+            except Exception as e:
+                logger.debug(f"关闭 WebSocket 连接时出错: {e}")
     
     def set_relay(self, sw: int, ind: int, cap: int):
         """

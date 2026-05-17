@@ -124,7 +124,8 @@ class RigctldClient:
         response = self._send_command("f")
         try:
             return int(response)
-        except:
+        except (ValueError, TypeError) as e:
+            logger.debug(f"解析频率响应失败: {e}")
             return 0
     
     def set_ptt(self, on: bool) -> bool:
@@ -212,8 +213,8 @@ class ATR1000Client:
             if sock:
                 try:
                     sock.close()
-                except:
-                    pass
+                except Exception as e:
+                    logger.debug(f"关闭 ATR-1000 socket 时出错: {e}")
     
     def get_meter_data(self) -> Optional[dict]:
         """获取功率/SWR 数据（使用缓存）"""
@@ -382,8 +383,8 @@ class ATUAutoTuner:
         if self.on_progress_callback:
             try:
                 self.on_progress_callback(self.get_progress())
-            except:
-                pass
+            except Exception as e:
+                logger.warning(f"进度回调失败: {e}")
     
     def _set_radio_freq(self, freq: int) -> bool:
         """设置电台频率"""

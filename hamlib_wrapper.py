@@ -8,7 +8,10 @@ Provides a Python interface to the Hamlib library for radio control
 
 import ctypes
 import ctypes.util
+import logging
 from ctypes import c_int, c_void_p, c_double, c_char_p, POINTER
+
+logger = logging.getLogger(__name__)
 
 # Load the Hamlib library
 lib_path = ctypes.util.find_library('hamlib')
@@ -119,8 +122,8 @@ class HamlibWrapper:
             try:
                 result = libham.rig_set_conf(self.rig, b"rig_pathname", pathname.encode())
                 print(f"Set pathname result: {result}")
-            except:
-                print("Could not set pathname via rig_set_conf")
+            except Exception as e:
+                logger.warning(f"Could not set pathname via rig_set_conf: {e}")
         return self.rig
         
     def rig_set_conf(self, token, val):

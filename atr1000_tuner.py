@@ -28,6 +28,7 @@ ATR-1000 天调存储模块 - V4.5.14 增强版
 
 import json
 import os
+import tempfile
 import time
 import logging
 import threading
@@ -79,17 +80,34 @@ class TunerStorage:
             self.data = {}
     
     def _save(self):
-        """保存存储数据"""
+        """保存存储数据 (atomic write via temp file + rename)"""
+        tmp_path = None
         try:
             raw = {
                 'version': '2.0',
                 'updated': datetime.now().isoformat(),
                 'records': list(self.data.values())
             }
-            with open(self.storage_file, 'w', encoding='utf-8') as f:
-                json.dump(raw, f, indent=2, ensure_ascii=False)
+            tmp_dir = os.path.dirname(os.path.abspath(self.storage_file))
+            with tempfile.NamedTemporaryFile('w', dir=tmp_dir, delete=False,
+                                             suffix='.tmp', encoding='utf-8') as tmp:
+                tmp_path = tmp.name
+                json.dump(raw, tmp, indent=2, ensure_ascii=False)
+                tmp.flush()
+                os.fsync(tmp.fileno())
+            try:
+                os.rename(tmp_path, self.storage_file)
+            except OSError:
+                # Windows does not allow os.rename over an existing file;
+                # os.replace is atomic on both POSIX and Windows (Python 3.3+).
+                os.replace(tmp_path, self.storage_file)
         except Exception as e:
             logger.error(f"保存天调数据失败: {e}")
+            if tmp_path and os.path.exists(tmp_path):
+                try:
+                    os.remove(tmp_path)
+                except OSError:
+                    pass
     
     def learn(self, freq: int, sw: int, ind: int, cap: int, swr: float) -> bool:
         """

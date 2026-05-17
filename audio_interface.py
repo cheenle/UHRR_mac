@@ -129,6 +129,12 @@ class PyAudioCapture(threading.Thread):
     recording_enabled = False  # 是否启用录音
     recording_buffer = []  # RX 录音数据缓冲区（左声道）
     tx_recording_buffer = []  # TX 录音数据缓冲区（右声道）
+    # WARNING: recording_buffer and tx_recording_buffer are unbounded lists.
+    # At 8 kHz mono, ~1 hour of audio ≈ 220 MB RAM.  A very long recording
+    # session without stop_recording() will grow memory indefinitely.
+    # If this becomes a problem, enforce a maximum duration or switch to
+    # writing chunks directly to disk (e.g. via a WAV file writer).
+    RECORDING_MAX_CHUNKS = 36000  # ~1 h at 8 kHz / 800-sample frames
     recording_lock = threading.Lock()  # 录音缓冲区锁
     recording_start_time = None  # 录音开始时间
     recording_freq = 0  # 录音时的频率
@@ -343,6 +349,10 @@ class PyAudioCapture(threading.Thread):
                             # 简单降采样：每3个取1个（48000/3 = 16000）
                             downsampled = int16_data[::3]
                             PyAudioCapture.recording_buffer.append(downsampled)
+                            # Guard against unbounded growth
+                            if len(PyAudioCapture.recording_buffer) >= PyAudioCapture.RECORDING_MAX_CHUNKS:
+                                logger.warning("录音缓冲区已满 (RECORDING_MAX_CHUNKS), 自动停止录音")
+                                PyAudioCapture.recording_enabled = False
                     
                     # ========== WDSP 数字信号处理 ==========
                     # 在 Int16 转换后、Opus编码前进行 WDSP 处理
