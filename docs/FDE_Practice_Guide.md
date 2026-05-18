@@ -2,7 +2,7 @@
 
 > **Forward Deployed Engineering — 从理论到实践的完整操作指南**
 >
-> 基于 MRRC 项目 (203 commits, V1.0→V5.1.0, 2024-10→2026-05) 的真实过程
+> 基于 MRRC 项目 (208 commits, V1.0→V5.2.0, 2024-10→2026-05) 的真实过程
 > 结合 IBM TeamSD v2.3.2 (SDD 14 章) 方法论
 > 面向个人开发者和小团队 (1-3 人)
 

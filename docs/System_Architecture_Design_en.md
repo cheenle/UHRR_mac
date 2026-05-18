@@ -1,7 +1,7 @@
 # Mobile Remote Radio Control (MRRC) System Architecture Design Document
 
 ## Document Information
-- **Version**: v5.1.0 (2026-05-10)
+- **Version**: v5.2.0 (2026-05-18)
 - **Author**: System Architecture Team
 - **Status**: Production Ready
 - **Classification**: Confidential/Internal
@@ -885,7 +885,8 @@ Community contributions are welcome, but please note:
 | v4.9.0 | 2026-03-14 | Voice assistant, CW mode, SDR interface | Production Ready |
 | v4.9.1 | 2026-03-15 | Multi-instance support deep optimization | Production Ready |
 | v5.0.0 | 2026-04-30 | Mobile UI modernization: glassmorphism, Unicode icons, CSS reduction | Historical Version |
-| v5.1.0 | 2026-05-10 | RagChew TX audio preset, Web Audio full-chain processing, Safari setValueAtTime fix | Current Version |
+| v5.1.0 | 2026-05-10 | RagChew TX audio preset, Web Audio full-chain processing, Safari setValueAtTime fix | Historical Version |
+| v5.2.0 | 2026-05-18 | WDSP hash caching (reduced per-frame CPU overhead), RX multi-node scheduled playback (gap-free), Opus frame alignment (960 samples@48kHz) | Current Version |
 
 ---
 

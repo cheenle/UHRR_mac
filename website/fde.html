@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>FDE & MRRC — Forward Deployed Engineering in Practice</title>
-    <meta name="description" content="How Palantir's Forward Deployed Engineering (FDE) methodology drove MRRC from V1.0 to V5.1.0 — 9 cycles, 203 commits, complete case study with best practices">
+    <meta name="description" content="How Palantir's Forward Deployed Engineering (FDE) methodology drove MRRC from V1.0 to V5.2.0 — 10 cycles, 208 commits, complete case study with best practices">
     <meta name="keywords" content="FDE, Forward Deployed Engineering, MRRC, Palantir, SDD, IBM TeamSD, software methodology, best practices">
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/docs.css">
@@ -318,21 +318,21 @@
                 <span class="gradient">Engineering</span>
             </h1>
             <p class="hero-subtitle">
-                How Palantir's FDE methodology drove MRRC through 9 cycles of evolution —
+                How Palantir's FDE methodology drove MRRC through 10 cycles of evolution —
                 from a bare fork to a full-featured remote radio control system.
-                203 commits, V1.0 to V5.1.0, with complete methodology, patterns, and lessons learned.
+                208 commits, V1.0 to V5.2.0, with complete methodology, patterns, and lessons learned.
             </p>
             <div class="hero-stats">
                 <div class="stat-item">
-                    <span class="stat-value">9</span>
+                    <span class="stat-value">10</span>
                     <span class="stat-label">FDE Cycles</span>
                 </div>
                 <div class="stat-item">
-                    <span class="stat-value">203</span>
+                    <span class="stat-value">208</span>
                     <span class="stat-label">Commits</span>
                 </div>
                 <div class="stat-item">
-                    <span class="stat-value">0→10</span>
+                    <span class="stat-value">0→11</span>
                     <span class="stat-label">Product Leverage</span>
                 </div>
                 <div class="stat-item">
@@ -410,8 +410,8 @@
         <div class="container">
             <div class="section-header">
                 <span class="section-label">Case Study</span>
-                <h2 class="section-title">MRRC's 9 FDE Cycles</h2>
-                <p class="section-subtitle">Each cycle is a complete Echo → Delta → Product iteration. 20 months from V1.0 to V5.1.0.</p>
+                <h2 class="section-title">MRRC's 10 FDE Cycles</h2>
+                <p class="section-subtitle">Each cycle is a complete Echo → Delta → Product iteration. 20 months from V1.0 to V5.2.0.</p>
             </div>
 
             <div style="overflow-x: auto;">
@@ -497,6 +497,14 @@
                             <td>Safari setValueAtTime fix</td>
                             <td>RagChew audio preset system</td>
                             <td>9→10</td>
+                        </tr>
+                        <tr>
+                            <td>10</td><td><strong>Performance Tuning</strong></td>
+                            <td>2026-05</td><td>~1w</td><td>V5.2</td>
+                            <td>RX audio inter-frame gaps, WDSP per-frame CPU overhead</td>
+                            <td>Multi-node scheduled playback</td>
+                            <td>audio_rx.js rewrite, WDSP hash caching</td>
+                            <td>10→11</td>
                         </tr>
                     </tbody>
                 </table>
@@ -677,11 +685,12 @@
                 <div class="leverage-bar"><span class="leverage-value">8</span><div class="leverage-fill" style="height:184px;"></div><span class="leverage-label">V5.0</span></div>
                 <div class="leverage-bar"><span class="leverage-value">9</span><div class="leverage-fill" style="height:208px;"></div><span class="leverage-label">V5.1.x</span></div>
                 <div class="leverage-bar"><span class="leverage-value">10</span><div class="leverage-fill" style="height:232px;"></div><span class="leverage-label">V5.1</span></div>
+                <div class="leverage-bar"><span class="leverage-value">11</span><div class="leverage-fill" style="height:256px;"></div><span class="leverage-label">V5.2</span></div>
             </div>
 
             <p style="text-align:center; color: var(--text-secondary); margin-top: 24px; font-size: 0.9rem;">
                 <strong style="color: var(--primary);">Answer: Yes.</strong> After each cycle, the marginal development cost of new features decreases.
-                V1.0 to V5.1.0: leverage grew from 0 to 10 (10x improvement in reuse efficiency).
+                V1.0 to V5.2.0: leverage grew from 0 to 11 (11x improvement in reuse efficiency).
             </p>
         </div>
     </section>

@@ -2,8 +2,8 @@
 
 **Mobile Remote Radio Control - Mobile Operation Guide**
 
-Version: V5.1.0  
-Last Updated: May 10, 2026
+Version: V5.2.0  
+Last Updated: May 18, 2026
 
 ---
 

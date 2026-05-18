@@ -1,7 +1,7 @@
 # Mobile Remote Radio Control (MRRC) 系统架构设计文档
 
 ## 文档信息
-- **版本**: v5.1.0 (2026-05-10)
+- **版本**: v5.2.0 (2026-05-18)
 - **作者**: System Architecture Team
 - **状态**: 生产就绪
 - **分类**: 机密/内部
@@ -930,7 +930,8 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 | v4.9.2 | 2026-03-16 | FT8 ULTRON集成优化 | 生产就绪 |
 | v4.9.3 | 2026-03-29 | 文档全面更新，功能完善 | 历史版本 |
 | v5.0.0 | 2026-04-30 | 移动端UI全面现代化：玻璃拟态效果、Unicode图标替换、CSS瘦身15%、触摸热区优化、震动反馈、TX频率变色、英文界面统一 | 历史版本 |
-| v5.1.0 | 2026-05-10 | RagChew TX 语音美化模式、Web Audio API 全链路处理（EQ+压缩+噪声门）、修复 Safari setValueAtTime 初始化错误 | 当前版本 |
+| v5.1.0 | 2026-05-10 | RagChew TX 语音美化模式、Web Audio API 全链路处理（EQ+压缩+噪声门）、修复 Safari setValueAtTime 初始化错误 | 历史版本 |
+| v5.2.0 | 2026-05-18 | WDSP哈希缓存优化（减少每帧CPU开销）、RX音频多节点调度播放引擎（消除帧间间隙）、Opus帧对齐（960 samples@48kHz） | 当前版本 |
 
 ---
 

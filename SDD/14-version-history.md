@@ -5,6 +5,7 @@
 | SDD V1.0 | 2026-03-15 | MRRC Team | Initial SDD document, IBM TeamSD methodology, 14 chapters |
 | SDD V2.0 | 2026-05-02 | MRRC Team | Updated to V5.0.0: Mobile UI redesign, ATR-1000 anti-disconnect, Opus HPF support, spectrum analysis tool |
 | SDD V2.1 | 2026-05-10 | MRRC Team | Updated to V5.1.0: RagChew TX audio preset, Web Audio full-chain processing |
+| SDD V2.2 | 2026-05-18 | MRRC Team | Updated to V5.2.0: WDSP hash caching optimization, RX audio multi-node scheduling playback engine |
 
 ## Key Changes in V2.0 (V5.0.0)
 
@@ -39,6 +40,19 @@
 - Dynamic compressor 3:1 ratio for smooth volume leveling
 - Noise gate with -50dB threshold for silent background
 - Safari setValueAtTime compatibility fix (critical bug resolution)
+
+## Key Changes in V2.2 (V5.2.0)
+
+### Updated Sections
+- **Chapter 1**: Updated version info to V5.2.0
+- **Chapter 9**: Added multi-BufferSourceNode scheduling architecture for RX audio
+- **Chapter 11**: Updated component inventory with RX playback engine changes
+
+### New Features Documented
+- RX audio multi-node scheduling playback engine (gap-free inter-frame alignment)
+- WDSP config hash caching for reduced per-frame CPU overhead
+- Opus frame-aligned capture buffer (960 samples @ 48kHz → 320 samples @ 16kHz)
+- AudioContext resume handling for browser auto-suspend compatibility
 
 ---
 

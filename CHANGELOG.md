@@ -5,6 +5,31 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [V5.2.0] - 2026-05-18
+
+### ⚡ WDSP 配置缓存优化 & RX 音频播放引擎重写
+
+**WDSP 性能优化**:
+- 哈希缓存机制：7 个关键参数哈希对比替代每帧 100+ 行属性检查，减少 CPU 开销
+- `frames_per_buffer` 256→960，对齐 Opus 帧 (20ms@48kHz → 320samples@16kHz)
+- 简化 WDSP 初始化/重配置逻辑，删除冗余调试日志
+
+**RX 音频播放引擎重写**:
+- 多 BufferSourceNode 调度替代单节点复用，消除帧间间隙 (pops/clicks)
+- 精确时间对齐 (`_rx_nextStartTime`)，每个 buffer 独立创建 source node
+- 非递归调度 + `onended` 链式触发，限制并发调度数 (`_rx_maxScheduled=3`)
+- 队列深度 10→20，更大缓冲容忍度
+- AudioContext resume 处理，适配浏览器自动暂停策略
+- 解码失败时丢弃帧而非断裂时间线
+
+**文件变更**:
+- `audio_interface.py` - WDSP 哈希缓存、Opus 帧对齐
+- `www/audio_rx.js` - RX 播放引擎重写
+- `mrrc_multi.sh` - 固定 Python 解释器路径
+- `atr1000_tuner.json` - 天调运行数据更新
+
+---
+
 ## [V5.1.0] - 2026-05-10
 
 ### 🎙️ RagChew TX 音频处理模式

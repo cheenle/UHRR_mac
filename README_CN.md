@@ -1,6 +1,6 @@
-# Mobile Remote Radio Control (MRRC) V5.1.0
+# Mobile Remote Radio Control (MRRC) V5.2.0
 
-[![English](https://img.shields.io/badge/lang-English-blue.svg)](README_en.md) [![中文](https://img.shields.io/badge/lang-中文-red.svg)](README_CN.md) [![版本](https://img.shields.io/badge/版本-V5.1.0-green.svg)](CHANGELOG.md)
+[![English](https://img.shields.io/badge/lang-English-blue.svg)](README_en.md) [![中文](https://img.shields.io/badge/lang-中文-red.svg)](README_CN.md) [![版本](https://img.shields.io/badge/版本-V5.2.0-green.svg)](CHANGELOG.md)
 
 **随时随地，畅享业余无线电。**
 
@@ -8,7 +8,7 @@ MRRC 是一款专为移动端优化的业余电台远程控制系统。无论您
 
 > ✅ **核心优势**：移动端优先设计，TX→RX切换延迟<100ms，PWA支持离线访问，专为单手操作优化
 >
-> 🎉 **V5.1.0 更新亮点**：
+> 🎉 **V5.2.0 更新亮点**：
 > - 🎙️ **RagChew TX 语音美化**：温暖自然的人声预设，EQ + 动态压缩 + 噪声门
 > - 🔧 **Web Audio 音频链修复**：修复 Safari setValueAtTime 参数缺失导致的初始化失败
 >
@@ -150,7 +150,7 @@ MRRC 是一款专为移动端优化的业余电台远程控制系统。无论您
 - **实时S表**：准确显示S0-S9+60dB信号强度
 - **音频滤波**：多种滤波器配置可选
 - **TX均衡器**：三段均衡器优化发射音频，支持短波语音/弱信号/比赛模式
-- **🎙️ RagChew 模式（V5.1.0）**：专为本地强信号优化的TX预设，提供温暖自然的语音质感
+- **🎙️ RagChew 模式（V5.2.0）**：专为本地强信号优化的TX预设，提供温暖自然的语音质感
   - EQ：低切150Hz、中频衰减-2dB@500Hz、临境感+3dB@2.4kHz、高切3kHz
   - 压缩器：3:1比率，平滑音量波动
   - 噪声门：-50dB阈值，静默时彻底消除底噪
@@ -364,7 +364,7 @@ curl -X POST -H "Content-Type: application/json" \
 
 ---
 
-**最新版本: V5.1.0** (2026-05-10) | [查看更新日志](CHANGELOG.md)
+**最新版本: V5.2.0** (2026-05-18) | [查看更新日志](CHANGELOG.md)
 
 ## 🖥️ 多实例支持（Multi-Instance）⭐ 新功能
 

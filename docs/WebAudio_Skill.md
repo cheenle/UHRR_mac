@@ -847,7 +847,7 @@ class DebugProcessor extends AudioWorkletProcessor {
 
 ---
 
-**文档版本**: 1.1 (V5.1.0)  
-**最后更新**: 2026-05-10  
+**文档版本**: 1.2 (V5.2.0)  
+**最后更新**: 2026-05-18  
 **适用于**: MRRC 项目 Web Audio 开发  
 **更新日志**: 添加 RagChew TX 音频处理链实战案例、Safari setValueAtTime 兼容性说明

@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>FDE 专题 — Forward Deployed Engineering 实践与思考</title>
-    <meta name="description" content="Palantir FDE 方法论如何驱动 MRRC 从 V1.0 演进到 V5.1.0 —— 9个完整 Cycle、203次提交、全套最佳实践">
+    <meta name="description" content="Palantir FDE 方法论如何驱动 MRRC 从 V1.0 演进到 V5.2.0 —— 10个完整 Cycle、208次提交、全套最佳实践">
     <meta name="keywords" content="FDE, Forward Deployed Engineering, 驻场工程师, MRRC, Palantir, SDD, IBM TeamSD, 软件方法论, 最佳实践">
     <link rel="stylesheet" href="../css/style.css">
     <link rel="stylesheet" href="../css/docs.css">
@@ -283,20 +283,20 @@
             </h1>
             <p class="hero-subtitle">
                 以 Palantir FDE 方法论重新审视 MRRC 项目全生命周期 ——
-                9 个 FDE Cycle、203 次提交、从 V1.0 到 V5.1.0 的完整演进过程。
+                10 个 FDE Cycle、208 次提交、从 V1.0 到 V5.2.0 的完整演进过程。
                 涵盖方法论基础、核心模式、最佳实践、反模式陷阱和全套实操指南。
             </p>
             <div class="hero-stats">
                 <div class="stat-item">
-                    <span class="stat-value">9</span>
+                    <span class="stat-value">10</span>
                     <span class="stat-label">FDE Cycle</span>
                 </div>
                 <div class="stat-item">
-                    <span class="stat-value">203</span>
+                    <span class="stat-value">208</span>
                     <span class="stat-label">次提交</span>
                 </div>
                 <div class="stat-item">
-                    <span class="stat-value">0→10</span>
+                    <span class="stat-value">0→11</span>
                     <span class="stat-label">产品杠杆增长</span>
                 </div>
                 <div class="stat-item">
@@ -398,8 +398,8 @@
         <div class="container">
             <div class="section-header">
                 <span class="section-label">完整案例</span>
-                <h2 class="section-title">MRRC 的 9 个 FDE Cycle</h2>
-                <p class="section-subtitle">每个 Cycle 都是完整的 Echo → Delta → Product 循环。20个月从 V1.0 走到 V5.1.0</p>
+                <h2 class="section-title">MRRC 的 10 个 FDE Cycle</h2>
+                <p class="section-subtitle">每个 Cycle 都是完整的 Echo → Delta → Product 循环。20个月从 V1.0 走到 V5.2.0</p>
             </div>
 
             <div style="overflow-x: auto;">
@@ -474,6 +474,13 @@
                             <td>Safari setValueAtTime 修复</td>
                             <td>RagChew TX 音频预设系统</td>
                             <td>9→10</td>
+                        </tr>
+                        <tr>
+                            <td>10</td><td><strong>性能调优</strong></td><td>2026-05</td><td>~1周</td><td>V5.2</td>
+                            <td>RX音频帧间间隙、WDSP逐帧CPU开销</td>
+                            <td>多节点调度播放引擎</td>
+                            <td>audio_rx.js重写、WDSP哈希缓存</td>
+                            <td>10→11</td>
                         </tr>
                     </tbody>
                 </table>
@@ -660,11 +667,12 @@
                 <div class="leverage-bar"><span class="leverage-value">8</span><div class="leverage-fill" style="height:184px;"></div><span class="leverage-label">V5.0</span></div>
                 <div class="leverage-bar"><span class="leverage-value">9</span><div class="leverage-fill" style="height:208px;"></div><span class="leverage-label">V5.1.x</span></div>
                 <div class="leverage-bar"><span class="leverage-value">10</span><div class="leverage-fill" style="height:232px;"></div><span class="leverage-label">V5.1</span></div>
+                <div class="leverage-bar"><span class="leverage-value">11</span><div class="leverage-fill" style="height:256px;"></div><span class="leverage-label">V5.2</span></div>
             </div>
 
             <p style="text-align:center; color: var(--text-secondary); margin-top: 24px; font-size: 0.9rem;">
                 <strong style="color: var(--primary);">答案是肯定的。</strong>
-                每个 Cycle 后，新增功能的边际开发成本递减。V1.0 到 V5.1.0，产品杠杆从 0 增长到 10，复用效率提升 10 倍。
+                每个 Cycle 后，新增功能的边际开发成本递减。V1.0 到 V5.2.0，产品杠杆从 0 增长到 11，复用效率提升 11 倍。
             </p>
         </div>
     </section>

@@ -1,8 +1,8 @@
 # MRRC 项目 FDE 模式复盘与提炼
 
 > Forward Deployed Engineering — 以 Palantir FDE 方法论重新审视 MRRC 项目演进
-> 综合来源: 203 commits, CHANGELOG, SDD (14章), DESIGN (6文档), AOD, DSP, 26+ 技术文档
-> 覆盖周期: 2024-10 ~ 2026-05, V1.0.0 → V5.1.0
+> 综合来源: 208 commits, CHANGELOG, SDD (14章), DESIGN (6文档), AOD, DSP, 26+ 技术文档
+> 覆盖周期: 2024-10 ~ 2026-05, V1.0.0 → V5.2.0
 
 ---
 
@@ -54,9 +54,9 @@ FDE = Echo(需求发现) + Delta(原型交付) + Product(抽象泛化)
 ┌────────┐ ┌────────┐  ┌────────┐  ┌────────────┐  ┌────────────┐  ┌────────┐  ┌──────────┐
 │ Cycle1 │ │ Cycle2 │  │ Cycle3 │  │ Gap Period │  │ Cycle 4-7  │  │Cycle 8 │  │ Cycle 9  │
 │ 奠基   │ │ 架构   │  │ 移动端 │  │ (运营维护)  │  │ 爆发式增长  │  │UI现代化 │  │ 音频精化  │
-│ V1.0   │ │ V2.0   │  │ V3.0   │  │ V3.0-V3.2  │  │ V4.0-V4.9  │  │ V5.0   │  │ V5.1     │
-│ ~4周   │ │ ~4周   │  │ ~4周   │  │ ~14个月    │  │ ~6周       │  │ ~4周   │  │ ~1.5周   │
-└────────┘ └────────┘  └────────┘  └────────────┘  └────────────┘  └────────┘  └──────────┘
+│ V1.0   │ │ V2.0   │  │ V3.0   │  │ V3.0-V3.2  │  │ V4.0-V4.9  │  │ V5.0   │  │ V5.1     │  │ V5.2     │
+│ ~4周   │ │ ~4周   │  │ ~4周   │  │ ~14个月    │  │ ~6周       │  │ ~4周   │  │ ~1.5周   │  │ ~1周     │
+└────────┘ └────────┘  └────────┘  └────────────┘  └────────────┘  └────────┘  └──────────┘  └──────────┘
                                                       分拆为:
                                                     ┌──────────┐  ┌──────────┐  ┌──────────┐
                                                     │ Cycle 4  │  │ Cycle 5  │  │ Cycle 6  │
@@ -453,10 +453,30 @@ Chrome/Firefox 默认可省略 → Safari 报 "TypeError: not enough arguments"
 
 **SDD 文档体系完成** (V2.1)：
 - 14 章完整 IBM TeamSD 方法论文档
-- 覆盖 V1.0 → V5.1.0 全部版本
+- 覆盖 V1.0 → V5.2.0 全部版本
 - 系统上下文、用例模型、架构决策、服务模型、组件模型完整
 
 **版本产出**: V5.1.0 (RagChew + Safari fix + ATR-1000 PTT + stereo recording + TX boost + SDD V2.1)
+
+### Cycle 10: 性能调优 — V5.2.0 (2026-05-18)
+
+| 要素 | 内容 |
+|------|------|
+| **Echo** | RX 音频帧间间隙导致 pops/clicks；WDSP 每帧 100+ 行属性检查造成 CPU 开销 |
+| **Delta** | 多 BufferSourceNode 精确时间对齐调度、WDSP 参数哈希缓存机制、Opus 帧对齐 (960 samples@48kHz) |
+| **Product** | `www/audio_rx.js` (播放引擎重写), `audio_interface.py` (WDSP 哈希缓存 + Opus 帧对齐), `mrrc_multi.sh` (Python 路径固定) |
+
+**RX 播放引擎重写** — V5.2.0 核心改进：
+- 单节点复用 → 多 BufferSourceNode 调度：每个 Opus 解码帧独立创建 source node
+- `_rx_nextStartTime` 精确时间对齐，消除帧间间隙
+- 非递归调度 + `onended` 链式触发，限制并发调度数 (`_rx_maxScheduled=3`)
+- 队列深度 10→20，解码失败时丢弃帧而非断裂时间线
+
+**WDSP 性能优化**：
+- 7 个关键参数哈希对比替代每帧属性检查，仅变更时重建处理器
+- `frames_per_buffer` 256→960，对齐 Opus 帧 (20ms@48kHz → 320samples@16kHz)
+
+**版本产出**: V5.2.0 (WDSP 哈希缓存 + RX 多节点调度播放引擎 + Opus 帧对齐 + SDD V2.2)
 
 ---
 
@@ -722,6 +742,6 @@ V5.1: 产品杠杆 = 9 (TX 预设系统 + RagChew + Ansible 部署自动化 + SD
 ---
 
 *本文档基于 FDE (Forward Deployed Engineering) 方法论，对 MRRC 项目进行全面复盘。*
-*资料来源: 203 commits, CHANGELOG (V1.0→V5.1.0), SDD (14章), DESIGN (6文档), 26+ 技术文档, AOD, DSP*
+*资料来源: 208 commits, CHANGELOG (V1.0→V5.2.0), SDD (14章), DESIGN (6文档), 26+ 技术文档, AOD, DSP*
 *FDE 理念源自 Palantir，详见 Bob O'Brien 访谈记录。*
-*文档版本: V3.0 | 2026-05-10 (全面重写: 9 个 FDE Cycle 完整覆盖 V1.0→V5.1.0，综合所有文档源)*
+*文档版本: V3.1 | 2026-05-18 (V5.2.0 更新: 10 个 FDE Cycle 完整覆盖 V1.0→V5.2.0，综合所有文档源)*
