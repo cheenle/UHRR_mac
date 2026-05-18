@@ -1,25 +1,28 @@
 // Audio RX functions - Audio reception and processing
+// V5.2: 重写播放引擎 — 多 BufferSourceNode 调度，消除帧间间隙
 
 const RXinstantMeter = document.querySelector('#RXinstant meter');
 
 var wsAudioRX = "";
 var AudioRX_context = "";
-var AudioRX_source_node = "";
 var AudioRX_gain_node = "";
 var AudioRX_biquadFilter_node = "";
 var AudioRX_analyser = "";
-var audiobufferready = false;
 var AudioRX_audiobuffer = [];
 var AudioRX_sampleRate=16000;
-var audioSyncMonitor = {
-	lastProcessTime: 0,
-	bufferCount: 0,
-	lagWarning: false
-};
+
+// V5.2: 调度播放状态
+var _rx_nextStartTime = 0;
+var _rx_scheduledCount = 0;
+var _rx_maxScheduled = 3;       // 最多提前调度3帧
+var _rx_nodesInitialized = false;
 
 function AudioRX_start(){
 	document.getElementById("indwsAudioRX").innerHTML='<img src="img/critsgrey.png">wsRX';
-	AudioRX_audiobuffer = [];var lenglitchbuf = 2;
+	AudioRX_audiobuffer = [];
+	_rx_nextStartTime = 0;
+	_rx_scheduledCount = 0;
+	_rx_nodesInitialized = false;
 
 	wsAudioRX = new WebSocket( 'wss://' + window.location.href.split( '/' )[2] + '/WSaudioRX' );
 	wsAudioRX.binaryType = 'arraybuffer';
@@ -28,11 +31,10 @@ function AudioRX_start(){
 	wsAudioRX.onclose = wsAudioRXclose;
 	wsAudioRX.onerror = wsAudioRXerror;
 
-	// 每秒打印一次码率（RX/TX）
 	if (!window.__brTimer) {
 		window.__rxBytes = 0; window.__txBytes = 0;
 		window.__brTimer = setInterval(function(){
-			var rxkbps = (window.__rxBytes||0) * 8 / 1000; // Kbps
+			var rxkbps = (window.__rxBytes||0) * 8 / 1000;
 			var txkbps = (window.__txBytes||0) * 8 / 1000;
 			console.log(`[码率] RX: ${rxkbps.toFixed(1)} kbps, TX: ${txkbps.toFixed(1)} kbps`);
 			var brEl = document.getElementById('div-bitrates');
@@ -42,50 +44,94 @@ function AudioRX_start(){
 	}
 
 	function appendwsAudioRX( msg ){
-		console.log('DEBUG: Received audio data message');
-		// 码率统计：RX
 		if (!window.__rxBytes) { window.__rxBytes = 0; }
 		if (msg && msg.data && msg.data.byteLength) {
 			window.__rxBytes += msg.data.byteLength;
 		}
-		// 限制缓冲区大小，防止累积过多音频数据
-		if (AudioRX_audiobuffer.length > 10) {
-			AudioRX_audiobuffer.shift();
+		// V5.2: 限制队列深度，防止积压
+		if (AudioRX_audiobuffer.length > 20) {
+			AudioRX_audiobuffer.splice(0, AudioRX_audiobuffer.length - 10);
 		}
 		AudioRX_audiobuffer.push(msg.data);
-		if (!audiobufferready) {
-			audiobufferready = true;
-			AudioRX_process();
+		// 尝试调度播放
+		AudioRX_scheduleNext();
+	}
+
+	// V5.2: 非递归调度播放 — 创建新 BufferSourceNode，精确时间对齐
+	function AudioRX_scheduleNext(){
+		// 限制并发调度数
+		if (_rx_scheduledCount >= _rx_maxScheduled) return;
+		if (AudioRX_audiobuffer.length === 0) return;
+
+		var msg = AudioRX_audiobuffer.shift();
+		_rx_scheduledCount++;
+
+		// 确保 AudioContext 在用户交互后恢复
+		if (AudioRX_context === "" || AudioRX_context.state === 'closed') {
+			AudioRX_context = new (window.AudioContext || window.webkitAudioContext)({sampleRate:AudioRX_sampleRate});
+		}
+		if (AudioRX_context.state === 'suspended') {
+			AudioRX_context.resume().then(function() {
+				_doDecode(msg);
+			}).catch(function() {
+				_rx_scheduledCount--;
+				AudioRX_audiobuffer.unshift(msg);
+			});
+		} else {
+			_doDecode(msg);
 		}
 	}
 
-	function AudioRX_process(){
-		if (AudioRX_audiobuffer.length > 0) {
-			var msg = AudioRX_audiobuffer.shift();
-			if (AudioRX_context === "") {
-				AudioRX_context = new AudioContext({sampleRate:AudioRX_sampleRate});
-				AudioRX_source_node = AudioRX_context.createBufferSource();
+	function _doDecode(msg) {
+		AudioRX_context.decodeAudioData(msg, function(buffer) {
+			// 懒初始化音频图
+			if (!_rx_nodesInitialized) {
 				AudioRX_gain_node = AudioRX_context.createGain();
 				AudioRX_biquadFilter_node = AudioRX_context.createBiquadFilter();
 				AudioRX_analyser = AudioRX_context.createAnalyser();
 				AudioRX_analyser.fftSize = 2048;
 				AudioRX_analyser.smoothingTimeConstant = 0.8;
-				AudioRX_source_node.connect(AudioRX_biquadFilter_node);
 				AudioRX_biquadFilter_node.connect(AudioRX_gain_node);
 				AudioRX_gain_node.connect(AudioRX_analyser);
 				AudioRX_analyser.connect(AudioRX_context.destination);
-				AudioRX_source_node.start();
+				_rx_nodesInitialized = true;
 			}
-			AudioRX_context.decodeAudioData(msg, function(buffer) {
-				AudioRX_source_node.buffer = buffer;
-				AudioRX_process();
-			}, function(e) {
-				console.log('Error with decoding audio data' + e.err);
-				AudioRX_process();
-			});
-		} else {
-			audiobufferready = false;
-		}
+
+			// V5.2: 每个 buffer 创建独立的 BufferSourceNode
+			var source = AudioRX_context.createBufferSource();
+			source.buffer = buffer;
+			source.connect(AudioRX_biquadFilter_node);
+
+			// 精确时间对齐
+			var now = AudioRX_context.currentTime;
+			if (_rx_nextStartTime < now) {
+				_rx_nextStartTime = now;
+			}
+			source.start(_rx_nextStartTime);
+			_rx_nextStartTime += buffer.duration;
+
+			source.onended = function() {
+				_rx_scheduledCount--;
+				// 从队列取下一帧
+				if (AudioRX_audiobuffer.length > 0) {
+					AudioRX_scheduleNext();
+				}
+			};
+
+			// 继续预取
+			if (AudioRX_audiobuffer.length > 0) {
+				AudioRX_scheduleNext();
+			}
+		}, function(e) {
+			console.log('Error decoding audio data: ' + e);
+			_rx_scheduledCount--;
+			// 丢包时用静默帧填充，避免时间线断裂
+			if (_rx_scheduledCount === 0 && AudioRX_audiobuffer.length === 0) {
+				// 没有待播放帧，时间线可能已断裂，重置
+				_rx_nextStartTime = 0;
+			}
+			AudioRX_scheduleNext();
+		});
 	}
 }
 
@@ -127,9 +173,10 @@ function wsAudioRXerror(err){
 	AudioRX_stop();
 }
 
-function AudioRX_stop()
-{
-	audiobufferready = false;
+function AudioRX_stop() {
+	_rx_nextStartTime = 0;
+	_rx_scheduledCount = 0;
+	AudioRX_audiobuffer = [];
 }
 
 var muteRX=false;

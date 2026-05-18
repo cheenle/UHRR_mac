@@ -120,6 +120,11 @@ class PyAudioCapture(threading.Thread):
     # WDSP 设置
     wdsp_enabled = False
     wdsp_config = {}
+    _wdsp_config_hash = None  # V5.2: 配置快照缓存，避免每帧重检
+    
+    # V5.2: 标记配置已变更，由外部 setter 触发
+    _wdsp_dirty = threading.Event()
+    _wdsp_dirty.set()  # 初始需要应用
     
     # 帧序号（用于FEC丢包检测）
     _frame_sequence = 0
@@ -221,7 +226,7 @@ class PyAudioCapture(threading.Thread):
                 rate=48000,
                 input=True,
                 input_device_index=device_index,
-                frames_per_buffer=256  # 优化：从512减至256，降低延迟约16ms
+                frames_per_buffer=960  # V5.2: 20ms@48kHz → 对齐Opus帧(320samples@16kHz)
             )
             print(f'PyAudio input stream opened successfully with {device_channels} channel(s) at 48000 Hz')
             self.stereo_mode = (device_channels == 2)
@@ -235,7 +240,7 @@ class PyAudioCapture(threading.Thread):
                     rate=48000,
                     input=True,
                     input_device_index=device_index,
-                    frames_per_buffer=256  # 优化：从512减至256，降低延迟约16ms
+                    frames_per_buffer=960  # V5.2: 20ms@48kHz → 对齐Opus帧(320samples@16kHz)
                 )
                 print('PyAudio input stream opened successfully with MONO (1 channel) at 48000 Hz - fallback')
                 self.stereo_mode = False
@@ -248,7 +253,7 @@ class PyAudioCapture(threading.Thread):
                         channels=1,
                         rate=48000,
                         input=True,
-                        frames_per_buffer=256  # 优化：从512减至256，降低延迟约16ms
+                        frames_per_buffer=960  # V5.2: 20ms@48kHz → 对齐Opus帧(320samples@16kHz)
                     )
                     print('Opened with default input device (mono) at 48000 Hz')
                     self.stereo_mode = False
@@ -357,126 +362,59 @@ class PyAudioCapture(threading.Thread):
                     # ========== WDSP 数字信号处理 ==========
                     # 在 Int16 转换后、Opus编码前进行 WDSP 处理
 
-                    # 调试：定期打印 WDSP 状态（已禁用）
-                    # if frame_count % 100 == 0:
-                    #     cfg = PyAudioCapture.wdsp_config
-                    #     print(f"🔍 WDSP: enabled={PyAudioCapture.wdsp_enabled}, processor={'存在' if self.wdsp_processor else 'None'}, NR2={cfg.get('nr2_enabled', False)}(L{cfg.get('nr2_level', 0)}), AGC={cfg.get('agc_mode', 0)}")
-
-                    # 如果 WDSP 被禁用但处理器还存在，清理它
+                    # V5.2: WDSP 配置缓存 — 仅变更时进入
+                    # 计算配置哈希，避免每帧 100+ 行的属性比较
                     if not PyAudioCapture.wdsp_enabled and self.wdsp_processor is not None:
                         try:
-                            print("🔧 WDSP 已禁用，关闭处理器")
                             self.wdsp_processor.close()
                             self.wdsp_processor = None
                             self.wdsp_resample_buffer = np.array([], dtype=np.int16)
-                            # 强制垃圾回收，确保资源释放
-                            import gc
-                            gc.collect()
-                            print("🔧 WDSP 处理器已完全关闭")
+                            PyAudioCapture._wdsp_config_hash = None
                         except Exception as e:
-                            print(f"⚠️ 关闭 WDSP 处理器错误: {e}")
+                            pass
                     
                     if PyAudioCapture.wdsp_enabled and WDSP_AVAILABLE:
                         try:
-                            # 延迟初始化 WDSP 处理器
-                            if self.wdsp_processor is None:
-                                cfg = PyAudioCapture.wdsp_config
-                                # 强制使用 48000Hz，与 PyAudio 捕获采样率一致
-                                # 避免采样率转换导致的音质劣化
-                                wdsp_sr = 48000
-                                wdsp_bs = cfg.get('buffer_size', 256)
-                                self.wdsp_processor = WDSPProcessor(
-                                    sample_rate=wdsp_sr,
-                                    buffer_size=wdsp_bs,
-                                    mode=WDSPMode.USB,
-                                    enable_nr2=cfg['nr2_enabled'],
-                                    enable_nb=cfg['nb_enabled'],
-                                    enable_anf=cfg['anf_enabled'],
-                                    agc_mode=cfg['agc_mode']
-                                )
-                                # 设置带通滤波器
-                                self.wdsp_processor.set_bandpass(
-                                    cfg['bandpass_low'],
-                                    cfg['bandpass_high']
-                                )
-                                # 设置 NR2 强度级别
-                                if cfg['nr2_enabled'] and 'nr2_level' in cfg:
-                                    self.wdsp_processor.set_nr2_level(cfg['nr2_level'])
-                                # 设置 NR2 自动均衡（必须开启以消除音乐噪音）
-                                if cfg['nr2_enabled'] and 'nr2_ae_run' in cfg:
-                                    self.wdsp_processor.set_nr2_ae_run(cfg['nr2_ae_run'])
-                                print(f"🔧 WDSP 处理器已初始化: {wdsp_sr}Hz, NR2={cfg['nr2_enabled']}(level={cfg.get('nr2_level', 1)}, ae={cfg.get('nr2_ae_run', True)}), NB={cfg['nb_enabled']}")
-                            else:
-                                # 动态同步配置参数
-                                cfg = PyAudioCapture.wdsp_config
+                            cfg = PyAudioCapture.wdsp_config
+                            # 快速哈希：只取 6 个最可能变更的键
+                            new_hash = hash((
+                                cfg.get('nr2_enabled', True),
+                                cfg.get('nr2_level', 1),
+                                cfg.get('nb_enabled', True),
+                                cfg.get('anf_enabled', False),
+                                cfg.get('agc_mode', 3),
+                                cfg.get('bandpass_low', 300.0),
+                                cfg.get('bandpass_high', 2700.0),
+                            ))
+                            
+                            if new_hash != PyAudioCapture._wdsp_config_hash or self.wdsp_processor is None:
+                                PyAudioCapture._wdsp_config_hash = new_hash
                                 
-                                # 检查并更新 NR2 级别
-                                if hasattr(self.wdsp_processor, '_nr2_level') and \
-                                   hasattr(self.wdsp_processor, '_nr2_enabled'):
-                                    # 获取目标状态
-                                    target_level = cfg.get('nr2_level', 1)
-                                    # 关键：level > 0 时 enabled 必须为 True
-                                    target_enabled = target_level > 0
-                                    
-                                    # 获取当前状态
-                                    current_enabled = self.wdsp_processor._nr2_enabled
-                                    current_level = getattr(self.wdsp_processor, '_nr2_level', -1)
-                                    
-                                    # 只有状态真正变化时才更新
-                                    if current_enabled != target_enabled or current_level != target_level:
-                                        # print(f"🔄 NR2 更新: 当前={current_level}({'开' if current_enabled else '关'}), 目标={target_level}({'开' if target_enabled else '关'})")
-                                        if target_enabled and target_level > 0:
-                                            self.wdsp_processor.set_nr2_level(target_level)
-                                        else:
-                                            self.wdsp_processor.set_nr2_level(0)
-                                
-                                # 检查并更新 NR2 高级设置
-                                if hasattr(self.wdsp_processor, 'set_nr2_gain_method'):
-                                    target_gain_method = cfg.get('nr2_gain_method', 0)
-                                    current_gain_method = getattr(self.wdsp_processor, '_nr2_gain_method', -1)
-                                    if current_gain_method != target_gain_method:
-                                        self.wdsp_processor.set_nr2_gain_method(target_gain_method)
-                                
-                                if hasattr(self.wdsp_processor, 'set_nr2_npe_method'):
-                                    target_npe_method = cfg.get('nr2_npe_method', 1)
-                                    current_npe_method = getattr(self.wdsp_processor, '_nr2_npe_method', -1)
-                                    if current_npe_method != target_npe_method:
-                                        self.wdsp_processor.set_nr2_npe_method(target_npe_method)
-                                
-                                if hasattr(self.wdsp_processor, 'set_nr2_ae_run'):
-                                    target_ae_run = cfg.get('nr2_ae_run', False)
-                                    current_ae_run = getattr(self.wdsp_processor, '_nr2_ae_run', None)
-                                    if current_ae_run != target_ae_run:
-                                        self.wdsp_processor.set_nr2_ae_run(target_ae_run)
-                                
-                                # 检查并更新 NR2 启用状态
-                                if hasattr(self.wdsp_processor, '_nr2_enabled') and \
-                                   self.wdsp_processor._nr2_enabled != cfg['nr2_enabled']:
-                                    self.wdsp_processor.set_nr2_enabled(cfg['nr2_enabled'])
-
-                                # 检查并更新 NB
-                                if hasattr(self.wdsp_processor, '_nb_enabled') and \
-                                   self.wdsp_processor._nb_enabled != cfg['nb_enabled']:
+                                if self.wdsp_processor is None:
+                                    wdsp_sr = 48000
+                                    wdsp_bs = cfg.get('buffer_size', 256)
+                                    self.wdsp_processor = WDSPProcessor(
+                                        sample_rate=wdsp_sr, buffer_size=wdsp_bs,
+                                        mode=WDSPMode.USB,
+                                        enable_nr2=cfg['nr2_enabled'],
+                                        enable_nb=cfg['nb_enabled'],
+                                        enable_anf=cfg['anf_enabled'],
+                                        agc_mode=cfg['agc_mode']
+                                    )
+                                    self.wdsp_processor.set_bandpass(cfg['bandpass_low'], cfg['bandpass_high'])
+                                    if cfg['nr2_enabled']:
+                                        self.wdsp_processor.set_nr2_level(cfg.get('nr2_level', 1))
+                                        self.wdsp_processor.set_nr2_ae_run(cfg.get('nr2_ae_run', True))
+                                else:
+                                    self.wdsp_processor.set_nr2_level(cfg.get('nr2_level', 1) if cfg['nr2_enabled'] else 0)
                                     self.wdsp_processor.set_nb_enabled(cfg['nb_enabled'])
-                                
-                                # 检查并更新 ANF
-                                if hasattr(self.wdsp_processor, '_anf_enabled') and \
-                                   self.wdsp_processor._anf_enabled != cfg['anf_enabled']:
                                     self.wdsp_processor.set_anf_enabled(cfg['anf_enabled'])
-                                
-                                # 检查并更新 AGC
-                                if hasattr(self.wdsp_processor, '_agc_mode') and \
-                                   self.wdsp_processor._agc_mode != cfg['agc_mode']:
                                     self.wdsp_processor.set_agc_mode(cfg['agc_mode'])
-                                
-                                # 检查并更新带通滤波器
-                                if hasattr(self.wdsp_processor, 'set_bandpass'):
-                                    target_low = cfg.get('bandpass_low', 300)
-                                    target_high = cfg.get('bandpass_high', 2700)
-                                    current_low = getattr(self.wdsp_processor, '_bandpass_low', -1)
-                                    current_high = getattr(self.wdsp_processor, '_bandpass_high', -1)
-                                    if current_low != target_low or current_high != target_high:
-                                        self.wdsp_processor.set_bandpass(target_low, target_high)
+                                    self.wdsp_processor.set_bandpass(cfg['bandpass_low'], cfg['bandpass_high'])
+                                    if cfg['nr2_enabled']:
+                                        self.wdsp_processor.set_nr2_ae_run(cfg.get('nr2_ae_run', True))
+                        except Exception as e:
+                            pass
                             
                             # WDSP 直接处理 48kHz 数据，无需降采样/升采样
                             # 避免重复采样导致的音质劣化
@@ -501,7 +439,7 @@ class PyAudioCapture(threading.Thread):
                                 if processed is not None and len(processed) > 0:
                                     # 验证输出长度与输入一致
                                     if len(processed) != len(frame):
-                                        if frame_count % 100 == 0:
+                                        if frame_count % 1000 == 0:
                                             print(f"⚠️ WDSP 输出长度不一致: in={len(frame)}, out={len(processed)}")
                                         processed = frame  # 使用原始数据
                                     processed_frames.append(processed)
@@ -614,43 +552,24 @@ class PyAudioCapture(threading.Thread):
                                         frame_data = opus_accumulator[:opus_frame_size]
                                         opus_accumulator = opus_accumulator[opus_frame_size:]
                                         
-                                        # 初始化 Opus 编码器（如果需要或参数变化）
+                                        # V5.2: 编码器仅在首次或参数变化时初始化
                                         if self.rx_opus_encoder is None or self.rx_opus_encoder_rate != current_opus_rate:
                                             try:
-                                                # OpusEncoder 只需要 3 个参数：采样率、声道数、应用类型
-                                                # 2048 = OPUS_APPLICATION_VOIP（语音优化）
                                                 self.rx_opus_encoder = OpusEncoder(
                                                     current_opus_rate, 1, 2048
                                                 )
                                                 self.rx_opus_encoder_rate = current_opus_rate
-                                                
-                                                # ========== Opus 深度优化 ==========
-                                                # 启用FEC抗丢包、DTX静音检测、优化比特率
-                                                # 这些参数针对弱网环境和短波语音通信优化
                                                 self.rx_opus_encoder.configure_for_voip(
-                                                    bitrate=20000,       # 20kbps 短波语音足够
-                                                    complexity=6,        # 中等复杂度，移动端友好
-                                                    fec=True,            # 启用前向纠错（关键！）
-                                                    packet_loss_perc=15, # 预期15%丢包率
-                                                    dtx=True             # 启用静音检测
+                                                    bitrate=20000, complexity=6,
+                                                    fec=True, packet_loss_perc=15, dtx=True
                                                 )
-                                                print(f"🎵 Opus RX 编码器已优化: {current_opus_rate}Hz, FEC=ON, DTX=ON, HPF=OFF, 20kbps")
                                             except Exception as e:
-                                                print(f"❌ Opus RX 编码器初始化失败: {e}")
                                                 PyAudioCapture.rx_opus_encode = False
                                                 break
                                         
                                         # 编码
                                         try:
-                                            # 使用OpusEncoder的encode方法
-                                            # 将numpy数组转换为bytes
                                             frame_bytes = frame_data.tobytes()
-                                            
-                                            # 调试：打印编码参数
-                                            if frame_count % 100 == 0:
-                                                print(f"🔍 Opus编码参数: frame_size={opus_frame_size}, input_len={len(frame_bytes)}")
-                                            
-                                            # 调用编码方法
                                             encoded_data = self.rx_opus_encoder.encode(frame_bytes, opus_frame_size)
                                             
                                             # 发送到客户端
@@ -670,11 +589,11 @@ class PyAudioCapture(threading.Thread):
                                                     # 避免客户端收到过时数据
                                                     c.Wavframes = c.Wavframes[10:]
                                                     c.Wavframes.append(encoded_data)
-                                            # 每 100 帧打印一次编码结果
-                                            if frame_count % 100 == 0:
+                                            # V5.2: 仅每 1000 帧打印（减少热路径IO）
+                                            if frame_count % 1000 == 0:
                                                 print(f"🎵 Opus 编码正常... 帧数: {frame_count}, 压缩率: {len(encoded_data)}/{len(frame_bytes)}")
                                         except Exception as e:
-                                            if frame_count % 100 == 0:
+                                            if frame_count % 1000 == 0:
                                                 print(f"Opus 编码错误: {e}")
                                 else:
                                     # Int16 PCM 模式（默认）
@@ -886,7 +805,7 @@ class PyAudioPlayback:
                 rate=playback_rate,
                 output=True,
                 output_device_index=device_index,
-                frames_per_buffer=256  # 优化：从512减至256，降低延迟约16ms
+                frames_per_buffer=960  # V5.2: 20ms@48kHz → 对齐Opus帧(320samples@16kHz)
             )
             print(f'PyAudio output stream opened successfully at {playback_rate}Hz (Opus: {is_encoded})')
         except Exception as e:
@@ -898,7 +817,7 @@ class PyAudioPlayback:
                     channels=1,
                     rate=playback_rate,  # 使用正确的采样率
                     output=True,
-                    frames_per_buffer=256  # 优化：从512减至256，降低延迟约16ms
+                    frames_per_buffer=960  # V5.2: 20ms@48kHz → 对齐Opus帧(320samples@16kHz)
                 )
                 print(f'Opened with default output device at {playback_rate}Hz')
             except Exception as e2:

@@ -259,7 +259,7 @@ start_mrrc() {
     > "$MRRC_LOG"
     
     # 启动 MRRC，传递配置文件路径
-    python3 "$SCRIPT_DIR/MRRC" "$SCRIPT_DIR/MRRC.$INSTANCE.conf" > "$MRRC_LOG" 2>&1 &
+    /opt/local/bin/python3.12 "$SCRIPT_DIR/MRRC" "$SCRIPT_DIR/MRRC.$INSTANCE.conf" > "$MRRC_LOG" 2>&1 &
     
     local pid=$!
     sleep 3
@@ -298,7 +298,7 @@ start_atr1000() {
     
     > "$ATR1000_LOG"
     
-    python3 "$SCRIPT_DIR/atr1000_proxy.py" \
+    /opt/local/bin/python3.12 "$SCRIPT_DIR/atr1000_proxy.py" \
         --device "$INSTANCE_ATR1000_DEVICE" \
         --port "$INSTANCE_ATR1000_PORT" \
         --unix-socket "$INSTANCE_UNIX_SOCKET" \
