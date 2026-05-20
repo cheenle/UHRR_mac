@@ -39,17 +39,17 @@ var OpusEncoder = (function () {
         // 参考: https://opus-codec.org/docs/opus_api-1.5/group__opus__encoderctls.html
 
         // OPUS_SET_COMPLEXITY_REQUEST = 4010
-        // 编码复杂度 (0-10, 默认10)
-        // 移动端推荐 5-7，桌面端推荐 10
+        // 编码复杂度 (0-10, 默认 10)
+        // 移动端推荐 5-7，桌面端推荐 8-10
         var complexity_ptr = allocate(4, 'i32', ALLOC_STACK);
-        setValue(complexity_ptr, 5, 'i32');
+        setValue(complexity_ptr, 8, 'i32');
         _opus_encoder_ctl(this.handle, 4010, complexity_ptr);
 
         // OPUS_SET_BITRATE_REQUEST = 4002
         // 目标比特率 (默认自动)
-        // VoIP 推荐 10-24kbps，短波语音 16-20kbps 足够
+        // 短波语音 24-32kbps 透明，兼顾带宽占用
         var bitrate_ptr = allocate(4, 'i32', ALLOC_STACK);
-        setValue(bitrate_ptr, 20000, 'i32');  // 20kbps
+        setValue(bitrate_ptr, 28000, 'i32');  // 28kbps
         _opus_encoder_ctl(this.handle, 4002, bitrate_ptr);
 
         // OPUS_SET_VBR_REQUEST = 4004
@@ -96,7 +96,7 @@ var OpusEncoder = (function () {
         setValue(hp_ptr, 0, 'i32');  // 0 = 禁用高通滤波器
         _opus_encoder_ctl(this.handle, 4030, hp_ptr);
 
-        console.log('🎵 Opus 编码器优化: complexity=5, bitrate=20kbps, VBR=ON, FEC=ON(15%), DTX=ON, HPF=OFF');
+        console.log('🎵 Opus 编码器优化: complexity=8, bitrate=28kbps, VBR=ON, FEC=ON(15%), DTX=ON, HPF=OFF');
     }
     OpusEncoder.prototype.encode = function (pcm) {
         var output = [];

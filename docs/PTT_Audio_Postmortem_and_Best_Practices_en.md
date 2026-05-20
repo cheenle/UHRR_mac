@@ -48,7 +48,7 @@ This document systematically reviews the typical instability issues encountered 
 - **Phenomenon**: High CPU usage during TX, affecting ATR-1000 response.
 - **Optimization measures**:
   1) **Frame length optimization**: 40ms → 20ms (WebRTC recommended value)
-  2) **Encoding complexity**: 10 → 5 (balance CPU and quality)
+   2) **Encoding complexity**: 10 → 5 (upgraded to 8 in V5.3, further balancing CPU and quality)
   3) **DTX silence detection**: On (no encoding during silence)
 - **Effects**:
   - CPU usage reduced by ~30%
@@ -171,6 +171,33 @@ This document systematically reviews the typical instability issues encountered 
 ## 7. References and Acknowledgments
 - Upstream project and documentation inspiration: F4HTB/Universal_HamRadio_Remote_HTML5 (Wiki)
   - https://github.com/F4HTB/Universal_HamRadio_Remote_HTML5/wiki
+
+---
+
+---
+
+## 8. V5.3+ Audio Optimizations
+
+### 8.1 Recording Downsampling
+Recording buffer now uses a 3-sample average anti-alias filter (replacing the naive `[::3]` slice) before decimating 48kHz→16kHz, applying low-pass filtering to prevent high-frequency foldback distortion.
+
+### 8.2 RX Opus Bitrate/Complexity
+RX Opus encoder configured via `configure_for_voip(bitrate=28000, complexity=8, fec=True, packet_loss_perc=15, dtx=True)` — up from 20kbps/complexity 5.
+
+### 8.3 Frontend TX Opus Defaults
+Browser-side OpusEncoder in `opus_codec.js` now uses optimized defaults: complexity=8, bitrate=28kbps, VBR=ON, FEC=ON(15%), DTX=ON, HPF=OFF. Settings are applied via `_opus_encoder_ctl` in the WASM constructor, NOT as JS property assignments.
+
+### 8.4 Pre-AGC Bypass
+Pre-AGC in `audio_interface.py` is skipped when WDSP AGC is active (`agc_mode != 0`), preventing two AGC stages from fighting.
+
+### 8.5 TX Level Normalization
+`PyAudioPlayback.write()` now applies gain smoothing with asymmetric attack/release (α=0.5 attack, α=0.05 release) to prevent audio pumping while catching overloads quickly. Target peak is 85% of full scale.
+
+### 8.6 Adaptive Opus Bitrate
+RX Opus bitrate adapts to client queue depth: 32kbps (queue < 5 frames), 24kbps (queue < 15), 16kbps (queue ≥ 15). Uses Python OpusEncoder's `.bitrate` setter which maps to real `_opus_encoder_ctl`.
+
+### 8.7 Frontend FEC/DTX
+TX Opus enables inband FEC with 15% packet loss expectation, and DTX (Discontinuous Transmission) for silence suppression, improving voice intelligibility under packet loss and saving bandwidth during silent intervals.
 
 ---
 

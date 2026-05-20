@@ -65,9 +65,9 @@ You need:
 - a cat interface.
 - a circuit making it possible to adapt the audio levels between the microphone input, the speaker output and the sound card.
 
-Assuming your raspberry pi hostname is set to MRRC, you can access it at https://MRRC.local:8888/
+Assuming your raspberry pi hostname is set to MRRC, you can access it at https://MRRC.local:8877/
 Note the HTTP <b> S </b>.
-You can configure all of this by logging into https://MRRC.local:8888/CONFIG
+You can configure all of this by logging into https://MRRC.local:8877/CONFIG
 If the original configuration is invalid or missing, this will automatically switch to the configuration page.
 
 ![func_princ](https://user-images.githubusercontent.com/18350938/99989800-f3a06f00-2daa-11eb-9b45-d695b75904f7.png)

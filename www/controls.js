@@ -1480,7 +1480,7 @@ var OpusEncoderProcessor = function( wsh )
     this.i16arr = new Int16Array( Math.floor(this.bufferSize / this.downSample) );
     this.f32arr = new Float32Array( Math.floor(this.bufferSize / this.downSample) );
     this.opusEncoder = new OpusEncoder( this.opusRate, 1, 2048, this.opusFrameDur );
-    console.log('🎵 TX Opus 编码器初始化: downSample=' + this.downSample + ', buffer=' + this.f32arr.length + ', frame=' + (this.opusRate * this.opusFrameDur / 1000));
+    console.log('🎵 TX Opus 编码器初始化: complexity=8, bitrate=28kbps, downSample=' + this.downSample + ', buffer=' + this.f32arr.length + ', frame=' + (this.opusRate * this.opusFrameDur / 1000));
 }
 
 

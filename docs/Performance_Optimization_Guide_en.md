@@ -1,9 +1,9 @@
 # MRRC Performance Optimization Guide
 
 ## Document Information
-- **Version**: V4.9.3 (2026-03-29)
+- **Version**: V5.3 (2026-05-20)
 - **Author**: Claude Code Analysis
-- **Status**: V4.5.4 Stable - Verified
+- **Status**: V5.3 Stable - Verified
 
 ---
 
@@ -16,9 +16,9 @@
 - **User Experience**: Smooth operation, fast response ✅
 - **Power Display**: ATR-1000 real-time display <200ms ✅
 
-### 1.2 Key Performance Indicators (V4.5.4 Measured)
+### 1.2 Key Performance Indicators (V5.3 Measured)
 
-| Metric | Target | V3.x | V4.5.4 | Status |
+| Metric | Target | V3.x | V5.3 | Status |
 |--------|--------|------|---------|--------|
 | PTT Response Time | <50ms | ~50ms | ~40ms | ✅ Met |
 | End-to-End Audio Latency | <100ms | ~100ms | ~65ms | ✅ Met |
@@ -31,14 +31,14 @@
 | PTT Reliability | 99%+ | 95% | 99%+ | ✅ Met |
 | ATR-1000 Stability | Stable | Risk of overload | Stable | ✅ Met |
 
-### 1.3 V4.5.4 New Optimizations (2026-03-06)
+### 1.3 V5.3 Opus Encoding Optimizations (2026-05-20)
 
 Opus encoding optimization based on WebRTC best practices:
 
 | Parameter | Before | After | Effect |
 |-----------|--------|-------|--------|
 | Frame Length | 40ms | **20ms** | Faster response |
-| Encoding Complexity | 10 | **5** | CPU reduced ~30% |
+| Encoding Complexity | 10 | **8** | Balanced CPU & quality |
 | DTX | Off | **On** | No encoding during silence |
 | Processing Frequency | 25 times/s | **50 times/s** | Smoother |
 
@@ -500,5 +500,75 @@ python3 atr1000_proxy.py --device 192.168.1.63 --port 60001 --interval 1.0
 
 ---
 
-*This performance optimization guide is verified based on MRRC V4.9.1 stable version.*
-*Last updated: 2026-03-06*
+## 11. V5.3 Audio Optimizations (2026-05-20)
+
+### 11.1 Optimization Overview
+
+V5.3 introduces 7 RX/TX audio optimizations further improving latency, quality, and robustness:
+
+| Optimization | Type | Description |
+|-------------|------|-------------|
+| Pre-AGC Bypass | RX | Bypass pre-AGC when WDSP AGC is active to avoid dual gain control |
+| Recording Anti-alias Filter | RX | 3-sample moving average, suppresses out-of-band aliasing noise |
+| RX Opus Parameter Tuning | RX | `configure_for_voip(bitrate=28000, complexity=8, fec=True, packet_loss_perc=15, dtx=True)` |
+| Frontend TX Opus Defaults | TX | Optimized Opus encoder defaults in `opus_codec.js` constructor |
+| TX Level Normalization | TX | Asymmetric gain smoothing (fast-attack, slow-release), prevents clipping |
+| Adaptive Opus Bitrate | TX | Dynamic Opus bitrate adjustment by queue depth |
+| Frontend FEC/DTX | TX | Forward error correction and discontinuous transmission to reduce packet-loss impact |
+
+### 11.2 Pre-AGC Bypass
+
+When WDSP AGC is active, the pre-AGC processing stage is automatically bypassed to avoid dual gain cascade causing audio distortion or pumping effects.
+
+**Location**: `wdsp_wrapper.py` / `MRRC` RX audio chain
+
+### 11.3 Recording Anti-alias Filter
+
+A 3-sample moving average low-pass filter is applied on the recording path to suppress out-of-band aliasing noise from ADC sampling.
+
+**Location**: `recorder.py` / audio capture pipeline
+
+### 11.4 RX Opus Parameter Tuning
+
+The Opus decoder is reconfigured prioritizing voice quality and loss resilience:
+
+```python
+configure_for_voip(
+    bitrate=28000,       # 28 kbps (was 20 kbps), improved voice quality
+    complexity=8,        # encoding complexity 8 (was 5), balanced CPU & quality
+    fec=True,            # enable forward error correction
+    packet_loss_perc=15, # expected 15% packet loss, triggers in-band FEC
+    dtx=True             # discontinuous transmission, silence frames not encoded
+)
+```
+
+**Location**: `MRRC` RX AudioHandler / `audio_interface.py`
+
+### 11.5 Frontend TX Opus Defaults
+
+The frontend `opus_codec.js` constructor integrates optimized encoder parameters, ensuring TX audio uses best configuration immediately upon connection.
+
+**Location**: `www/opus_codec.js`
+
+### 11.6 TX Level Normalization with Asymmetric Gain Smoothing
+
+Asymmetric gain smoothing (fast-attack, slow-release) normalizes audio level in the transmit path to prevent clipping while avoiding auditory discomfort from rapid gain reduction.
+
+**Location**: `MRRC` TX audio processing / `audio_interface.py`
+
+### 11.7 Adaptive Opus Bitrate by Queue Depth
+
+Dynamic Opus bitrate adjustment based on backend TX audio queue depth: lowers bitrate during queue buildup to alleviate congestion, raises bitrate during idle periods to preserve voice quality.
+
+**Location**: `MRRC` TX AudioHandler
+
+### 11.8 Frontend FEC/DTX
+
+Frontend WebSocket send path enables Opus FEC (in-band forward error correction) and DTX (discontinuous transmission), reducing packet-loss impact on voice continuity while saving bandwidth during silence.
+
+**Location**: `www/opus_codec.js`
+
+---
+
+*This performance optimization guide is verified based on MRRC V5.3 stable version.*
+*Last updated: 2026-05-20*

@@ -475,6 +475,8 @@ function int16ToFloat32(int16Array) {
 ```javascript
 // 简单线性插值降采样
 function downsample(input, inputRate, outputRate) {
+  // V5.3: 录音路径使用 3 样本滑动平均抗混叠滤波器替代本函数
+  // 参见 antiAliasingDownsample() 或 recording 路径的 3-sample moving average
   const ratio = inputRate / outputRate;
   const outputLength = Math.floor(input.length / ratio);
   const output = new Float32Array(outputLength);
@@ -847,7 +849,7 @@ class DebugProcessor extends AudioWorkletProcessor {
 
 ---
 
-**文档版本**: 1.2 (V5.2.0)  
-**最后更新**: 2026-05-18  
+**文档版本**: 1.3 (V5.3)  
+**最后更新**: 2026-05-20  
 **适用于**: MRRC 项目 Web Audio 开发  
-**更新日志**: 添加 RagChew TX 音频处理链实战案例、Safari setValueAtTime 兼容性说明
+**更新日志**: 添加 RagChew TX 音频处理链实战案例、Safari setValueAtTime 兼容性说明、V5.3 录音抗混叠滤波器说明

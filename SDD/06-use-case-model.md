@@ -25,7 +25,7 @@
 │ 1. User presses PTT button                                               │
 │ 2. System sends PTT command to radio (with warm-up frames)               │
 │ 3. User speaks, browser captures audio via Web Audio API                 │
-│ 4. Audio encoded as Opus (16kHz, 20kbps)                                 │
+│ 4. Audio encoded as Opus (16kHz, 28kbps (current operating point))       │
 │ 5. Transmitted via WebSocket to server                                   │
 │ 6. Server decodes and plays to radio via PyAudio                         │
 │ 7. User releases PTT                                                     │
@@ -52,7 +52,7 @@
 │ 1. System captures audio from radio (PyAudio, 48kHz)                     │
 │ 2. Audio processed: DC removal → AGC pre-amp → soft limiter              │
 │ 3. Optional WDSP: NR2 → NB → ANF → AGC                                  │
-│ 4. Audio encoded as Opus (16kHz, 20kbps)                                │
+│ 4. Audio encoded as Opus (16kHz, 28kbps (current operating point))      │
 │ 5. Transmitted via WebSocket to browser                                  │
 │ 6. Browser decodes Opus, plays via AudioWorklet                          │
 └─────────────────────────────────────────────────────────────────────────┘

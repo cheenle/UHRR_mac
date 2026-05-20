@@ -78,7 +78,7 @@ Universal HamRadio Remote HTML5 (MRRC) is a Python/Tornado-based server applicat
 docker-compose up --build
 
 # Alternative Docker command (check docker-compose.yml for port mapping)
-docker run -d --device=/dev/snd --device=/dev/ttyUSB0 -p 8888:8888 uhrh
+docker run -d --device=/dev/snd --device=/dev/ttyUSB0 -p 8877:8877 uhrh
 ```
 
 ### Testing & Debugging

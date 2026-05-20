@@ -183,6 +183,22 @@ try { rxNode.port.postMessage({ type: 'config', min: 16, max: 32 }); } catch(_){
 - Optimize mobile touch response
 - Provide latency setting options
 
+## V5.3 Additional Audio Optimizations
+
+V5.3 introduces 7 RX/TX audio optimizations that further improve latency and quality:
+
+| Optimization | Type | Latency Impact |
+|-------------|------|----------------|
+| Pre-AGC Bypass | RX | Bypasses dual-gain cascade, reducing RX processing path delay |
+| Recording Anti-alias Filter | RX | 3-sample moving average, improves recording quality |
+| RX Opus Parameter Tuning | RX | `complexity=8, bitrate=28kbps`, balanced CPU & quality |
+| Frontend TX Opus Defaults | TX | Optimized encoder params in constructor, eliminates init mismatch |
+| TX Level Normalization | TX | Asymmetric gain smoothing (fast-attack, slow-release), prevents clipping |
+| Adaptive Opus Bitrate | TX | Dynamic adjustment by queue depth, alleviates congestion delay |
+| Frontend FEC/DTX | TX | Forward error correction + discontinuous transmission, reduces packet-loss impact |
+
+**Key latency optimization**: Pre-AGC Bypass avoids dual-gain processing when WDSP AGC is active, reducing RX path overhead; Adaptive Opus Bitrate lowers bitrate during queue buildup to reduce buffering delay.
+
 ## Conclusion
 
 Through systematic analysis and multi-faceted optimization, the TX to RX switch latency issue in the MRRC project has been successfully resolved. The key points are:
@@ -236,5 +252,5 @@ if (now - this._lastSyncTime < 500) {
 
 ---
 
-*This document is updated based on MRRC V4.9.1 stable version.*
-*Last updated: 2026-03-06*
+*This document is updated based on MRRC V5.3 stable version.*
+*Last updated: 2026-05-20*

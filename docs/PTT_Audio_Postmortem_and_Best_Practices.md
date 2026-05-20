@@ -48,7 +48,7 @@
 - 现象：TX 期间 CPU 占用较高，影响 ATR-1000 响应
 - 优化措施：
   1) **帧长优化**：40ms → 20ms（WebRTC 推荐值）
-  2) **编码复杂度**：10 → 5（平衡 CPU 和音质）
+   2) **编码复杂度**：10 → 5（V5.3 升级为 8，进一步平衡 CPU 和音质）
   3) **DTX 静音检测**：开启（静音时不编码）
 - 效果：
   - CPU 占用降低约 30%
@@ -171,6 +171,33 @@
 ## 7. 参考与致谢
 - 上游项目与文档启发：F4HTB/Universal_HamRadio_Remote_HTML5（Wiki）
   - https://github.com/F4HTB/Universal_HamRadio_Remote_HTML5/wiki
+
+---
+
+---
+
+## 8. V5.3+ 音频优化
+
+### 8.1 录音降采样
+录音缓冲改用 3 样本平均抗混叠滤波器替代原有的 `[::3]` 直接切片，在 48kHz→16kHz 降采样前进行低通滤波，避免高频折叠失真。
+
+### 8.2 RX Opus 码率/复杂度
+RX Opus 编码器通过 `configure_for_voip(bitrate=28000, complexity=8, fec=True, packet_loss_perc=15, dtx=True)` 配置，码率从 20kbps 提升至 28kbps，复杂度从 5 提升至 8。
+
+### 8.3 前端 TX Opus 默认参数
+`opus_codec.js` 中浏览器端 OpusEncoder 使用优化默认值：complexity=8、bitrate=28kbps、VBR=ON、FEC=ON(15%)、DTX=ON、HPF=OFF。这些设置在 WASM 构造函数中通过 `_opus_encoder_ctl` 应用，而非 JS 属性赋值。
+
+### 8.4 预 AGC 旁路
+`audio_interface.py` 中的预 AGC 在 WDSP AGC 激活时 (`agc_mode != 0`) 自动跳过，防止两级 AGC 相互干扰。
+
+### 8.5 TX 电平归一化
+`PyAudioPlayback.write()` 应用增益平滑处理，采用非对称 attack/release（α=0.5 attack, α=0.05 release），防止音频泵动同时快速捕捉过载。目标峰值为满量程的 85%。
+
+### 8.6 自适应 Opus 码率
+RX Opus 码率根据客户端队列深度自适应调节：32kbps（队列 < 5 帧）、24kbps（队列 < 15 帧）、16kbps（队列 ≥ 15 帧）。通过 Python OpusEncoder 的 `.bitrate` 设置器实现，映射到实际 `_opus_encoder_ctl`。
+
+### 8.7 前端 FEC/DTX
+TX Opus 启用带内 FEC（15% 丢包预期）和 DTX（不连续传输）静音抑制，在网络丢包环境下提升语音可懂度，并在静音时段节省带宽。
 
 ---
 

@@ -59,6 +59,6 @@
 | ID | Requirement | Target | Priority | Verification |
 |----|-------------|--------|----------|-------------|
 | NFR-060 | WDSP NR depth | 15-20dB | Critical | Spectral analysis |
-| NFR-061 | Opus codec quality | 20kbps @ 16kHz | High | Subjective listening test |
+| NFR-061 | Opus codec quality | 28kbps @ 16kHz | High | Subjective listening test |
 | NFR-062 | Audio sample rate | 48kHz (processing), 16kHz (transport) | High | Audio interface config |
 | NFR-063 | Audio format | Int16 PCM primary, Opus optional | High | Codec verification |

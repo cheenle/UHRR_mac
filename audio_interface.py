@@ -330,17 +330,22 @@ class PyAudioCapture(threading.Thread):
                     if abs(dc_offset) > 0.001:
                         float32_data = float32_data - dc_offset
                     
-                    # 2. 自动增益控制 (AGC) - 提升弱信号
-                    max_val = np.max(np.abs(float32_data))
-                    if max_val > 0.001:
-                        target_level = 0.6  # 目标电平 -4dB
-                        if max_val < target_level * 0.3:
-                            # 弱信号：提升增益（最大4倍）
-                            gain = min(target_level / max_val, 4.0)
-                            float32_data = float32_data * gain
-                        elif max_val > 0.9:
-                            # 强信号：略微衰减，防止削波
-                            float32_data = float32_data * 0.85
+                    # 2. 自动增益控制 (AGC) - 当 WDSP AGC 已开启时跳过
+                    wdsp_agc_active = (
+                        PyAudioCapture.wdsp_enabled and WDSP_AVAILABLE
+                        and PyAudioCapture.wdsp_config.get('agc_mode', 0) != 0
+                    )
+                    if not wdsp_agc_active:
+                        max_val = np.max(np.abs(float32_data))
+                        if max_val > 0.001:
+                            target_level = 0.6  # 目标电平 -4dB
+                            if max_val < target_level * 0.3:
+                                # 弱信号：提升增益（最大4倍）
+                                gain = min(target_level / max_val, 4.0)
+                                float32_data = float32_data * gain
+                            elif max_val > 0.9:
+                                # 强信号：略微衰减，防止削波
+                                float32_data = float32_data * 0.85
                     
                     # 3. 软削波保护
                     float32_data = np.clip(float32_data, -0.95, 0.95)
@@ -351,8 +356,14 @@ class PyAudioCapture(threading.Thread):
                     if PyAudioCapture.recording_enabled:
                         with PyAudioCapture.recording_lock:
                             # 将48kHz数据降采样到16kHz（与输出一致）
-                            # 简单降采样：每3个取1个（48000/3 = 16000）
-                            downsampled = int16_data[::3]
+                            # 先 3 样本平均低通防混叠，再抽取
+                            samples_len = len(int16_data)
+                            trimmed_len = (samples_len // 3) * 3
+                            if trimmed_len >= 3:
+                                reshaped = int16_data[:trimmed_len].reshape(-1, 3)
+                                downsampled = reshaped.mean(axis=1).astype(np.int16)
+                            else:
+                                downsampled = int16_data
                             PyAudioCapture.recording_buffer.append(downsampled)
                             # Guard against unbounded growth
                             if len(PyAudioCapture.recording_buffer) >= PyAudioCapture.RECORDING_MAX_CHUNKS:
@@ -415,86 +426,33 @@ class PyAudioCapture(threading.Thread):
                                         self.wdsp_processor.set_nr2_ae_run(cfg.get('nr2_ae_run', True))
                         except Exception as e:
                             pass
-                            
-                            # WDSP 直接处理 48kHz 数据，无需降采样/升采样
-                            # 避免重复采样导致的音质劣化
-                            cfg = PyAudioCapture.wdsp_config
-                            wdsp_buffer_size = cfg['buffer_size']
-                            # 强制使用 48kHz，与 PyAudio 捕获采样率一致
-                            wdsp_sample_rate = 48000
-                            
-                            # 累积到 WDSP 缓冲区
-                            self.wdsp_resample_buffer = np.concatenate([self.wdsp_resample_buffer, int16_data])
-                            
-                            # 处理完整缓冲区
-                            processed_frames = []
-                            while len(self.wdsp_resample_buffer) >= wdsp_buffer_size:
-                                # 取出一帧
-                                frame = self.wdsp_resample_buffer[:wdsp_buffer_size]
-                                self.wdsp_resample_buffer = self.wdsp_resample_buffer[wdsp_buffer_size:]
-                                
-                                # 通过 WDSP 处理
-                                processed = self.wdsp_processor.process(frame)
-                                # 只使用有效输出（WDSP 启动时可能有 -2 错误，返回原始数据）
-                                if processed is not None and len(processed) > 0:
-                                    # 验证输出长度与输入一致
-                                    if len(processed) != len(frame):
-                                        if frame_count % 1000 == 0:
-                                            print(f"⚠️ WDSP 输出长度不一致: in={len(frame)}, out={len(processed)}")
-                                        processed = frame  # 使用原始数据
-                                    processed_frames.append(processed)
-                            
-                            # 合并处理后的帧
-                            if processed_frames:
-                                int16_data = np.concatenate(processed_frames)
-                                
-                                # ===== 软削波 (Soft Clipping) =====
-                                # WDSP处理后可能产生峰值超过 Int16 范围的情况
-                                # 使用 tanh 软削波函数平滑限幅，避免硬削波产生的尖锐失真
-                                # 阈值 0.95 允许一定动态范围，同时防止超过 Int16 上限
-                                try:
-                                    # 转换为 float32 进行软削波处理
-                                    float_output = int16_data.astype(np.float32) / 32767.0
-                                    
-                                    # 软削波: 使用 tanh 平滑限幅
-                                    # 阈值 0.95 保留足够动态范围
-                                    soft_clip_threshold = 0.95
-                                    float_output = np.tanh(float_output / soft_clip_threshold) * soft_clip_threshold
-                                    
-                                    # 检查是否发生显著限幅（削波）
-                                    clipped_samples = np.sum(np.abs(float_output) >= soft_clip_threshold * 0.99)
-                                    if clipped_samples > 0 and frame_count % 200 == 0:
-                                        print(f"🔊 软削波触发: {clipped_samples} 样本被限幅")
-                                    
-                                    # 转换回 int16
-                                    int16_data = (float_output * 32767.0).astype(np.int16)
-                                except Exception as e:
-                                    if frame_count % 500 == 0:
-                                        print(f"⚠️ 软削波处理错误: {e}")
-                                
-                                # 调试：显示WDSP处理效果（输入vs输出能量对比）
-                                # 调试：打印能量统计（已禁用）
-                                # if frame_count % 100 == 0:
-                                #     in_energy = np.sum(np.abs(frame.astype(np.float64)))
-                                #     out_energy = np.sum(np.abs(int16_data.astype(np.float64)))
-                                #     ratio = out_energy / in_energy if in_energy > 0 else 0
-                                #     print(f"🔍 WDSP 能量: 输入={in_energy:.0f}, 输出={out_energy:.0f}, 比例={ratio:.2f}")
-                            else:
-                                # 没有处理帧（缓冲区未满），使用原始数据
-                                # 这样可以避免 WDSP 启动时的音频丢失
+                        
+                        # V5.2: WDSP 处理 — 在 try/except 之外，每帧必执行
+                        cfg = PyAudioCapture.wdsp_config
+                        wdsp_buffer_size = cfg['buffer_size']
+                        wdsp_sample_rate = 48000
+                        
+                        self.wdsp_resample_buffer = np.concatenate([self.wdsp_resample_buffer, int16_data])
+                        
+                        processed_frames = []
+                        while len(self.wdsp_resample_buffer) >= wdsp_buffer_size:
+                            frame = self.wdsp_resample_buffer[:wdsp_buffer_size]
+                            self.wdsp_resample_buffer = self.wdsp_resample_buffer[wdsp_buffer_size:]
+                            processed = self.wdsp_processor.process(frame)
+                            if processed is not None and len(processed) > 0:
+                                if len(processed) != len(frame):
+                                    processed = frame
+                                processed_frames.append(processed)
+                        
+                        if processed_frames:
+                            int16_data = np.concatenate(processed_frames)
+                            try:
+                                float_output = int16_data.astype(np.float32) / 32767.0
+                                soft_clip_threshold = 0.95
+                                float_output = np.tanh(float_output / soft_clip_threshold) * soft_clip_threshold
+                                int16_data = (float_output * 32767.0).astype(np.int16)
+                            except Exception:
                                 pass
-                            # 保持 48kHz，后续 Opus 编码前统一降采样
-                            
-                            # 每 100 帧获取一次 S-meter 读数
-                            if frame_count % 100 == 0:
-                                smeter = self.wdsp_processor.get_meter(WDSPMeterType.S_PK)
-                                # 可以在这里将 S-meter 值存储到全局变量供前端读取
-                                
-                        except Exception as e:
-                            if frame_count % 100 == 0:
-                                print(f"⚠️ WDSP 处理错误: {e}")
-                                import traceback
-                                traceback.print_exc()
                     
                     # 发送到客户端队列
                     try:
@@ -560,12 +518,22 @@ class PyAudioCapture(threading.Thread):
                                                 )
                                                 self.rx_opus_encoder_rate = current_opus_rate
                                                 self.rx_opus_encoder.configure_for_voip(
-                                                    bitrate=20000, complexity=6,
+                                                    bitrate=28000, complexity=8,
                                                     fec=True, packet_loss_perc=15, dtx=True
                                                 )
                                             except Exception as e:
                                                 PyAudioCapture.rx_opus_encode = False
                                                 break
+                                        
+                                        # 自适应 Opus 比特率：队列深度反映网络状况
+                                        qlen = max(len(c.Wavframes) for c in AudioRXHandlerClients) if AudioRXHandlerClients else 0
+                                        target_bps = 32000 if qlen < 5 else (24000 if qlen < 15 else 16000)
+                                        if target_bps != getattr(self, '_rx_opus_bitrate', -1):
+                                            try:
+                                                self.rx_opus_encoder.bitrate = target_bps
+                                                self._rx_opus_bitrate = target_bps
+                                            except Exception:
+                                                pass
                                         
                                         # 编码
                                         try:
@@ -774,6 +742,7 @@ class PyAudioPlayback:
         self.is_encoded = is_encoded
         self.op_rate = op_rate
         self.op_frm_dur = op_frm_dur
+        self._tx_gain_smooth = 1.0  # TX 电平平滑状态
         
         if is_encoded:
             self.decoder = OpusDecoder(op_rate, 1)
@@ -847,23 +816,24 @@ class PyAudioPlayback:
     def write(self, data):
         """Write audio data to output stream with TX level normalization"""
         if self.is_encoded:
-            # Decode Opus data first
             pcm = self.decoder.decode(data, self.frame_size, False)
         else:
             pcm = data
 
-        # TX 音频电平归一化：实质性提升发射功率
-        # 将 Int16 PCM 数据提升到目标电平，避免削波
+        # TX 音频电平归一化：带 smoothing 的增益控制，防 pumping
         tx_int16 = np.frombuffer(pcm, dtype=np.int16)
         if len(tx_int16) > 0:
             max_val = np.max(np.abs(tx_int16))
             if max_val > 0:
-                # 目标峰值电平为 85%（留出余量）
                 target_peak = int(32767 * 0.85)
                 if max_val < target_peak:
-                    # 提升增益但不超过 2.5 倍（防止过度放大）
-                    gain = min(target_peak / max_val, 2.5)
-                    tx_int16 = np.clip(tx_int16 * gain, -32767, 32767).astype(np.int16)
+                    target_gain = min(target_peak / max_val, 2.5)
+                else:
+                    target_gain = 1.0  # 已够大，不提升
+                # 一阶平滑：attack(需减增益)快 release(需增增益)慢，防 pumping
+                alpha = 0.5 if target_gain < self._tx_gain_smooth else 0.05
+                self._tx_gain_smooth = self._tx_gain_smooth * (1 - alpha) + target_gain * alpha
+                tx_int16 = np.clip(tx_int16 * self._tx_gain_smooth, -32767, 32767).astype(np.int16)
             pcm = tx_int16.tobytes()
 
         self.stream.write(pcm)

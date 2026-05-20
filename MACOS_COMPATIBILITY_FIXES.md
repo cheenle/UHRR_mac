@@ -94,4 +94,4 @@ Test Results: 6/6 tests passed
 🎉 All tests passed! The application should run correctly.
 ```
 
-The server now starts successfully and listens on port 8888 with SSL enabled.
+The server now starts successfully and listens on port 8877 with SSL enabled.

@@ -1,7 +1,8 @@
 # MRRC 架构概览 (Architecture Overview Document)
 
-**版本**: V5.0.0 (2026-03-15)  
-**用途**: 快速了解 MRRC 系统架构、核心功能和数据流
+**版本**: V5.1.0 (2026-05-20)  
+**用途**: 快速了解 MRRC 系统架构、核心功能和数据流  
+**更新**: Opus 码率 28kbps, 编码复杂度 8, 新增 AGC 预放绕过优化
 
 ---
 
@@ -123,10 +124,10 @@
                           │                                         │
                           ▼                                         ▼
                    ┌─────────────┐                         ┌─────────────┐
-                   │ Opus Encode │                         │  WebSocket  │
-                   │ (16kHz)     │                         │   (WSS)     │
-                   │ 20kbps      │                         └──────┬──────┘
-                   └─────────────┘                                │
+                    │ Opus Encode │                         │  WebSocket  │
+                    │ (16kHz)     │                         │   (WSS)     │
+                    │ 28kbps      │                         └──────┬──────┘
+                    └─────────────┘                                │
                                                                   ▼
                                                            ┌─────────────┐
                                                            │   Browser   │
@@ -162,7 +163,7 @@ Int16/Float32 Conversion (48kHz)
 │  └── AGC Auto Gain Control     │  (4 modes)
 └─────────────────────────────────┘
         ↓
-Opus Encode (16kHz, 20kbps)
+Opus Encode (16kHz, 28kbps, complexity=8)
         ↓
 WebSocket → Browser
 ```

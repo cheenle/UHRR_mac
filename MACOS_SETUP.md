@@ -58,7 +58,7 @@ rig_pathname = /dev/tty.usbserial*  # or your specific device path
 ./MRRC
 ```
 
-Access the interface at: https://localhost:8888/
+Access the interface at: https://localhost:8877/
 
 ## Platform-Specific Considerations
 

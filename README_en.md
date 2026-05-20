@@ -1,6 +1,6 @@
-# Mobile Remote Radio Control (MRRC) V5.2.0
+# Mobile Remote Radio Control (MRRC) V5.3
 
-[![English](https://img.shields.io/badge/lang-English-blue.svg)](README_en.md) [![中文](https://img.shields.io/badge/lang-中文-red.svg)](README_CN.md) [![Version](https://img.shields.io/badge/version-V5.2.0-green.svg)](CHANGELOG.md)
+[![English](https://img.shields.io/badge/lang-English-blue.svg)](README_en.md) [![中文](https://img.shields.io/badge/lang-中文-red.svg)](README_CN.md) [![Version](https://img.shields.io/badge/version-V5.3-green.svg)](CHANGELOG.md)
 
 **Amateur Radio, Anytime, Anywhere.**
 
@@ -8,19 +8,10 @@ MRRC is a modern web-based remote control system optimized for mobile devices, e
 
 > ✅ **Core Advantage**: Mobile-first design, TX→RX switching latency <100ms, PWA support for offline access, optimized for one-hand operation
 >
-> 🎉 **V5.2.0 Highlights**:
-> - 🎙️ **RagChew TX Audio Preset**: Warm, natural voice processing with EQ + compressor + noise gate
-> - 🔧 **Web Audio Chain Fix**: Fixed Safari setValueAtTime missing argument causing initialization failure
+> 🎉 **V5.3 Highlights**:
+> - 🎛️ **7 RX/TX Audio Optimizations**: Pre-AGC Bypass, Recording Anti-alias Filter (3-sample avg), TX Opus optimized defaults (complexity=8, bitrate=28kbps), Adaptive Bitrate, Level Normalization, FEC/DTX
 >
-> 🎉 **V5.0.0 Highlights**:
-> - 🎨 **Glassmorphism UI**: Frosted glass cards with backdrop-filter blur
-> - ✨ **Unicode Icons**: Cross-platform consistent, no emoji dependency
-> - 📱 **Touch Optimization**: 44px WCAG buttons, 28px slider targets
-> - 📳 **Haptic Feedback**: Vibration API for tactile interaction
-> - 🔴 **TX Visual Feedback**: Frequency display glows red during transmit
-> - 🗑️ **CSS Cleanup**: 15% size reduction, 324 lines removed
->
-> Previous: V5.0.0 Mobile UI Modernization | V4.9.3 Frequency Sync | V4.9.2 Blue UI | V4.9.0 Voice Assistant
+> > Previous: V5.2.0 WDSP Hash Cache Opt | V5.0.0 Mobile UI Modernization | V4.9.3 Frequency Sync
 
 ## 🎯 Design Philosophy
 
@@ -321,7 +312,7 @@ Based on [F4HTB/Universal_HamRadio_Remote_HTML5](https://github.com/F4HTB/Univer
 
 ---
 
-**Latest Version: V5.2.0** (2026-05-18) | [View Changelog](CHANGELOG.md)
+**Latest Version: V5.3** (2026-05-20) | [View Changelog](CHANGELOG.md)
 
 **MRRC - Mobile Remote Radio Control**  
 *Amateur Radio, Anytime, Anywhere.*

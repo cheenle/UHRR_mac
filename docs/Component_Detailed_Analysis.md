@@ -1,7 +1,7 @@
 # MRRC 组件详细分析文档
 
 ## 文档信息
-- **版本**: V5.0.0 (2026-04-30)
+- **版本**: V5.2.0 (2026-05-20)
 - **作者**: Claude Code Analysis
 - **状态**: 基于深度代码分析
 
@@ -9,7 +9,7 @@
 
 ### 1.1 主服务器 (`MRRC`)
 
-**文件位置**: `/Users/cheenle/MRRC/MRRC_mac/MRRC`
+**文件位置**: `/Users/cheenle/UHRR/MRRC/MRRC`
 **代码行数**: 1800+ 行
 
 #### 1.1.1 核心类分析
@@ -99,6 +99,16 @@
 - 自动设备检测
 - 立体声到单声道转换
 
+**V5.2 音频优化**:
+
+1. **录音防混叠滤波器** (`audio_interface.py:359-364`): 录音时 48kHz→16kHz 降采样前先进行 3 样本平均低通滤波，防止频谱混叠伪迹。
+
+2. **Pre-AGC 旁路** (`audio_interface.py:333-348`): 当 WDSP AGC 激活时跳过内建简易 AGC (`agc_mode != 0`)，避免串联增益控制导致信号倍增压限。
+
+3. **自适应 Opus 比特率** (`audio_interface.py:528-536`): 根据客户端 WebSocket 队列深度动态调整 RX Opus 码率——`qlen<5 → 32kbps, qlen<15 → 24kbps, ≥15 → 16kbps`——在弱网条件下自动降码率防堵塞。
+
+4. **TX 电平归一化与平滑** (`audio_interface.py:823-837`): `PyAudioPlayback.write()` 中对输出 PCM 做峰值归一化至 85% 满幅，增益变化经一阶平滑：attack=0.5（增增益快）、release=0.05（减增益慢），避免 pumping 效应。
+
 ### 1.3 Hamlib 包装器
 
 **hamlib_wrapper.py**
@@ -139,24 +149,33 @@
 
 #### 2.1.1 音频处理
 
-**TX 音频编码**:
+**TX 音频编码 (Opus + Int16)**:
 ```javascript
-// Int16 编码器配置
-const audioConfig = {
-  sampleRate: 16000,
-  channels: 1,
-  format: 'int16'
+// OpusEncoderProcessor 初始化
+var OpusEncoderProcessor = function( wsh ) {
+    this.bufferSize = 2048;
+    this.downSample = 3;  // 48kHz → 16kHz
+    this.opusFrameDur = 20; // ms
+    this.opusRate = 16000;
+    this.opusEncoder = new OpusEncoder( 16000, 1, 2048, 20 );
+    // Opus 编码器在 opus_codec.js 中设置:
+    // complexity=8, bitrate=28000, VBR=ON, FEC=ON(15%), DTX=ON, HPF=OFF
 };
 ```
 
-**RX 音频播放**:
+**OpusEncoder 初始化** (`controls.js:1461-1483`):
+- `AudioTX_start()` 创建 `OpusEncoderProcessor` 实例
+- `sendSettings()` 同步 Opus 编码状态到后端
+- Opus 帧: 320 samples @ 16kHz / 20ms
+
+**RX 音频播放 (Opus 解码)** (`controls.js:212-349`):
 ```javascript
-// AudioWorklet 配置
-const workletConfig = {
-  minFrames: 16,
-  maxFrames: 32,
-  channelCount: 1
-};
+// AudioRX_opusDecode 切换 Opus/Int16 解码
+function decodeOpusAudio(data) {
+    const opusDecodeRate = 16000;
+    AudioRX_OpusDecoder = new OpusDecoder(opusDecodeRate, 1);
+    const int16Data = AudioRX_OpusDecoder.decode(data);
+}
 ```
 
 #### 2.1.2 频率控制
@@ -211,7 +230,28 @@ class RxPlayerProcessor extends AudioWorkletProcessor {
 - 音频质量保证
 - 欠载计数器重置
 
-### 2.3 PTT 按钮优化 (`tx_button_optimized.js`)
+### 2.3 Opus 编解码模块 (`modules/opus_codec.js`)
+
+**文件位置**: `www/modules/opus_codec.js`
+**职责**: OpusEncoder/OpusDecoder 类实现，依赖 Opus WASM 运行时
+
+**V5.2 优化默认值** (`opus_codec.js:37-99`):
+| 参数 | 值 | 说明 |
+|------|-----|------|
+| OPUS_SET_COMPLEXITY | 8 (范围 0-10, 默认 10) | 桌面端推荐值，平衡质量与性能 |
+| OPUS_SET_BITRATE | 28000 (28kbps) | 短波语音透明码率 |
+| OPUS_SET_VBR | 1 (开启) | 可变比特率，内容自适应 |
+| OPUS_SET_INBAND_FEC | 1 (开启) | 带内前向纠错，丢包恢复 |
+| OPUS_SET_PACKET_LOSS_PERC | 15 | 预期 15% 丢包率 |
+| OPUS_SET_DTX | 1 (开启) | 不连续传输，静音段省带宽 |
+| OPUS_SET_SIGNAL | 3001 (VOICE) | 语音信号优化 |
+| OPUS_SET_HP_FILTER | 0 (禁用) | 保留低频厚度 |
+
+**默认值变更**:
+- complexity: `5 → 8`（提升编码质量）
+- bitrate: `20kbps → 28kbps`（提升语音透明度）
+
+### 2.4 PTT 按钮优化 (`tx_button_optimized.js`)
 
 **移动端优化**:
 - 触摸事件处理
@@ -228,7 +268,7 @@ let pttState = {
 };
 ```
 
-### 2.4 移动端界面 (`mobile_modern.js`)
+### 2.5 移动端界面 (`mobile_modern.js`)
 
 **响应式设计**:
 - 触摸友好的控件布局
@@ -242,7 +282,7 @@ let pttState = {
 - 实时功率/SWR 显示
 - 天调参数存储
 
-### 2.5 TX 均衡器 (`controls.js`)
+### 2.6 TX 均衡器 (`controls.js`)
 
 **三段均衡器**:
 - 低频 (Low): 200Hz, lowshelf
@@ -317,15 +357,20 @@ fft_window = hamming
 
 **TX 音频流**:
 ```
-麦克风 → Web Audio API → TX EQ → Int16 编码 → WebSocket 传输 → 
-服务器解码 → PyAudio → 电台音频输入
+麦克风 → Web Audio API → TX EQ → Opus/Int16 编码 → WebSocket 传输 → 
+服务器解码(OpusDecoder/Int16) → PyAudio → 电台音频输入
 ```
+- 前端: `OpusEncoderProcessor` (opus_codec.js) 编码，16kHz/20ms帧
+- 后端: `PyAudioPlayback.write()` 解码后经 TX 电平归一化与平滑
 
 **RX 音频流**:
 ```
-电台音频输出 → PyAudio 采集 → WebSocket 传输 → 
-浏览器解码 → AudioWorklet → 扬声器
+电台音频输出 → PyAudio 采集 → WDSP(NR2/NB/ANF/AGC) → Opus/Int16 编码 → 
+WebSocket 传输 → 浏览器解码 → AudioWorklet → 扬声器
 ```
+- 后端: `PyAudioCapture` 采集，经 WDSP 处理后 Opus 编码 (`configure_for_voip`)
+- 后端: 自适应比特率 (32k/24k/16kbps) 根据队列深度动态调整
+- 前端: `decodeOpusAudio()` 解码，支持 FEC 丢包恢复
 
 ### 4.3 ATR-1000 数据流
 
@@ -375,6 +420,9 @@ MRRC 桥接 → WebSocket(/WSATR1000) → 移动端显示
 
 **带宽优化**:
 - Int16 音频格式 (50% 带宽减少)
+- Opus 编码 (相比 Int16 再节省 ~70% 带宽，典型 ~40kbps)
+- 自适应 Opus 比特率 (弱网降至 16kbps)
+- Opus DTX (静音段不发送数据)
 - WebSocket 压缩
 - 增量状态更新
 
@@ -489,4 +537,4 @@ MRRC 桥接 → WebSocket(/WSATR1000) → 移动端显示
 ---
 
 *本文档提供了 MRRC 项目的详细组件分析，帮助理解系统内部工作机制和优化机会。*
-*更新时间: 2026-03-06*
+*更新时间: 2026-05-20*

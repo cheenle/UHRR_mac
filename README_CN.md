@@ -1,6 +1,6 @@
-# Mobile Remote Radio Control (MRRC) V5.2.0
+# Mobile Remote Radio Control (MRRC) V5.3
 
-[![English](https://img.shields.io/badge/lang-English-blue.svg)](README_en.md) [![中文](https://img.shields.io/badge/lang-中文-red.svg)](README_CN.md) [![版本](https://img.shields.io/badge/版本-V5.2.0-green.svg)](CHANGELOG.md)
+[![English](https://img.shields.io/badge/lang-English-blue.svg)](README_en.md) [![中文](https://img.shields.io/badge/lang-中文-red.svg)](README_CN.md) [![版本](https://img.shields.io/badge/版本-V5.3-green.svg)](CHANGELOG.md)
 
 **随时随地，畅享业余无线电。**
 
@@ -8,11 +8,10 @@ MRRC 是一款专为移动端优化的业余电台远程控制系统。无论您
 
 > ✅ **核心优势**：移动端优先设计，TX→RX切换延迟<100ms，PWA支持离线访问，专为单手操作优化
 >
-> 🎉 **V5.2.0 更新亮点**：
-> - 🎙️ **RagChew TX 语音美化**：温暖自然的人声预设，EQ + 动态压缩 + 噪声门
-> - 🔧 **Web Audio 音频链修复**：修复 Safari setValueAtTime 参数缺失导致的初始化失败
+> 🎉 **V5.3 更新亮点**：
+> - 🎛️ **7 项 RX/TX 音频优化**：Pre-AGC Bypass、录音抗混叠滤波（3样本滑动平均）、TX Opus 优化默认值（complexity=8, bitrate=28kbps）、自适应码率、电平归一化、FEC/DTX
 >
-> 历史版本：V5.0.0 移动端UI现代化 | V4.9.3 频率联动 | V4.9.2 蓝色UI | V4.9.0 语音助手
+> 历史版本：V5.2.0 WDSP 哈希缓存优化 | V5.0.0 移动端UI现代化 | V4.9.3 频率联动
 
 ## 🎯 设计理念
 
@@ -364,7 +363,7 @@ curl -X POST -H "Content-Type: application/json" \
 
 ---
 
-**最新版本: V5.2.0** (2026-05-18) | [查看更新日志](CHANGELOG.md)
+**最新版本: V5.3** (2026-05-20) | [查看更新日志](CHANGELOG.md)
 
 ## 🖥️ 多实例支持（Multi-Instance）⭐ 新功能
 

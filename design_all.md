@@ -104,7 +104,7 @@ class ticksTRXRIG(threading.Thread)   # Status monitoring thread
 #### Configuration Management:
 ```ini
 [SERVER]
-port = 8888
+port = 8877
 certfile = UHRH.crt
 keyfile = UHRH.key
 auth = 

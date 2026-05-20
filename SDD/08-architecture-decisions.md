@@ -49,7 +49,7 @@
 **Rationale**:
 - Opus is the WebRTC standard, natively supported by browsers
 - Low latency (20ms frame length)
-- High compression ratio (20kbps at 16kHz for SSB audio)
+- High compression ratio (28kbps at 16kHz for SSB audio (current operating point; range 20–48kbps))
 - Int16 PCM provides compatibility fallback
 
 **Impact**:
