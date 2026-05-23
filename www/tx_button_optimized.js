@@ -63,6 +63,7 @@ async function TXControl(action) {
                 TXState.pendingStop = false;
                 if (typeof sendTRXptt === 'function') sendTRXptt(false);
                 if (typeof toggleRecord === 'function') toggleRecord();
+                if (typeof window.resumeAudioContext === 'function') window.resumeAudioContext();
                 if (typeof toggleaudioRX === 'function') toggleaudioRX(false);
                 if (typeof window.updatePTTStatus === 'function') window.updatePTTStatus(false);
                 if (typeof button_unpressed === 'function') button_unpressed();
@@ -196,6 +197,7 @@ async function TXControl(action) {
                 TXState.isPressed = false;
                 sendTRXptt(false);
                 toggleRecord();
+                if (typeof window.resumeAudioContext === 'function') window.resumeAudioContext();
                 toggleaudioRX(false);
                 if (typeof window.updatePTTStatus === 'function') {
                     window.updatePTTStatus(false);
@@ -256,10 +258,9 @@ async function TXControl(action) {
                         // 发送flush命令并立即重置
                         AudioRX_source_node.port.postMessage({type: 'flush'});
                         AudioRX_source_node.port.postMessage({type: 'reset'});
-                        // V4.5.21: 立即设置最小缓冲为1帧，让RX音频立即播放
+                        // 临时降为 min:1 实现快速恢复，200ms后恢复稳定缓冲
                         AudioRX_source_node.port.postMessage({type: 'config', min: 1, max: 20});
-                        console.log(`[${timestamp}] ✅ AudioWorklet 缓冲区已清除并重置，最小缓冲设为1帧`);
-                        // 200ms后恢复正常缓冲（与初始配置一致）
+                        console.log(`[${timestamp}] ✅ AudioWorklet 缓冲区已清除并重置，最小缓冲临时设为1帧`);
                         setTimeout(() => {
                             if (AudioRX_source_node && AudioRX_source_node.port) {
                                 AudioRX_source_node.port.postMessage({type: 'config', min: 2, max: 30});
@@ -279,7 +280,11 @@ async function TXControl(action) {
                 }
             }
             
-            // 4. 恢复RX音频（延迟最小化）
+            // 4. 确保 AudioContext 已恢复（iOS 关键：PTT长时间后可能被suspend）
+            if (typeof window.resumeAudioContext === 'function') {
+                window.resumeAudioContext();
+            }
+            // 5. 恢复RX音频（延迟最小化）
             console.log(`[${timestamp}] 🔧 调用toggleaudioRX(false) - 恢复RX音频`);
             toggleaudioRX(false);  // 明确恢复RX音频
             

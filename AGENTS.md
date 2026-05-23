@@ -35,6 +35,24 @@
 - `ft8/` Python scripts are mostly standard-library based (`python run_ultron.py`, `python ultron.py`, `python ultron_dxcc.py`); PHP variants use `php -c extra/php-lnx.ini ...`.
 - `ft8/rdma/` is a packaged Python subproject with its own `pyproject.toml`, pytest/black/isort/flake8/mypy settings, and `src/` layout.
 
+## FT8 Critical Gotchas (V5.3)
+- **Big-endian protocol**: JTDX/WSJT-X UDP uses **big endian** (default Qt 5+ QDataStream byte order). All header fields (magic, schema, type) and body fields (string lengths, uint64, double, int32) use `>` format. String encoding is QByteArray: `[uint32 BE length][UTF-8 data]`, with `0xFFFFFFFF` for null.
+- **Status field layout** (type 1): Id → DialFreq(quint64) → Mode → DXCall → Report → TxMode → TxEnabled(bool) → Transmitting(bool) → Decoding(bool) → RxDF(qint32) → TxDF(qint32) → DECall → DEGrid → DXGrid → TxWatchdog(bool) → SubMode → FastMode(bool) → TxFirst(bool). No dialog_name field between Id and freq.
+- **Decode field layout** (type 2): Id → New(bool) → Time(quint32) → snr(qint32) → DeltaTime(double, 8B) → DeltaFreq(quint32) → Mode → Message → LowConfidence(bool) → OffAir(bool).
+- **Port 2238 not 2237**: `ft8_integration.py` listens on **2238** to avoid conflicting with JTDX/WSJT-X (which owns 2237). User must configure JTDX's UDP secondary port to `127.0.0.1:2238`.
+- **TX via Free Text**: CQ/Reply/RR73 commands send WSJT-X Free Text (type 9) packets to JTDX on port 2237. No audio path needed — JTDX generates the TX audio.
+- **`ft8_decoder.py` is non-functional** — requires `PyFT8` library (not installed), returns empty decodes. All decode/status comes from JTDX/WSJT-X UDP forward.
+- **Frontend dual paths**: `ft8_ultron.html` + `ft8_ultron.js` is the active UI (rewritten V5.3). `ft8.html` + `ft8.js` is legacy (waterfall, simulated TX).
+- **PHP files in `ft8/`** (robot.php etc.) are legacy; all active development is Python.
+
+## Audio Buffer Critical Patterns (V5.3.1)
+- **`rx_worklet_processor.js` minimum buffer MUST NOT stay at 1**. When `targetMinFrames=1`, line 78 guard `this.targetMinFrames > 1` is always false → zero jitter protection → every transient network delay produces an audible gap. Safe default: `min: 2, max: 30`.
+- **TX→RX uses a transient min:1 window**: After TX ends, `tx_button_optimized.js` sets `min: 1` for fast audio recovery, then a 200ms `setTimeout` restores `min: 2, max: 30`. Never remove that timer.
+- **Three flush targets on PTT release**: (a) `client.Wavframes = []` — clear already-encoded frames; (b) `PyAudioCapture._flush_opus_accumulator = True` — clear raw PCM accumulator in capture thread; (c) JS-side `AudioWorklet.flush()` + `AudioRX_audiobuffer = []`. Missing any one causes stale frames to play after TX→RX switch.
+- **`tune` and `cq` stop paths MUST duplicate the PTT-release flush logic** — they call `CTRX.setPTT("false")` directly, bypassing the `setPTT` handler that does cleanup.
+- **`stream.read()` size should align to Opus frame boundaries**: 320 samples = 20ms @ 16kHz (one Opus frame). Avoid sizes that produce fractional frames per read (e.g. 480 = 1.5 frames).
+- **`toggleaudioRX()` re-enables audio after mute** — it must flush buffers the same way TX stop does, or manual mute/unmute will replay stale frames.
+
 ## Existing Guidance
 - `CLAUDE.md` has broader architecture notes; prefer this file for compact OpenCode-specific gotchas.
 - `AOD.md`, `DSP.md`, and `docs/Multi_Instance_Setup.md` are useful when changing wiring, DSP, or multi-instance behavior.

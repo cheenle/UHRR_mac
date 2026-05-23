@@ -398,8 +398,8 @@ function AudioRX_start(){
                 await AudioRX_context.audioWorklet.addModule('rx_worklet_processor.js');
                 const rxNode = new AudioWorkletNode(AudioRX_context, 'rx-player');
                 AudioRX_source_node = rxNode;
-                // V4.5.23: 优化缓冲配置，减少 TX→RX 切换延迟
-                // min:2(快速开始播放), max:30(约60ms缓冲)
+                // V5.3.1: 恢复正常缓冲配置防止卡顿
+                // min:2(40ms缓冲), max:30(约60ms缓冲@16kHz)
                 try { rxNode.port.postMessage({ type: 'config', min: 2, max: 30 }); } catch(_){}
                 window.__pushRxFrame = function(f32) {
                     rxNode.port.postMessage({ type: 'push', payload: f32 });
@@ -672,28 +672,23 @@ function toggleaudioRX(stat="None"){
 	else{
 		AudioRX_SetGAIN();
 		console.log('🔊 RX音频恢复');
-		
-		// 关键优化：TX结束后完全清空缓冲区，避免旧数据导致卡顿
+
+		// 清空缓冲区，避免旧数据导致卡顿
 		if (typeof AudioRX_audiobuffer !== 'undefined') {
 			AudioRX_audiobuffer = [];
-			console.log('🧹 RX音频缓冲区已完全清空');
 		}
-		
+
 		// 清除 AudioWorklet 缓冲区
 		if (typeof AudioRX_source_node !== 'undefined' && AudioRX_source_node && AudioRX_source_node.port) {
 			try {
 				AudioRX_source_node.port.postMessage({type: 'flush'});
-				console.log('🔄 AudioWorklet缓冲区已清除');
-			} catch(e) {
-				console.log('⚠️ 清除AudioWorklet缓冲区时出错:', e);
-			}
+			} catch(e) {}
 		}
-		
+
 		// 重置累积缓冲区（ScriptProcessor模式）
 		if (typeof window.__rxAccumulatedBuffer !== 'undefined') {
 			window.__rxAccumulatedBuffer = [];
 			window.__rxTotalSamples = 0;
-			console.log('🔄 累积缓冲区已重置');
 		}
 	}
 }

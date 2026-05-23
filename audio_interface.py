@@ -111,6 +111,7 @@ class PyAudioCapture(threading.Thread):
     rx_opus_encode = False
     rx_opus_rate = 16000  # Opus 采样率
     rx_opus_frame_dur = 20  # Opus 帧时长 (ms)
+    _flush_opus_accumulator = False  # 跨线程标志：PTT释放时清空opus_accumulator
     rx_opus_encoder = None  # Opus 编码器实例
     
     # RNNoise 降噪设置
@@ -299,7 +300,7 @@ class PyAudioCapture(threading.Thread):
         while True:
             try:
                 # 使用非阻塞读取，避免线程被阻塞
-                data = self.stream.read(256, exception_on_overflow=False)
+                data = self.stream.read(320, exception_on_overflow=False)
                 
                 if len(data) > 0:
                     frame_count += 1
@@ -478,6 +479,11 @@ class PyAudioCapture(threading.Thread):
                                     continue
                                 
                                 # 动态读取类变量，支持运行时切换编码模式
+                                # 跨线程：PTT释放时清空accumulator
+                                if PyAudioCapture._flush_opus_accumulator:
+                                    opus_accumulator = np.array([], dtype=np.int16)
+                                    PyAudioCapture._flush_opus_accumulator = False
+
                                 current_opus_mode = PyAudioCapture.rx_opus_encode
                                 current_opus_rate = PyAudioCapture.rx_opus_rate
                                 current_opus_frame_dur = PyAudioCapture.rx_opus_frame_dur

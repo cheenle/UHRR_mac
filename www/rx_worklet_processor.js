@@ -5,8 +5,8 @@ class RxPlayerProcessor extends AudioWorkletProcessor {
   constructor() {
     super();
     this.queue = [];
-    // V4.5.23: 降低最小缓冲以减少 TX→RX 切换延迟
-    // min:2帧开始播放, max:30帧(约60ms@16kHz)
+    // V5.3.1: 恢复正常缓冲防止卡顿，TX→RX 切换时临时降为 min:1
+    // min:2(40ms缓冲), max:30(约60ms缓冲@16kHz)
     this.targetMinFrames = 2;
     this.targetMaxFrames = 30;
     

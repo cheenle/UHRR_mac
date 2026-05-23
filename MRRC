@@ -2795,6 +2795,12 @@ class WS_ControlTRX(tornado.websocket.WebSocketHandler):
 				# PTT释放时，清空所有RX客户端的音频队列
 				for client in AudioRXHandlerClients:
 					client.Wavframes = []
+				# 跨线程信号：清空 Opus 累加器，防止 TX→RX 切换后首个帧混入旧数据
+				try:
+					from audio_interface import PyAudioCapture
+					PyAudioCapture._flush_opus_accumulator = True
+				except Exception:
+					pass
 			# V4.5.6: PTT 日志只在 debug 模式下打印
 			if bool(config['CTRL']['debug']):
 				print(f"🔥 PTT命令: {datato}")
@@ -2835,8 +2841,15 @@ class WS_ControlTRX(tornado.websocket.WebSocketHandler):
 			else:
 				# 停止tune
 				stop_tune()
-				# 同时停止PTT
+				# 同时停止PTT & 清空RX音频队列
 				CTRX.setPTT("false")
+				for client in AudioRXHandlerClients:
+					client.Wavframes = []
+				try:
+					from audio_interface import PyAudioCapture
+					PyAudioCapture._flush_opus_accumulator = True
+				except Exception:
+					pass
 				yield self.send_to_all_clients("getPTT:false")
 		elif(action == "cq"):
 			# 处理cq命令
@@ -2849,8 +2862,15 @@ class WS_ControlTRX(tornado.websocket.WebSocketHandler):
 			else:
 				# 停止cq播放
 				stop_cq()
-				# 同时停止PTT
+				# 同时停止PTT & 清空RX音频队列
 				CTRX.setPTT("false")
+				for client in AudioRXHandlerClients:
+					client.Wavframes = []
+				try:
+					from audio_interface import PyAudioCapture
+					PyAudioCapture._flush_opus_accumulator = True
+				except Exception:
+					pass
 				yield self.send_to_all_clients("getPTT:false")
 		elif(action == "cq_complete"):
 			# CQ播放完成通知
