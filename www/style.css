@@ -323,7 +323,7 @@ overflow: hidden;
 .network-stat.latency-bad  { color: #ff4444; border-color: rgba(255,68,68,0.4); }
 #div-bitrates {
 	color: #00ffcc;
-	font-size: 14px;
+	font-size: 17px;
 	text-shadow: 0 0 6px rgba(0,255,204,0.4);
 }
 
