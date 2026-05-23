@@ -1,384 +1,377 @@
 /**
- * ULTRON FT8 Web Interface
- * 与 ft8_integration.py 后端深度集成
+ * FT8 Remote Control — WebSocket frontend for JTDX/WSJT-X
+ * Protocol matches ft8_integration.py backend.
+ *
+ * Messages from server:
+ *   {type:"connected", version, listen_port, jtdx_port}
+ *   {type:"status", data:{software, frequency, mode, band, transmitting, callsign}}
+ *   {type:"decode", data:{time, snr, freq, mode, message, callsign, grid, dxcc_id, dxcc_name, dxcc_flag, worked, excluded}}
+ *   {type:"cycle", data:{phase, is_tx, slot, seconds_left}}
+ *   {type:"qso_logged", data:{dx_call, dx_grid}}
+ *   {type:"error", message}
+ *
+ * Messages to server:
+ *   {type:"command", command:"cq|reply|rr73|free_text|halt_tx|settings|exclude", params:{}}
  */
 
-// 全局状态
-const state = {
-    isConnected: false,
-    isListening: false,
-    isCQActive: false,
-    currentTarget: null,
-    decodes: [],
-    workedDxcc: new Set(),
-    settings: {
-        callsign: localStorage.getItem('ultron_callsign') || '',
-        grid: localStorage.getItem('ultron_grid') || '',
-        threshold: parseInt(localStorage.getItem('ultron_threshold')) || -20,
-        autoReply: localStorage.getItem('ultron_auto_reply') !== 'false'
-    },
-    stats: {
-        today: 0,
-        worked: 0,
-        new: 0,
-        decodes: 0
-    }
+function getCookie(name) {
+  const m = document.cookie.match('(?:^|;)\\s*' + name + '=([^;]*)');
+  return m ? decodeURIComponent(m[1]) : '';
+}
+
+function setCookie(name, val, days) {
+  const d = new Date();
+  d.setDate(d.getDate() + (days || 365));
+  document.cookie = name + '=' + encodeURIComponent(val) + '; expires=' + d.toUTCString() + '; path=/';
+}
+
+const FT8 = {
+  ws: null,
+  reconnectTimer: null,
+  connected: false,
+  decodes: [],
+  settings: {
+    callsign: getCookie('ft8_call') || '',
+    grid: getCookie('ft8_grid') || '',
+    threshold: parseInt(getCookie('ft8_thr')) || -20,
+    autoReply: getCookie('ft8_ar') === '1',
+  },
+  stats: { today: 0, worked: 0, newDxcc: 0, decodes: 0 },
+  cycleSlot: -1,
+  sepPending: false,
 };
 
-// WebSocket 连接
-let ws = null;
-let reconnectTimer = null;
-
-// 初始化
 document.addEventListener('DOMContentLoaded', () => {
-    loadSettings();
-    updateStats();
-    connectWebSocket();
-    logMessage('系统初始化完成');
+  applySettings();
+  checkSetup();
+  updateStats();
+  connect();
 });
 
-// WebSocket 连接
-function connectWebSocket() {
-    if (ws && ws.readyState === WebSocket.OPEN) return;
-    
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${protocol}//${window.location.host}/WSFT8`;
-    
-    try {
-        ws = new WebSocket(wsUrl);
-        
-        ws.onopen = () => {
-            state.isConnected = true;
-            updateConnectionStatus(true);
-            logMessage('WebSocket 连接成功', 'success');
-            
-            // 发送设置
-            sendCommand('get_status');
-        };
-        
-        ws.onmessage = (event) => {
-            handleMessage(event.data);
-        };
-        
-        ws.onclose = () => {
-            state.isConnected = false;
-            updateConnectionStatus(false);
-            logMessage('WebSocket 连接断开，5秒后重试...', 'error');
-            
-            // 重连
-            reconnectTimer = setTimeout(connectWebSocket, 5000);
-        };
-        
-        ws.onerror = (error) => {
-            logMessage('WebSocket 错误: ' + error.message, 'error');
-        };
-        
-    } catch (err) {
-        logMessage('连接失败: ' + err.message, 'error');
-        reconnectTimer = setTimeout(connectWebSocket, 5000);
-    }
+function connect() {
+  if (FT8.ws && FT8.ws.readyState === WebSocket.OPEN) return;
+  const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const url = `${proto}//${window.location.host}/WSFT8`;
+  console.log('[FT8] Connecting to', url);
+
+  FT8.ws = new WebSocket(url);
+  FT8.ws.onopen = () => {
+    FT8.connected = true;
+    setConnected(true);
+    log('WebSocket connected', 'ok');
+  };
+  FT8.ws.onmessage = e => handleMsg(e.data);
+  FT8.ws.onclose = () => {
+    FT8.connected = false;
+    setConnected(false);
+    log('Disconnected, retry in 3s', 'err');
+    clearTimeout(FT8.reconnectTimer);
+    FT8.reconnectTimer = setTimeout(connect, 3000);
+  };
+  FT8.ws.onerror = () => log('Connection error', 'err');
 }
 
-// 处理消息
-function handleMessage(data) {
-    try {
-        const msg = JSON.parse(data);
-        
-        switch (msg.type) {
-            case 'decode':
-                handleDecode(msg.data);
-                break;
-            case 'status':
-                handleStatus(msg.data);
-                break;
-            case 'status_change':
-                handleStatusChange(msg.data);
-                break;
-            case 'qso_logged':
-                handleQSOLogged(msg.data);
-                break;
-            case 'command_ack':
-                handleCommandAck(msg.data);
-                break;
-        }
-    } catch (e) {
-        console.error('解析消息错误:', e);
-    }
+function sendCmd(command, params = {}) {
+  if (!FT8.ws || FT8.ws.readyState !== WebSocket.OPEN) {
+    log('Not connected', 'err');
+    return;
+  }
+  const payload = JSON.stringify({ type: 'command', command, params });
+  FT8.ws.send(payload);
+  console.log('[FT8] TX cmd:', command, params);
 }
 
-// 处理解码消息
-function handleDecode(data) {
-    state.stats.decodes++;
-    updateStats();
-    
-    // 添加到列表
-    const decode = {
-        timestamp: data.timestamp,
-        snr: data.snr,
-        delta_f: data.delta_f,
-        mode: data.mode,
-        message: data.message,
-        status: data.status,
-        dxcc_id: data.dxcc_id,
-        dxcc_name: data.dxcc_name,
-        dxcc_flag: data.dxcc_flag,
-        priority: data.priority
-    };
-    
-    state.decodes.unshift(decode);
-    if (state.decodes.length > 100) {
-        state.decodes.pop();
-    }
-    
-    // 渲染
-    renderDecodes();
-    
-    // 高优先级提示
-    if (data.priority >= 10) {
-        showNotification(`🎯 新目标: ${data.message.split(' ')[1] || 'Unknown'}`, data.dxcc_name);
-    }
+function handleMsg(raw) {
+  let msg;
+  try { msg = JSON.parse(raw); } catch { return; }
+
+  switch (msg.type) {
+    case 'connected':
+      log(`FT8 connected — listen port ${msg.listen_port}, JTDX port ${msg.jtdx_port}`, 'ok');
+      sendCmd('settings', FT8.settings);
+      break;
+
+    case 'decodes':
+      if (Array.isArray(msg.data)) {
+        msg.data.forEach(d => addDecode(d));
+      }
+      break;
+
+    case 'decode':
+      addDecode(msg.data);
+      break;
+
+    case 'status':
+      setStatus(msg.data);
+      break;
+
+    case 'cycle':
+      renderCycle(msg.data);
+      break;
+
+    case 'qso_logged':
+      onQSOLogged(msg.data);
+      break;
+
+    case 'command_ack':
+      if (msg.data && msg.data.status === 'error') {
+        log('Command error: ' + (msg.data.message || 'unknown'), 'err');
+      } else if (msg.data && msg.data.command) {
+        log('ACK: ' + msg.data.command + ' ' + (msg.data.status || ''), 'ok');
+      }
+      break;
+
+    case 'error':
+      log('Server: ' + msg.message, 'err');
+      break;
+  }
 }
 
-// 处理状态消息
-function handleStatus(data) {
-    document.getElementById('software-name').textContent = data.software || '-';
-    document.getElementById('frequency').textContent = data.frequency ? 
-        (data.frequency / 1000000).toFixed(3) + ' MHz' : '-';
-    document.getElementById('mode').textContent = data.mode || '-';
-    document.getElementById('band').textContent = data.band || '-';
+// ── Setup check ──
+function checkSetup() {
+  const c = FT8.settings.callsign;
+  const notice = document.getElementById('setup-notice');
+  const cqBtn = document.querySelector('.ctrl .cq');
+  if (notice) notice.style.display = c ? 'none' : 'flex';
+  if (cqBtn) cqBtn.style.opacity = c ? '1' : '0.4';
 }
 
-// 处理状态变化
-function handleStatusChange(data) {
-    if (data.sendcq) {
-        state.isCQActive = true;
-        document.getElementById('cq-status').textContent = '活跃';
-        document.getElementById('cq-status').classList.add('active');
+// ── Decodes ──
+function addDecode(d) {
+  if (FT8.sepPending) {
+    FT8.decodes.unshift({ _sep: true });
+    FT8.sepPending = false;
+  }
+  FT8.stats.decodes++;
+  updateStats();
+  d._id = Date.now() + Math.random();
+  FT8.decodes.unshift(d);
+  if (FT8.decodes.length > 200) FT8.decodes.pop();
+  renderDecodes();
+
+  if (!d.worked && !d.excluded && d.snr >= FT8.settings.threshold) {
+    const parts = d.message.split(' ');
+    if (parts[0] === 'CQ' || parts[0] === 'QRZ') {
+      notify(`CQ: ${d.callsign}`, `${d.dxcc_name}  ${d.snr}dB`);
     }
-    
-    if (data.current_call) {
-        state.currentTarget = data.current_call;
-        document.getElementById('target-call').textContent = data.current_call;
-        document.getElementById('current-target').textContent = data.current_call;
-        document.getElementById('target-panel').style.display = 'block';
-    }
-    
-    logMessage(data.message || '状态已更新');
+  }
 }
 
-// 处理 QSO 记录
-function handleQSOLogged(data) {
-    state.stats.today++;
-    state.stats.worked++;
-    updateStats();
-    
-    logMessage(`✓ QSO 记录: ${data.dx_call}`, 'success');
-    
-    // 检查是否新 DXCC
-    if (!state.workedDxcc.has(data.dxcc_id)) {
-        state.workedDxcc.add(data.dxcc_id);
-        state.stats.new++;
-        updateStats();
-        showNotification('🎉 新 DXCC!', data.dxcc_name);
-    }
-}
-
-// 处理命令确认
-function handleCommandAck(data) {
-    logMessage(`命令执行: ${data.command}`);
-}
-
-// 渲染解码列表
 function renderDecodes() {
-    const container = document.getElementById('decodes-list');
-    
-    if (state.decodes.length === 0) {
-        container.innerHTML = `
-            <div class="decode-empty" style="text-align: center; padding: 40px; color: var(--text-muted);">
-                等待解码数据...<br>
-                <small>请启动 JTDX/WSJT-X 并确保 UDP 端口 2237 开启</small>
-            </div>
-        `;
-        return;
+  const el = document.getElementById('decode-list');
+  if (!el) return;
+  if (!FT8.decodes.length) {
+    el.innerHTML = '<div class="empty">Waiting for decodes…<br><small>Start JTDX/WSJT-X, set UDP forward → ' + window.location.hostname + ':2238</small></div>';
+    return;
+  }
+  el.innerHTML = FT8.decodes.map(d => {
+    if (d._sep) {
+      return '<div class="cycle-sep"></div>';
     }
-    
-    container.innerHTML = state.decodes.map(decode => {
-        let cssClass = 'decode-item';
-        if (decode.priority >= 10) cssClass += ' priority-high';
-        else if (decode.priority >= 5) cssClass += ' priority-medium';
-        if (decode.status === '--') cssClass += ' worked';
-        
-        let statusClass = '';
-        if (decode.status === '>>' || decode.status === '->') statusClass = 'target';
-        else if (decode.status === '--') statusClass = 'worked';
-        else if (decode.status === 'Lo') statusClass = 'low';
-        
-        return `
-            <div class="${cssClass}" onclick="selectDecode('${decode.message}')">
-                <span class="decode-time">${decode.timestamp}</span>
-                <span class="decode-snr ${decode.snr < -20 ? 'low' : ''}">${decode.snr}</span>
-                <span class="decode-delta">${decode.delta_f}</span>
-                <span class="decode-status ${statusClass}">${decode.status || '  '}</span>
-                <span class="decode-message">${decode.message}</span>
-            </div>
-        `;
-    }).join('');
+    let cls = 'decode-item';
+    if (d.worked) cls += ' worked';
+    if (d.excluded) cls += ' excluded';
+    if (d.message.startsWith('CQ') && !d.worked && !d.excluded) cls += ' cq';
+    if (d.dxcc_name && d.dxcc_name !== '?') cls += ' has-dxcc';
+
+    const flag = d.dxcc_flag || '';
+    const name = d.dxcc_name || '';
+
+    return `<div class="${cls}" onclick="selectDecode('${escHtml(d.callsign)}','${escHtml(d.message)}')">
+      <span class="time">${d.time}</span>
+      <span class="snr ${d.snr < -20 ? 'weak' : ''}">${d.snr > 0 ? '+' : ''}${d.snr}</span>
+      <span class="freq">${d.freq}Hz</span>
+      <span class="msg"><span class="call">${escHtml(d.callsign || '')}</span> ${escHtml(d.message)}</span>
+      <span class="dxcc">${flag} ${name}</span>
+    </div>`;
+  }).join('');
 }
 
-// 发送命令
-function sendCommand(command, params = {}) {
-    if (!ws || ws.readyState !== WebSocket.OPEN) {
-        logMessage('未连接，无法发送命令', 'error');
-        return;
-    }
-    
-    ws.send(JSON.stringify({
-        type: 'command',
-        command: command,
-        params: params
-    }));
+function selectDecode(callsign, message) {
+  if (!callsign) return;
+  document.getElementById('target-call').textContent = callsign;
+  document.getElementById('target-msg').textContent = message;
+  document.getElementById('target-panel').style.display = 'flex';
 }
 
-// 控制函数
-function toggleListen() {
-    state.isListening = !state.isListening;
-    
-    const btn = document.getElementById('btn-listen');
-    if (state.isListening) {
-        btn.textContent = '停止监听';
-        btn.classList.remove('primary');
-        btn.classList.add('danger');
-        document.getElementById('btn-cq').disabled = false;
-        logMessage('开始监听 JTDX/WSJT-X 数据');
-    } else {
-        btn.textContent = '开始监听';
-        btn.classList.remove('danger');
-        btn.classList.add('primary');
-        document.getElementById('btn-cq').disabled = true;
-        document.getElementById('btn-stop-cq').disabled = true;
-        logMessage('停止监听');
-    }
+// ── Status & Cycle ──
+function setStatus(d) {
+  setText('sw-name', d.software || '-');
+  setText('sw-freq', d.frequency ? (d.frequency / 1e6).toFixed(3) + ' MHz' : '-');
+  setText('sw-mode', d.mode || '-');
+  setText('sw-band', d.band || '-');
+  setText('sw-callsign', d.de_call || d.dx_call || '-');
 }
 
+function renderCycle(c) {
+  const bar = document.getElementById('cycle-bar');
+  const label = document.getElementById('cycle-label');
+  if (bar) bar.style.width = (c.phase * 100) + '%';
+  if (label) {
+    const tx = c.is_tx ? 'TX' : 'RX';
+    const n = Math.round(c.seconds_left);
+    label.textContent = `${tx}  ${n}s / 15s`;
+    label.className = c.is_tx ? 'tx' : 'rx';
+  }
+  if (FT8.cycleSlot !== -1 && c.slot !== FT8.cycleSlot) {
+    FT8.sepPending = true;
+  }
+  FT8.cycleSlot = c.slot;
+}
+
+// ── QSO ──
+function onQSOLogged(d) {
+  FT8.stats.today++;
+  FT8.stats.worked++;
+  const call = d.dx_call || '';
+  log(`QSO: ${call}`, 'ok');
+  notify('QSO Logged', call);
+}
+
+// ── TX Controls ──
 function sendCQ() {
-    sendCommand('send_cq');
-    document.getElementById('btn-stop-cq').disabled = false;
-    document.getElementById('btn-cq').disabled = true;
+  const c = FT8.settings.callsign;
+  if (!c) { toggleSettings(); return; }
+  const g = FT8.settings.grid || 'AA00';
+  const msg = `CQ ${c} ${g}`;
+  sendCmd('cq', { message: msg });
+  log(`CQ: ${msg}`, 'tx');
 }
 
-function stopCQ() {
-    sendCommand('stop_cq');
-    document.getElementById('btn-stop-cq').disabled = true;
-    document.getElementById('btn-cq').disabled = false;
-    document.getElementById('target-panel').style.display = 'none';
+function sendReply() {
+  const call = document.getElementById('target-call').textContent;
+  const c = FT8.settings.callsign;
+  const g = FT8.settings.grid || 'AA00';
+  if (!call || call === '-') { alert('No target callsign'); return; }
+  const msg = `${call} ${c} ${g}`;
+  sendCmd('reply', { callsign: call, message: msg });
+  log(`Reply: ${msg}`, 'tx');
+  hideTarget();
 }
 
-function replyToTarget() {
-    if (state.currentTarget) {
-        sendCommand('reply', {
-            callsign: state.currentTarget,
-            message: `${state.currentTarget} ${state.settings.callsign} ${state.settings.grid || 'AA00'}`
-        });
-    }
+function sendRR73() {
+  const call = document.getElementById('target-call').textContent;
+  if (!call || call === '-') return;
+  const c = FT8.settings.callsign;
+  const msg = `${call} ${c} RR73`;
+  sendCmd('rr73', { callsign: call });
+  log(`RR73: ${msg}`, 'tx');
+  hideTarget();
 }
 
-function skipTarget() {
-    if (state.currentTarget) {
-        sendCommand('exclude', { callsign: state.currentTarget });
-        document.getElementById('target-panel').style.display = 'none';
-        logMessage(`跳过: ${state.currentTarget}`);
-    }
+function send73() {
+  const call = document.getElementById('target-call').textContent;
+  if (!call || call === '-') return;
+  const c = FT8.settings.callsign;
+  const msg = `${call} ${c} 73`;
+  sendCmd('free_text', { text: msg });
+  log(`73: ${msg}`, 'tx');
+  hideTarget();
 }
 
-function selectDecode(message) {
-    // 解析消息获取呼号
-    const parts = message.split(' ');
-    if (parts.length > 1) {
-        const call = parts[1];
-        document.getElementById('current-target').textContent = call;
-        document.getElementById('target-panel').style.display = 'block';
-    }
+function sendCustom() {
+  const el = document.getElementById('custom-text');
+  const text = (el.value || '').trim().toUpperCase();
+  if (!text) return;
+  if (text.length > 30) { alert('Max 30 chars'); return; }
+  sendCmd('free_text', { text });
+  log(`Custom: ${text}`, 'tx');
+  el.value = '';
 }
 
-// 设置面板
+function haltTX() {
+  sendCmd('halt_tx');
+  log('TX halted', 'tx');
+}
+
+function exclude() {
+  const call = document.getElementById('target-call').textContent;
+  if (call && call !== '-') {
+    sendCmd('exclude', { callsign: call });
+    log(`Excluded: ${call}`);
+    hideTarget();
+  }
+}
+
+function hideTarget() {
+  document.getElementById('target-panel').style.display = 'none';
+}
+
+// ── Settings ──
 function toggleSettings() {
-    const panel = document.getElementById('settings-panel');
-    panel.classList.toggle('active');
+  document.getElementById('settings-panel').classList.toggle('active');
 }
 
-function loadSettings() {
-    document.getElementById('setting-callsign').value = state.settings.callsign;
-    document.getElementById('setting-grid').value = state.settings.grid;
-    document.getElementById('setting-threshold').value = state.settings.threshold;
-    document.getElementById('setting-auto-reply').checked = state.settings.autoReply;
+function applySettings() {
+  const s = FT8.settings;
+  const byId = id => document.getElementById(id);
+  if (byId('set-call')) byId('set-call').value = s.callsign;
+  if (byId('set-grid')) byId('set-grid').value = s.grid;
+  if (byId('set-threshold')) byId('set-threshold').value = s.threshold;
+  if (byId('set-autoreply')) byId('set-autoreply').checked = s.autoReply;
 }
 
 function saveSettings() {
-    state.settings.callsign = document.getElementById('setting-callsign').value.toUpperCase();
-    state.settings.grid = document.getElementById('setting-grid').value.toUpperCase();
-    state.settings.threshold = parseInt(document.getElementById('setting-threshold').value);
-    state.settings.autoReply = document.getElementById('setting-auto-reply').checked;
-    
-    localStorage.setItem('ultron_callsign', state.settings.callsign);
-    localStorage.setItem('ultron_grid', state.settings.grid);
-    localStorage.setItem('ultron_threshold', state.settings.threshold);
-    localStorage.setItem('ultron_auto_reply', state.settings.autoReply);
-    
-    // 发送到后端
-    sendCommand('settings', state.settings);
-    
-    toggleSettings();
-    logMessage('设置已保存');
+  const s = FT8.settings;
+  s.callsign = (document.getElementById('set-call').value || '').toUpperCase();
+  s.grid = (document.getElementById('set-grid').value || '').toUpperCase();
+  s.threshold = parseInt(document.getElementById('set-threshold').value) || -20;
+  s.autoReply = document.getElementById('set-autoreply').checked;
+
+  setCookie('ft8_call', s.callsign);
+  setCookie('ft8_grid', s.grid);
+  setCookie('ft8_thr', s.threshold);
+  setCookie('ft8_ar', s.autoReply ? '1' : '0');
+
+  sendCmd('settings', s);
+  toggleSettings();
+  checkSetup();
+  log('Settings saved');
 }
 
-// 更新状态
-function updateConnectionStatus(connected) {
-    const indicator = document.getElementById('connection-status');
-    const text = indicator.querySelector('.status-text');
-    
-    if (connected) {
-        indicator.classList.remove('disconnected');
-        indicator.classList.add('connected');
-        text.textContent = '在线';
-    } else {
-        indicator.classList.remove('connected');
-        indicator.classList.add('disconnected');
-        text.textContent = '离线';
-    }
+// ── UI helpers ──
+function setConnected(on) {
+  const dot = document.getElementById('conn-dot');
+  const txt = document.getElementById('conn-text');
+  if (!dot || !txt) return;
+  dot.className = 'dot ' + (on ? 'online' : 'offline');
+  txt.textContent = on ? 'Online' : 'Offline';
+}
+
+function setText(id, val) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = val;
+}
+
+function log(msg, cls = '') {
+  const el = document.getElementById('log-panel');
+  if (!el) return;
+  const d = document.createElement('div');
+  d.className = 'log-line' + (cls ? ' ' + cls : '');
+  d.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+  el.appendChild(d);
+  el.scrollTop = el.scrollHeight;
+  while (el.children.length > 80) el.removeChild(el.firstChild);
+}
+
+function notify(title, body) {
+  if ('Notification' in window && Notification.permission === 'granted') {
+    new Notification(title, { body });
+  }
 }
 
 function updateStats() {
-    document.getElementById('stat-today').textContent = state.stats.today;
-    document.getElementById('stat-worked').textContent = state.stats.worked;
-    document.getElementById('stat-new').textContent = state.stats.new;
-    document.getElementById('stat-decodes').textContent = state.stats.decodes;
+  setText('stat-decode', FT8.stats.decodes);
+  setText('stat-today', FT8.stats.today);
+  setText('stat-worked', FT8.stats.worked);
+  setText('stat-new', FT8.stats.newDxcc);
 }
 
-// 日志
-function logMessage(message, type = 'info') {
-    const panel = document.getElementById('log-panel');
-    const entry = document.createElement('div');
-    entry.className = `log-entry ${type}`;
-    entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
-    panel.appendChild(entry);
-    panel.scrollTop = panel.scrollHeight;
-    
-    // 限制日志数量
-    while (panel.children.length > 50) {
-        panel.removeChild(panel.firstChild);
-    }
+function escHtml(s) {
+  if (!s) return '';
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
-// 通知
-function showNotification(title, body) {
-    if ('Notification' in window && Notification.permission === 'granted') {
-        new Notification(title, { body });
-    } else {
-        logMessage(`${title}: ${body}`, 'success');
-    }
-}
-
-// 请求通知权限
 if ('Notification' in window && Notification.permission === 'default') {
-    Notification.requestPermission();
+  Notification.requestPermission();
 }

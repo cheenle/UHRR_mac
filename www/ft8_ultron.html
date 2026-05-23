@@ -1,515 +1,205 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="theme-color" content="#0a0a0f">
-    <title>ULTRON FT8 - MRRC</title>
-    <link rel="stylesheet" href="mobile_modern.css">
-    <style>
-        /* FT8 ULTRON 专用样式 */
-        .ft8-container {
-            display: flex;
-            flex-direction: column;
-            height: 100vh;
-            background: var(--bg-primary);
-        }
-        
-        /* 状态栏 */
-        .ultron-status-bar {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 8px;
-            padding: 8px;
-            background: var(--bg-secondary);
-            border-bottom: 1px solid var(--border-color);
-        }
-        
-        .status-card {
-            background: var(--bg-card);
-            border-radius: 8px;
-            padding: 8px;
-            text-align: center;
-        }
-        
-        .status-label {
-            font-size: 10px;
-            color: var(--text-muted);
-            text-transform: uppercase;
-        }
-        
-        .status-value {
-            font-size: 14px;
-            font-weight: 600;
-            color: var(--accent-primary);
-            font-family: var(--font-mono);
-        }
-        
-        .status-value.active {
-            color: var(--accent-success);
-        }
-        
-        .status-value.warning {
-            color: var(--accent-warning);
-        }
-        
-        /* 控制面板 */
-        .ultron-controls {
-            display: flex;
-            gap: 8px;
-            padding: 8px;
-            background: var(--bg-secondary);
-            border-bottom: 1px solid var(--border-color);
-            flex-wrap: wrap;
-        }
-        
-        .ultron-btn {
-            flex: 1;
-            min-width: 70px;
-            padding: 10px;
-            border: none;
-            border-radius: 8px;
-            font-size: 12px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-        
-        .ultron-btn.primary {
-            background: var(--accent-primary);
-            color: var(--bg-primary);
-        }
-        
-        .ultron-btn.success {
-            background: var(--accent-success);
-            color: var(--bg-primary);
-        }
-        
-        .ultron-btn.danger {
-            background: var(--accent-danger);
-            color: white;
-        }
-        
-        .ultron-btn.warning {
-            background: var(--accent-warning);
-            color: var(--bg-primary);
-        }
-        
-        .ultron-btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-        
-        /* 解码列表 */
-        .decodes-container {
-            flex: 1;
-            overflow-y: auto;
-            padding: 8px;
-            background: var(--bg-primary);
-        }
-        
-        .decode-item {
-            display: grid;
-            grid-template-columns: 45px 35px 50px 30px 1fr;
-            gap: 8px;
-            padding: 8px;
-            margin-bottom: 4px;
-            background: var(--bg-card);
-            border-radius: 8px;
-            border-left: 3px solid transparent;
-            cursor: pointer;
-            transition: all 0.2s;
-            align-items: center;
-        }
-        
-        .decode-item:hover {
-            background: var(--bg-tertiary);
-        }
-        
-        .decode-item.priority-high {
-            border-left-color: var(--accent-success);
-            background: rgba(16, 185, 129, 0.1);
-        }
-        
-        .decode-item.priority-medium {
-            border-left-color: var(--accent-warning);
-        }
-        
-        .decode-item.worked {
-            opacity: 0.5;
-        }
-        
-        .decode-time {
-            font-size: 11px;
-            color: var(--text-muted);
-            font-family: var(--font-mono);
-        }
-        
-        .decode-snr {
-            font-size: 12px;
-            font-weight: 600;
-            font-family: var(--font-mono);
-            color: var(--accent-primary);
-        }
-        
-        .decode-snr.low {
-            color: var(--accent-warning);
-        }
-        
-        .decode-delta {
-            font-size: 11px;
-            color: var(--text-secondary);
-            font-family: var(--font-mono);
-        }
-        
-        .decode-status {
-            font-size: 12px;
-            font-weight: 700;
-            text-align: center;
-        }
-        
-        .decode-status.target {
-            color: var(--accent-success);
-        }
-        
-        .decode-status.worked {
-            color: var(--accent-danger);
-        }
-        
-        .decode-status.low {
-            color: var(--accent-warning);
-        }
-        
-        .decode-message {
-            font-size: 13px;
-            font-family: var(--font-mono);
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-        
-        .decode-dxcc {
-            font-size: 10px;
-            color: var(--text-muted);
-        }
-        
-        /* 当前目标面板 */
-        .target-panel {
-            background: linear-gradient(135deg, var(--bg-card), var(--bg-tertiary));
-            padding: 12px;
-            border-top: 1px solid var(--border-color);
-        }
-        
-        .target-info {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 8px;
-        }
-        
-        .target-call {
-            font-size: 24px;
-            font-weight: 700;
-            color: var(--accent-primary);
-            font-family: var(--font-mono);
-        }
-        
-        .target-dxcc {
-            font-size: 14px;
-            color: var(--text-secondary);
-        }
-        
-        .target-actions {
-            display: flex;
-            gap: 8px;
-        }
-        
-        .target-btn {
-            padding: 8px 16px;
-            border: none;
-            border-radius: 6px;
-            font-size: 12px;
-            font-weight: 600;
-            cursor: pointer;
-        }
-        
-        /* 统计面板 */
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 8px;
-            padding: 8px;
-            background: var(--bg-secondary);
-        }
-        
-        .stat-item {
-            text-align: center;
-            padding: 8px;
-        }
-        
-        .stat-value {
-            font-size: 20px;
-            font-weight: 700;
-            color: var(--accent-primary);
-            font-family: var(--font-mono);
-        }
-        
-        .stat-label {
-            font-size: 10px;
-            color: var(--text-muted);
-        }
-        
-        /* 连接状态指示 */
-        .connection-indicator {
-            display: inline-flex;
-            align-items: center;
-            gap: 4px;
-            padding: 4px 8px;
-            border-radius: 12px;
-            font-size: 11px;
-        }
-        
-        .connection-indicator.connected {
-            background: rgba(16, 185, 129, 0.2);
-            color: var(--accent-success);
-        }
-        
-        .connection-indicator.disconnected {
-            background: rgba(239, 68, 68, 0.2);
-            color: var(--accent-danger);
-        }
-        
-        .connection-dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            animation: pulse 2s infinite;
-        }
-        
-        .connection-indicator.connected .connection-dot {
-            background: var(--accent-success);
-        }
-        
-        .connection-indicator.disconnected .connection-dot {
-            background: var(--accent-danger);
-        }
-        
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
-        }
-        
-        /* 设置面板 */
-        .settings-panel {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.8);
-            z-index: 1000;
-            padding: 20px;
-        }
-        
-        .settings-panel.active {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        
-        .settings-content {
-            background: var(--bg-secondary);
-            border-radius: 12px;
-            padding: 20px;
-            width: 100%;
-            max-width: 400px;
-            max-height: 80vh;
-            overflow-y: auto;
-        }
-        
-        .setting-group {
-            margin-bottom: 16px;
-        }
-        
-        .setting-label {
-            display: block;
-            font-size: 12px;
-            color: var(--text-muted);
-            margin-bottom: 4px;
-        }
-        
-        .setting-input {
-            width: 100%;
-            padding: 10px;
-            background: var(--bg-tertiary);
-            border: 1px solid var(--border-color);
-            border-radius: 6px;
-            color: var(--text-primary);
-            font-size: 14px;
-        }
-        
-        /* 日志输出 */
-        .log-panel {
-            height: 100px;
-            background: var(--bg-tertiary);
-            padding: 8px;
-            overflow-y: auto;
-            font-family: var(--font-mono);
-            font-size: 11px;
-            border-top: 1px solid var(--border-color);
-        }
-        
-        .log-entry {
-            margin-bottom: 2px;
-            color: var(--text-secondary);
-        }
-        
-        .log-entry.error {
-            color: var(--accent-danger);
-        }
-        
-        .log-entry.success {
-            color: var(--accent-success);
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0d1117">
+<title>FT8 — MRRC</title>
+<link rel="stylesheet" href="mobile_modern.css">
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#0d1117;color:#c9d1d9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:14px}
+.ft8-app{display:flex;flex-direction:column;height:100dvh;max-width:800px;margin:0 auto}
+
+/* Header */
+.hdr{display:flex;align-items:center;gap:8px;padding:8px 12px;background:#161b22;border-bottom:1px solid #30363d}
+.hdr .back{background:none;border:none;color:#58a6ff;font-size:18px;cursor:pointer;padding:4px 8px}
+.hdr h1{flex:1;margin:0;font-size:16px;font-weight:600}
+.hdr .dot{width:10px;height:10px;border-radius:50%;display:inline-block;margin-right:4px}
+.hdr .dot.online{background:#3fb950;box-shadow:0 0 6px #3fb950}
+.hdr .dot.offline{background:#f85149}
+.conn{display:flex;align-items:center;gap:4px;font-size:12px}
+
+/* Status bar */
+.status{display:flex;gap:4px;padding:6px 8px;background:#0d1117;border-bottom:1px solid #21262d;font-size:11px;flex-wrap:wrap}
+.status span{padding:2px 8px;background:#161b22;border-radius:4px;white-space:nowrap}
+.status .label{color:#8b949e}
+
+/* Cycle bar */
+.cycle-wrap{height:4px;background:#21262d}
+.cycle-wrap .bar{height:100%;background:#58a6ff;transition:width 0.1s linear}
+.cycle-label{text-align:center;font-size:11px;padding:2px;color:#8b949e}
+.cycle-label.tx{color:#f0883e}
+.cycle-label.rx{color:#58a6ff}
+
+/* Controls */
+.ctrl{display:flex;gap:4px;padding:6px 8px;background:#161b22;flex-wrap:wrap}
+.ctrl button{padding:6px 12px;border:1px solid #30363d;border-radius:6px;background:#21262d;color:#c9d1d9;font-size:12px;cursor:pointer;white-space:nowrap;flex:1;min-width:60px}
+.ctrl button:active{opacity:.7}
+.ctrl .cq{background:#1f6feb;border-color:#1f6feb;color:#fff}
+.ctrl .reply{background:#238636;border-color:#238636;color:#fff}
+.ctrl .rr73{background:#9e6a03;border-color:#9e6a03;color:#fff}
+.ctrl .seventy-three{background:#8b949e;border-color:#8b949e;color:#fff}
+.ctrl .halt{background:#da3633;border-color:#da3633;color:#fff}
+
+/* Decode list */
+.decode-area{flex:1;overflow-y:auto;padding:4px 8px}
+.decode-item{display:flex;gap:6px;align-items:center;padding:5px 8px;border-radius:4px;cursor:pointer;border-left:3px solid transparent;margin-bottom:2px}
+.decode-item:hover{background:#161b22}
+.decode-item.cq{border-left-color:#1f6feb}
+.decode-item.worked{opacity:.4}
+.decode-item.excluded{opacity:.3;text-decoration:line-through}
+.decode-item.has-dxcc{border-left-color:#238636}
+.decode-item .time{color:#8b949e;font-size:11px;min-width:40px;font-family:monospace}
+.decode-item .snr{min-width:36px;font-weight:600;font-size:12px;font-family:monospace}
+.decode-item .snr.weak{color:#d29922}
+.decode-item .snr:not(.weak){color:#58a6ff}
+.decode-item .freq{color:#8b949e;font-size:11px;min-width:50px;font-family:monospace}
+.decode-item .msg{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px}
+.decode-item .msg .call{color:#f0883e;font-weight:600}
+.decode-item .dxcc{color:#8b949e;font-size:11px;min-width:80px;text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cycle-sep{height:1px;background:#30363d;margin:4px 0}
+.empty{text-align:center;padding:40px 16px;color:#8b949e;font-size:13px}
+.empty small{display:block;margin-top:8px;font-size:11px;color:#484f58}
+
+/* Target panel */
+.target{display:none;align-items:center;gap:8px;padding:8px 12px;background:#1c2128;border-top:1px solid #30363d}
+.target .call{font-size:20px;font-weight:700;color:#f0883e;font-family:monospace;flex:1}
+.target .msg{font-size:11px;color:#8b949e;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.target button{padding:6px 10px;border:1px solid #30363d;border-radius:4px;background:#21262d;color:#c9d1d9;font-size:11px;cursor:pointer}
+
+/* Custom text input */
+.custom-row{display:flex;gap:4px;padding:4px 8px;background:#161b22}
+.custom-row input{flex:1;padding:6px 8px;background:#0d1117;border:1px solid #30363d;border-radius:4px;color:#c9d1d9;font-size:13px}
+.custom-row input::placeholder{color:#484f58}
+.custom-row button{padding:6px 12px;border:1px solid #30363d;border-radius:4px;background:#21262d;color:#c9d1d9;cursor:pointer}
+
+/* Stats bar */
+.stats{display:flex;gap:0;background:#161b22;border-top:1px solid #30363d}
+.stats div{flex:1;text-align:center;padding:6px 4px}
+.stats .num{font-size:16px;font-weight:700;color:#58a6ff;font-family:monospace}
+.stats .lbl{font-size:9px;color:#8b949e;text-transform:uppercase}
+
+/* Log */
+.log{height:80px;overflow-y:auto;background:#0d1117;border-top:1px solid #21262d;padding:4px 8px;font-family:monospace;font-size:10px}
+.log-line{color:#484f58}
+.log-line.ok{color:#3fb950}
+.log-line.err{color:#f85149}
+.log-line.tx{color:#f0883e}
+
+/* Settings overlay */
+.settings{display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:100;align-items:center;justify-content:center;padding:20px}
+.settings.active{display:flex}
+.settings .box{background:#161b22;border:1px solid #30363d;border-radius:12px;padding:24px;width:100%;max-width:360px;max-height:80vh;overflow-y:auto}
+.settings h2{margin:0 0 16px;font-size:16px}
+.settings .row{margin-bottom:12px}
+.settings label{display:block;font-size:11px;color:#8b949e;margin-bottom:4px}
+.settings input[type="text"],.settings input[type="number"]{width:100%;padding:8px 10px;background:#0d1117;border:1px solid #30363d;border-radius:6px;color:#c9d1d9;font-size:14px}
+.settings .toggle-row{display:flex;justify-content:space-between;align-items:center}
+.settings .toggle-row input[type="checkbox"]{accent-color:#58a6ff}
+.settings .actions{display:flex;gap:8px;margin-top:16px}
+.settings .actions button{flex:1;padding:8px;border-radius:6px;border:1px solid #30363d;cursor:pointer;font-size:13px}
+.settings .actions .save{background:#238636;border-color:#238636;color:#fff}
+.settings .actions .cancel{background:#21262d;color:#c9d1d9}
+
+/* Setup notice */
+.setup-notice{display:none;align-items:center;gap:8px;padding:8px 12px;background:#3b1a1a;border-bottom:1px solid #da3633;font-size:12px;color:#f85149}
+.setup-notice a{color:#58a6ff;text-decoration:none;white-space:nowrap;margin-left:auto}
+.setup-notice a:hover{text-decoration:underline}
+.setup-notice .dismiss{background:none;border:none;color:#8b949e;cursor:pointer;font-size:16px;padding:0 4px}
+.jtdx-notice{display:flex;align-items:center;gap:8px;padding:6px 12px;background:#1c2128;border-bottom:1px solid #d29922;font-size:11px;color:#d29922}
+.jtdx-notice b{color:#e6edf3}
+</style>
 </head>
 <body>
-    <div class="ft8-container">
-        <!-- 头部 -->
-        <header class="ft8-header">
-            <div class="header-row">
-                <button class="header-btn" onclick="window.location.href='mobile_modern.html'">
-                    <span>←</span>
-                </button>
-                <div class="header-title">
-                    <span class="title-main">ULTRON FT8</span>
-                </div>
-                <div class="connection-indicator disconnected" id="connection-status">
-                    <span class="connection-dot"></span>
-                    <span class="status-text">离线</span>
-                </div>
-            </div>
-        </header>
-        
-        <!-- 状态栏 -->
-        <div class="ultron-status-bar">
-            <div class="status-card">
-                <div class="status-label">软件</div>
-                <div class="status-value" id="software-name">-</div>
-            </div>
-            <div class="status-card">
-                <div class="status-label">频率</div>
-                <div class="status-value" id="frequency">-</div>
-            </div>
-            <div class="status-card">
-                <div class="status-label">模式</div>
-                <div class="status-value" id="mode">-</div>
-            </div>
-            <div class="status-card">
-                <div class="status-label">波段</div>
-                <div class="status-value" id="band">-</div>
-            </div>
-            <div class="status-card">
-                <div class="status-label">CQ状态</div>
-                <div class="status-value" id="cq-status">停止</div>
-            </div>
-            <div class="status-card">
-                <div class="status-label">目标</div>
-                <div class="status-value" id="target-call">-</div>
-            </div>
-        </div>
-        
-        <!-- 控制按钮 -->
-        <div class="ultron-controls">
-            <button class="ultron-btn primary" id="btn-listen" onclick="toggleListen()">开始监听</button>
-            <button class="ultron-btn success" id="btn-cq" onclick="sendCQ()" disabled>发送CQ</button>
-            <button class="ultron-btn danger" id="btn-stop-cq" onclick="stopCQ()" disabled>停止CQ</button>
-            <button class="ultron-btn warning" id="btn-settings" onclick="toggleSettings()">设置</button>
-        </div>
-        
-        <!-- 解码列表 -->
-        <div class="decodes-container" id="decodes-list">
-            <div class="decode-empty" style="text-align: center; padding: 40px; color: var(--text-muted);">
-                等待解码数据...<br>
-                <small>请启动 JTDX/WSJT-X 并确保 UDP 端口 2237 开启</small>
-            </div>
-        </div>
-        
-        <!-- 当前目标面板 -->
-        <div class="target-panel" id="target-panel" style="display: none;">
-            <div class="target-info">
-                <div>
-                    <div class="target-call" id="current-target">-</div>
-                    <div class="target-dxcc" id="target-dxcc">-</div>
-                </div>
-                <div class="target-actions">
-                    <button class="target-btn" onclick="replyToTarget()">回复</button>
-                    <button class="target-btn" onclick="skipTarget()">跳过</button>
-                </div>
-            </div>
-        </div>
-        
-        <!-- 统计面板 -->
-        <div class="stats-grid">
-            <div class="stat-item">
-                <div class="stat-value" id="stat-today">0</div>
-                <div class="stat-label">今日QSO</div>
-            </div>
-            <div class="stat-item">
-                <div class="stat-value" id="stat-worked">0</div>
-                <div class="stat-label">已通联</div>
-            </div>
-            <div class="stat-item">
-                <div class="stat-value" id="stat-new">0</div>
-                <div class="stat-label">新DXCC</div>
-            </div>
-            <div class="stat-item">
-                <div class="stat-value" id="stat-decodes">0</div>
-                <div class="stat-label">解码数</div>
-            </div>
-        </div>
-        
-        <!-- 日志面板 -->
-        <div class="log-panel" id="log-panel">
-            <div class="log-entry">系统就绪...</div>
-        </div>
+<div class="ft8-app">
+  <!-- Header -->
+  <div class="hdr">
+    <button class="back" onclick="window.location.href='mobile_modern.html'">&larr;</button>
+    <h1>FT8 Remote</h1>
+    <div class="conn"><span class="dot offline" id="conn-dot"></span><span id="conn-text">Offline</span></div>
+  </div>
+
+  <!-- Setup prompt -->
+  <div class="setup-notice" id="setup-notice" style="display:none">
+    <span>&#9888; Set your callsign in Settings to transmit</span>
+    <a href="#" onclick="toggleSettings();return false">Open Settings &rarr;</a>
+  </div>
+  <div class="jtdx-notice" id="jtdx-notice" style="display:flex">
+    <span>&#9888; JTDX must check <b>Settings → Reporting → Accept UDP requests</b></span>
+  </div>
+
+  <!-- Status -->
+  <div class="status">
+    <span><span class="label">SW</span> <span id="sw-name">-</span></span>
+    <span><span class="label">Freq</span> <span id="sw-freq">-</span></span>
+    <span><span class="label">Mode</span> <span id="sw-mode">-</span></span>
+    <span><span class="label">Band</span> <span id="sw-band">-</span></span>
+    <span><span class="label">DE</span> <span id="sw-callsign">-</span></span>
+  </div>
+
+  <!-- Cycle -->
+  <div class="cycle-wrap"><div class="bar" id="cycle-bar" style="width:0%"></div></div>
+  <div class="cycle-label rx" id="cycle-label">RX  0s / 15s</div>
+
+  <!-- Controls -->
+  <div class="ctrl">
+    <button class="cq" onclick="sendCQ()">CQ</button>
+    <button class="reply" onclick="sendReply()">Reply</button>
+    <button class="rr73" onclick="sendRR73()">RR73</button>
+    <button class="seventy-three" onclick="send73()">73</button>
+    <button class="halt" onclick="haltTX()">Halt TX</button>
+    <button onclick="toggleSettings()">&#9881;</button>
+  </div>
+
+  <!-- Custom -->
+  <div class="custom-row">
+    <input type="text" id="custom-text" placeholder="Custom message (max 13 chars)" maxlength="13">
+    <button onclick="sendCustom()">Send</button>
+  </div>
+
+  <!-- Decode list -->
+  <div class="decode-area" id="decode-list">
+    <div class="empty">Waiting for decodes&hellip;<br><small>Configure JTDX &#8594; Reporting &#8594; UDP secondary port &#8594; <b>2238</b></small></div>
+  </div>
+
+  <!-- Target panel -->
+  <div class="target" id="target-panel">
+    <span class="call" id="target-call">-</span>
+    <span class="msg" id="target-msg"></span>
+    <button onclick="exclude()" title="Exclude">&#10007;</button>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats">
+    <div><div class="num" id="stat-decode">0</div><div class="lbl">Decodes</div></div>
+    <div><div class="num" id="stat-today">0</div><div class="lbl">Today</div></div>
+    <div><div class="num" id="stat-worked">0</div><div class="lbl">Worked</div></div>
+    <div><div class="num" id="stat-new">0</div><div class="lbl">New DXCC</div></div>
+  </div>
+
+  <!-- Log -->
+  <div class="log" id="log-panel">
+    <div class="log-line">Ready&hellip;</div>
+  </div>
+</div>
+
+<!-- Settings -->
+<div class="settings" id="settings-panel">
+  <div class="box">
+    <h2>Settings</h2>
+    <div class="row"><label>My Callsign</label><input type="text" id="set-call" placeholder="VE3KBR"></div>
+    <div class="row"><label>Grid Square</label><input type="text" id="set-grid" placeholder="FN15"></div>
+    <div class="row"><label>Signal Threshold (dB)</label><input type="number" id="set-threshold" min="-30" max="0"></div>
+    <div class="row toggle-row"><label>Auto Reply</label><input type="checkbox" id="set-autoreply"></div>
+    <div class="actions">
+      <button class="save" onclick="saveSettings()">Save</button>
+      <button class="cancel" onclick="toggleSettings()">Cancel</button>
     </div>
-    
-    <!-- 设置面板 -->
-    <div class="settings-panel" id="settings-panel">
-        <div class="settings-content">
-            <h3>ULTRON 设置</h3>
-            
-            <div class="setting-group">
-                <label class="setting-label">我的呼号 (DE)</label>
-                <input type="text" class="setting-input" id="setting-callsign" placeholder="YOURCALL">
-            </div>
-            
-            <div class="setting-group">
-                <label class="setting-label">网格定位</label>
-                <input type="text" class="setting-input" id="setting-grid" placeholder="AA00aa">
-            </div>
-            
-            <div class="setting-group">
-                <label class="setting-label">信号阈值 (dB)</label>
-                <input type="number" class="setting-input" id="setting-threshold" value="-20" min="-30" max="10">
-            </div>
-            
-            <div class="setting-group">
-                <label class="setting-label">自动回复</label>
-                <label class="toggle-switch">
-                    <input type="checkbox" id="setting-auto-reply" checked>
-                    <span class="toggle-slider"></span>
-                </label>
-            </div>
-            
-            <button class="ultron-btn primary" onclick="saveSettings()" style="width: 100%; margin-top: 16px;">保存设置</button>
-            <button class="ultron-btn" onclick="toggleSettings()" style="width: 100%; margin-top: 8px;">取消</button>
-        </div>
-    </div>
-    
-    <script src="ft8_ultron.js"></script>
+  </div>
+</div>
+
+<script src="ft8_ultron.js"></script>
 </body>
 </html>

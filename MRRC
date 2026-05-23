@@ -2018,20 +2018,27 @@ class WS_FT8Handler(tornado.websocket.WebSocketHandler):
                 logger.info("✅ FT8 Integration (ULTRON) 已启动")
             
             # 添加客户端
-            WS_FT8Handler.ft8_integration.add_websocket_client(self)
-            
-            # 发送欢迎消息
+            WS_FT8Handler.ft8_integration.add_client(self)
+
+            # 发送欢迎消息 (含端口信息)
+            ft8 = WS_FT8Handler.ft8_integration
             self.write_message(json.dumps({
                 'type': 'connected',
-                'message': 'ULTRON FT8 服务已连接',
-                'version': 'PY-20241115'
+                'message': 'FT8 integration connected',
+                'listen_port': ft8.listen_port,
+                'jtdx_port': ft8.jtdx_port
             }))
-            
+
             # 发送当前状态
-            status = WS_FT8Handler.ft8_integration._get_status()
             self.write_message(json.dumps({
                 'type': 'status',
-                'data': status
+                'data': ft8.get_status()
+            }))
+
+            # 发送初始解码历史
+            self.write_message(json.dumps({
+                'type': 'decodes',
+                'data': ft8.get_decodes(100)
             }))
             
         else:
@@ -2059,7 +2066,7 @@ class WS_FT8Handler(tornado.websocket.WebSocketHandler):
                     params = msg.get('params', {})
                     
                     # 处理命令
-                    result = WS_FT8Handler.ft8_integration.handle_web_command(command, params)
+                    result = WS_FT8Handler.ft8_integration.handle_command(command, params)
                     
                     # 返回结果
                     if isinstance(result, dict):
@@ -2093,7 +2100,7 @@ class WS_FT8Handler(tornado.websocket.WebSocketHandler):
         logger.info(f"🔌 FT8/ULTRON 客户端断开，剩余 {len(WS_FT8Handler.clients)} 个")
         
         if FT8_INTEGRATION_AVAILABLE and WS_FT8Handler.ft8_integration:
-            WS_FT8Handler.ft8_integration.remove_websocket_client(self)
+            WS_FT8Handler.ft8_integration.remove_client(self)
 
 
 class TRXRIG:
