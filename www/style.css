@@ -321,7 +321,11 @@ overflow: hidden;
 .network-stat.latency-good { color: #44ff44; border-color: rgba(68,255,68,0.4); }
 .network-stat.latency-warn { color: #ffaa00; border-color: rgba(255,170,0,0.4); }
 .network-stat.latency-bad  { color: #ff4444; border-color: rgba(255,68,68,0.4); }
-#div-bitrates { color: #00aaff; }
+#div-bitrates {
+	color: #00ffcc;
+	font-size: 14px;
+	text-shadow: 0 0 6px rgba(0,255,204,0.4);
+}
 
 #RX-GAIN_control
 {

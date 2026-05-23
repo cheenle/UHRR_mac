@@ -443,7 +443,10 @@ body {
     box-shadow: 0 0 4px rgba(255, 68, 68, 0.6);
 }
 #status-bitrates {
-    color: #aaa;
+    color: #00ffcc;
+    font-weight: 700;
+    font-size: 11px;
+    text-shadow: 0 0 5px rgba(0,255,204,0.35);
 }
 
 @keyframes pulse {
