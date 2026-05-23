@@ -349,7 +349,7 @@ body {
     align-items: center;
     gap: clamp(4px, 1vw, 8px);
     padding: clamp(2px, 0.5vh, 4px) 0;
-    flex-wrap: nowrap;
+    flex-wrap: wrap;
 }
 
 .status-item {
@@ -412,7 +412,39 @@ body {
     text-shadow: 0 0 4px rgba(0, 255, 255, 0.5);
 }
 
-
+/* 网络状态指示器 */
+#status-latency,
+#status-bitrates {
+    font-family: 'Courier New', monospace;
+    min-width: 0;
+}
+#status-latency.latency-good {
+    color: #44ff44;
+    border-color: rgba(68, 255, 68, 0.5);
+}
+#status-latency.latency-good .status-dot {
+    background: #44ff44;
+    box-shadow: 0 0 4px rgba(68, 255, 68, 0.6);
+}
+#status-latency.latency-warn {
+    color: #ffaa00;
+    border-color: rgba(255, 170, 0, 0.5);
+}
+#status-latency.latency-warn .status-dot {
+    background: #ffaa00;
+    box-shadow: 0 0 4px rgba(255, 170, 0, 0.6);
+}
+#status-latency.latency-bad {
+    color: #ff4444;
+    border-color: rgba(255, 68, 68, 0.5);
+}
+#status-latency.latency-bad .status-dot {
+    background: #ff4444;
+    box-shadow: 0 0 4px rgba(255, 68, 68, 0.6);
+}
+#status-bitrates {
+    color: #aaa;
+}
 
 @keyframes pulse {
     0%, 100% { opacity: 1; }

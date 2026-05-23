@@ -127,6 +127,9 @@ var poweron = false;
 var canvasRXsmeter = "";
 var ctxRXsmeter = "";
 
+// 网络状态 EMA 平滑变量
+var _netLatency = 0, _netRxKbps = 0, _netTxKbps = 0, _netInit = false;
+
 // 安全设置元素内容的辅助函数（兼容移动端）
 function safeSetInnerHTML(elementId, htmlContent) {
 	var el = document.getElementById(elementId);
@@ -256,9 +259,22 @@ function AudioRX_start(){
 		window.__brTimer = setInterval(function(){
 			var rxkbps = (window.__rxBytes||0) * 8 / 1000; // Kbps
 			var txkbps = (window.__txBytes||0) * 8 / 1000;
+			// EMA 平滑 (alpha=0.3)
+			if (!_netInit) { _netRxKbps = rxkbps; _netTxKbps = txkbps; }
+			else {
+				_netRxKbps = _netRxKbps * 0.7 + rxkbps * 0.3;
+				_netTxKbps = _netTxKbps * 0.7 + txkbps * 0.3;
+			}
 			var mode = AudioRX_opusDecode ? "Opus" : "Int16";
+			// 桌面端显示
 			var brEl = document.getElementById('div-bitrates');
-			if (brEl) { brEl.textContent = `bitrate RX: ${rxkbps.toFixed(1)} kbps (${mode}) | TX: ${txkbps.toFixed(1)} kbps`; }
+			if (brEl) { brEl.textContent = "RX " + _netRxKbps.toFixed(1) + "K  TX " + _netTxKbps.toFixed(1) + "K  (" + mode + ")"; }
+			// 移动端显示 (紧凑)
+			var mobEl = document.getElementById('status-bitrates');
+			if (mobEl) {
+				var v = mobEl.querySelector('.stat-value');
+				if (v) v.textContent = "RX" + _netRxKbps.toFixed(0) + "K TX" + _netTxKbps.toFixed(0) + "K";
+			}
 			window.__rxBytes = 0; window.__txBytes = 0;
 		}, 1000);
 	}
@@ -1064,12 +1080,30 @@ function checklatency() {
 			}
 			checklatency();
 		}
-	}, 5000);
+	}, 2000);
 }
 
 function showlatency(){
-	latency = Date.now() - startTime;
-	document.getElementById("div-latencymeter").innerHTML="latency:"+latency+"ms";
+	var raw = Date.now() - startTime;
+	// EMA 平滑 (alpha=0.3)
+	if (!_netInit) { _netLatency = raw; _netInit = true; }
+	else { _netLatency = _netLatency * 0.7 + raw * 0.3; }
+	var ms = Math.round(_netLatency);
+	// 延迟质量分级
+	var cls = ms < 50 ? "latency-good" : (ms < 150 ? "latency-warn" : "latency-bad");
+	// 桌面端显示
+	var el = document.getElementById("div-latencymeter");
+	if (el) { el.textContent = ms + "ms"; el.className = "network-stat " + cls; }
+	// 移动端显示
+	var mobEl = document.getElementById("status-latency");
+	if (mobEl) {
+		var v = mobEl.querySelector(".stat-value");
+		if (v) v.textContent = ms + "ms";
+		mobEl.className = mobEl.className.replace(/\blatency-\w+\b/g, "");
+		mobEl.classList.add(cls);
+		var dot = mobEl.querySelector(".status-dot");
+		if (dot) { dot.className = dot.className.replace(/\blatency-\w+\b/g, ""); dot.classList.add(cls); }
+	}
 }
 
 function get_digit_freq(){
