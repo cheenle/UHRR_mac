@@ -2595,7 +2595,7 @@ const ATR1000 = {
     _msgCount: 0,  // 收到的消息计数
     _ignoreDataUntil: 0,  // V4.5.8: 忽略数据截止时间
     _lastDataTime: 0,  // V4.5.10: 上次收到数据的时间
-    _dataTimeout: 3000,  // V4.5.10: 数据超时阈值 3秒
+    _dataTimeout: 5000,  // V4.5.10: 数据超时阈值 5秒（容忍一次轮询丢失）
     _deviceOnline: false,  // V4.5.10: 设备在线状态
     _smoothPower: 0,  // V4.5.10: 平滑后的功率
     _smoothSWR: 1.0,  // V4.5.10: 平滑后的SWR
@@ -3292,8 +3292,8 @@ const ATR1000 = {
     clearDisplay: function() {
         console.log('🧹 ATR-1000 清零显示');
         
-        // V4.5.23: 缩短保护期到500ms，避免数字延迟
-        this._ignoreDataUntil = Date.now() + 500;
+        // V4.5.23: 保护期 100ms，仅用于排空管道残留数据
+        this._ignoreDataUntil = Date.now() + 100;
         
         // 清零内部状态
         this.lastPower = 0;

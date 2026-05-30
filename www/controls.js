@@ -259,11 +259,11 @@ function AudioRX_start(){
 		window.__brTimer = setInterval(function(){
 			var rxkbps = (window.__rxBytes||0) * 8 / 1000; // Kbps
 			var txkbps = (window.__txBytes||0) * 8 / 1000;
-			// EMA 平滑 (alpha=0.3)
+			// EMA 平滑 (alpha=0.7, 快速响应)
 			if (!_netInit) { _netRxKbps = rxkbps; _netTxKbps = txkbps; }
 			else {
-				_netRxKbps = _netRxKbps * 0.7 + rxkbps * 0.3;
-				_netTxKbps = _netTxKbps * 0.7 + txkbps * 0.3;
+				_netRxKbps = _netRxKbps * 0.3 + rxkbps * 0.7;
+				_netTxKbps = _netTxKbps * 0.3 + txkbps * 0.7;
 			}
 			var mode = AudioRX_opusDecode ? "Opus" : "Int16";
 			// 桌面端显示
@@ -1087,7 +1087,7 @@ function showlatency(){
 	var raw = Date.now() - startTime;
 	// EMA 平滑 (alpha=0.3)
 	if (!_netInit) { _netLatency = raw; _netInit = true; }
-	else { _netLatency = _netLatency * 0.7 + raw * 0.3; }
+	else { _netLatency = _netLatency * 0.3 + raw * 0.7; }
 	var ms = Math.round(_netLatency);
 	// 延迟质量分级
 	var cls = ms < 50 ? "latency-good" : (ms < 150 ? "latency-warn" : "latency-bad");

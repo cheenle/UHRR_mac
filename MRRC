@@ -1435,6 +1435,7 @@ class ATR1000ProxyManager:
         self.main_ioloop = None
         self.last_data = None  # 缓存最新数据
         self.refresh_timer = None  # 定期获取数据的定时器
+        self._reconnect_delay = 0.5  # 重连初始延迟
 
         logger.info("📡 ATR-1000 代理管理器已初始化")
     
@@ -1463,6 +1464,7 @@ class ATR1000ProxyManager:
                 self._reconnecting = False
             if hasattr(self, '_need_reconnect'):
                 self._need_reconnect = False
+            self._reconnect_delay = 0.5  # 重置重连延迟
 
             # 保存主线程的 IOLoop 引用
             from tornado.ioloop import IOLoop
@@ -1491,9 +1493,12 @@ class ATR1000ProxyManager:
             # 清除重连状态
             if hasattr(self, '_reconnecting'):
                 self._reconnecting = False
-            # 5秒后重试
+            # 指数退避重试: 0.5s → 1s → 2s → 4s → 5s (上限)
             if self.running:
-                threading.Timer(5.0, self._connect).start()
+                delay = self._reconnect_delay
+                logger.info(f"🔄 {delay:.1f}秒后重连 ATR-1000 代理...")
+                threading.Timer(delay, self._connect).start()
+                self._reconnect_delay = min(delay * 2, 5.0)
 
     def _start_data_refresh(self):
         """定期向代理发送 get_data 请求，确保持续有数据推送给前端"""
@@ -1595,7 +1600,8 @@ class ATR1000ProxyManager:
                 
                 # V4.5.22: 立即广播最新数据，最小延迟
                 if message_batch:
-                    self._broadcast_batch(message_batch)
+                    if self.main_ioloop:
+                        self.main_ioloop.add_callback(self._do_broadcast_batch, list(message_batch))
                     message_batch = []
                     last_batch_time = time.time()
                         
@@ -1610,16 +1616,18 @@ class ATR1000ProxyManager:
                 # 非致命错误继续循环，不 break
                 continue
 
-        # 退出前广播剩余消息
-        if message_batch:
-            self._broadcast_batch(message_batch)
+        # 退出前广播剩余消息（通过 IOLoop 回到主线程）
+        if message_batch and self.main_ioloop:
+            self.main_ioloop.add_callback(self._do_broadcast_batch, list(message_batch))
 
         logger.info(f"🔄 ATR-1000 代理读取线程已退出，共处理 {self.message_count} 条消息")
 
-        # 如果还在运行，尝试重连（延长到 5 秒，避免频繁重连风暴）
+        # 如果还在运行，尝试重连（指数退避）
         if self.running:
-            logger.info("🔄 5秒后重新连接 ATR-1000 代理...")
-            threading.Timer(5.0, self._connect).start()
+            delay = self._reconnect_delay
+            logger.info(f"🔄 {delay:.1f}秒后重新连接 ATR-1000 代理...")
+            threading.Timer(delay, self._connect).start()
+            self._reconnect_delay = min(delay * 2, 5.0)
     
     def _broadcast_batch(self, message_batch):
         """批量广播消息到所有前端客户端"""
@@ -1670,10 +1678,8 @@ class ATR1000ProxyManager:
         global ATR1000HandlerClients
         
         current_client_count = len(ATR1000HandlerClients)
-        logger.info(f"🔄 _do_broadcast_batch 被调用: 客户端={current_client_count}, 批次大小={len(message_batch) if message_batch else 0}")
-        
+
         if current_client_count == 0 or not message_batch:
-            logger.debug(f"⚠️ 广播跳过: 客户端={current_client_count}, 消息批次={len(message_batch) if message_batch else 0}")
             return
         
         # 只广播最后一条消息（最新的数据）
@@ -1703,10 +1709,8 @@ class ATR1000ProxyManager:
                 logger.warning(f"⚠️ WebSocket 发送失败: {e}")
                 failed_clients.append(client)
         
-        # 记录发送结果
-        if sent_count > 0:
-            logger.info(f"📤 ATR-1000 广播到前端: power={power}W, SWR={swr:.2f}, 发送={sent_count}/{current_client_count}")
-        elif current_client_count > 0:
+        # 记录发送结果（仅异常时告警）
+        if sent_count == 0 and current_client_count > 0:
             logger.warning(f"⚠️ ATR-1000 广播失败: 客户端={current_client_count}, 发送=0")
         
         # 清理失败的客户端
