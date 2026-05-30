@@ -3266,16 +3266,24 @@ const ATR1000 = {
             console.log('📻 ATR-1000 已在 RX 模式，跳过重复停止');
             return;
         }
-        this._txActive = false;
 
         // 发送 stop 到 proxy，复位 is_tx 状态，恢复 poll loop 的保活 SYNC
+        var sent = false;
         if (this.ws && this.ws.readyState === WebSocket.OPEN) {
             try {
                 this.ws.send(JSON.stringify({action: 'stop'}));
                 console.log('📤 发送 ATR-1000 stop 命令');
+                sent = true;
             } catch (e) {
                 console.error('发送 stop 命令失败:', e);
             }
+        }
+        // 必须在 send 之后才设 false，否则 WebSocket 重连时 onopen 无法判断是否需要矫正
+        this._txActive = false;
+        if (!sent) {
+            // stop 未送达，清除 pendingStart 防止重连时误发 start
+            this._pendingStart = false;
+            console.log('⚠️ stop 未送达，已清除 pendingStart，依赖 proxy 看门狗恢复');
         }
         // V4.5.18: 恢复平时 sync 间隔 2 秒（进一步降低设备压力）
         this._syncInterval = 2000;
