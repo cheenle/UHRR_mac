@@ -3267,7 +3267,16 @@ const ATR1000 = {
             return;
         }
         this._txActive = false;
-        
+
+        // 发送 stop 到 proxy，复位 is_tx 状态，恢复 poll loop 的保活 SYNC
+        if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+            try {
+                this.ws.send(JSON.stringify({action: 'stop'}));
+                console.log('📤 发送 ATR-1000 stop 命令');
+            } catch (e) {
+                console.error('发送 stop 命令失败:', e);
+            }
+        }
         // V4.5.18: 恢复平时 sync 间隔 2 秒（进一步降低设备压力）
         this._syncInterval = 2000;
         console.log('📻 TX 结束 (sync: 2000ms)');

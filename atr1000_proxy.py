@@ -353,12 +353,26 @@ class ATR1000Client:
             
             # 根据状态选择轮询策略
             if is_tx:
-                # TX模式：设备会主动推送 RELAY 数据，不需要 SYNC
-                # 完全不发送 SYNC，只做状态检查
+                # TX模式：设备会主动推送数据，不发送 SYNC
+                # 但若长时间无数据（硬件可能断连），发送一次 SYNC 尝试唤醒
                 interval = 5.0  # 每5秒检查一次状态
                 reason = 'TX模式(不发送SYNC)'
-                
-                # 不再发送 SYNC 唤醒，因为设备会主动推送数据
+
+                if time_since_data > 15:
+                    if not getattr(self, '_tx_watchdog_synced', False):
+                        logger.warning(f"⚠️ TX 模式 {time_since_data:.0f}秒无数据，发送一次 SYNC 尝试唤醒")
+                        if connected and self.ws:
+                            try:
+                                self._send_sync()
+                            except Exception as e:
+                                logger.error(f"看门狗 SYNC 失败: {e}")
+                        self._tx_watchdog_synced = True
+                    elif time_since_data > 60:
+                        logger.warning(f"⚠️ TX 模式 {time_since_data:.0f}秒无数据，自动退出 TX 模式")
+                        is_tx = False
+                        self._tx_watchdog_synced = False
+                else:
+                    self._tx_watchdog_synced = False
             elif client_count > 0:
                 interval = POLL_INTERVAL_ACTIVE
                 reason = f'有{client_count}个客户端'

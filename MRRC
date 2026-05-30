@@ -1600,8 +1600,7 @@ class ATR1000ProxyManager:
                 
                 # V4.5.22: 立即广播最新数据，最小延迟
                 if message_batch:
-                    if self.main_ioloop:
-                        self.main_ioloop.add_callback(self._do_broadcast_batch, list(message_batch))
+                    self._broadcast_batch(message_batch)
                     message_batch = []
                     last_batch_time = time.time()
                         
@@ -1616,9 +1615,9 @@ class ATR1000ProxyManager:
                 # 非致命错误继续循环，不 break
                 continue
 
-        # 退出前广播剩余消息（通过 IOLoop 回到主线程）
-        if message_batch and self.main_ioloop:
-            self.main_ioloop.add_callback(self._do_broadcast_batch, list(message_batch))
+        # 退出前广播剩余消息
+        if message_batch:
+            self._broadcast_batch(message_batch)
 
         logger.info(f"🔄 ATR-1000 代理读取线程已退出，共处理 {self.message_count} 条消息")
 
