@@ -226,79 +226,72 @@ class WDSPProcessor:
             raise
     
     def _setup_nr2(self):
-        """Setup Spectral Noise Reduction (NR2) - using EMNR for strong noise reduction"""
+        """Setup Spectral Noise Reduction (NR2) - 默认 Gaussian 温和降噪"""
         try:
-            # 使用 EMNR (Enhanced Multi-band NR) - 专业级频谱降噪
-            _wdsp.SetRXAANRRun(ctypes.c_int(self.channel), ctypes.c_int(0))  # 禁用 LMS NR
-            
-            # 启用 EMNR
+            _wdsp.SetRXAANRRun(ctypes.c_int(self.channel), ctypes.c_int(0))
+
             _wdsp.SetRXAEMNRRun(ctypes.c_int(self.channel), ctypes.c_int(1))
-            
-            # EMNR 参数配置 - 使用中等强度默认设置
-            # gainMethod: 0=保守, 1=中等, 2=激进(最大降噪)
-            # npeMethod: 0=LambdaD, 1=LambdaDs
-            # aeRun: 1=开启自动均衡(消除音乐噪音)
-            _wdsp.SetRXAEMNRgainMethod(ctypes.c_int(self.channel), ctypes.c_int(1))  # 中等强度
-            _wdsp.SetRXAEMNRnpeMethod(ctypes.c_int(self.channel), ctypes.c_int(1))   # LambdaDs
-            _wdsp.SetRXAEMNRaeRun(ctypes.c_int(self.channel), ctypes.c_int(1))       # 开启自动均衡
-            _wdsp.SetRXAEMNRPosition(ctypes.c_int(self.channel), ctypes.c_int(1))
-            
+
+            # 默认参数: Gaussian(自然), OSMS(平滑), AE=ON(消音乐噪音)
+            _wdsp.SetRXAEMNRgainMethod(ctypes.c_int(self.channel), ctypes.c_int(0))
+            _wdsp.SetRXAEMNRnpeMethod(ctypes.c_int(self.channel), ctypes.c_int(0))
+            _wdsp.SetRXAEMNRaeRun(ctypes.c_int(self.channel), ctypes.c_int(1))
+            # Position=0: 在 AGC 之前降噪，避免 AGC 放大残留噪声
+            _wdsp.SetRXAEMNRPosition(ctypes.c_int(self.channel), ctypes.c_int(0))
+
             self._nr2_enabled = True
-            self._nr2_level = 1  # 默认强度
-            print(f"   NR2 (EMNR) configured - gainMethod=1, npeMethod=1, aeRun=ON (中等强度)")
+            self._nr2_level = 2  # 默认温和
+            print(f"   NR2 (EMNR) configured - Gaussian, OSMS, AE=ON, Pre-AGC (温和)")
         except Exception as e:
             print(f"   ⚠️ NR2 setup error: {e}")
     
     def set_nr2_level(self, level: int):
         """
-        Set NR2 intensity level (EMNR mode).
-        
+        Set NR2 intensity level.
+
         Args:
-            level: 0-4 
+            level: 0-4
                 0 = OFF
-                1 = MIN (gainMethod=0, aeRun=OFF) - 极温和
-                2 = LOW (gainMethod=0, aeRun=ON) - 温和
-                3 = MED (gainMethod=1, aeRun=OFF) - 中等
-                4 = HIGH (gainMethod=2, aeRun=ON) - 强力
+                1 = MIN  — Gaussian + OSMS + AE=OFF (极温和，无处理痕迹)
+                2 = LOW  — Gaussian + OSMS + AE=ON  (温和，日常推荐)
+                3 = MED  — Gaussian(log) + MMSE + AE=ON (中等噪声)
+                4 = HIGH — Gaussian(log) + MMSE + AE=ON (强噪声，优先可懂度)
         """
         if not self._initialized:
             return
-        
+
         try:
             if level == 0:
-                # 关闭 NR
                 _wdsp.SetRXAEMNRRun(ctypes.c_int(self.channel), ctypes.c_int(0))
                 _wdsp.SetRXAANRRun(ctypes.c_int(self.channel), ctypes.c_int(0))
                 self._nr2_enabled = False
                 self._nr2_level = 0
                 print(f"🔧 WDSP NR2: OFF")
             else:
-                # 使用 EMNR
                 _wdsp.SetRXAANRRun(ctypes.c_int(self.channel), ctypes.c_int(0))
                 _wdsp.SetRXAEMNRRun(ctypes.c_int(self.channel), ctypes.c_int(1))
-                
-                # 组合参数：gainMethod 和 aeRun
-                # 增强降噪效果：使用更激进的参数
-                # level 1: gainMethod=1, aeRun=1 (中等强度)
-                # level 2: gainMethod=2, aeRun=1 (高强度)
-                # level 3: gainMethod=2, aeRun=1 + 额外设置 (强力)
-                # level 4: gainMethod=2, aeRun=1 + 最大效果 (极强力)
+
+                # Level → (gainMethod, npeMethod, aeRun)
+                # gainMethod: 0=Gaussian, 1=Gaussian(log)
+                # npeMethod: 0=OSMS(最优平滑), 1=MMSE
                 params = {
-                    1: (1, 1, 1),  # gainMethod=1(中等), npeMethod=1, aeRun=1
-                    2: (2, 1, 1),  # gainMethod=2(激进), npeMethod=1, aeRun=1
-                    3: (2, 1, 1),  # gainMethod=2(激进), npeMethod=1, aeRun=1
-                    4: (2, 1, 1),  # gainMethod=2(激进), npeMethod=1, aeRun=1
+                    1: (0, 0, 0),  # 极温和: Gaussian + OSMS, 无AE
+                    2: (0, 0, 1),  # 温和:   Gaussian + OSMS + AE
+                    3: (1, 1, 1),  # 中等:   Gaussian(log) + MMSE + AE
+                    4: (1, 1, 1),  # 强力:   Gaussian(log) + MMSE + AE
                 }
-                gain_method, npe_method, ae_run = params.get(level, (1, 1, 1))
-                
+                gain_method, npe_method, ae_run = params.get(level, (0, 0, 1))
+
                 _wdsp.SetRXAEMNRgainMethod(ctypes.c_int(self.channel), ctypes.c_int(gain_method))
                 _wdsp.SetRXAEMNRnpeMethod(ctypes.c_int(self.channel), ctypes.c_int(npe_method))
                 _wdsp.SetRXAEMNRaeRun(ctypes.c_int(self.channel), ctypes.c_int(ae_run))
-                
+                # 保持 Position=0 (AGC 前)
+                _wdsp.SetRXAEMNRPosition(ctypes.c_int(self.channel), ctypes.c_int(0))
+
                 self._nr2_enabled = True
                 self._nr2_level = level
                 level_names = {1: 'MIN(极温和)', 2: 'LOW(温和)', 3: 'MED(中等)', 4: 'HIGH(强力)'}
-                print(f"🔧 WDSP NR2: {level_names.get(level, level)} (gain={gain_method}, ae={ae_run})")
+                print(f"🔧 WDSP NR2: {level_names.get(level, level)} (gain={gain_method}, npe={npe_method}, ae={ae_run})")
         except Exception as e:
             print(f"⚠️ NR2 level error: {e}")
     

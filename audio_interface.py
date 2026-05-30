@@ -415,16 +415,14 @@ class PyAudioCapture(threading.Thread):
                                     )
                                     self.wdsp_processor.set_bandpass(cfg['bandpass_low'], cfg['bandpass_high'])
                                     if cfg['nr2_enabled']:
-                                        self.wdsp_processor.set_nr2_level(cfg.get('nr2_level', 1))
-                                        self.wdsp_processor.set_nr2_ae_run(cfg.get('nr2_ae_run', True))
+                                        self.wdsp_processor.set_nr2_level(cfg.get('nr2_level', 2))
                                 else:
-                                    self.wdsp_processor.set_nr2_level(cfg.get('nr2_level', 1) if cfg['nr2_enabled'] else 0)
+                                    self.wdsp_processor.set_nr2_level(cfg.get('nr2_level', 2) if cfg['nr2_enabled'] else 0)
                                     self.wdsp_processor.set_nb_enabled(cfg['nb_enabled'])
                                     self.wdsp_processor.set_anf_enabled(cfg['anf_enabled'])
                                     self.wdsp_processor.set_agc_mode(cfg['agc_mode'])
                                     self.wdsp_processor.set_bandpass(cfg['bandpass_low'], cfg['bandpass_high'])
-                                    if cfg['nr2_enabled']:
-                                        self.wdsp_processor.set_nr2_ae_run(cfg.get('nr2_ae_run', True))
+                                    # nr2_ae_run 已由 set_nr2_level() 内置管理，无需额外设置
                         except Exception as e:
                             pass
                         
