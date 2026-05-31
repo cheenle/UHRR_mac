@@ -203,12 +203,13 @@ _geoip_reader = None
 
 
 def init_geoip():
-    """Lazily load the MaxMind GeoIP database."""
+    """Lazily load the MaxMind GeoIP database. Returns reader or None (warns once)."""
     global _geoip_reader
     if _geoip_reader is not None:
-        return _geoip_reader
+        return _geoip_reader if _geoip_reader is not False else None
     if not os.path.exists(MMDB_PATH):
         print("  WARNING: GeoIP database not found at", MMDB_PATH)
+        _geoip_reader = False
         return None
     try:
         import maxminddb
@@ -216,9 +217,11 @@ def init_geoip():
         return _geoip_reader
     except ImportError:
         print("  WARNING: maxminddb not installed. Run: pip3 install maxminddb")
+        _geoip_reader = False
         return None
     except Exception as e:
         print(f"  WARNING: Failed to open GeoIP database: {e}")
+        _geoip_reader = False
         return None
 
 

@@ -1,0 +1,4 @@
+AuthType Basic
+AuthName "MRRC Statistics"
+AuthUserFile /var/www/vlsc.net/mrrc/stats/.htpasswd
+Require valid-user
