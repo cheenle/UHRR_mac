@@ -257,6 +257,185 @@ def country_flag(country_name):
     return f"{code} {country_name}"
 
 
+def get_parse_state(conn):
+    """Get the last parse position and inode from meta table."""
+    cur = conn.execute("SELECT key, value FROM meta WHERE key IN ('log_file', 'position', 'inode')")
+    state = dict(cur.fetchall())
+    return {
+        "log_file": state.get("log_file", LOG_FILE),
+        "position": int(state.get("position", 0)),
+        "inode": int(state.get("inode", 0)),
+    }
+
+
+def save_parse_state(conn, log_file, position, inode):
+    """Save current parse state to meta table."""
+    conn.execute("INSERT OR REPLACE INTO meta VALUES ('log_file', ?)", (log_file,))
+    conn.execute("INSERT OR REPLACE INTO meta VALUES ('position', ?)", (str(position),))
+    conn.execute("INSERT OR REPLACE INTO meta VALUES ('inode', ?)", (str(inode),))
+    conn.commit()
+
+
+def ingest_logs(conn):
+    """Incrementally parse logs and insert new hits. Returns count of new hits inserted."""
+    # Check current log file state
+    try:
+        result = subprocess.run(
+            ["sudo", "stat", "-c", "%i %s", LOG_FILE],
+            capture_output=True, text=True, timeout=5
+        )
+        current_inode, current_size = map(int, result.stdout.strip().split())
+    except Exception as e:
+        print(f"  ERROR: Cannot stat log file: {e}")
+        return 0
+
+    state = get_parse_state(conn)
+    prev_inode = state["inode"]
+    prev_position = state["position"]
+
+    # Log rotation detected
+    if prev_inode != 0 and prev_inode != current_inode:
+        # Process old file from prev_position to end
+        old_log = state["log_file"]
+        print(f"  Log rotated. Processing remaining data from {old_log}")
+        old_lines = read_log_lines(old_log)
+        new_from_old = _insert_from_lines(conn, old_lines[prev_position:])
+        print(f"  Got {new_from_old} hits from rotated log tail")
+
+        # Now process all historical rotated files
+        _ingest_historical_logs(conn)
+
+        # Reset for current log
+        prev_position = 0
+
+    # No new data
+    if prev_position >= current_size and prev_inode == current_inode:
+        print(f"  No new data (position={prev_position}, size={current_size})")
+        return 0
+
+    # Read new content from current log
+    lines = read_log_lines(LOG_FILE)
+    new_lines = lines[prev_position:] if prev_position < len(lines) else []
+    new_count = _insert_from_lines(conn, new_lines)
+
+    save_parse_state(conn, LOG_FILE, current_size, current_inode)
+    print(f"  Inserted {new_count} new hits (position now {current_size})")
+    return new_count
+
+
+def _insert_from_lines(conn, lines):
+    """Parse lines and insert into hits table. Returns count."""
+    count = 0
+    cur = conn.cursor()
+    for line in lines:
+        parsed = parse_log_line(line.strip())
+        if parsed is None:
+            continue
+        browser, os_name, is_bot = parse_ua(parsed["ua"])
+        if not is_bot and is_scanner_path(parsed["path"]):
+            is_bot = 1
+        country = lookup_country(parsed["ip"])
+        is_404 = 1 if parsed["status"] == 404 else 0
+        cur.execute(
+            """INSERT INTO hits (ts, vhost, ip, method, path, status, bytes, referer, ua,
+               ua_browser, ua_os, is_bot, is_404, country)
+               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+            (parsed["ts"], parsed["vhost"], parsed["ip"], parsed["method"],
+             parsed["path"], parsed["status"], parsed["bytes"], parsed["referer"],
+             parsed["ua"], browser, os_name, is_bot, is_404, country)
+        )
+        count += 1
+    conn.commit()
+    return count
+
+
+def _ingest_historical_logs(conn):
+    """Process all rotated log files we haven't seen before."""
+    import glob
+    seen_key = "historical_processed"
+    cur = conn.execute("SELECT value FROM meta WHERE key=?", (seen_key,))
+    row = cur.fetchone()
+    processed = set(row[0].split(",")) if row else set()
+
+    for fpath in sorted(glob.glob(LOG_GLOB)):
+        if fpath == LOG_FILE:
+            continue
+        if fpath in processed:
+            continue
+        print(f"  Processing historical log: {fpath}")
+        lines = read_log_lines(fpath)
+        n = _insert_from_lines(conn, lines)
+        print(f"    Inserted {n} hits from {fpath}")
+        processed.add(fpath)
+
+    conn.execute("INSERT OR REPLACE INTO meta VALUES (?, ?)", (seen_key, ",".join(processed)))
+    conn.commit()
+
+
+def cleanup_old_hits(conn):
+    """Delete hits older than retention period."""
+    cutoff = datetime.now(CST) - timedelta(days=HITS_RETENTION_DAYS)
+    cutoff_str = cutoff.strftime("%Y-%m-%dT00:00:00")
+    conn.execute("DELETE FROM hits WHERE ts < ?", (cutoff_str,))
+    deleted = conn.rowcount
+    if deleted:
+        print(f"  Cleaned up {deleted} old hits (before {cutoff_str})")
+    conn.commit()
+
+
+def update_daily_summary(conn):
+    """Update daily_summary table for today based on current hits data."""
+    today = datetime.now(CST).strftime("%Y-%m-%d")
+
+    cur = conn.execute("""
+        SELECT
+            COUNT(*) AS pv,
+            COUNT(DISTINCT ip || '|' || ua) AS uv,
+            SUM(bytes) AS bytes_total,
+            SUM(CASE WHEN status BETWEEN 200 AND 299 THEN 1 ELSE 0 END) AS s2xx,
+            SUM(CASE WHEN status BETWEEN 300 AND 399 THEN 1 ELSE 0 END) AS s3xx,
+            SUM(CASE WHEN status BETWEEN 400 AND 499 THEN 1 ELSE 0 END) AS s4xx,
+            SUM(CASE WHEN status BETWEEN 500 AND 599 THEN 1 ELSE 0 END) AS s5xx,
+            ROUND(100.0 * SUM(is_bot) / MAX(COUNT(*), 1), 1) AS bots_pct
+        FROM hits WHERE ts >= ? AND ts < ?
+    """, (today + "T00:00:00", today + "T23:59:59"))
+    row = cur.fetchone()
+
+    # Top pages
+    cur = conn.execute("""
+        SELECT path, COUNT(*) AS c FROM hits
+        WHERE ts >= ? AND ts < ? AND is_bot = 0 AND status < 400
+        GROUP BY path ORDER BY c DESC LIMIT 10
+    """, (today + "T00:00:00", today + "T23:59:59"))
+    top_pages = json.dumps([{"path": r[0], "count": r[1]} for r in cur.fetchall()])
+
+    # Top referrers (excluding direct/bookmark)
+    cur = conn.execute("""
+        SELECT referer, COUNT(*) AS c FROM hits
+        WHERE ts >= ? AND ts < ? AND is_bot = 0 AND referer != '' AND referer != '-'
+        GROUP BY referer ORDER BY c DESC LIMIT 10
+    """, (today + "T00:00:00", today + "T23:59:59"))
+    top_refs = json.dumps([{"ref": r[0], "count": r[1]} for r in cur.fetchall()])
+
+    # Top countries
+    cur = conn.execute("""
+        SELECT country, COUNT(*) AS c FROM hits
+        WHERE ts >= ? AND ts < ? AND is_bot = 0
+        GROUP BY country ORDER BY c DESC LIMIT 10
+    """, (today + "T00:00:00", today + "T23:59:59"))
+    top_countries = json.dumps([{"country": r[0], "count": r[1]} for r in cur.fetchall()])
+
+    conn.execute("""
+        INSERT OR REPLACE INTO daily_summary
+        (date, pv, uv, bytes_total, status_2xx, status_3xx, status_4xx, status_5xx,
+         top_pages, top_refs, top_countries, bots_pct)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
+    """, (today, row[0], row[1], row[2] or 0, row[3], row[4], row[5], row[6],
+          top_pages, top_refs, top_countries, row[7] or 0.0))
+    conn.commit()
+    print(f"  Updated daily_summary for {today}: PV={row[0]}, UV={row[1]}")
+
+
 def init_db():
     """Create tables and indexes if they don't exist."""
     conn = sqlite3.connect(DB_PATH)
