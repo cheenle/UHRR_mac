@@ -176,15 +176,10 @@ class PyAudioCapture(threading.Thread):
                     'sample_rate': config['WDSP'].getint('sample_rate', 48000),
                     'buffer_size': config['WDSP'].getint('buffer_size', 256),
                     'nr2_enabled': config['WDSP'].getboolean('nr2_enabled', True),
-                    'nr2_level': config['WDSP'].getint('nr2_level', 1),  # 默认低强度
-                    'nr2_gain_method': config['WDSP'].getint('nr2_gain_method', 0),  # NR2 Gain Method
-                    'nr2_npe_method': config['WDSP'].getint('nr2_npe_method', 1),  # NR2 NPE Method
-                    'nr2_ae_run': config['WDSP'].getboolean('nr2_ae_run', True),  # NR2 AE Run (默认开启)
-                    'nr_enabled': config['WDSP'].getboolean('nr_enabled', False),
+                    'nr2_level': config['WDSP'].getint('nr2_level', 2),
                     'nb_enabled': config['WDSP'].getboolean('nb_enabled', True),
-                    'nb2_enabled': config['WDSP'].getboolean('nb2_enabled', False),
                     'anf_enabled': config['WDSP'].getboolean('anf_enabled', False),
-                    'nf_enabled': config['WDSP'].getboolean('nf_enabled', False),  # 手动陷波滤波器 (NF)
+                    'nf_enabled': config['WDSP'].getboolean('nf_enabled', False),
                     'agc_mode': config['WDSP'].getint('agc_mode', 3),
                     'bandpass_low': config['WDSP'].getfloat('bandpass_low', 300.0),
                     'bandpass_high': config['WDSP'].getfloat('bandpass_high', 2700.0),

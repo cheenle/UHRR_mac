@@ -199,7 +199,14 @@ class WDSPProcessor:
             # 后续需要进一步调试带通滤波器参数
             # self.set_bandpass(300.0, 2700.0)
             
-            # Configure AGC (注意：必须在设置PanelGain之后)
+            self._initialized = True
+            print(f"🔧 WDSP Processor initialized: SR={self.sample_rate}Hz, Mode={self.mode}")
+            print(f"   NR2={'ON' if self._nr2_enabled else 'OFF'}, "
+                  f"NB={'ON' if self._nb_enabled else 'OFF'}, "
+                  f"ANF={'ON' if self._anf_enabled else 'OFF'}, "
+                  f"AGC={self._agc_mode}")
+            
+            # Configure AGC (必须在 OpenChannel 后、其他模块前设置)
             self.set_agc_mode(self._agc_mode)
             
             # Configure Noise Reduction (NR2 - Spectral)
@@ -213,13 +220,6 @@ class WDSPProcessor:
             # Configure ANF
             if self._anf_enabled:
                 self._setup_anf()
-            
-            self._initialized = True
-            print(f"🔧 WDSP Processor initialized: SR={self.sample_rate}Hz, Mode={self.mode}")
-            print(f"   NR2={'ON' if self._nr2_enabled else 'OFF'}, "
-                  f"NB={'ON' if self._nb_enabled else 'OFF'}, "
-                  f"ANF={'ON' if self._anf_enabled else 'OFF'}, "
-                  f"AGC={self._agc_mode}")
             
         except Exception as e:
             print(f"❌ WDSP initialization error: {e}")
@@ -254,8 +254,8 @@ class WDSPProcessor:
                 0 = OFF
                 1 = MIN  — Gaussian + OSMS + AE=OFF (极温和，无处理痕迹)
                 2 = LOW  — Gaussian + OSMS + AE=ON  (温和，日常推荐)
-                3 = MED  — Gaussian(log) + MMSE + AE=ON (中等噪声)
-                4 = HIGH — Gaussian(log) + MMSE + AE=ON (强噪声，优先可懂度)
+                3 = MED  — Gaussian + MMSE + AE=ON  (中等噪声，更强估计)
+                4 = HIGH — Gaussian(log) + MMSE + AE=ON (强噪声，对数域增益)
         """
         if not self._initialized:
             return
@@ -272,12 +272,13 @@ class WDSPProcessor:
                 _wdsp.SetRXAEMNRRun(ctypes.c_int(self.channel), ctypes.c_int(1))
 
                 # Level → (gainMethod, npeMethod, aeRun)
-                # gainMethod: 0=Gaussian, 1=Gaussian(log)
-                # npeMethod: 0=OSMS(最优平滑), 1=MMSE
+                # gainMethod: 0=Gaussian(自然), 1=Gaussian(log)(对数域)
+                # npeMethod: 0=OSMS(最优平滑), 1=MMSE(最小均方误差)
+                # 递进逻辑: L1→L2 开AE | L2→L3 MMSE替代OSMS | L3→L4 对数域增益
                 params = {
                     1: (0, 0, 0),  # 极温和: Gaussian + OSMS, 无AE
                     2: (0, 0, 1),  # 温和:   Gaussian + OSMS + AE
-                    3: (1, 1, 1),  # 中等:   Gaussian(log) + MMSE + AE
+                    3: (0, 1, 1),  # 中等:   Gaussian + MMSE + AE
                     4: (1, 1, 1),  # 强力:   Gaussian(log) + MMSE + AE
                 }
                 gain_method, npe_method, ae_run = params.get(level, (0, 0, 1))
@@ -294,41 +295,6 @@ class WDSPProcessor:
                 print(f"🔧 WDSP NR2: {level_names.get(level, level)} (gain={gain_method}, npe={npe_method}, ae={ae_run})")
         except Exception as e:
             print(f"⚠️ NR2 level error: {e}")
-    
-    def set_nr2_gain_method(self, method: int):
-        """Set NR2 Gain Method (0=Conservative, 1=Moderate, 2=Aggressive)"""
-        if not self._initialized or not self._nr2_enabled:
-            return
-        try:
-            _wdsp.SetRXAEMNRgainMethod(ctypes.c_int(self.channel), ctypes.c_int(method))
-            self._nr2_gain_method = method
-            method_names = {0: 'Conservative', 1: 'Moderate', 2: 'Aggressive'}
-            print(f"🔧 WDSP NR2 GainMethod: {method_names.get(method, method)}")
-        except Exception as e:
-            print(f"⚠️ NR2 gain method error: {e}")
-    
-    def set_nr2_npe_method(self, method: int):
-        """Set NR2 NPE Method (0=LambdaD, 1=LambdaDs)"""
-        if not self._initialized or not self._nr2_enabled:
-            return
-        try:
-            _wdsp.SetRXAEMNRnpeMethod(ctypes.c_int(self.channel), ctypes.c_int(method))
-            self._nr2_npe_method = method
-            method_names = {0: 'LambdaD', 1: 'LambdaDs'}
-            print(f"🔧 WDSP NR2 NpeMethod: {method_names.get(method, method)}")
-        except Exception as e:
-            print(f"⚠️ NR2 npe method error: {e}")
-    
-    def set_nr2_ae_run(self, enabled: bool):
-        """Set NR2 Auto-Equalization Run"""
-        if not self._initialized or not self._nr2_enabled:
-            return
-        try:
-            _wdsp.SetRXAEMNRaeRun(ctypes.c_int(self.channel), ctypes.c_int(1 if enabled else 0))
-            self._nr2_ae_run = enabled
-            print(f"🔧 WDSP NR2 AeRun: {'ON' if enabled else 'OFF'}")
-        except Exception as e:
-            print(f"⚠️ NR2 ae run error: {e}")
     
     def _setup_nb(self):
         """Setup Noise Blanker"""

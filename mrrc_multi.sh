@@ -259,7 +259,7 @@ start_mrrc() {
     > "$MRRC_LOG"
     
     # 启动 MRRC，传递配置文件路径
-    /opt/local/bin/python3.12 "$SCRIPT_DIR/MRRC" "$SCRIPT_DIR/MRRC.$INSTANCE.conf" > "$MRRC_LOG" 2>&1 &
+    cd "$SCRIPT_DIR" && /opt/local/bin/python3.12 "$SCRIPT_DIR/MRRC" "$SCRIPT_DIR/MRRC.$INSTANCE.conf" > "$MRRC_LOG" 2>&1 &
     
     local pid=$!
     sleep 3

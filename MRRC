@@ -2899,8 +2899,14 @@ class WS_ControlTRX(tornado.websocket.WebSocketHandler):
 			# 设置 NR2 (频谱降噪)
 			from audio_interface import PyAudioCapture
 			if PyAudioCapture.wdsp_enabled:
-				PyAudioCapture.wdsp_config['nr2_enabled'] = datato.lower() == "true"
-				print(f"🔧 WDSP NR2 {'enabled' if PyAudioCapture.wdsp_config['nr2_enabled'] else 'disabled'}")
+				enabled = datato.lower() == "true"
+				PyAudioCapture.wdsp_config['nr2_enabled'] = enabled
+				# 同步 nr2_level: 关闭时置0，开启时如果为0则恢复默认2
+				if not enabled:
+					PyAudioCapture.wdsp_config['nr2_level'] = 0
+				elif PyAudioCapture.wdsp_config.get('nr2_level', 2) == 0:
+					PyAudioCapture.wdsp_config['nr2_level'] = 2
+				print(f"🔧 WDSP NR2 {'enabled' if enabled else 'disabled'}")
 				yield self.send_to_all_clients(f"setWDSPNR2:{datato}")
 			
 		elif(action == "setWDSPNR2Level"):
@@ -3047,40 +3053,6 @@ class WS_ControlTRX(tornado.websocket.WebSocketHandler):
 			except ValueError:
 				pass
 		
-		elif(action == "setWDSPNR2GainMethod"):
-			# 设置 NR2 Gain Method
-			from audio_interface import PyAudioCapture
-			try:
-				method = int(datato)
-				if 0 <= method <= 2:
-					PyAudioCapture.wdsp_config['nr2_gain_method'] = method
-					method_names = {0: "Conservative", 1: "Moderate", 2: "Aggressive"}
-					print(f"🔧 WDSP NR2 GainMethod: {method_names.get(method, method)}")
-					yield self.send_to_all_clients(f"setWDSPNR2GainMethod:{method}")
-			except ValueError:
-				pass
-		
-		elif(action == "setWDSPNR2NpeMethod"):
-			# 设置 NR2 NPE Method
-			from audio_interface import PyAudioCapture
-			try:
-				method = int(datato)
-				if 0 <= method <= 1:
-					PyAudioCapture.wdsp_config['nr2_npe_method'] = method
-					method_names = {0: "LambdaD", 1: "LambdaDs"}
-					print(f"🔧 WDSP NR2 NpeMethod: {method_names.get(method, method)}")
-					yield self.send_to_all_clients(f"setWDSPNR2NpeMethod:{method}")
-			except ValueError:
-				pass
-		
-		elif(action == "setWDSPNR2AeRun"):
-			# 设置 NR2 AE Run
-			from audio_interface import PyAudioCapture
-			ae_run = datato in ['1', 'true', 'True']
-			PyAudioCapture.wdsp_config['nr2_ae_run'] = ae_run
-			print(f"🔧 WDSP NR2 AeRun: {'enabled' if ae_run else 'disabled'}")
-			yield self.send_to_all_clients(f"setWDSPNR2AeRun:{ae_run}")
-		
 		elif(action == "setWDSPBandpass"):
 			# 设置带通滤波器
 			from audio_interface import PyAudioCapture
@@ -3101,10 +3073,7 @@ class WS_ControlTRX(tornado.websocket.WebSocketHandler):
 			from audio_interface import PyAudioCapture
 			status = {
 				'enabled': PyAudioCapture.wdsp_enabled,
-				'nr2Level': PyAudioCapture.wdsp_config.get('nr2_level', 1),
-				'nr2GainMethod': PyAudioCapture.wdsp_config.get('nr2_gain_method', 0),
-				'nr2NpeMethod': PyAudioCapture.wdsp_config.get('nr2_npe_method', 1),
-				'nr2AeRun': PyAudioCapture.wdsp_config.get('nr2_ae_run', False),
+				'nr2Level': PyAudioCapture.wdsp_config.get('nr2_level', 2),
 				'nbEnabled': PyAudioCapture.wdsp_config.get('nb_enabled', False),
 				'anfEnabled': PyAudioCapture.wdsp_config.get('anf_enabled', False),
 				'nfEnabled': PyAudioCapture.wdsp_config.get('nf_enabled', False),
