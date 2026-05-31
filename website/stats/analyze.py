@@ -139,6 +139,66 @@ def parse_log_line(line):
     }
 
 
+def parse_ua(ua_str):
+    """Extract browser and OS from UA string. Returns (browser, os_name, is_bot)."""
+    ua_lower = ua_str.lower() if ua_str else ""
+
+    # Bot detection
+    is_bot = 0
+    for token in BOT_TOKENS:
+        if token in ua_lower:
+            is_bot = 1
+            break
+
+    # Browser
+    browser = "Other"
+    if "edg/" in ua_lower:
+        browser = "Edge"
+    elif "chrome/" in ua_lower and "samsungbrowser" not in ua_lower:
+        browser = "Chrome"
+    elif "safari/" in ua_lower and "chrome/" not in ua_lower:
+        browser = "Safari"
+    elif "firefox/" in ua_lower:
+        browser = "Firefox"
+    elif "opera" in ua_lower or "opr/" in ua_lower:
+        browser = "Opera"
+    elif "samsungbrowser" in ua_lower:
+        browser = "Samsung Internet"
+    elif "qqbrowser" in ua_lower:
+        browser = "QQ Browser"
+    elif is_bot:
+        browser = "Bot"
+
+    # OS
+    os_name = "Other"
+    if "windows nt" in ua_lower:
+        os_name = "Windows"
+    elif "mac os x" in ua_lower:
+        os_name = "macOS"
+    elif "android" in ua_lower:
+        os_name = "Android"
+    elif "iphone" in ua_lower or "ipad" in ua_lower:
+        os_name = "iOS"
+    elif "linux" in ua_lower and "android" not in ua_lower:
+        os_name = "Linux"
+    elif "cros" in ua_lower:
+        os_name = "ChromeOS"
+
+    return browser, os_name, is_bot
+
+
+def is_scanner_path(path):
+    """Check if path matches known scanner/exploit patterns."""
+    path_lower = path.lower() if path else ""
+    for token in SCANNER_PATH_TOKENS:
+        if token in path_lower:
+            return True
+    # Also flag suspicious encoding patterns
+    if "%2e%2e" in path_lower or "%%32%%65" in path_lower or "%ADd+" in path_lower:
+        return True
+    return False
+
+
 def init_db():
     """Create tables and indexes if they don't exist."""
     conn = sqlite3.connect(DB_PATH)
