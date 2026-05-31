@@ -376,8 +376,8 @@ def cleanup_old_hits(conn):
     """Delete hits older than retention period."""
     cutoff = datetime.now(CST) - timedelta(days=HITS_RETENTION_DAYS)
     cutoff_str = cutoff.strftime("%Y-%m-%dT00:00:00")
-    conn.execute("DELETE FROM hits WHERE ts < ?", (cutoff_str,))
-    deleted = conn.rowcount
+    cur = conn.execute("DELETE FROM hits WHERE ts < ?", (cutoff_str,))
+    deleted = cur.rowcount
     if deleted:
         print(f"  Cleaned up {deleted} old hits (before {cutoff_str})")
     conn.commit()
@@ -879,5 +879,35 @@ def init_db():
 
 
 if __name__ == "__main__":
-    init_db()
-    print("Database initialized.")
+    import sys
+
+    start_time = time.time()
+    print(f"[{datetime.now(CST).strftime('%Y-%m-%d %H:%M:%S')}] Starting stats analysis...")
+
+    conn = init_db()
+
+    # Step 1: Ingest new log data
+    print("1. Ingesting logs...")
+    new_count = ingest_logs(conn)
+    print(f"   {new_count} new hits ingested")
+
+    # Step 2: Clean up old data
+    print("2. Cleaning up old hits...")
+    cleanup_old_hits(conn)
+
+    # Step 3: Update daily summary
+    print("3. Updating daily summary...")
+    update_daily_summary(conn)
+
+    # Step 4: Query stats and render HTML
+    print("4. Rendering dashboard...")
+    stats = query_stats(conn)
+    html = render_html(stats)
+
+    with open(HTML_PATH, "w", encoding="utf-8") as f:
+        f.write(html)
+
+    conn.close()
+
+    elapsed = time.time() - start_time
+    print(f"Done in {elapsed:.1f}s. Dashboard written to {HTML_PATH}")
