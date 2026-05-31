@@ -436,6 +436,402 @@ def update_daily_summary(conn):
     print(f"  Updated daily_summary for {today}: PV={row[0]}, UV={row[1]}")
 
 
+def query_stats(conn):
+    """Collect all statistics needed for the dashboard. Returns a dict."""
+    today = datetime.now(CST).strftime("%Y-%m-%d")
+    month_start = datetime.now(CST).strftime("%Y-%m-01")
+
+    def q(sql, params=()):
+        row = conn.execute(sql, params).fetchone()
+        if row is None:
+            return None
+        return row[0]
+
+    def qall(sql, params=()):
+        return conn.execute(sql, params).fetchall()
+
+    stats = {}
+
+    # Overview cards
+    stats["today_pv"] = q("SELECT COALESCE(SUM(pv),0) FROM daily_summary WHERE date=?", (today,))
+    stats["today_uv"] = q(
+        "SELECT COUNT(DISTINCT ip||'|'||ua) FROM hits WHERE ts>=? AND ts<?",
+        (today+"T00:00:00", today+"T23:59:59")
+    )
+    stats["month_pv"] = q("SELECT COALESCE(SUM(pv),0) FROM daily_summary WHERE date>=?", (month_start,))
+    stats["total_pv"] = q("SELECT COALESCE(SUM(pv),0) FROM daily_summary")
+
+    # 24h hourly breakdown
+    hourly = qall("""
+        SELECT SUBSTR(ts,12,2) AS h, COUNT(*) FROM hits
+        WHERE ts>=? AND ts<? AND is_bot=0
+        GROUP BY h ORDER BY h
+    """, (today+"T00:00:00", today+"T23:59:59"))
+    stats["hourly"] = [(int(h), c) for h, c in hourly]
+    stats["hourly_max"] = max([c for _, c in hourly]) if hourly else 0
+
+    # 30-day trend
+    daily = qall("""
+        SELECT date, pv, uv FROM daily_summary
+        WHERE date >= ? ORDER BY date
+    """, ((datetime.now(CST) - timedelta(days=29)).strftime("%Y-%m-%d"),))
+    stats["daily"] = [(d, pv, uv) for d, pv, uv in daily]
+    daily_max = max([pv for _, pv, _ in daily]) if daily else 1
+    stats["daily_max"] = daily_max
+
+    # Top pages (today)
+    stats["top_pages"] = json.loads(q(
+        "SELECT top_pages FROM daily_summary WHERE date=?", (today,)
+    ) or "[]")
+
+    # Top referrers (today)
+    stats["top_refs"] = json.loads(q(
+        "SELECT top_refs FROM daily_summary WHERE date=?", (today,)
+    ) or "[]")
+
+    # Top countries (today)
+    stats["top_countries"] = json.loads(q(
+        "SELECT top_countries FROM daily_summary WHERE date=?", (today,)
+    ) or "[]")
+
+    # Browser distribution (today)
+    browser_rows = qall("""
+        SELECT ua_browser, COUNT(*) AS c FROM hits
+        WHERE ts>=? AND ts<? AND is_bot=0
+        GROUP BY ua_browser ORDER BY c DESC
+    """, (today+"T00:00:00", today+"T23:59:59"))
+    total_browser = sum(c for _, c in browser_rows) or 1
+    stats["browsers"] = [(b, c, round(100*c/total_browser,1)) for b, c in browser_rows]
+
+    # OS distribution (today)
+    os_rows = qall("""
+        SELECT ua_os, COUNT(*) AS c FROM hits
+        WHERE ts>=? AND ts<? AND is_bot=0
+        GROUP BY ua_os ORDER BY c DESC
+    """, (today+"T00:00:00", today+"T23:59:59"))
+    total_os = sum(c for _, c in os_rows) or 1
+    stats["os_list"] = [(o, c, round(100*c/total_os,1)) for o, c in os_rows]
+
+    # Anomaly footer
+    stats["today_404"] = q(
+        "SELECT COUNT(*) FROM hits WHERE ts>=? AND ts<? AND status=404",
+        (today+"T00:00:00", today+"T23:59:59")
+    )
+    stats["bots_pct"] = q(
+        "SELECT COALESCE(bots_pct,0) FROM daily_summary WHERE date=?", (today,)
+    ) or 0.0
+    stats["total_hits_today"] = q(
+        "SELECT COUNT(*) FROM hits WHERE ts>=? AND ts<?",
+        (today+"T00:00:00", today+"T23:59:59")
+    )
+
+    # Suspicious scanner IPs
+    suspicious = qall("""
+        SELECT ip, COUNT(*) AS c, GROUP_CONCAT(DISTINCT SUBSTR(path,1,80)) AS paths FROM hits
+        WHERE ts>=? AND ts<? AND is_bot=1
+        GROUP BY ip HAVING c >= 3 ORDER BY c DESC LIMIT 5
+    """, (today+"T00:00:00", today+"T23:59:59"))
+    stats["suspicious"] = [(ip, c, paths) for ip, c, paths in suspicious]
+
+    # Last update timestamp
+    stats["last_update"] = datetime.now(CST).strftime("%Y-%m-%d %H:%M:%S CST")
+    stats["next_update"] = (datetime.now(CST) + timedelta(hours=1)).strftime("%Y-%m-%d %H:00:00 CST")
+
+    return stats
+
+
+def _pct_bar(pct, color="#00d4ff"):
+    """Render a percentage bar for distribution lists."""
+    return f'<div class="pct-bar-bg"><div class="pct-bar-fill" style="width:{pct}%;background:{color}"></div></div>'
+
+
+def render_html(stats):
+    """Generate complete dashboard HTML."""
+    # ------- 24h hourly bars -------
+    hour_bars = ""
+    for h in range(24):
+        height_pct = 0
+        count = 0
+        for hh, c in stats["hourly"]:
+            if hh == h:
+                count = c
+                height_pct = int(c / max(stats["hourly_max"], 1) * 100)
+                break
+        peak_class = 'peak' if count == stats["hourly_max"] and count > 0 else ''
+        hour_bars += f'<div class="hour-col"><div class="hour-bar {peak_class}" style="height:{height_pct}%"></div><span class="hour-label">{h:02d}</span></div>'
+
+    # ------- 30-day SVG trend -------
+    svg_points_pv = ""
+    svg_points_uv = ""
+    if stats["daily"]:
+        max_val = stats["daily_max"]
+        w_step = 780.0 / max(len(stats["daily"]) - 1, 1)
+        for i, (d, pv, uv) in enumerate(stats["daily"]):
+            x = i * w_step + 40
+            y_pv = 200 - (pv / max_val * 180) if max_val > 0 else 200
+            y_uv = 200 - (uv / max_val * 180) if max_val > 0 else 200
+            svg_points_pv += f"{x:.1f},{y_pv:.1f} "
+            svg_points_uv += f"{x:.1f},{y_uv:.1f} "
+
+    # ------- Top pages table -------
+    pages_html = ""
+    for item in stats["top_pages"]:
+        path = item["path"][:60]
+        count = item["count"]
+        pct = round(count / max(stats["today_pv"], 1) * 100)
+        pages_html += f'<tr><td class="mono">{path}</td><td>{count}</td><td>{pct}%</td></tr>'
+    if not pages_html:
+        pages_html = '<tr><td colspan="3" class="empty">No data yet</td></tr>'
+
+    # ------- Top referrers table -------
+    refs_html = ""
+    for item in stats["top_refs"]:
+        ref = item["ref"][:60]
+        refs_html += f'<tr><td class="mono">{ref}</td><td>{item["count"]}</td></tr>'
+    if not refs_html:
+        refs_html = '<tr><td colspan="2" class="empty">No referrer data yet</td></tr>'
+
+    # ------- Top countries -------
+    countries_html = ""
+    for item in stats["top_countries"]:
+        name = country_flag(item["country"])
+        countries_html += f'<tr><td>{name}</td><td>{item["count"]}</td></tr>'
+    if not countries_html:
+        countries_html = '<tr><td colspan="2" class="empty">No GeoIP data</td></tr>'
+
+    # ------- Browser & OS distributions -------
+    browser_html = ""
+    for name, count, pct in stats["browsers"][:8]:
+        browser_html += f'<div class="dist-row"><span class="dist-label">{name}</span><span class="dist-value">{pct}%</span>{_pct_bar(pct)}</div>'
+    if not browser_html:
+        browser_html = '<div class="empty">No data</div>'
+
+    os_html = ""
+    for name, count, pct in stats["os_list"][:8]:
+        os_html += f'<div class="dist-row"><span class="dist-label">{name}</span><span class="dist-value">{pct}%</span>{_pct_bar(pct, "#7c3aed")}</div>'
+    if not os_html:
+        os_html = '<div class="empty">No data</div>'
+
+    # ------- Suspicious IPs -------
+    suspicious_html = ""
+    for ip, count, paths in stats["suspicious"]:
+        suspicious_html += f'<tr><td class="mono">{ip}</td><td>{count}</td><td class="mono small">{paths[:80]}</td></tr>'
+    if not suspicious_html:
+        suspicious_html = '<tr><td colspan="3" class="empty">No suspicious activity detected</td></tr>'
+
+    return f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>MRRC Website Statistics</title>
+<style>
+:root {{
+    --primary: #00d4ff;
+    --primary-dark: #0099cc;
+    --purple: #7c3aed;
+    --bg-dark: #0a0a0f;
+    --bg-card: #13131f;
+    --bg-light: #1e1e2e;
+    --text: #ffffff;
+    --text-secondary: #a0a0b0;
+    --text-muted: #6b7280;
+    --border: #2d2d3d;
+    --success: #10b981;
+    --warning: #f59e0b;
+    --error: #ef4444;
+}}
+* {{ margin:0; padding:0; box-sizing:border-box; }}
+body {{
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: var(--bg-dark); color: var(--text);
+    line-height: 1.6; min-height: 100vh;
+}}
+.mono {{ font-family: 'JetBrains Mono', 'Courier New', monospace; font-size: 0.85rem; }}
+.container {{ max-width: 1200px; margin: 0 auto; padding: 20px; }}
+
+/* Header */
+.header {{
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 24px 0; border-bottom: 1px solid var(--border); margin-bottom: 32px;
+    flex-wrap: wrap; gap: 12px;
+}}
+.header h1 {{ font-size: 1.5rem; color: var(--primary); }}
+.header-meta {{ color: var(--text-muted); font-size: 0.85rem; text-align: right; }}
+.header-meta span {{ display: block; }}
+
+/* Overview cards */
+.cards {{ display: grid; grid-template-columns: repeat(4,1fr); gap: 16px; margin-bottom: 32px; }}
+.card {{
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: 12px; padding: 24px; text-align: center;
+}}
+.card-number {{ font-size: 2rem; font-weight: 700; color: var(--primary);
+    font-family: 'JetBrains Mono', monospace; }}
+.card-label {{ font-size: 0.85rem; color: var(--text-secondary); margin-top: 4px; }}
+
+/* Section headers */
+.section {{ margin-bottom: 32px; }}
+.section-title {{ font-size: 1.1rem; font-weight: 600; margin-bottom: 16px; color: var(--text); }}
+
+/* 24h chart */
+.hour-chart {{
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: 12px; padding: 24px;
+    display: flex; align-items: flex-end; gap: 4px; height: 180px;
+}}
+.hour-col {{ flex:1; display:flex; flex-direction:column; align-items:center; height:100%; justify-content:flex-end; }}
+.hour-bar {{
+    width: 100%; max-width: 32px; background: var(--bg-light);
+    border-radius: 4px 4px 0 0; min-height: 2px; transition: height 0.3s;
+}}
+.hour-bar.peak {{ background: var(--primary); box-shadow: 0 0 12px rgba(0,212,255,0.5); }}
+.hour-label {{ font-size: 0.65rem; color: var(--text-muted); margin-top: 6px; }}
+
+/* 30-day SVG */
+.trend-box {{
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: 12px; padding: 24px; overflow-x: auto;
+}}
+.legend {{ display: flex; gap: 24px; margin-bottom: 8px; font-size: 0.85rem; }}
+.legend-pv {{ color: var(--primary); }}
+.legend-uv {{ color: var(--purple); }}
+
+/* Two-column grid */
+.grid-2 {{ display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 32px; }}
+
+/* Tables */
+.table-box {{
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: 12px; padding: 20px; overflow-x: auto;
+}}
+table {{ width: 100%; border-collapse: collapse; }}
+th {{ text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--border);
+    color: var(--text-muted); font-size: 0.8rem; text-transform: uppercase; }}
+td {{ padding: 8px 12px; border-bottom: 1px solid rgba(45,45,61,0.5); font-size: 0.9rem; }}
+.empty {{ color: var(--text-muted); font-style: italic; padding: 16px; text-align: center; }}
+.small {{ font-size: 0.75rem; }}
+
+/* Distribution bars */
+.dist-row {{ display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }}
+.dist-label {{ width: 100px; font-size: 0.85rem; flex-shrink: 0; }}
+.dist-value {{ width: 45px; font-size: 0.85rem; color: var(--text-secondary); text-align: right; }}
+.pct-bar-bg {{ flex:1; height: 8px; background: var(--bg-light); border-radius: 4px; overflow: hidden; }}
+.pct-bar-fill {{ height: 100%; border-radius: 4px; transition: width 0.3s; }}
+
+/* Anomaly footer */
+.anomaly {{
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: 12px; padding: 24px; margin-bottom: 32px;
+}}
+.anomaly-title {{ color: var(--warning); font-weight: 600; margin-bottom: 12px; }}
+.anomaly-stats {{ display: flex; gap: 32px; flex-wrap: wrap; margin-bottom: 16px; }}
+.anomaly-stat {{ font-size: 0.9rem; }}
+.anomaly-stat strong {{ color: var(--warning); }}
+
+/* Responsive */
+@media (max-width: 768px) {{
+    .cards {{ grid-template-columns: repeat(2,1fr); }}
+    .grid-2 {{ grid-template-columns: 1fr; }}
+    .hour-chart {{ height: 120px; }}
+    .anomaly-stats {{ flex-direction: column; gap: 8px; }}
+}}
+@media (max-width: 480px) {{
+    .cards {{ grid-template-columns: 1fr; }}
+    .header {{ flex-direction: column; text-align: center; }}
+    .header-meta {{ text-align: center; }}
+}}
+</style>
+</head>
+<body>
+<div class="container">
+
+<!-- Header -->
+<div class="header">
+    <div><h1>\U0001f4ca MRRC Website Statistics</h1></div>
+    <div class="header-meta">
+        <span>Last update: {stats["last_update"]}</span>
+        <span>Next update: {stats["next_update"]}</span>
+    </div>
+</div>
+
+<!-- Overview Cards -->
+<div class="cards">
+    <div class="card"><div class="card-number">{stats["today_pv"]:,}</div><div class="card-label">Today PV</div></div>
+    <div class="card"><div class="card-number">{stats["today_uv"]:,}</div><div class="card-label">Today UV</div></div>
+    <div class="card"><div class="card-number">{stats["month_pv"]:,}</div><div class="card-label">Month PV</div></div>
+    <div class="card"><div class="card-number">{stats["total_pv"]:,}</div><div class="card-label">Total PV (All-time)</div></div>
+</div>
+
+<!-- 24h Hourly Chart -->
+<div class="section">
+    <div class="section-title">\U0001f4c8 24-Hour Traffic (Today, CST)</div>
+    <div class="hour-chart">{hour_bars}</div>
+</div>
+
+<!-- 30-Day Trend -->
+<div class="section">
+    <div class="section-title">\U0001f4c9 30-Day Trend</div>
+    <div class="trend-box">
+        <div class="legend"><span class="legend-pv">━ PV</span><span class="legend-uv">┅ UV</span></div>
+        <svg viewBox="0 0 860 240" width="100%" height="240">
+            <!-- Grid lines -->
+            <line x1="40" y1="20" x2="820" y2="20" stroke="#2d2d3d" stroke-dasharray="4,4"/>
+            <line x1="40" y1="200" x2="820" y2="200" stroke="#2d2d3d"/>
+            <!-- Axes -->
+            <line x1="40" y1="20" x2="40" y2="210" stroke="#2d2d3d"/>
+            <line x1="35" y1="200" x2="820" y2="200" stroke="#2d2d3d"/>
+            <!-- PV line -->
+            <polyline fill="none" stroke="#00d4ff" stroke-width="2" points="{svg_points_pv.strip()}"/>
+            <!-- UV line -->
+            <polyline fill="none" stroke="#7c3aed" stroke-width="1.5" stroke-dasharray="6,4" points="{svg_points_uv.strip()}"/>
+        </svg>
+    </div>
+</div>
+
+<!-- Top Pages + Referrers -->
+<div class="grid-2">
+    <div class="table-box">
+        <div class="section-title">\U0001f4c4 Top Pages</div>
+        <table><thead><tr><th>Path</th><th>Hits</th><th>%</th></tr></thead><tbody>{pages_html}</tbody></table>
+    </div>
+    <div class="table-box">
+        <div class="section-title">\U0001f517 Top Referrers</div>
+        <table><thead><tr><th>Source</th><th>Count</th></tr></thead><tbody>{refs_html}</tbody></table>
+    </div>
+</div>
+
+<!-- Countries + Browser/OS -->
+<div class="grid-2">
+    <div class="table-box">
+        <div class="section-title">\U0001f30d Countries / Regions</div>
+        <table><thead><tr><th>Country</th><th>Visitors</th></tr></thead><tbody>{countries_html}</tbody></table>
+    </div>
+    <div class="table-box">
+        <div class="section-title">\U0001f5a5 Browsers</div>
+        {browser_html}
+        <div class="section-title" style="margin-top:16px;">\U0001f4f1 Operating Systems</div>
+        {os_html}
+    </div>
+</div>
+
+<!-- Anomaly Footer -->
+<div class="anomaly">
+    <div class="anomaly-title">⚠️ Anomaly Monitoring (Today)</div>
+    <div class="anomaly-stats">
+        <div class="anomaly-stat">404 Errors: <strong>{stats["today_404"]}</strong></div>
+        <div class="anomaly-stat">Bot Traffic: <strong>{stats["bots_pct"]}%</strong></div>
+        <div class="anomaly-stat">Total Requests: <strong>{stats["total_hits_today"]:,}</strong></div>
+    </div>
+    <table style="margin-top:12px;"><thead><tr><th>Suspicious IP</th><th>Requests</th><th>Paths Attempted</th></tr></thead><tbody>{suspicious_html}</tbody></table>
+</div>
+
+</div>
+</body>
+</html>"""
+
+
 def init_db():
     """Create tables and indexes if they don't exist."""
     conn = sqlite3.connect(DB_PATH)
