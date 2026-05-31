@@ -53,6 +53,82 @@ LOG_RE = re.compile(
 )
 
 
+def parse_timestamp(ts_str):
+    """Parse Apache [DD/Mon/YYYY:HH:MM:SS +TZ] to ISO 8601 in CST."""
+    t = datetime.strptime(ts_str, "%d/%b/%Y:%H:%M:%S %z")
+    local = t.astimezone(CST)
+    return local.strftime("%Y-%m-%dT%H:%M:%S"), local.strftime("%Y-%m-%d")
+
+
+def detect_gzip(filepath):
+    """Check if file is gzip-compressed by reading magic bytes via sudo."""
+    try:
+        result = subprocess.run(
+            ["sudo", "head", "-c", "2", filepath],
+            capture_output=True, timeout=5
+        )
+        return result.stdout == b"\x1f\x8b"
+    except Exception:
+        return False
+
+
+def read_log_lines(filepath):
+    """Read all lines from a log file (plain text or gzip).
+    Uses sudo cat via subprocess since logs are root:adm 640."""
+    try:
+        result = subprocess.run(
+            ["sudo", "cat", filepath],
+            capture_output=True, timeout=30
+        )
+        if result.returncode != 0:
+            print(f"  WARNING: sudo cat {filepath} failed: {result.stderr.strip()}")
+            return []
+        raw = result.stdout
+    except Exception as e:
+        print(f"  ERROR reading {filepath}: {e}")
+        return []
+
+    if detect_gzip(filepath):
+        import io
+        return gzip.open(io.BytesIO(raw), "rt", errors="replace").readlines()
+
+    return raw.decode("utf-8", errors="replace").splitlines()
+
+
+def parse_log_line(line):
+    """Parse one Apache combined vhost log line. Returns dict or None if no match."""
+    m = LOG_RE.match(line)
+    if not m:
+        return None
+    vhost, ip, ident, auth, ts_raw, method, path, proto, status, bytes_str, referer, ua = m.groups()
+
+    if not VLSC_HOST_PATTERN.match(vhost):
+        return None
+
+    ts_iso, ts_date = parse_timestamp(ts_raw)
+    try:
+        status = int(status)
+    except ValueError:
+        status = 0
+    try:
+        b = int(bytes_str)
+    except ValueError:
+        b = 0
+
+    return {
+        "ts": ts_iso,
+        "date": ts_date,
+        "vhost": vhost,
+        "ip": ip,
+        "method": method,
+        "path": path,
+        "status": status,
+        "bytes": b,
+        "referer": referer,
+        "ua": ua,
+    }
+
+
 def init_db():
     """Create tables and indexes if they don't exist."""
     conn = sqlite3.connect(DB_PATH)
