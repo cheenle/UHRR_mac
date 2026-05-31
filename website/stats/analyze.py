@@ -53,23 +53,33 @@ LOG_RE = re.compile(
 )
 
 
+_MONTH_MAP = {
+    "Jan": 1, "Feb": 2, "Mar": 3, "Apr": 4, "May": 5, "Jun": 6,
+    "Jul": 7, "Aug": 8, "Sep": 9, "Oct": 10, "Nov": 11, "Dec": 12,
+}
+
 def parse_timestamp(ts_str):
-    """Parse Apache [DD/Mon/YYYY:HH:MM:SS +TZ] to ISO 8601 in CST."""
-    t = datetime.strptime(ts_str, "%d/%b/%Y:%H:%M:%S %z")
+    """Parse Apache [DD/Mon/YYYY:HH:MM:SS +TZ] to ISO 8601 in CST.
+    Uses manual month map to avoid locale-dependent strptime %b."""
+    # Format: DD/Mon/YYYY:HH:MM:SS +TZ
+    date_part, time_part = ts_str.split(":", 1)  # DD/Mon/YYYY, HH:MM:SS +TZ
+    day, mon, year = date_part.split("/")
+    month = _MONTH_MAP[mon]
+
+    # Parse time and timezone
+    time_rest = time_part.rsplit(" ", 1)  # ["HH:MM:SS", "+TZ"]
+    h, m, s = time_rest[0].split(":")
+    tz_str = time_rest[1]
+
+    # Parse timezone offset
+    tz_sign = 1 if tz_str[0] == "+" else -1
+    tz_h = int(tz_str[1:3])
+    tz_m = int(tz_str[3:5])
+    tz_offset = timezone(timedelta(hours=tz_sign * tz_h, minutes=tz_sign * tz_m))
+
+    t = datetime(int(year), month, int(day), int(h), int(m), int(s), tzinfo=tz_offset)
     local = t.astimezone(CST)
     return local.strftime("%Y-%m-%dT%H:%M:%S"), local.strftime("%Y-%m-%d")
-
-
-def detect_gzip(filepath):
-    """Check if file is gzip-compressed by reading magic bytes via sudo."""
-    try:
-        result = subprocess.run(
-            ["sudo", "head", "-c", "2", filepath],
-            capture_output=True, timeout=5
-        )
-        return result.stdout == b"\x1f\x8b"
-    except Exception:
-        return False
 
 
 def read_log_lines(filepath):
@@ -88,7 +98,7 @@ def read_log_lines(filepath):
         print(f"  ERROR reading {filepath}: {e}")
         return []
 
-    if detect_gzip(filepath):
+    if raw[:2] == b"\x1f\x8b":
         import io
         return gzip.open(io.BytesIO(raw), "rt", errors="replace").readlines()
 
