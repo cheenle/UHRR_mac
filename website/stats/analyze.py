@@ -199,6 +199,64 @@ def is_scanner_path(path):
     return False
 
 
+_geoip_reader = None
+
+
+def init_geoip():
+    """Lazily load the MaxMind GeoIP database."""
+    global _geoip_reader
+    if _geoip_reader is not None:
+        return _geoip_reader
+    if not os.path.exists(MMDB_PATH):
+        print("  WARNING: GeoIP database not found at", MMDB_PATH)
+        return None
+    try:
+        import maxminddb
+        _geoip_reader = maxminddb.open_database(MMDB_PATH)
+        return _geoip_reader
+    except ImportError:
+        print("  WARNING: maxminddb not installed. Run: pip3 install maxminddb")
+        return None
+    except Exception as e:
+        print(f"  WARNING: Failed to open GeoIP database: {e}")
+        return None
+
+
+def lookup_country(ip):
+    """Look up country name for an IP. Returns 'Unknown' on failure."""
+    reader = init_geoip()
+    if reader is None:
+        return "Unknown"
+    try:
+        result = reader.get(ip)
+        if result and "country" in result:
+            return result["country"]["names"].get("en", "Unknown")
+    except Exception:
+        pass
+    return "Unknown"
+
+
+def country_flag(country_name):
+    """Return emoji flag + country name for known countries."""
+    country_to_code = {
+        "United States": "\U0001f1fa\U0001f1f8", "China": "\U0001f1e8\U0001f1f3", "Japan": "\U0001f1ef\U0001f1f5",
+        "Germany": "\U0001f1e9\U0001f1ea", "United Kingdom": "\U0001f1ec\U0001f1e7", "France": "\U0001f1eb\U0001f1f7",
+        "Canada": "\U0001f1e8\U0001f1e6", "Australia": "\U0001f1e6\U0001f1fa", "South Korea": "\U0001f1f0\U0001f1f7",
+        "Russia": "\U0001f1f7\U0001f1fa", "Brazil": "\U0001f1e7\U0001f1f7", "India": "\U0001f1ee\U0001f1f3",
+        "Singapore": "\U0001f1f8\U0001f1ec", "Netherlands": "\U0001f1f3\U0001f1f1", "Sweden": "\U0001f1f8\U0001f1ea",
+        "Switzerland": "\U0001f1e8\U0001f1ed", "Taiwan": "\U0001f1f9\U0001f1fc", "Hong Kong": "\U0001f1ed\U0001f1f0",
+        "Italy": "\U0001f1ee\U0001f1f9", "Spain": "\U0001f1ea\U0001f1f8", "Poland": "\U0001f1f5\U0001f1f1", "Ukraine": "\U0001f1fa\U0001f1e6",
+        "Thailand": "\U0001f1f9\U0001f1ed", "Vietnam": "\U0001f1fb\U0001f1f3", "Indonesia": "\U0001f1ee\U0001f1e9",
+        "Malaysia": "\U0001f1f2\U0001f1fe", "Philippines": "\U0001f1f5\U0001f1ed", "Finland": "\U0001f1eb\U0001f1ee",
+        "Norway": "\U0001f1f3\U0001f1f4", "Denmark": "\U0001f1e9\U0001f1f0", "Belgium": "\U0001f1e7\U0001f1ea",
+        "Austria": "\U0001f1e6\U0001f1f9", "Czechia": "\U0001f1e8\U0001f1ff", "Ireland": "\U0001f1ee\U0001f1ea",
+        "New Zealand": "\U0001f1f3\U0001f1ff", "Mexico": "\U0001f1f2\U0001f1fd", "Argentina": "\U0001f1e6\U0001f1f7",
+        "Turkey": "\U0001f1f9\U0001f1f7", "Israel": "\U0001f1ee\U0001f1f1", "United Arab Emirates": "\U0001f1e6\U0001f1ea",
+    }
+    code = country_to_code.get(country_name, "\U0001f310")
+    return f"{code} {country_name}"
+
+
 def init_db():
     """Create tables and indexes if they don't exist."""
     conn = sqlite3.connect(DB_PATH)
