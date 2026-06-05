@@ -149,3 +149,18 @@ pip3 install pyaudio numpy tornado pyserial pyrtlsdr
 - Multiple test utilities for debugging audio, connectivity, and services
 - HTML/JS tools for audio quality testing
 - Service verification scripts
+
+### Website (`website/`)
+- **Bilingual static site**: EN (`website/`) and ZH (`website/zh/`) with shared CSS/JS/assets
+- **Pages**: index.html, fde.html, docs/ (features, installation, design, docs), efhw/
+- **Deploy**: `./deploy_website.sh` → `cheenle@www.vlsc.net:/var/www/vlsc.net/mrrc/`
+  - Apache DocumentRoot is `/var/www/vlsc.net`, with `/` redirecting to `/mrrc/`
+  - **CRITICAL**: Deploy target is `/var/www/vlsc.net/mrrc/`, NOT `/var/www/html/mrrc/`
+  - RSync may fail with permission errors — first `ssh cheenle@www.vlsc.net "sudo chown -R cheenle /var/www/vlsc.net/mrrc"` then deploy, then restore `sudo chown -R www-data:www-data`
+- **Nav consistency**: All 12 HTML pages must use identical nav items:
+  - EN: Home · Features · Demo · Installation · Design & Architecture · Docs · FDE · EFHW · GitHub
+  - ZH: 首页 · 功能 · 演示 · 安装 · 设计 & 架构 · 文档 · FDE · EFHW · GitHub
+  - Demo links to `../index.html#demo` (docs/) or `../../index.html#demo` (zh/docs/) or `index.html#demo` (root)
+  - EFHW links to `../efhw/index.html` (docs/) or `../../efhw/index.html` (zh/docs/) or `efhw/index.html` (root)
+- **Version references**: Keep current (V5.4). Architecture diagram image files can keep old names (e.g. `architecture52.jpg`), but captions/alt text/titles must reference V5.4
+- **Script paths in zh/docs/**: Must use `../../js/main.js` (two levels up), never `../js/main.js`

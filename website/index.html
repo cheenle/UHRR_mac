@@ -35,16 +35,17 @@
                 <li><a href="#features">Features</a></li>
                 <li><a href="#demo">Demo</a></li>
                 <li><a href="docs/installation.html">Installation</a></li>
-                <li><a href="docs/design.html">Design</a></li>
+                <li><a href="docs/design.html">Design & Architecture</a></li>
                 <li><a href="docs/docs.html">Docs</a></li>
                 <li><a href="fde.html">FDE</a></li>
+                <li><a href="efhw/index.html">EFHW</a></li>
                 <li><a href="https://github.com/cheenle/UHRR_mac" target="_blank" rel="noopener">
                     <i class="fab fa-github"></i> GitHub
                 </a></li>
             </ul>
             
             <div class="nav-actions">
-                <a href="zh/index.html" class="lang-toggle">中文</a>
+                <a href="zh/index.html" class="lang-btn">中文</a>
                 <button class="mobile-menu-toggle">
                     <i class="fas fa-bars"></i>
                 </button>
@@ -57,7 +58,7 @@
         <div class="hero-content">
             <div class="hero-badge">
                 <i class="fas fa-satellite-dish"></i>
-                <span>V5.0.0 Released</span>
+                <span>V5.4 · Production Ready</span>
             </div>            
             <h1 class="hero-title">
                 Amateur Radio<br>
@@ -65,8 +66,8 @@
             </h1>
             
             <p class="hero-subtitle">
-                MRRC - Modern Web-based remote transceiver control system. Control your HF radio from phone, tablet, or computer. 
-                Ultra-low latency audio streaming, professional DSP noise reduction, AI voice assistant.
+                MRRC - Modern Web-based remote transceiver control system. Control your HF radio from phone, tablet, or computer.
+                Opus-optimized audio streaming, WDSP professional noise reduction, AI voice assistant, CW/FT8 digital modes, and studio-grade TX audio processing.
             </p>
             
             <div class="hero-actions">
@@ -80,6 +81,23 @@
                 </a>
             </div>
             
+            <div class="hero-preview">
+                <img src="images/hero_preview_thumb.jpg" alt="MRRC Remote Radio Control Interface - Desktop and Mobile" onclick="document.getElementById('lightbox-hero').style.display='flex'" style="cursor:zoom-in" />
+            </div>
+            <div id="lightbox-hero" class="lightbox" onclick="this.style.display='none'">
+                <span class="lightbox-close">&times;</span>
+                <img src="images/hero_preview.jpg" alt="MRRC Remote Radio Control Interface" />
+            </div>
+
+            <div class="hero-preview">
+                <p style="text-align:center; color: var(--text-secondary); margin-bottom: 12px; font-size: 0.95rem; font-weight: 500;">MRRC V5.4 System Architecture — 4-Layer Design</p>
+                <img src="images/architecture52.jpg" alt="MRRC V5.4 System Architecture Diagram" onclick="document.getElementById('lightbox-arch').style.display='flex'" style="cursor:zoom-in" />
+            </div>
+            <div id="lightbox-arch" class="lightbox" onclick="this.style.display='none'">
+                <span class="lightbox-close">&times;</span>
+                <img src="images/architecture52.jpg" alt="MRRC V5.2 System Architecture Diagram" />
+            </div>
+
             <div class="hero-stats">
                 <div class="stat-item">
                     <span class="stat-value">&lt;100ms</span>
@@ -94,8 +112,8 @@
                     <span class="stat-label">WDSP NR</span>
                 </div>
                 <div class="stat-item">
-                    <span class="stat-value">DXCC</span>
-                    <span class="stat-label">Smart Tracking</span>
+                    <span class="stat-value">V5.4</span>
+                    <span class="stat-label">240+ Commits</span>
                 </div>
             </div>
         </div>
@@ -116,7 +134,7 @@
                     </div>
                     <h3 class="card-title">Mobile First</h3>
                     <p class="card-text">
-                        Touch-optimized interface, PWA support for home screen, perfect for iPhone/Android.
+                        Touch-optimized glassmorphism UI, PWA add-to-home-screen, haptic feedback, safe-area adaptation for all modern phones.
                     </p>
                 </article>
                 
@@ -126,7 +144,7 @@
                     </div>
                     <h3 class="card-title">Ultra Low Latency</h3>
                     <p class="card-text">
-                        TX/RX switch &lt;100ms, Opus codec optimization, AudioWorklet playback, professional real-time experience.
+                        TX ~65ms / RX ~51ms, &lt;100ms TX↔RX switch. Opus codec 28kbps, AudioWorklet playback, Int16 transport — professional real-time experience.
                     </p>
                 </article>
                 
@@ -136,7 +154,7 @@
                     </div>
                     <h3 class="card-title">WDSP Professional NR</h3>
                     <p class="card-text">
-                        Integrated OpenHPSDR WDSP library, NR2 spectral NR 15-20dB, full AGC/ANF/NB support.
+                        OpenHPSDR WDSP library: NR2 spectral noise reduction 15-20dB, AGC (4 modes), ANF auto-notch, NB noise blanker — SSB-optimized.
                     </p>
                 </article>
                 
@@ -146,7 +164,7 @@
                     </div>
                     <h3 class="card-title">AI Voice Assistant</h3>
                     <p class="card-text">
-                        Whisper speech recognition + Qwen3-TTS synthesis, voice control, automatic phonetic callsigns.
+                        Whisper ASR + Qwen3-TTS: speech-to-text receive, text-to-speech transmit with automatic phonetic alphabet callsign conversion.
                     </p>
                 </article>
                 
@@ -156,7 +174,7 @@
                     </div>
                     <h3 class="card-title">CW Real-time Decode</h3>
                     <p class="card-text">
-                        Frontend ONNX inference (&lt;2MB), dual-mode architecture, QSO state machine smart reply suggestions.
+                        Browser-first AI: &lt;2MB ONNX model, &lt;50ms inference, QSO state machine auto-detects callsign/RST/QTH with smart reply suggestions.
                     </p>
                 </article>
                 
@@ -166,7 +184,7 @@
                     </div>
                     <h3 class="card-title">ATR-1000 Integration</h3>
                     <p class="card-text">
-                        Real-time power/SWR display, smart tuner learning, auto-tune parameter storage and quick recall.
+                        0-200W real-time power display, SWR 1.0-9.99, smart frequency→tuner learning with ±10kHz recall, JSON persistence.
                     </p>
                 </article>
                 
@@ -176,7 +194,7 @@
                     </div>
                     <h3 class="card-title">Multi-Instance Support</h3>
                     <p class="card-text">
-                        Run multiple independent instances on a single server, independent radio control, differentiated tuner learning.
+                        Single server, multiple independent radio instances — each with dedicated config, audio device, ATR-1000 proxy, and tuner learning.
                     </p>
                 </article>
                 
@@ -184,19 +202,19 @@
                     <div class="card-icon">
                         <i class="fas fa-broadcast-tower"></i>
                     </div>
-                    <h3 class="card-title">FT8 Integration</h3>
+                    <h3 class="card-title">FT8 Digital Mode</h3>
                     <p class="card-text">
-                        ULTRON automation tool, JTDX/WSJT-X linkage support, DXCC target tracking, smart QSO.
+                        JTDX/WSJT-X/MSHV integration, ULTRON auto-CQ + smart reply, DXCC entity/band tracking, built-in WebSocket bridge to MRRC.
                     </p>
                 </article>
-                
+
                 <article class="card">
                     <div class="card-icon">
-                        <i class="fas fa-chart-area"></i>
+                        <i class="fas fa-sliders-h"></i>
                     </div>
-                    <h3 class="card-title">NanoVNA Integration</h3>
+                    <h3 class="card-title">RagChew TX Audio</h3>
                     <p class="card-text">
-                        Built-in vector network analyzer Web interface, PWA offline support, antenna parameter analysis.
+                        Web Audio API TX chain: low-cut 150Hz, mid-cut -2dB@500Hz, presence +3dB@2.4kHz, high-cut 3kHz, 3:1 compressor, -50dB noise gate.
                     </p>
                 </article>
             </div>
@@ -315,11 +333,13 @@
                 <div class="footer-section">
                     <h4>Quick Links</h4>
                     <ul>
+                        <li><a href="#">Home</a></li>
                         <li><a href="#features">Features</a></li>
-                        <li><a href="#demo">Live Demo</a></li>
+                        <li><a href="#demo">Demo</a></li>
                         <li><a href="docs/installation.html">Installation</a></li>
-                        <li><a href="docs/design.html">Design</a></li>
+                        <li><a href="docs/design.html">Design &amp; Architecture</a></li>
                         <li><a href="docs/docs.html">Documentation</a></li>
+                        <li><a href="efhw/index.html">EFHW Antenna</a></li>
                     </ul>
                 </div>
                 <div class="footer-section">

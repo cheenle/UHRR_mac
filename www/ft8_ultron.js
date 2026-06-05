@@ -30,11 +30,15 @@ const FT8 = {
   reconnectTimer: null,
   connected: false,
   decodes: [],
+  decodeMap: {},         // quick lookup by ID for transmit reply info
+  selectedDecode: null,  // full decode data for current target
   settings: {
     callsign: getCookie('ft8_call') || '',
     grid: getCookie('ft8_grid') || '',
     threshold: parseInt(getCookie('ft8_thr')) || -20,
     autoReply: getCookie('ft8_ar') === '1',
+    jtdx_host: getCookie('ft8_jtdx_host') || '',
+    jtdx_port: parseInt(getCookie('ft8_jtdx_port')) || 0,
   },
   stats: { today: 0, worked: 0, newDxcc: 0, decodes: 0 },
   cycleSlot: -1,
@@ -115,7 +119,9 @@ function handleMsg(raw) {
 
     case 'command_ack':
       if (msg.data && msg.data.status === 'error') {
-        log('Command error: ' + (msg.data.message || 'unknown'), 'err');
+        log('TX ERROR: ' + (msg.data.message || 'unknown'), 'err');
+        alert('TX command failed: ' + (msg.data.message || 'unknown') +
+          '\n\nCheck Settings → JTDX host/port.');
       } else if (msg.data && msg.data.command) {
         log('ACK: ' + msg.data.command + ' ' + (msg.data.status || ''), 'ok');
       }
@@ -146,7 +152,11 @@ function addDecode(d) {
   updateStats();
   d._id = Date.now() + Math.random();
   FT8.decodes.unshift(d);
-  if (FT8.decodes.length > 200) FT8.decodes.pop();
+  FT8.decodeMap[d._id] = d;  // store for transmit reply lookup
+  if (FT8.decodes.length > 200) {
+    const old = FT8.decodes.pop();
+    if (old && old._id) delete FT8.decodeMap[old._id];
+  }
   renderDecodes();
 
   if (!d.worked && !d.excluded && d.snr >= FT8.settings.threshold) {
@@ -177,7 +187,7 @@ function renderDecodes() {
     const flag = d.dxcc_flag || '';
     const name = d.dxcc_name || '';
 
-    return `<div class="${cls}" onclick="selectDecode('${escHtml(d.callsign)}','${escHtml(d.message)}')">
+    return `<div class="${cls}" onclick="selectDecode('${d._id}')">
       <span class="time">${d.time}</span>
       <span class="snr ${d.snr < -20 ? 'weak' : ''}">${d.snr > 0 ? '+' : ''}${d.snr}</span>
       <span class="freq">${d.freq}Hz</span>
@@ -187,10 +197,12 @@ function renderDecodes() {
   }).join('');
 }
 
-function selectDecode(callsign, message) {
-  if (!callsign) return;
-  document.getElementById('target-call').textContent = callsign;
-  document.getElementById('target-msg').textContent = message;
+function selectDecode(id) {
+  const d = FT8.decodeMap[id];
+  if (!d) return;
+  FT8.selectedDecode = d;
+  document.getElementById('target-call').textContent = d.callsign || '';
+  document.getElementById('target-msg').textContent = d.message || '';
   document.getElementById('target-panel').style.display = 'flex';
 }
 
@@ -201,6 +213,14 @@ function setStatus(d) {
   setText('sw-mode', d.mode || '-');
   setText('sw-band', d.band || '-');
   setText('sw-callsign', d.de_call || d.dx_call || '-');
+
+  // Show JTDX connection info from server status (initial connect only)
+  if (d.jtdx_detected || d.jtdx_host) {
+    const el = document.getElementById('set-jtdx-detected');
+    if (el) {
+      el.textContent = 'Detected: ' + (d.jtdx_detected || d.jtdx_host + ':' + (d.jtdx_port || '2237'));
+    }
+  }
 }
 
 function renderCycle(c) {
@@ -244,7 +264,22 @@ function sendReply() {
   const g = FT8.settings.grid || 'AA00';
   if (!call || call === '-') { alert('No target callsign'); return; }
   const msg = `${call} ${c} ${g}`;
-  sendCmd('reply', { callsign: call, message: msg });
+
+  const d = FT8.selectedDecode;
+  if (d && d.time_ms !== undefined && d.snr !== undefined) {
+    // Use Reply packet type with full decode info
+    sendCmd('reply', {
+      callsign: call,
+      message: msg,
+      time_ms: d.time_ms,
+      snr: d.snr,
+      delta_time: d.delta_time || 0.0,
+      delta_freq: d.delta_freq || d.freq || 0,
+      mode: d.mode || 'FT8',
+    });
+  } else {
+    sendCmd('reply', { callsign: call, message: msg });
+  }
   log(`Reply: ${msg}`, 'tx');
   hideTarget();
 }
@@ -254,7 +289,7 @@ function sendRR73() {
   if (!call || call === '-') return;
   const c = FT8.settings.callsign;
   const msg = `${call} ${c} RR73`;
-  sendCmd('rr73', { callsign: call });
+  sendCmd('rr73', { callsign: call, message: msg });
   log(`RR73: ${msg}`, 'tx');
   hideTarget();
 }
@@ -309,6 +344,8 @@ function applySettings() {
   if (byId('set-grid')) byId('set-grid').value = s.grid;
   if (byId('set-threshold')) byId('set-threshold').value = s.threshold;
   if (byId('set-autoreply')) byId('set-autoreply').checked = s.autoReply;
+  if (byId('set-jtdx-host')) byId('set-jtdx-host').value = s.jtdx_host;
+  if (byId('set-jtdx-port')) byId('set-jtdx-port').value = s.jtdx_port || '';
 }
 
 function saveSettings() {
@@ -317,11 +354,15 @@ function saveSettings() {
   s.grid = (document.getElementById('set-grid').value || '').toUpperCase();
   s.threshold = parseInt(document.getElementById('set-threshold').value) || -20;
   s.autoReply = document.getElementById('set-autoreply').checked;
+  s.jtdx_host = (document.getElementById('set-jtdx-host').value || '').trim();
+  s.jtdx_port = parseInt(document.getElementById('set-jtdx-port').value) || 0;
 
   setCookie('ft8_call', s.callsign);
   setCookie('ft8_grid', s.grid);
   setCookie('ft8_thr', s.threshold);
   setCookie('ft8_ar', s.autoReply ? '1' : '0');
+  setCookie('ft8_jtdx_host', s.jtdx_host);
+  setCookie('ft8_jtdx_port', s.jtdx_port || '');
 
   sendCmd('settings', s);
   toggleSettings();

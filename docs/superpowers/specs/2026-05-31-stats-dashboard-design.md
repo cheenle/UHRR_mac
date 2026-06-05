@@ -41,7 +41,7 @@ website/stats/
 ```
 
 `analyze.py` is a single self-contained file to minimize deployment complexity. It contains:
-- Log parsing (Apache combined vhost format, gzip support)
+- Log parsing (Apache combined vhost format, gzip detection via magic bytes 1f 8b, not file extension — rotated logs may be plaintext or gzip)
 - SQLite schema creation and incremental tracking
 - GeoIP lookup (MaxMind mmdb)
 - UA parsing (browser, OS, bot detection via regex)

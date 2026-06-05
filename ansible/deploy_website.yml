@@ -1,0 +1,48 @@
+---
+- name: Deploy MRRC website files
+  hosts: mrrc_webservers
+  become: true
+  gather_facts: false
+
+  vars:
+    remote_path: /var/www/vlsc.net/mrrc
+    local_dir: ../website
+
+  tasks:
+    - name: Create remote directory
+      ansible.builtin.file:
+        path: "{{ remote_path }}"
+        state: directory
+        mode: '0755'
+
+    - name: Sync website files
+      ansible.posix.synchronize:
+        src: "{{ local_dir }}/"
+        dest: "{{ remote_path }}/"
+        archive: true
+        delete: true
+        compress: true
+        rsync_opts:
+          - "--exclude=.DS_Store"
+          - "--exclude=*.log"
+          - "--exclude=README.md"
+          - "--exclude=deploy.sh"
+
+    - name: Fix file ownership
+      ansible.builtin.command:
+        cmd: chown -R www-data:www-data {{ remote_path }}
+      changed_when: true
+
+    - name: Fix file permissions
+      ansible.builtin.command:
+        cmd: chmod -R 755 {{ remote_path }}
+      changed_when: true
+
+    - name: Verify deployment
+      ansible.builtin.stat:
+        path: "{{ remote_path }}/index.html"
+      register: index_check
+
+    - name: Report success
+      ansible.builtin.debug:
+        msg: "✅ Website deployed successfully to {{ remote_path }} (index.html exists: {{ index_check.stat.exists }})"

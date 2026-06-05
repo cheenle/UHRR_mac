@@ -21,8 +21,15 @@
             <nav class="nav">
                 <a href="../index.html">Home</a>
                 <a href="features.html" class="active">Features</a>
-                <a href="../zh/docs/installation.html">Installation</a>
-                <a href="docs.html">Documentation</a>
+                <a href="../index.html#demo">Demo</a>
+                <a href="installation.html">Installation</a>
+                <a href="design.html">Design &amp; Architecture</a>
+                <a href="docs.html">Docs</a>
+                <a href="../fde.html">FDE</a>
+                <a href="../efhw/index.html">EFHW</a>
+                <a href="https://github.com/cheenle/UHRR_mac" target="_blank" rel="noopener">
+                    <i class="fab fa-github"></i> GitHub
+                </a>
             </nav>
             <div class="lang-switch">
                 <button class="lang-btn active">English</button>
@@ -268,52 +275,83 @@ Response Example: ff050701031b1e000e01
                 </div>
             </div>
 
-            <!-- TX Equalizer -->
-            <div class="doc-section" id="eq">
-                <h2><span class="feature-icon">🎚️</span> TX Transmit Equalizer</h2>
-                <p>Three-band equalizer optimizes transmit audio quality, specifically for shortwave communication voice optimization.</p>
+            <!-- RagChew TX Audio -->
+            <div class="doc-section" id="ragchew">
+                <h2><span class="feature-icon">🎚️</span> RagChew TX Audio Processing Chain</h2>
+                <p>V5.1 introduced a complete Web Audio API-based transmit audio processing chain — studio-grade speech optimization for amateur radio.</p>
 
-                <h3>Preset Modes</h3>
+                <h3>Processing Chain (V5.1+)</h3>
+                <table class="comparison-table">
+                    <tr>
+                        <th>Stage</th>
+                        <th>Parameter</th>
+                        <th>Value</th>
+                        <th>Purpose</th>
+                    </tr>
+                    <tr>
+                        <td class="highlight">4-Band EQ</td>
+                        <td>Low-Cut / Mid-Cut / Presence / High-Cut</td>
+                        <td>150Hz / -2dB@500Hz / +3dB@2.4kHz / 3kHz</td>
+                        <td>Shape voice for SSB clarity</td>
+                    </tr>
+                    <tr>
+                        <td class="highlight">Dynamic Compressor</td>
+                        <td>Ratio / Attack / Release</td>
+                        <td>3:1 / 5ms / 50ms</td>
+                        <td>Consistent modulation level</td>
+                    </tr>
+                    <tr>
+                        <td class="highlight">Noise Gate</td>
+                        <td>Threshold</td>
+                        <td>-50dB</td>
+                        <td>Silence background when not speaking</td>
+                    </tr>
+                </table>
+
+                <h3>TX Equalizer Presets</h3>
+                <p>For simple 3-band EQ (legacy mode):</p>
                 <table class="comparison-table">
                     <tr>
                         <th>Preset</th>
-                        <th>Low Freq (&lt;100Hz)</th>
-                        <th>Mid Freq (1500Hz)</th>
-                        <th>High Freq (&gt;2700Hz)</th>
+                        <th>Low (&lt;100Hz)</th>
+                        <th>Mid (1500Hz)</th>
+                        <th>High (&gt;2700Hz)</th>
                         <th>Use Case</th>
-                    </tr>
-                    <tr>
-                        <td>Default</td>
-                        <td>0dB</td>
-                        <td>0dB</td>
-                        <td>0dB</td>
-                        <td>No processing</td>
                     </tr>
                     <tr>
                         <td class="highlight">HF Voice</td>
                         <td>-20dB</td>
                         <td>+6dB</td>
                         <td>-20dB</td>
-                        <td>Standard HF communication</td>
+                        <td>Standard SSB communication</td>
                     </tr>
                     <tr>
                         <td class="highlight">Mobile Optimized</td>
                         <td>-15dB</td>
                         <td>+8dB</td>
                         <td>-24dB</td>
-                        <td>Mobile phone microphone</td>
+                        <td>Phone microphone</td>
                     </tr>
                     <tr>
                         <td class="highlight">Weak Signal</td>
                         <td>-20dB</td>
                         <td>+10dB</td>
                         <td>-25dB</td>
-                        <td>DX weak signal communication</td>
+                        <td>DX / contest</td>
                     </tr>
                 </table>
+            </div>
 
-                <h3>Anti-Alias Filtering</h3>
-                <p>Uses 6kHz lowpass filter, removes high frequencies before downsampling, solves the shrill sound problem caused by iPhone microphone high-frequency emphasis.</p>
+            <!-- Network Monitoring -->
+            <div class="doc-section" id="network">
+                <h2><span class="feature-icon">📶</span> Real-time Network Monitoring</h2>
+                <p>V5.3 introduced live network bandwidth and latency monitoring, giving operators full visibility into connection quality.</p>
+                <ul>
+                    <li><strong>Bandwidth Display</strong>: Real-time upstream/downstream throughput (kbps)</li>
+                    <li><strong>Latency Monitor</strong>: WebSocket ping-pong round-trip time display</li>
+                    <li><strong>Visual Enhancements</strong>: Glow effect, larger fonts, color-coded thresholds</li>
+                    <li><strong>Status Bar</strong>: Streamlined UI removing redundant CTL/RX/TX indicators</li>
+                </ul>
             </div>
 
             <!-- CW Decoding -->
@@ -378,7 +416,7 @@ Response Example: ff050701031b1e000e01
             <!-- FT8/ULTRON -->
             <div class="doc-section" id="ft8">
                 <h2><span class="feature-icon">📻</span> FT8/ULTRON Automation Tool</h2>
-                <p>ULTRON Enhanced is MRRC V4.9's new FT8 digital mode automation tool, supporting JTDX, WSJT-X, MSHV software integration.</p>
+                <p>ULTRON Enhanced is MRRC's FT8 digital mode automation tool (introduced V4.9, stabilized V5.4), supporting JTDX, WSJT-X, MSHV software integration via WebSocket bridge.</p>
                 
                 <h3>Core Features</h3>
                 <div class="feature-grid">
@@ -455,7 +493,7 @@ python dxcc_analyzer.py</code></pre>
             <h2 class="cta-title">Ready to Get Started?</h2>
             <p class="cta-text">Follow the installation guide to set up a complete remote transceiver control system in 5 minutes</p>
             <div class="cta-buttons">
-                <a href="../zh/docs/installation.html" class="btn btn-primary">Installation Guide</a>
+                <a href="installation.html" class="btn btn-primary">Installation Guide</a>
                 <a href="docs.html" class="btn btn-secondary">Technical Documentation</a>
             </div>
         </div>
@@ -474,7 +512,7 @@ python dxcc_analyzer.py</code></pre>
                     <ul>
                         <li><a href="../index.html">Home</a></li>
                         <li><a href="features.html">Features</a></li>
-                        <li><a href="../zh/docs/installation.html">Installation</a></li>
+                        <li><a href="installation.html">Installation</a></li>
                         <li><a href="docs.html">Documentation</a></li>
                     </ul>
                 </div>

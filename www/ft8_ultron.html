@@ -193,6 +193,9 @@ body{margin:0;background:#0d1117;color:#c9d1d9;font-family:-apple-system,BlinkMa
     <div class="row"><label>Grid Square</label><input type="text" id="set-grid" placeholder="FN15"></div>
     <div class="row"><label>Signal Threshold (dB)</label><input type="number" id="set-threshold" min="-30" max="0"></div>
     <div class="row toggle-row"><label>Auto Reply</label><input type="checkbox" id="set-autoreply"></div>
+    <div class="row"><label>JTDX Host</label><input type="text" id="set-jtdx-host" placeholder="127.0.0.1"></div>
+    <div class="row"><label>JTDX UDP Port</label><input type="number" id="set-jtdx-port" placeholder="2237" min="1" max="65535"></div>
+    <div class="row" style="font-size:11px;color:#8b949e" id="set-jtdx-detected"></div>
     <div class="actions">
       <button class="save" onclick="saveSettings()">Save</button>
       <button class="cancel" onclick="toggleSettings()">Cancel</button>

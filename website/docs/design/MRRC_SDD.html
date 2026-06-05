@@ -4,78 +4,56 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SDD 软件设计说明 - MRRC 工程设计文档</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../../css/octen.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        :root {
-            --primary-color: #00d4aa;
-            --bg-dark: #0a0a0f;
-            --bg-card: #12121a;
-            --text-primary: #e8e8e8;
-            --text-secondary: #a0a0a0;
-            --border-color: #2a2a3a;
-            --code-bg: #1a1a24;
-        }
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: var(--bg-dark);
-            color: var(--text-primary);
-            line-height: 1.7;
-            padding: 20px;
-        }
-        .container { max-width: 1200px; margin: 0 auto; }
-        .header {
-            background: linear-gradient(135deg, #1a1a2e 0%, #0f0f1a 100%);
-            border: 1px solid var(--border-color);
-            border-radius: 12px;
-            padding: 30px;
-            margin-bottom: 30px;
-        }
-        .header h1 {
-            color: var(--primary-color);
-            font-size: 2em;
-            margin-bottom: 10px;
-        }
+        .hero { min-height: auto; padding: 140px 24px 60px; }
+        .section { padding: 2rem 0; }
         .breadcrumb {
             color: var(--text-secondary);
             font-size: 0.9em;
+            margin-top: 0.5rem;
         }
         .breadcrumb a {
-            color: var(--primary-color);
+            color: var(--accent);
             text-decoration: none;
         }
+        .breadcrumb a:hover { text-decoration: underline; }
         .content {
             background: var(--bg-card);
-            border: 1px solid var(--border-color);
+            border: 1px solid var(--border);
             border-radius: 12px;
             padding: 30px;
             overflow-x: auto;
         }
         .content h1, .content h2, .content h3 {
-            color: var(--primary-color);
+            color: var(--accent);
             margin: 1.5em 0 0.5em;
             line-height: 1.3;
         }
-        .content h1 { font-size: 1.8em; border-bottom: 2px solid var(--primary-color); padding-bottom: 10px; }
+        .content h1 { font-size: 1.8em; border-bottom: 2px solid var(--accent); padding-bottom: 10px; }
         .content h2 { font-size: 1.4em; }
-        .content h3 { font-size: 1.2em; color: #00ffcc; }
+        .content h3 { font-size: 1.2em; color: #22d3ee; }
         .content p { margin: 1em 0; color: var(--text-primary); }
-        .content ul, .content ol { margin: 1em 0; padding-left: 2em; }
+        .content ul, .content ol { margin: 1em 0; padding-left: 2em; color: var(--text-primary); }
         .content li { margin: 0.5em 0; }
         .content code {
-            background: var(--code-bg);
+            background: #1a1a24;
             padding: 2px 8px;
             border-radius: 4px;
-            font-family: 'SF Mono', Monaco, Consolas, monospace;
+            font-family: var(--font-mono);
             font-size: 0.9em;
             color: #ff79c6;
         }
         .content pre {
-            background: var(--code-bg);
+            background: #1a1a24;
             padding: 15px;
             border-radius: 8px;
             overflow-x: auto;
             margin: 1em 0;
-            border: 1px solid var(--border-color);
+            border: 1px solid var(--border);
         }
         .content pre code {
             padding: 0;
@@ -89,24 +67,25 @@
         }
         .content th, .content td {
             padding: 12px;
-            border: 1px solid var(--border-color);
+            border: 1px solid var(--border);
             text-align: left;
         }
         .content th {
-            background: var(--code-bg);
-            color: var(--primary-color);
+            background: #1a1a24;
+            color: var(--accent);
             font-weight: 600;
         }
-        .content tr:hover { background: rgba(0, 212, 170, 0.05); }
+        .content td { color: var(--text-primary); }
+        .content tr:hover { background: var(--accent-glow); }
         .content blockquote {
-            border-left: 4px solid var(--primary-color);
+            border-left: 4px solid var(--accent);
             padding-left: 20px;
             margin: 1em 0;
             color: var(--text-secondary);
             font-style: italic;
         }
         .content a {
-            color: var(--primary-color);
+            color: var(--accent);
             text-decoration: none;
         }
         .content a:hover { text-decoration: underline; }
@@ -117,40 +96,58 @@
         }
         .content hr {
             border: none;
-            border-top: 1px solid var(--border-color);
+            border-top: 1px solid var(--border);
             margin: 2em 0;
         }
-        .nav-links {
-            display: flex;
-            gap: 15px;
-            margin-top: 20px;
-            flex-wrap: wrap;
-        }
-        .nav-links a {
-            background: var(--bg-card);
-            border: 1px solid var(--primary-color);
-            color: var(--primary-color);
-            padding: 10px 20px;
-            border-radius: 6px;
-            text-decoration: none;
-            transition: all 0.3s;
-        }
-        .nav-links a:hover {
-            background: var(--primary-color);
-            color: var(--bg-dark);
+        .content strong { color: var(--text-primary); }
+        @media (max-width: 768px) {
+            .hero { padding: 120px 24px 40px; }
+            .content { padding: 20px; }
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <h1>SDD 软件设计说明</h1>
-            <div class="breadcrumb">
-                <a href="design.html">← 设计&工程</a> | 完整系统架构与设计
+    <nav class="navbar">
+        <div class="container navbar-content">
+            <a href="../../index.html" class="logo">
+                <span class="logo-icon">📻</span>
+                <span>MRRC</span>
+            </a>
+            <ul class="nav-links">
+                <li><a href="../../index.html">首页</a></li>
+                <li><a href="../features.html">功能</a></li>
+                <li><a href="../../index.html#demo">演示</a></li>
+                <li><a href="../installation.html">安装</a></li>
+                <li><a href="../design.html">设计 &amp; 架构</a></li>
+                <li><a href="../docs.html">文档</a></li>
+                <li><a href="../../fde.html">FDE</a></li>
+                <li><a href="../../efhw/index.html">EFHW</a></li>
+                <li><a href="https://github.com/cheenle/UHRR_mac" target="_blank" rel="noopener">
+                    <i class="fab fa-github"></i> GitHub
+                </a></li>
+            </ul>
+            <div class="nav-actions">
+                <a href="../../docs/design.html" class="lang-btn">English</a>
+                <button class="mobile-menu-toggle">
+                    <i class="fas fa-bars"></i>
+                </button>
             </div>
         </div>
-        <div class="content">
-            <h1>MRRC 软件设计方案 (SDD)</h1>
+    </nav>
+
+    <section class="hero">
+        <div class="hero-content">
+            <h1 class="hero-title" style="font-size: clamp(2rem, 5vw, 3rem);">SDD 软件设计说明</h1>
+            <div class="breadcrumb">
+                <a href="../design.html">← 设计&amp;工程</a> | 完整系统架构与设计
+            </div>
+        </div>
+    </section>
+
+    <section class="section">
+        <div class="container">
+            <div class="content">
+<h1>MRRC 软件设计方案 (SDD)</h1>
 <h2>Mobile Remote Radio Control - Software Design Description</h2>
 <p><strong>文档版本</strong>: V1.0<br />
 <strong>日期</strong>: 2026-03-15<br />
@@ -1999,12 +1996,44 @@
 <hr />
 <p><em>本文档遵循IBM Team Solution Design (TeamSD)方法论生成</em>
 <em>文档编码: SDD-MRR-2026-001</em></p>
+            </div>
         </div>
-        <div class="nav-links">
-            <a href="index.html">首页</a>
-            <a href="docs.html">文档中心</a>
-            <a href="design.html">设计&工程</a>
+    </section>
+
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-grid">
+                <div class="footer-section">
+                    <h4>MRRC</h4>
+                    <p>Mobile Remote Radio Control<br>随时随地，畅享业余无线电</p>
+                </div>
+                <div class="footer-section">
+                    <h4>快速链接</h4>
+                    <ul>
+                        <li><a href="../../index.html">首页</a></li>
+                        <li><a href="../features.html">功能特性</a></li>
+                        <li><a href="../../index.html#demo">演示</a></li>
+                        <li><a href="../installation.html">安装指南</a></li>
+                        <li><a href="../design.html">设计 &amp; 架构</a></li>
+                        <li><a href="../docs.html">技术文档</a></li>
+                        <li><a href="../../efhw/index.html">EFHW 天线</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h4>资源</h4>
+                    <ul>
+                        <li><a href="https://github.com/cheenle/UHRR_mac" target="_blank">GitHub</a></li>
+                        <li><a href="https://github.com/cheenle/UHRR_mac/issues" target="_blank">问题反馈</a></li>
+                        <li><a href="https://radio.vlsc.net:8877/" target="_blank">在线系统</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2024-2026 MRRC Project. Open Source under GPL-3.0 License.</p>
+            </div>
         </div>
-    </div>
+    </footer>
+
+    <script src="../../js/main.js"></script>
 </body>
 </html>

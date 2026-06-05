@@ -1,26 +1,30 @@
 #!/usr/bin/env python3
 """
 FT8 Integration Module for MRRC
-深度整合 ULTRON Python 后端与 Web 前端
+UDP ↔ WebSocket bridge for JTDX/WSJT-X remote control
 
-架构:
-1. UDP 监听 (2237): 接收 JTDX/WSJT-X/MSHV 数据
-2. WebSocket 桥接: 通过 /WSFT8 端点与前端通信
-3. 双向通信:
-   - 后端 → 前端: 解码消息、状态更新、QSO状态
-   - 前端 → 后端: 发送CQ、停止CQ、配置参数
-4. 集成到 MRRC: 使用现有 Tornado WebSocket 框架
+Architecture:
+  JTDX/WSJT-X (UDP 2237)  ←→  ft8_integration (UDP 2238 listen)
+        ↑                          ↓
+        └────── UDP sends ─────────┘
+                                   ↓
+                            WebSocket /WSFT8
+                                   ↓
+                            Browser frontend
 
-Created by: 心流 CLI
-Based on: ULTRON by LU9DCE / Eduardo Castillo
+Usage:
+  - JTDX/WSJT-X must be configured to forward UDP to 127.0.0.1:2238
+    (Settings → Reporting → UDP Secondary Port)
+  - Listens on 2238 by default (configurable, never conflicts with JTDX's 2237)
+  - Sends Reply/Free Text back to JTDX on 2237
 """
 
-import asyncio
 import json
 import logging
 import os
 import re
 import socket
+import struct
 import threading
 import time
 from collections import deque
@@ -29,772 +33,776 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set
 
-import numpy as np
+logger = logging.getLogger('FT8')
+logger.setLevel(logging.DEBUG)
+if not logger.handlers:
+    h = logging.StreamHandler()
+    h.setLevel(logging.DEBUG)
+    h.setFormatter(logging.Formatter('FT8: %(message)s'))
+    logger.addHandler(h)
+    logger.propagate = False
 
-# 尝试导入 Tornado
-try:
-    import tornado.web
-    import tornado.websocket
-    import tornado.ioloop
-    TORNADO_AVAILABLE = True
-except ImportError:
-    TORNADO_AVAILABLE = False
-    logging.warning("Tornado not available, WebSocket functionality disabled")
+# ── Constants ───────────────────────────────────────────────
+LISTEN_PORT = 2238
+JTDX_PORT = 2237
+JTDX_HOST = "127.0.0.1"
+WSJT_MAX_PACKET = 2048
+CYCLE_15S = 15.0
 
-# 配置
-UDP_PORT = 2237
-UDP_FORWARD_PORT = 2277
-UDP_LISTEN_IP = "0.0.0.0"
-UDP_FORWARD_IP = "127.0.0.1"
-WSJT_X_MAX_LENGTH = 512
-SIGNAL_THRESHOLD = -20  # dB
+# Magic numbers
+MAGIC_WSJTX = 0xadbccbda
+VALID_MAGICS = {MAGIC_WSJTX}
 
-# ANSI 颜色
-class Colors:
-    RED = '\033[31m'
-    GREEN = '\033[32m'
-    YELLOW = '\033[33m'
-    BLUE = '\033[34m'
-    CYAN = '\033[36m'
-    BRIGHT_GREEN = '\033[92m'
-    RESET = '\033[0m'
+# Packet types (outgoing from JTDX)
+PKT_STATUS = 1
+PKT_DECODE = 2
+PKT_CLEAR = 3
+PKT_QSO_LOGGED = 5
+PKT_CLOSE = 6
+PKT_ADIF_LOGGED = 12
 
-
-@dataclass
-class QSOState:
-    """QSO 状态管理"""
-    sendcq: bool = False
-    current_call: str = ""
-    tempo: int = 0
-    tempu: int = 0
-    rx_count: int = 0
-    tx_count: int = 0
-    mega: int = 0
-    current_freq: int = 0
-    current_mode: str = ""
-    excluded_calls: Set[str] = field(default_factory=set)
-    worked_calls: Set[str] = field(default_factory=set)
+# Packet types (incoming to JTDX)
+PKT_REPLY = 4
+PKT_HALT_TX = 8
+PKT_FREE_TEXT = 9
 
 
 @dataclass
-class DecodeMessage:
-    """解码消息结构"""
-    timestamp: str
+class CycleState:
+    phase: float = 0.0
+    is_tx: bool = False
+    seconds_left: float = 15.0
+    cycle_start: float = 0.0
+    slot: int = 0
+
+    def update(self):
+        now = time.time()
+        elapsed = now % CYCLE_15S
+        self.phase = elapsed / CYCLE_15S
+        self.seconds_left = CYCLE_15S - elapsed
+        self.cycle_start = now - elapsed
+        tot = int(now / CYCLE_15S)
+        self.slot = tot % 2
+        self.is_tx = (self.slot == 0)
+
+
+@dataclass
+class DecodeEntry:
+    time: str
     snr: int
-    delta_f: int
+    freq: int
     mode: str
     message: str
-    status: str = ""
+    callsign: str = ""
+    grid: str = ""
     dxcc_id: str = ""
     dxcc_name: str = ""
     dxcc_flag: str = ""
-    priority: int = 0
+    time_ms: int = 0
+    delta_time: float = 0.0
+    delta_freq: int = 0
 
 
+# ── DXCC Database ──────────────────────────────────────────
 class DXCCDatabase:
-    """DXCC 数据库管理"""
-    
-    def __init__(self, db_file: str = None):
-        if db_file is None:
-            # 尝试多个可能的路径
-            possible_paths = [
-                "ft8/base.json",
-                "base.json",
-                "/Users/cheenle/UHRR/MRRC/ft8/base.json",
-            ]
-            for path in possible_paths:
-                if os.path.exists(path):
-                    db_file = path
-                    break
-        
-        self.db_file = db_file
-        self.database = self.load_database()
-    
-    def load_database(self) -> List[Dict]:
-        """加载 DXCC 数据库"""
-        try:
-            if self.db_file and os.path.exists(self.db_file):
-                with open(self.db_file, 'r', encoding='utf-8') as f:
-                    return json.load(f)
-        except Exception as e:
-            logging.warning(f"无法加载 DXCC 数据库: {e}")
-        return []
-    
-    def locate_call(self, call: str) -> Dict[str, str]:
-        """根据呼号查找 DXCC 信息"""
+    def __init__(self):
+        self.db: List[Dict] = []
+        for p in ["ft8/base.json", "base.json",
+                   str(Path(__file__).parent / "ft8" / "base.json")]:
+            if os.path.exists(p):
+                try:
+                    with open(p, 'r', encoding='utf-8') as f:
+                        self.db = json.load(f)
+                    logger.info(f"DXCC database loaded ({len(self.db)} entries) from {p}")
+                except Exception as e:
+                    logger.warning(f"Cannot load DXCC db from {p}: {e}")
+                break
+
+    def locate(self, call: str) -> Dict[str, str]:
         call = call.upper()
-        
-        # 从长到短尝试匹配
         for i in range(len(call), 0, -1):
-            partial_call = call[:i]
-            for entry in self.database:
-                pattern = r'\b' + re.escape(partial_call) + r'\b'
-                if re.search(pattern, entry.get('licencia', ''), re.IGNORECASE):
+            prefix = call[:i]
+            for entry in self.db:
+                if re.search(r'\b' + re.escape(prefix) + r'\b',
+                             entry.get('licencia', ''), re.IGNORECASE):
                     return {
-                        'id': entry.get('id', 'unknown'),
+                        'id': str(entry.get('id', '')),
                         'flag': entry.get('flag', ''),
-                        'name': entry.get('name', 'Unknown')
+                        'name': entry.get('name', 'Unknown'),
                     }
-        
-        return {'id': 'unknown', 'flag': '', 'name': 'Unknown'}
+        return {'id': '', 'flag': '', 'name': '?'}
 
 
+# ── ADIF Processor ─────────────────────────────────────────
 class ADIFProcessor:
-    """ADIF 日志处理器"""
-    
     @staticmethod
-    def parse_adif(data: str) -> List[Dict[str, str]]:
-        """解析 ADIF 格式数据"""
-        qsos = []
-        pattern = r'<([A-Z0-9_]+):(\d+)(?::[A-Z])?>([^<]*)'
-        matches = re.findall(pattern, data, re.IGNORECASE)
-        
-        current_qso = {}
-        for field, length, content in matches:
-            field = field.lower()
-            content = content.strip()
-            if content:
-                current_qso[field] = content
-            
-            if field == 'eor':
-                if current_qso:
-                    qsos.append(current_qso.copy())
-                current_qso = {}
-        
-        if current_qso:
-            qsos.append(current_qso)
-            
+    def parse(data: str) -> List[Dict]:
+        qsos, cur = [], {}
+        for m in re.finditer(r'<([A-Z0-9_]+):(\d+)(?::[A-Z])?>([^<]*)', data, re.I):
+            f, _, v = m.group(1).lower(), m.group(2), m.group(3).strip()
+            if v:
+                cur[f] = v
+            if f == 'eor':
+                if cur:
+                    qsos.append(cur.copy())
+                cur = {}
+        if cur:
+            qsos.append(cur)
         return qsos
-    
+
     @staticmethod
-    def generate_adif(qso: Dict[str, str]) -> str:
-        """生成单条 ADIF 记录"""
-        adif_entry = ""
-        for field, content in qso.items():
-            if field == 'eor':
+    def format(qso: Dict) -> str:
+        parts = []
+        for k, v in qso.items():
+            if k == 'eor':
                 continue
-            content = str(content).strip()
-            field_length = len(content)
-            adif_entry += f"<{field.upper()}:{field_length}>{content} "
-        adif_entry += "<EOR>"
-        return adif_entry
+            parts.append(f"<{k.upper()}:{len(str(v))}>{v}")
+        parts.append("<EOR>")
+        return " ".join(parts)
 
 
+# ── WSJT-X Protocol ────────────────────────────────────────
 class WSJTXProtocol:
-    """WSJT-X 协议解析器"""
-    
-    # 数据包类型
-    PACKET_TYPE_STATUS = 1
-    PACKET_TYPE_DECODE = 2
-    PACKET_TYPE_CLEAR = 3
-    PACKET_TYPE_REPLY = 4
-    PACKET_TYPE_QSO_LOGGED = 5
-    PACKET_TYPE_CLOSE = 6
-    PACKET_TYPE_REPLAY = 7
-    PACKET_TYPE_HALT_TX = 8
-    PACKET_TYPE_FREE_TEXT = 9
-    PACKET_TYPE_WSPR_DECODE = 10
-    PACKET_TYPE_LOCATION = 11
-    PACKET_TYPE_LOGGED_ADIF = 12
-    PACKET_TYPE_HIGHLIGHT_CALLSIGN = 13
-    PACKET_TYPE_SWITCH_CONFIGURATION = 14
-    PACKET_TYPE_CONFIGURE = 15
-    
-    # Magic numbers
-    VALID_MAGICS = [0xadbccb00, 0xadbccbda, 0xdacbbcad]
-    
-    def parse_packet(self, data: bytes) -> Optional[Dict[str, Any]]:
-        """解析 WSJT-X 数据包"""
+    @staticmethod
+    def parse_header(data: bytes) -> Optional[Dict]:
         if len(data) < 12:
             return None
-        
-        try:
-            # 解析头部
-            magic = int.from_bytes(data[0:4], byteorder='big')
-            
-            if magic not in self.VALID_MAGICS:
-                return None
-            
-            version = int.from_bytes(data[4:8], byteorder='big')
-            packet_type = int.from_bytes(data[8:12], byteorder='big')
-            
-            # 根据类型解析
-            if packet_type == self.PACKET_TYPE_STATUS:
-                return self._parse_status(data[12:])
-            elif packet_type == self.PACKET_TYPE_DECODE:
-                return self._parse_decode(data[12:])
-            elif packet_type == self.PACKET_TYPE_QSO_LOGGED:
-                return self._parse_qso_logged(data[12:])
-            
+        magic = struct.unpack_from('>I', data, 0)[0]
+        if magic not in VALID_MAGICS:
             return None
-            
+        schema = struct.unpack_from('>I', data, 4)[0]
+        ptype = struct.unpack_from('>I', data, 8)[0]
+        return {'magic': magic, 'schema': schema, 'type': ptype, 'data': data[12:]}
+
+    @staticmethod
+    def _read_utf8(data: bytes, offset: int) -> tuple:
+        ln = struct.unpack_from('>I', data, offset)[0]
+        offset += 4
+        if ln == 0xFFFFFFFF:
+            return '', offset
+        s = data[offset:offset + ln].decode('utf-8', errors='replace')
+        offset += ln
+        return s, offset
+
+    @classmethod
+    def parse_status(cls, data: bytes) -> Dict:
+        try:
+            offset = 0
+            software, offset = cls._read_utf8(data, offset)
+            freq = struct.unpack_from('>Q', data, offset)[0]; offset += 8
+            mode, offset = cls._read_utf8(data, offset)
+            dx_call, offset = cls._read_utf8(data, offset)
+            report, offset = cls._read_utf8(data, offset)
+            tx_mode, offset = cls._read_utf8(data, offset)
+            tx_enabled = bool(data[offset]); offset += 1
+            transmitting = bool(data[offset]); offset += 1
+            decoding = bool(data[offset]); offset += 1
+            rx_df = struct.unpack_from('>i', data, offset)[0]; offset += 4
+            tx_df = struct.unpack_from('>i', data, offset)[0]; offset += 4
+            de_call, offset = cls._read_utf8(data, offset)
+            de_grid, offset = cls._read_utf8(data, offset)
+            dx_grid, offset = cls._read_utf8(data, offset)
+            tx_watchdog = bool(data[offset]); offset += 1
+            sub_mode, offset = cls._read_utf8(data, offset)
+            fast_mode = bool(data[offset]); offset += 1
+            tx_first = bool(data[offset]); offset += 1
+            return {
+                'type': 'status', 'software': software.strip(),
+                'frequency': freq, 'mode': mode.strip(),
+                'dx_call': dx_call.strip(), 'report': report.strip(),
+                'tx_mode': tx_mode.strip(),
+                'transmitting': transmitting,
+                'tx_enabled': tx_enabled,
+                'rx_df': rx_df, 'tx_df': tx_df,
+                'de_call': de_call.strip(), 'de_grid': de_grid.strip(),
+                'dx_grid': dx_grid.strip(),
+            }
         except Exception as e:
-            logging.error(f"解析数据包错误: {e}")
+            logger.warning(f"parse_status error: {e}")
+            return {'type': 'status', 'software': '', 'frequency': 0, 'mode': ''}
+
+    @classmethod
+    def parse_decode(cls, data: bytes) -> Optional[Dict]:
+        try:
+            offset = 0
+            software, offset = cls._read_utf8(data, offset)
+            new_decode = bool(data[offset]); offset += 1
+            time_ms = struct.unpack_from('>I', data, offset)[0]; offset += 4
+            snr = struct.unpack_from('>i', data, offset)[0]; offset += 4
+            delta_time = struct.unpack_from('>d', data, offset)[0]; offset += 8
+            delta_freq = struct.unpack_from('>I', data, offset)[0]; offset += 4
+            mode, offset = cls._read_utf8(data, offset)
+            message, offset = cls._read_utf8(data, offset)
+            if offset < len(data):
+                low_conf = bool(data[offset]); offset += 1
+            else:
+                low_conf = False
+            if offset < len(data):
+                off_air = bool(data[offset])
+            else:
+                off_air = False
+            msg_text = message.strip()
+            callsign = ""
+            grid = ""
+            parts = msg_text.split()
+            if len(parts) >= 2:
+                if parts[0].upper() == "CQ" and len(parts) >= 2:
+                    callsign = parts[1]
+                    if len(parts) >= 3 and re.match(r'^[A-R]{2}\d{2}$', parts[2]):
+                        grid = parts[2]
+                elif len(parts) >= 2:
+                    callsign = parts[0]
+                    for p in parts[1:]:
+                        if re.match(r'^[A-R]{2}\d{2}$', p.upper()):
+                            grid = p.upper()
+                            break
+            mode_clean = mode.strip()
+            if mode_clean in ('~', ''):
+                mode_clean = 'FT8'
+            elif mode_clean == '@':
+                mode_clean = 'JT9'
+            return {
+                'type': 'decode', 'software': software.strip(),
+                'new_decode': new_decode, 'time_ms': time_ms,
+                'snr': snr, 'delta_time': delta_time,
+                'delta_freq': delta_freq, 'mode': mode_clean,
+                'message': msg_text,
+                'callsign': callsign, 'grid': grid,
+                'low_confidence': low_conf, 'off_air': off_air,
+            }
+        except Exception as e:
+            logger.warning(f"parse_decode error: {e}")
             return None
-    
-    def _parse_status(self, data: bytes) -> Dict[str, Any]:
-        """解析状态数据包"""
+
+    @classmethod
+    def parse_qso_logged(cls, data: bytes) -> Optional[Dict]:
         try:
             offset = 0
-            
-            # ID 长度和字符串
-            id_len = int.from_bytes(data[offset:offset+4], byteorder='big')
-            offset += 4
-            software_id = data[offset:offset+id_len].decode('utf-8', errors='replace')
-            offset += id_len
-            
-            # 频率
-            frequency = int.from_bytes(data[offset:offset+8], byteorder='big')
-            offset += 8
-            
-            # 模式长度和字符串
-            mode_len = int.from_bytes(data[offset:offset+4], byteorder='big')
-            offset += 4
-            mode = data[offset:offset+mode_len].decode('utf-8', errors='replace')
-            offset += mode_len
-            
-            # 跳过后续字段（简化处理）
-            
+            _, offset = cls._read_utf8(data, offset)
+            date_msecs = struct.unpack_from('>q', data, offset)[0]; offset += 8
+            _ = bool(data[offset]); offset += 1  # date spec (UTC)
+            _ = bool(data[offset]); offset += 1  # dst
+            _ = struct.unpack_from('>i', data, offset)[0]; offset += 4  # tz offset
+            dx_call, offset = cls._read_utf8(data, offset)
+            dx_grid, offset = cls._read_utf8(data, offset)
+            tx_sig, offset = cls._read_utf8(data, offset)
+            rx_sig, offset = cls._read_utf8(data, offset)
+            tx_power, offset = cls._read_utf8(data, offset)
             return {
-                'type': 'status',
-                'software': software_id,
-                'frequency': frequency,
-                'mode': mode
+                'type': 'qso_logged', 'dx_call': dx_call.strip(),
+                'dx_grid': dx_grid.strip(), 'time_off': date_msecs,
             }
-            
         except Exception as e:
-            logging.error(f"解析状态包错误: {e}")
-            return {'type': 'status'}
-    
-    def _parse_decode(self, data: bytes) -> Dict[str, Any]:
-        """解析解码数据包"""
+            logger.warning(f"parse_qso_logged error: {e}")
+            return None
+
+    @classmethod
+    def parse_adif_logged(cls, data: bytes) -> Optional[Dict]:
         try:
             offset = 0
-            
-            # ID 长度和字符串
-            id_len = int.from_bytes(data[offset:offset+4], byteorder='big')
-            offset += 4
-            software_id = data[offset:offset+id_len].decode('utf-8', errors='replace')
-            offset += id_len
-            
-            # 新解码标志
-            new_decode = bool(data[offset])
-            offset += 1
-            
-            # 时间戳 (毫秒)
-            time_ms = int.from_bytes(data[offset:offset+4], byteorder='big')
-            offset += 4
-            
-            # SNR
-            snr = int.from_bytes(data[offset:offset+4], byteorder='big', signed=True)
-            offset += 4
-            
-            # Delta F
-            delta_f = int.from_bytes(data[offset:offset+4], byteorder='big', signed=True)
-            offset += 4
-            
-            # 模式长度和字符串
-            mode_len = int.from_bytes(data[offset:offset+4], byteorder='big')
-            offset += 4
-            mode = data[offset:offset+mode_len].decode('utf-8', errors='replace')
-            offset += mode_len
-            
-            # 消息长度和字符串
-            msg_len = int.from_bytes(data[offset:offset+4], byteorder='big')
-            offset += 4
-            message = data[offset:offset+msg_len].decode('utf-8', errors='replace').strip()
-            
-            return {
-                'type': 'decode',
-                'new_decode': new_decode,
-                'time_ms': time_ms,
-                'snr': snr,
-                'delta_f': delta_f,
-                'mode': mode,
-                'message': message
-            }
-            
+            _, offset = cls._read_utf8(data, offset)
+            adif, offset = cls._read_utf8(data, offset)
+            return {'type': 'adif_logged', 'adif': adif.strip()}
         except Exception as e:
-            logging.error(f"解析解码包错误: {e}")
-            return {'type': 'decode'}
-    
-    def _parse_qso_logged(self, data: bytes) -> Dict[str, Any]:
-        """解析 QSO 记录数据包"""
-        try:
-            offset = 0
-            
-            # ID 长度和字符串
-            id_len = int.from_bytes(data[offset:offset+4], byteorder='big')
-            offset += 4
-            offset += id_len  # 跳过 ID
-            
-            # 时间戳
-            time_off = int.from_bytes(data[offset:offset+8], byteorder='big')
-            offset += 8
-            
-            # 呼号长度和字符串
-            call_len = int.from_bytes(data[offset:offset+4], byteorder='big')
-            offset += 4
-            dx_call = data[offset:offset+call_len].decode('utf-8', errors='replace')
-            offset += call_len
-            
-            # 网格长度和字符串
-            grid_len = int.from_bytes(data[offset:offset+4], byteorder='big')
-            offset += 4
-            dx_grid = data[offset:offset+grid_len].decode('utf-8', errors='replace')
-            
-            return {
-                'type': 'qso_logged',
-                'dx_call': dx_call,
-                'dx_grid': dx_grid,
-                'time_off': time_off
-            }
-            
-        except Exception as e:
-            logging.error(f"解析 QSO 记录包错误: {e}")
-            return {'type': 'qso_logged'}
-    
-    def create_reply_packet(self, callsign: str, snr: int, mode: str) -> bytes:
-        """创建回复数据包"""
-        # 简化实现 - 实际需要构造完整的 WSJT-X 回复包
-        magic = 0xadbccb00.to_bytes(4, byteorder='big')
-        version = (2).to_bytes(4, byteorder='big')
-        packet_type = self.PACKET_TYPE_REPLY.to_bytes(4, byteorder='big')
-        
-        # 这里应该构造完整的回复包
-        return magic + version + packet_type
+            logger.warning(f"parse_adif error: {e}")
+            return None
+
+    @staticmethod
+    def build_reply(decode_info: Dict) -> bytes:
+        pkt = bytearray()
+        pkt += struct.pack('>III', MAGIC_WSJTX, 2, PKT_REPLY)
+        id_bytes = b"WSJT-X"
+        pkt += struct.pack('>I', len(id_bytes)) + id_bytes
+        pkt += struct.pack('>I', decode_info.get('time_ms', 0))
+        pkt += struct.pack('>i', decode_info.get('snr', -20))
+        pkt += struct.pack('>d', decode_info.get('delta_time', 0.0))
+        pkt += struct.pack('>I', decode_info.get('delta_freq', 0))
+        mode = decode_info.get('mode', 'FT8')
+        mode_bytes = mode.encode('utf-8')
+        if mode == 'FT8':
+            mode_bytes = b'~'
+        elif mode == 'JT9':
+            mode_bytes = b'@'
+        pkt += struct.pack('>I', len(mode_bytes)) + mode_bytes
+        msg = decode_info.get('message', '')
+        msg_bytes = msg.encode('utf-8')
+        pkt += struct.pack('>I', len(msg_bytes)) + msg_bytes
+        return bytes(pkt)
+
+    @staticmethod
+    def build_free_text(text: str) -> bytes:
+        pkt = bytearray()
+        pkt += struct.pack('>III', MAGIC_WSJTX, 2, PKT_FREE_TEXT)
+        id_bytes = b"WSJT-X"
+        pkt += struct.pack('>I', len(id_bytes)) + id_bytes
+        msg_bytes = text.strip().encode('utf-8')
+        pkt += struct.pack('>I', len(msg_bytes)) + msg_bytes
+        return bytes(pkt)
+
+    @staticmethod
+    def build_halt_tx() -> bytes:
+        pkt = bytearray()
+        pkt += struct.pack('>III', MAGIC_WSJTX, 2, PKT_HALT_TX)
+        pkt += struct.pack('>I', 0)
+        return bytes(pkt)
 
 
+# ── FT8 Integration ────────────────────────────────────────
 class FT8Integration:
-    """FT8 集成主类 - 桥接 UDP 和 WebSocket"""
-    
-    def __init__(self):
-        self.state = QSOState()
+    def __init__(self, listen_port=LISTEN_PORT, jtdx_port=JTDX_PORT):
+        self.listen_port = listen_port
+        self.jtdx_port = jtdx_port
         self.protocol = WSJTXProtocol()
-        self.dxcc_db = DXCCDatabase()
-        self.adif_processor = ADIFProcessor()
+        self.dxcc = DXCCDatabase()
+        self.adif = ADIFProcessor()
+
         self.websocket_clients: Set[Any] = set()
-        
-        # 解码消息队列
-        self.decode_queue: deque = deque(maxlen=100)
+        self.lock = threading.Lock()
+        self.decode_history: deque = deque(maxlen=200)
         self.qso_log: List[Dict] = []
-        
-        # 日志文件
-        self.log_file = Path("ft8/wsjtx_log.adi")
-        self._ensure_log_file()
-        
-        # 加载已通联呼号
-        self.load_worked_calls()
-        
-        # 运行状态
+
         self.is_running = False
         self.udp_thread: Optional[threading.Thread] = None
-        self.udp_socket: Optional[socket.socket] = None
-        
-        logging.info(f"{Colors.GREEN}FT8 Integration initialized{Colors.RESET}")
-    
-    def _ensure_log_file(self):
-        """确保日志文件存在"""
+        self.udp_sock: Optional[socket.socket] = None
+        self.cycle = CycleState()
+        self._ioloop = None
+
+        self.jtdx_host: str = JTDX_HOST
+        self.jtdx_addr: Optional[tuple] = None  # (host, port) auto-detected from received UDP packets
+
+        self.my_callsign: str = ""
+        self.my_grid: str = ""
+        self.signal_threshold: int = -20
+        self.auto_reply: bool = False
+        self.worked_calls: Set[str] = set()
+        self.excluded_calls: Set[str] = set()
+
+        self.log_file = Path("ft8/wsjtx_log.adi")
+        self._ensure_log()
+        self._load_worked()
+
+        logger.info(f"FT8Integration ready (listen={listen_port}, jtdx={jtdx_port})")
+
+    def _ensure_log(self):
+        self.log_file.parent.mkdir(parents=True, exist_ok=True)
         if not self.log_file.exists():
-            self.log_file.parent.mkdir(parents=True, exist_ok=True)
             self.log_file.touch()
-    
-    def load_worked_calls(self):
-        """加载已通联的呼号"""
+
+    def _load_worked(self):
         try:
             content = self.log_file.read_text(encoding='utf-8')
-            qsos = self.adif_processor.parse_adif(content)
-            for qso in qsos:
+            for qso in self.adif.parse(content):
                 if 'call' in qso:
-                    self.state.worked_calls.add(qso['call'].upper())
-            logging.info(f"Loaded {len(self.state.worked_calls)} worked calls")
+                    self.worked_calls.add(qso['call'].upper())
+            logger.info(f"Loaded {len(self.worked_calls)} worked calls from log")
         except Exception as e:
-            logging.warning(f"Error loading log: {e}")
-    
-    def add_websocket_client(self, client):
-        """添加 WebSocket 客户端"""
-        self.websocket_clients.add(client)
-        logging.info(f"WebSocket client added, total: {len(self.websocket_clients)}")
-    
-    def remove_websocket_client(self, client):
-        """移除 WebSocket 客户端"""
-        self.websocket_clients.discard(client)
-        logging.info(f"WebSocket client removed, total: {len(self.websocket_clients)}")
-    
-    def broadcast_to_web(self, message: Dict):
-        """广播消息到所有 WebSocket 客户端"""
-        if not self.websocket_clients:
-            return
-        
-        json_message = json.dumps(message)
-        
-        # 使用 IOLoop 在主线程中执行 WebSocket 写操作
-        # 避免 "There is no current event loop in thread" 错误
-        try:
-            loop = tornado.ioloop.IOLoop.current()
-            if loop is None:
-                # 如果没有当前 loop，尝试获取实例
-                loop = tornado.ioloop.IOLoop.instance()
-            
-            loop.add_callback(self._do_broadcast, json_message)
-        except Exception as e:
-            logging.error(f"Error scheduling broadcast: {e}")
-    
-    def _do_broadcast(self, json_message: str):
-        """在主线程中执行实际的广播"""
-        disconnected = set()
-        
-        for client in list(self.websocket_clients):
-            try:
-                if hasattr(client, 'write_message'):
-                    # Tornado WebSocket
-                    client.write_message(json_message)
-                elif hasattr(client, 'send'):
-                    # 其他 WebSocket 实现
-                    client.send(json_message)
-            except Exception as e:
-                logging.debug(f"Error sending to client: {e}")
-                disconnected.add(client)
-        
-        # 清理断开的客户端
-        for client in disconnected:
+            logger.warning(f"Cannot load log: {e}")
+
+    # ── WebSocket management ──
+    def add_client(self, client):
+        with self.lock:
+            self.websocket_clients.add(client)
+        if self._ioloop is None:
+            import tornado.ioloop
+            self._ioloop = tornado.ioloop.IOLoop.instance()
+        logger.info(f"WS client added ({len(self.websocket_clients)} total)")
+
+    def remove_client(self, client):
+        with self.lock:
             self.websocket_clients.discard(client)
-    
-    def process_decode(self, decode_data: Dict[str, Any]):
-        """处理解码消息"""
-        message = decode_data.get('message', '')
-        snr = decode_data.get('snr', -30)
-        mode = decode_data.get('mode', 'FT8')
-        delta_f = decode_data.get('delta_f', 0)
-        
-        # 解析消息
-        parts = message.split()
-        if len(parts) < 2:
+        logger.info(f"WS client removed ({len(self.websocket_clients)} total)")
+
+    def _enqueue_broadcast(self, msg: dict):
+        if self._ioloop is None:
             return
-        
-        call = parts[1] if len(parts) > 1 else ""
-        
-        # 查找 DXCC 信息
-        dxcc_info = self.dxcc_db.locate_call(call)
-        
-        # 确定状态和优先级
-        status = "   "
-        priority = 0
-        
-        if call in self.state.excluded_calls:
-            status = "XX"
-            priority = 0
-        elif snr <= SIGNAL_THRESHOLD:
-            status = "Lo"
-            priority = 1
-        elif call in self.state.worked_calls:
-            status = "--"
-            priority = 2
-        elif parts[0] == "CQ" or (len(parts) > 2 and parts[2] in ["73", "RR73", "RRR"]):
-            if self.state.sendcq:
-                status = "->"
-                priority = 5
-            else:
-                status = ">>"
-                priority = 10  # 高优先级
-        
-        # 创建解码消息对象
-        decode_msg = DecodeMessage(
-            timestamp=datetime.now(timezone.utc).strftime("%H%M%S"),
-            snr=snr,
-            delta_f=delta_f,
-            mode=mode,
-            message=message,
-            status=status,
-            dxcc_id=dxcc_info['id'],
-            dxcc_name=dxcc_info['name'],
+        payload = json.dumps(msg, ensure_ascii=False)
+        try:
+            self._ioloop.add_callback(self._do_broadcast, payload)
+        except Exception:
+            pass
+
+    def _do_broadcast(self, payload: str):
+        dead = set()
+        with self.lock:
+            clients = list(self.websocket_clients)
+        for c in clients:
+            try:
+                if hasattr(c, 'write_message'):
+                    c.write_message(payload)
+            except Exception:
+                dead.add(c)
+        if dead:
+            with self.lock:
+                self.websocket_clients -= dead
+
+    # ── Packet handling ──
+    def _on_decode(self, pkt: dict):
+        msg_text = pkt.get('message', '')
+        snr = pkt.get('snr', -30)
+        mode = pkt.get('mode', 'FT8')
+        freq = pkt.get('delta_freq', 0)
+        callsign = pkt.get('callsign', '')
+        grid = pkt.get('grid', '')
+        time_ms = pkt.get('time_ms', 0)
+        delta_time = pkt.get('delta_time', 0.0)
+        delta_freq = pkt.get('delta_freq', 0)
+
+        dxcc_info = self.dxcc.locate(callsign)
+
+        entry = DecodeEntry(
+            time=datetime.now(timezone.utc).strftime("%H%M%S"),
+            snr=snr, freq=freq, mode=mode, message=msg_text,
+            callsign=callsign, grid=grid,
+            dxcc_id=dxcc_info['id'], dxcc_name=dxcc_info['name'],
             dxcc_flag=dxcc_info['flag'],
-            priority=priority
+            time_ms=time_ms, delta_time=delta_time, delta_freq=delta_freq,
         )
-        
-        # 添加到队列
-        self.decode_queue.append(decode_msg)
-        
-        # 广播到 Web
-        self.broadcast_to_web({
+        self.decode_history.append(entry)
+
+        self._enqueue_broadcast({
             'type': 'decode',
             'data': {
-                'timestamp': decode_msg.timestamp,
-                'snr': decode_msg.snr,
-                'delta_f': decode_msg.delta_f,
-                'mode': decode_msg.mode,
-                'message': decode_msg.message,
-                'status': decode_msg.status,
-                'dxcc_id': decode_msg.dxcc_id,
-                'dxcc_name': decode_msg.dxcc_name,
-                'dxcc_flag': decode_msg.dxcc_flag,
-                'priority': decode_msg.priority
+                'time': entry.time, 'snr': entry.snr,
+                'freq': entry.freq, 'mode': entry.mode,
+                'message': entry.message,
+                'callsign': entry.callsign, 'grid': entry.grid,
+                'dxcc_id': entry.dxcc_id,
+                'dxcc_name': entry.dxcc_name,
+                'dxcc_flag': entry.dxcc_flag,
+                'time_ms': entry.time_ms,
+                'delta_time': entry.delta_time,
+                'delta_freq': entry.delta_freq,
+                'worked': entry.callsign.upper() in self.worked_calls,
+                'excluded': entry.callsign.upper() in self.excluded_calls,
             }
         })
-        
-        # 处理响应逻辑
-        self._handle_response_logic(parts, status, call, dxcc_info)
-    
-    def _handle_response_logic(self, parts: List[str], status: str, call: str, dxcc_info: Dict):
-        """处理响应逻辑"""
-        if status == ">>" and not self.state.sendcq:
-            self.state.current_call = call
-            self.state.sendcq = True
-            self.state.tempo = int(time.time())
-            
-            logging.info(f"{Colors.BRIGHT_GREEN}Target: {call} ({dxcc_info['name']}){Colors.RESET}")
-            
-            # 广播状态变化
-            self.broadcast_to_web({
-                'type': 'status_change',
-                'data': {
-                    'sendcq': True,
-                    'current_call': call,
-                    'message': f"Targeting {call}"
-                }
-            })
-    
-    def process_status(self, status_data: Dict[str, Any]):
-        """处理状态数据包"""
-        software = status_data.get('software', 'Unknown')
-        frequency = status_data.get('frequency', 0)
-        mode = status_data.get('mode', 'Unknown')
-        
-        self.state.current_freq = frequency
-        self.state.current_mode = mode
-        
-        # 广播到 Web
-        self.broadcast_to_web({
+
+        if entry.callsign and not entry.callsign.upper() in self.worked_calls:
+            parts = msg_text.split()
+            if len(parts) >= 2 and (parts[0] == 'CQ' or parts[0] == 'QRZ'):
+                if self.auto_reply and snr >= self.signal_threshold:
+                    self._do_response(entry)
+
+    def _on_status(self, pkt: dict):
+        freq = pkt.get('frequency', 0)
+        band = self._freq_to_band(freq)
+        self._enqueue_broadcast({
             'type': 'status',
             'data': {
-                'software': software,
-                'frequency': frequency,
-                'mode': mode,
-                'band': self._freq_to_band(frequency)
+                'software': pkt.get('software', ''),
+                'frequency': freq,
+                'mode': pkt.get('mode', ''),
+                'band': band,
+                'transmitting': pkt.get('transmitting', False),
+                'de_call': pkt.get('de_call', ''),
+                'dx_call': pkt.get('dx_call', ''),
+                'report': pkt.get('report', ''),
+                'tx_enabled': pkt.get('tx_enabled', False),
             }
         })
-    
-    def _freq_to_band(self, freq: int) -> str:
-        """频率转换为波段"""
-        freq_mhz = freq / 1000000
-        bands = [
-            (1.8, '160m'), (3.5, '80m'), (5.3, '60m'), (7.0, '40m'),
-            (10.1, '30m'), (14.0, '20m'), (18.1, '17m'), (21.0, '15m'),
-            (24.9, '12m'), (28.0, '10m'), (50.0, '6m')
-        ]
-        for f, band in bands:
-            if abs(freq_mhz - f) < 0.5:
-                return band
-        return f"{freq_mhz:.1f}MHz"
-    
-    def handle_web_command(self, command: str, params: Dict = None):
-        """处理来自 Web 前端的命令"""
-        params = params or {}
-        
-        if command == 'send_cq':
-            self._send_cq_command()
-        elif command == 'stop_cq':
-            self._stop_cq_command()
-        elif command == 'reply':
-            callsign = params.get('callsign', '')
-            message = params.get('message', '')
-            self._send_reply(callsign, message)
-        elif command == 'exclude':
-            call = params.get('callsign', '')
-            self.state.excluded_calls.add(call.upper())
-        elif command == 'get_decodes':
-            return self._get_decode_history()
-        elif command == 'get_status':
-            return self._get_status()
-        
-        return {'status': 'ok'}
-    
-    def _send_cq_command(self):
-        """发送 CQ 命令"""
-        self.state.sendcq = True
-        self.broadcast_to_web({
-            'type': 'command_ack',
-            'data': {'command': 'send_cq', 'status': 'sent'}
-        })
-        logging.info(f"{Colors.CYAN}CQ command sent{Colors.RESET}")
-    
-    def _stop_cq_command(self):
-        """停止 CQ"""
-        self.state.sendcq = False
-        self.state.current_call = ""
-        self.broadcast_to_web({
-            'type': 'command_ack',
-            'data': {'command': 'stop_cq', 'status': 'stopped'}
-        })
-        logging.info(f"{Colors.YELLOW}CQ stopped{Colors.RESET}")
-    
-    def _send_reply(self, callsign: str, message: str):
-        """发送回复"""
-        # 这里需要实现实际的 UDP 发送逻辑
-        logging.info(f"{Colors.CYAN}Reply to {callsign}: {message}{Colors.RESET}")
-        self.broadcast_to_web({
-            'type': 'command_ack',
-            'data': {'command': 'reply', 'callsign': callsign, 'message': message}
-        })
-    
-    def _get_decode_history(self) -> List[Dict]:
-        """获取解码历史"""
-        return [
-            {
-                'timestamp': msg.timestamp,
-                'snr': msg.snr,
-                'delta_f': msg.delta_f,
-                'mode': msg.mode,
-                'message': msg.message,
-                'status': msg.status,
-                'dxcc_id': msg.dxcc_id,
-                'dxcc_name': msg.dxcc_name,
-                'dxcc_flag': msg.dxcc_flag,
-                'priority': msg.priority
-            }
-            for msg in self.decode_queue
-        ]
-    
-    def _get_status(self) -> Dict:
-        """获取当前状态"""
-        return {
-            'sendcq': self.state.sendcq,
-            'current_call': self.state.current_call,
-            'current_freq': self.state.current_freq,
-            'current_mode': self.state.current_mode,
-            'worked_calls_count': len(self.state.worked_calls),
-            'excluded_calls_count': len(self.state.excluded_calls)
-        }
-    
-    def _udp_listener_loop(self):
-        """UDP 监听循环"""
-        try:
-            # 创建 UDP socket
-            self.udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            self.udp_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            self.udp_socket.bind((UDP_LISTEN_IP, UDP_PORT))
-            self.udp_socket.settimeout(1.0)
-            
-            # 转发 socket
-            forward_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            
-            logging.info(f"{Colors.GREEN}UDP listener started on port {UDP_PORT}{Colors.RESET}")
-            
-            while self.is_running:
-                try:
-                    data, addr = self.udp_socket.recvfrom(WSJT_X_MAX_LENGTH)
-                    
-                    # 转发数据
-                    try:
-                        forward_sock.sendto(data, (UDP_FORWARD_IP, UDP_FORWARD_PORT))
-                    except:
-                        pass
-                    
-                    # 解析数据包
-                    packet = self.protocol.parse_packet(data)
-                    if packet:
-                        if packet['type'] == 'decode':
-                            self.process_decode(packet)
-                        elif packet['type'] == 'status':
-                            self.process_status(packet)
-                        elif packet['type'] == 'qso_logged':
-                            self._handle_qso_logged(packet)
-                            
-                except socket.timeout:
-                    continue
-                except Exception as e:
-                    logging.error(f"UDP listener error: {e}")
-                    
-        except Exception as e:
-            logging.error(f"Failed to start UDP listener: {e}")
-    
-    def _handle_qso_logged(self, packet: Dict):
-        """处理 QSO 记录"""
-        dx_call = packet.get('dx_call', '')
-        dx_grid = packet.get('dx_grid', '')
-        
-        if dx_call:
-            self.state.worked_calls.add(dx_call.upper())
-            
-            # 写入 ADIF 日志
+
+    def _on_qso_logged(self, pkt: dict):
+        call = pkt.get('dx_call', '')
+        grid = pkt.get('dx_grid', '')
+        if call:
+            self.worked_calls.add(call.upper())
             qso = {
-                'call': dx_call,
-                'gridsquare': dx_grid,
-                'mode': self.state.current_mode,
-                'freq': str(self.state.current_freq),
-                'qso_date': datetime.now(timezone.utc).strftime('%Y%m%d'),
-                'time_on': datetime.now(timezone.utc).strftime('%H%M%S'),
-                'eor': ''
+                'call': call, 'gridsquare': grid,
+                'mode': 'FT8', 'qso_date': datetime.now(timezone.utc).strftime('%Y%m%d'),
+                'time_on': datetime.now(timezone.utc).strftime('%H%M%S'), 'eor': '',
             }
-            
-            adif_line = self.adif_processor.generate_adif(qso)
-            
             try:
                 with open(self.log_file, 'a', encoding='utf-8') as f:
-                    f.write(adif_line + '\n')
+                    f.write(self.adif.format(qso) + '\n')
             except Exception as e:
-                logging.error(f"Error writing log: {e}")
-            
-            # 广播到 Web
-            self.broadcast_to_web({
+                logger.error(f"Log write error: {e}")
+            self._enqueue_broadcast({
                 'type': 'qso_logged',
-                'data': {
-                    'dx_call': dx_call,
-                    'dx_grid': dx_grid,
-                    'adif': adif_line
-                }
+                'data': {'dx_call': call, 'dx_grid': grid}
             })
-    
+
+    def _do_response(self, entry: DecodeEntry):
+        msg = f"{entry.callsign} {self.my_callsign}"
+        if self.my_grid:
+            msg += f" {self.my_grid}"
+        decode_info = {
+            'time_ms': entry.time_ms,
+            'snr': entry.snr,
+            'delta_time': entry.delta_time,
+            'delta_freq': entry.delta_freq,
+            'mode': entry.mode,
+            'message': msg,
+        }
+        ok = self._send_udp(WSJTXProtocol.build_reply(decode_info))
+        if not ok:
+            # Fallback to FreeText
+            self._send_udp(WSJTXProtocol.build_free_text(msg))
+        logger.info(f"Auto-reply: {msg}")
+
+    @staticmethod
+    def _freq_to_band(f: int) -> str:
+        mhz = f / 1e6
+        for freq, name in [
+            (1.8, '160m'), (3.5, '80m'), (5.3, '60m'), (7.0, '40m'),
+            (10.1, '30m'), (14.0, '20m'), (18.1, '17m'), (21.0, '15m'),
+            (24.9, '12m'), (28.0, '10m'), (50.0, '6m'),
+        ]:
+            if abs(mhz - freq) < 0.5:
+                return name
+        return f"{mhz:.1f}MHz"
+
+    # ── UDP I/O ──
+    def _send_udp(self, data: bytes) -> bool:
+        host = self.jtdx_addr[0] if self.jtdx_addr else self.jtdx_host
+        port = self.jtdx_port
+        try:
+            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            s.settimeout(1.0)
+            sent = s.sendto(data, (host, port))
+            s.close()
+            logger.info(f"UDP sent {sent}B to {host}:{port} hex={data[:24].hex()}")
+            if len(data) <= 80:
+                logger.debug(f"Full packet: {data.hex()}")
+            return True
+        except Exception as e:
+            logger.error(f"UDP send error → {host}:{port}: {e}")
+            return False
+
+    def _udp_loop(self):
+        try:
+            self.udp_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            self.udp_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            self.udp_sock.bind(('0.0.0.0', self.listen_port))
+            self.udp_sock.settimeout(0.5)
+            logger.info(f"UDP listener started on port {self.listen_port}")
+            logger.info(f"Configure JTDX → UDP secondary port to {self.listen_port}")
+            last_cycle_update = 0.0
+
+            while self.is_running:
+                try:
+                    data, addr = self.udp_sock.recvfrom(WSJT_MAX_PACKET)
+                except socket.timeout:
+                    pass
+                else:
+                    if self.jtdx_addr is None or self.jtdx_addr[0] != addr[0]:
+                        self.jtdx_addr = addr
+                        logger.info(f"JTDX source auto-detected: {addr[0]}:{addr[1]}")
+                    hdr = self.protocol.parse_header(data)
+                    if hdr:
+                        ptype = hdr['type']
+                        payload = hdr['data']
+                        if ptype == PKT_DECODE:
+                            pkt = self.protocol.parse_decode(payload)
+                            if pkt:
+                                self._on_decode(pkt)
+                        elif ptype == PKT_STATUS:
+                            pkt = self.protocol.parse_status(payload)
+                            if pkt:
+                                self._on_status(pkt)
+                        elif ptype == PKT_QSO_LOGGED:
+                            pkt = self.protocol.parse_qso_logged(payload)
+                            if pkt:
+                                self._on_qso_logged(pkt)
+                        elif ptype == PKT_ADIF_LOGGED:
+                            pkt = self.protocol.parse_adif_logged(payload)
+                            if pkt:
+                                logger.debug(f"ADIF logged: {pkt.get('adif','')[:60]}")
+                        elif ptype == PKT_CLOSE:
+                            logger.info("JTDX/WSJT-X closed connection")
+
+                now = time.time()
+                if now - last_cycle_update >= 1.0:
+                    self.cycle.update()
+                    last_cycle_update = now
+                    self._enqueue_broadcast({
+                        'type': 'cycle',
+                        'data': {
+                            'phase': self.cycle.phase,
+                            'is_tx': self.cycle.is_tx,
+                            'slot': self.cycle.slot,
+                            'seconds_left': round(self.cycle.seconds_left, 1),
+                        }
+                    })
+        except Exception as e:
+            logger.error(f"UDP listener error: {e}")
+
+    # ── Web commands ──
+    def handle_command(self, command: str, params: dict = None) -> dict:
+        params = params or {}
+        if command == 'cq':
+            msg = params.get('message', '')
+            if not msg:
+                c = self.my_callsign
+                g = self.my_grid
+                msg = f"CQ {c} {g}".strip()
+            if not self._send_udp(WSJTXProtocol.build_free_text(msg)):
+                return {'status': 'error', 'message': 'UDP send failed — check JTDX host/port'}
+            logger.info(f"CQ: {msg}")
+            return {'status': 'ok', 'command': 'cq', 'message': msg}
+
+        elif command == 'reply':
+            callsign = params.get('callsign', '')
+            if not callsign:
+                return {'status': 'error', 'message': 'No callsign'}
+
+            # Use Reply packet type (4) when decode info is available
+            if all(k in params for k in ('time_ms', 'snr', 'delta_time', 'delta_freq')):
+                decode_info = {
+                    'time_ms': params.get('time_ms', 0),
+                    'snr': params.get('snr', -20),
+                    'delta_time': params.get('delta_time', 0.0),
+                    'delta_freq': params.get('delta_freq', 0),
+                    'mode': params.get('mode', 'FT8'),
+                    'message': params.get('message', ''),
+                }
+                ok = self._send_udp(WSJTXProtocol.build_reply(decode_info))
+            else:
+                msg = params.get('message', '')
+                if not msg:
+                    g = self.my_grid or 'AA00'
+                    msg = f"{callsign} {self.my_callsign} {g}"
+                ok = self._send_udp(WSJTXProtocol.build_free_text(msg))
+
+            if not ok:
+                return {'status': 'error', 'message': 'UDP send failed — check JTDX host/port'}
+            logger.info(f"Reply: {callsign}")
+            return {'status': 'ok', 'command': 'reply', 'callsign': callsign}
+
+        elif command == 'rr73':
+            callsign = params.get('callsign', '')
+            if callsign:
+                msg = f"{callsign} {self.my_callsign} RR73"
+                if not self._send_udp(WSJTXProtocol.build_free_text(msg)):
+                    return {'status': 'error', 'message': 'UDP send failed'}
+                logger.info(f"RR73: {msg}")
+                return {'status': 'ok', 'command': 'rr73', 'message': msg}
+            return {'status': 'error', 'message': 'No callsign'}
+
+        elif command == 'free_text':
+            text = params.get('text', '')
+            if text:
+                if not self._send_udp(WSJTXProtocol.build_free_text(text)):
+                    return {'status': 'error', 'message': 'UDP send failed'}
+                return {'status': 'ok', 'command': 'free_text', 'message': text}
+            return {'status': 'error', 'message': 'No text'}
+
+        elif command == 'halt_tx':
+            if not self._send_udp(WSJTXProtocol.build_halt_tx()):
+                return {'status': 'error', 'message': 'UDP send failed'}
+            return {'status': 'ok', 'command': 'halt_tx'}
+
+        elif command == 'exclude':
+            call = params.get('callsign', '').upper()
+            if call:
+                self.excluded_calls.add(call)
+                return {'status': 'ok', 'command': 'exclude', 'callsign': call}
+            return {'status': 'error', 'message': 'No callsign'}
+
+        elif command == 'settings':
+            if 'callsign' in params:
+                self.my_callsign = params['callsign'].upper()
+            if 'grid' in params:
+                self.my_grid = params['grid'].upper()
+            if 'threshold' in params:
+                self.signal_threshold = int(params['threshold'])
+            if 'auto_reply' in params:
+                self.auto_reply = bool(params['auto_reply'])
+            if 'jtdx_port' in params:
+                try:
+                    port = int(params['jtdx_port'])
+                    if port > 0:
+                        self.jtdx_port = port
+                        logger.info(f"JTDX port set to {self.jtdx_port}")
+                except (ValueError, TypeError):
+                    pass
+            if 'jtdx_host' in params and params['jtdx_host']:
+                self.jtdx_host = str(params['jtdx_host'])
+                self.jtdx_addr = None  # Reset auto-detected addr so new host is used
+                logger.info(f"JTDX host set to {self.jtdx_host}")
+            return {'status': 'ok', 'command': 'settings'}
+
+        elif command == 'get_decodes':
+            return {'status': 'ok', 'command': 'get_decodes', 'decodes': self.get_decodes(100)}
+
+        elif command == 'get_status':
+            return {'status': 'ok', 'command': 'get_status', 'status': self.get_status()}
+
+        return {'status': 'error', 'message': f'Unknown command: {command}'}
+
+    def get_status(self) -> dict:
+        return {
+            'connected': self.is_running,
+            'my_callsign': self.my_callsign,
+            'my_grid': self.my_grid,
+            'signal_threshold': self.signal_threshold,
+            'auto_reply': self.auto_reply,
+            'worked_count': len(self.worked_calls),
+            'excluded_count': len(self.excluded_calls),
+            'decode_count': len(self.decode_history),
+            'listen_port': self.listen_port,
+            'jtdx_port': self.jtdx_port,
+            'jtdx_host': self.jtdx_host,
+            'jtdx_detected': f"{self.jtdx_addr[0]}:{self.jtdx_addr[1]}" if self.jtdx_addr else None,
+            'cycle': {
+                'phase': self.cycle.phase,
+                'is_tx': self.cycle.is_tx,
+                'slot': self.cycle.slot,
+                'seconds_left': round(self.cycle.seconds_left, 1),
+            },
+        }
+
+    def get_decodes(self, limit: int = 50) -> list:
+        return [
+            {
+                'time': e.time, 'snr': e.snr, 'freq': e.freq,
+                'mode': e.mode, 'message': e.message,
+                'callsign': e.callsign, 'grid': e.grid,
+                'dxcc_id': e.dxcc_id, 'dxcc_name': e.dxcc_name,
+                'dxcc_flag': e.dxcc_flag,
+                'time_ms': e.time_ms, 'delta_time': e.delta_time,
+                'delta_freq': e.delta_freq,
+                'worked': e.callsign.upper() in self.worked_calls,
+                'excluded': e.callsign.upper() in self.excluded_calls,
+            }
+            for e in list(self.decode_history)[-limit:]
+        ]
+
+    # ── Lifecycle ──
     def start(self):
-        """启动集成服务"""
         if self.is_running:
             return
-        
         self.is_running = True
-        
-        # 启动 UDP 监听线程
-        self.udp_thread = threading.Thread(target=self._udp_listener_loop)
-        self.udp_thread.daemon = True
+        self.udp_thread = threading.Thread(target=self._udp_loop, daemon=True)
         self.udp_thread.start()
-        
-        logging.info(f"{Colors.GREEN}FT8 Integration service started{Colors.RESET}")
-    
+        logger.info("FT8 Integration started")
+
     def stop(self):
-        """停止集成服务"""
         self.is_running = False
-        
-        if self.udp_socket:
-            self.udp_socket.close()
-        
+        if self.udp_sock:
+            try:
+                self.udp_sock.close()
+            except Exception:
+                pass
         if self.udp_thread:
             self.udp_thread.join(timeout=2.0)
-        
-        logging.info(f"{Colors.YELLOW}FT8 Integration service stopped{Colors.RESET}")
+        logger.info("FT8 Integration stopped")
 
 
-# 全局实例
-_ft8_integration = None
+_singleton: Optional[FT8Integration] = None
 
 def get_ft8_integration() -> FT8Integration:
-    """获取 FT8 集成实例 (单例)"""
-    global _ft8_integration
-    if _ft8_integration is None:
-        _ft8_integration = FT8Integration()
-    return _ft8_integration
+    global _singleton
+    if _singleton is None:
+        _singleton = FT8Integration()
+    return _singleton
 
 
 if __name__ == '__main__':
-    # 测试运行
-    logging.basicConfig(
-        level=logging.INFO,
-        format='%(asctime)s - %(levelname)s - %(message)s'
-    )
-    
-    integration = get_ft8_integration()
-    integration.start()
-    
+    logger.info("Starting FT8 Integration standalone test...")
+    svc = get_ft8_integration()
+    svc.start()
     try:
         while True:
             time.sleep(1)
     except KeyboardInterrupt:
-        integration.stop()
+        svc.stop()

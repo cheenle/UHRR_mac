@@ -35,16 +35,17 @@
                 <li><a href="#features">功能</a></li>
                 <li><a href="#demo">演示</a></li>
                 <li><a href="docs/installation.html">安装</a></li>
-                <li><a href="docs/design.html">设计</a></li>
+                <li><a href="docs/design.html">设计 & 架构</a></li>
                 <li><a href="docs/docs.html">文档</a></li>
                 <li><a href="fde.html">FDE</a></li>
+                <li><a href="efhw/index.html">EFHW</a></li>
                 <li><a href="https://github.com/cheenle/UHRR_mac" target="_blank" rel="noopener">
                     <i class="fab fa-github"></i> GitHub
                 </a></li>
             </ul>
             
             <div class="nav-actions">
-                <a href="../index.html" class="lang-toggle">English</a>
+                <a href="../index.html" class="lang-btn">English</a>
                 <button class="mobile-menu-toggle">
                     <i class="fas fa-bars"></i>
                 </button>
@@ -57,7 +58,7 @@
         <div class="hero-content">
             <div class="hero-badge">
                 <i class="fas fa-satellite-dish"></i>
-                <span>V5.0.0 已发布</span>
+                <span>V5.4 · 生产就绪</span>
             </div>            
             <h1 class="hero-title">
                 业余无线电<br>
@@ -66,7 +67,7 @@
             
             <p class="hero-subtitle">
                 MRRC - 现代 Web 远程电台控制系统。手机、平板、电脑随时操控您的短波电台。
-                超低延迟音频传输，专业级 DSP 降噪，AI 语音助手。
+                Opus 优化音频传输、WDSP 专业降噪、AI 语音助手、CW/FT8 数字模式、录音室级 TX 音频处理。
             </p>
             
             <div class="hero-actions">
@@ -80,6 +81,23 @@
                 </a>
             </div>
             
+            <div class="hero-preview">
+                <img src="../images/hero_preview_thumb.jpg" alt="MRRC 远程电台控制界面 - 桌面端与移动端" onclick="document.getElementById('lightbox-hero').style.display='flex'" style="cursor:zoom-in" />
+            </div>
+            <div id="lightbox-hero" class="lightbox" onclick="this.style.display='none'">
+                <span class="lightbox-close">&times;</span>
+                <img src="../images/hero_preview.jpg" alt="MRRC 远程电台控制界面" />
+            </div>
+
+            <div class="hero-preview">
+                <p style="text-align:center; color: var(--text-secondary); margin-bottom: 12px; font-size: 0.95rem; font-weight: 500;">MRRC V5.4 系统架构 — 四层设计</p>
+                <img src="../images/architecture52.jpg" alt="MRRC V5.4 系统架构图" onclick="document.getElementById('lightbox-arch').style.display='flex'" style="cursor:zoom-in" />
+            </div>
+            <div id="lightbox-arch" class="lightbox" onclick="this.style.display='none'">
+                <span class="lightbox-close">&times;</span>
+                <img src="../images/architecture52.jpg" alt="MRRC V5.2 系统架构图" />
+            </div>
+
             <div class="hero-stats">
                 <div class="stat-item">
                     <span class="stat-value">&lt;100ms</span>
@@ -94,8 +112,8 @@
                     <span class="stat-label">WDSP 降噪</span>
                 </div>
                 <div class="stat-item">
-                    <span class="stat-value">DXCC</span>
-                    <span class="stat-label">智能追踪</span>
+                    <span class="stat-value">V5.4</span>
+                    <span class="stat-label">240+ 次提交</span>
                 </div>
             </div>
         </div>
@@ -116,7 +134,7 @@
                     </div>
                     <h3 class="card-title">移动优先</h3>
                     <p class="card-text">
-                        专为触摸屏优化的界面，PWA 支持添加到主屏幕，iPhone/Android 完美适配。
+                        触屏优化的玻璃态 UI，PWA 添加到主屏幕，触觉反馈，安全区域适配 — 全系手机完美运行。
                     </p>
                 </article>
                 
@@ -126,7 +144,7 @@
                     </div>
                     <h3 class="card-title">超低延迟</h3>
                     <p class="card-text">
-                        TX/RX 切换 &lt;100ms，Opus 编码优化，AudioWorklet 播放，专业级实时体验。
+                        TX ~65ms / RX ~51ms，&lt;100ms TX↔RX 切换。Opus 28kbps 编码，AudioWorklet 播放，Int16 传输 — 专业实时体验。
                     </p>
                 </article>
                 
@@ -136,7 +154,7 @@
                     </div>
                     <h3 class="card-title">WDSP 专业降噪</h3>
                     <p class="card-text">
-                        集成 OpenHPSDR WDSP 库，NR2 频谱降噪 15-20dB，AGC/ANF/NB 全面支持。
+                        OpenHPSDR WDSP 库：NR2 频谱降噪 15-20dB，AGC（4 种模式），ANF 自动陷波，NB 脉冲抑制 — SSB 专项优化。
                     </p>
                 </article>
                 
@@ -146,7 +164,7 @@
                     </div>
                     <h3 class="card-title">AI 语音助手</h3>
                     <p class="card-text">
-                        Whisper 语音识别 + Qwen3-TTS 合成，语音控制电台，呼号自动解释法。
+                        Whisper ASR + Qwen3-TTS：语音接收转文字、文字合成语音发射，呼号自动字母解释法转换。
                     </p>
                 </article>
                 
@@ -156,7 +174,7 @@
                     </div>
                     <h3 class="card-title">CW 实时解码</h3>
                     <p class="card-text">
-                        前端 ONNX 推理 (&lt;2MB)，双模式架构，QSO 状态机智能回复建议。
+                        浏览器端 AI：&lt;2MB ONNX 模型，&lt;50ms 推理，QSO 状态机自动识别呼号/RST/QTH 并生成回复建议。
                     </p>
                 </article>
                 
@@ -166,7 +184,7 @@
                     </div>
                     <h3 class="card-title">ATR-1000 集成</h3>
                     <p class="card-text">
-                        实时功率/SWR 显示，天调智能学习，自动调谐参数存储与快速调用。
+                        0-200W 实时功率显示，SWR 1.0-9.99，频率→天调参数智能学习，±10kHz 容差召回，JSON 持久化。
                     </p>
                 </article>
                 
@@ -176,7 +194,7 @@
                     </div>
                     <h3 class="card-title">多实例支持</h3>
                     <p class="card-text">
-                        单服务器运行多个独立实例，各电台独立控制，差异化天调参数学习。
+                        单服务器多独立电台实例 — 每实例独享配置、音频设备、ATR-1000 代理与天调学习参数。
                     </p>
                 </article>
                 
@@ -184,19 +202,19 @@
                     <div class="card-icon">
                         <i class="fas fa-broadcast-tower"></i>
                     </div>
-                    <h3 class="card-title">FT8 集成</h3>
+                    <h3 class="card-title">FT8 数字模式</h3>
                     <p class="card-text">
-                        ULTRON 自动化工具，支持 JTDX/WSJT-X 联动，DXCC 目标追踪，智能通联。
+                        JTDX/WSJT-X/MSHV 全兼容，ULTRON 自动 CQ + 智能应答，DXCC 实体/波段追踪，内置 WebSocket 桥接。
                     </p>
                 </article>
-                
+
                 <article class="card">
                     <div class="card-icon">
-                        <i class="fas fa-chart-area"></i>
+                        <i class="fas fa-sliders-h"></i>
                     </div>
-                    <h3 class="card-title">NanoVNA 集成</h3>
+                    <h3 class="card-title">RagChew TX 音频</h3>
                     <p class="card-text">
-                        内置矢量网络分析仪 Web 界面，PWA 离线支持，天线参数分析。
+                        Web Audio API TX 链：低切 150Hz、中切 -2dB@500Hz、临场 +3dB@2.4kHz、高切 3kHz、3:1 压缩器、-50dB 噪声门。
                     </p>
                 </article>
             </div>
@@ -315,11 +333,13 @@
                 <div class="footer-section">
                     <h4>快速链接</h4>
                     <ul>
+                        <li><a href="#">首页</a></li>
                         <li><a href="#features">功能特性</a></li>
-                        <li><a href="#demo">在线演示</a></li>
+                        <li><a href="#demo">演示</a></li>
                         <li><a href="docs/installation.html">安装指南</a></li>
-                        <li><a href="docs/design.html">设计&工程</a></li>
+                        <li><a href="docs/design.html">设计 &amp; 架构</a></li>
                         <li><a href="docs/docs.html">技术文档</a></li>
+                        <li><a href="efhw/index.html">EFHW 天线</a></li>
                     </ul>
                 </div>
                 <div class="footer-section">

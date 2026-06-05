@@ -4,8 +4,8 @@
 
 set -e
 
-REMOTE_HOST="${1:-vlsc@www.vlsc.net}"
-REMOTE_PATH="${2:-/var/www/html/mrrc}"
+REMOTE_HOST="${1:-cheenle@www.vlsc.net}"
+REMOTE_PATH="${2:-/var/www/vlsc.net/mrrc}"
 LOCAL_DIR="/Users/cheenle/UHRR/MRRC/website"
 
 echo "=========================================="

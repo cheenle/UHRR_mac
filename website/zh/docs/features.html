@@ -20,9 +20,16 @@
             </a>
             <nav class="nav">
                 <a href="../../index.html" data-i18n="nav_home">首页</a>
-                <a href="features.html" class="active" data-i18n="nav_features">功能特性</a>
-                <a href="../installation.html" data-i18n="nav_install">安装指南</a>
-                <a href="docs.html" data-i18n="nav_docs">技术文档</a>
+                <a href="features.html" class="active" data-i18n="nav_features">功能</a>
+                <a href="../../index.html#demo" data-i18n="nav_demo">演示</a>
+                <a href="installation.html" data-i18n="nav_install">安装</a>
+                <a href="design.html" data-i18n="nav_design">设计 &amp; 架构</a>
+                <a href="docs.html" data-i18n="nav_docs">文档</a>
+                <a href="../../fde.html">FDE</a>
+                <a href="../../efhw/index.html">EFHW</a>
+                <a href="https://github.com/cheenle/UHRR_mac" target="_blank" rel="noopener">
+                    <i class="fab fa-github"></i> GitHub
+                </a>
             </nav>
             <div class="lang-switch">
                 <button class="lang-btn" data-lang="en"><a href="../../docs/features.html" style="color:inherit;text-decoration:none;">English</a></button>
@@ -268,12 +275,40 @@
                 </div>
             </div>
 
-            <!-- TX均衡器 -->
-            <div class="doc-section" id="eq">
-                <h2><span class="feature-icon">🎚️</span> TX发射均衡器</h2>
-                <p>三段均衡器优化发射音频质量，专为短波通信语音优化。</p>
+            <!-- RagChew TX 音频 -->
+            <div class="doc-section" id="ragchew">
+                <h2><span class="feature-icon">🎚️</span> RagChew TX 音频处理链</h2>
+                <p>V5.1 引入了完整的基于 Web Audio API 的发射音频处理链 — 为业余无线电打造的录音室级语音优化。</p>
 
-                <h3>预设模式</h3>
+                <h3>处理链 (V5.1+)</h3>
+                <table class="comparison-table">
+                    <tr>
+                        <th>阶段</th>
+                        <th>参数</th>
+                        <th>数值</th>
+                        <th>作用</th>
+                    </tr>
+                    <tr>
+                        <td class="highlight">4段均衡器</td>
+                        <td>低切 / 中切 / 临场 / 高切</td>
+                        <td>150Hz / -2dB@500Hz / +3dB@2.4kHz / 3kHz</td>
+                        <td>塑造 SSB 语音清晰度</td>
+                    </tr>
+                    <tr>
+                        <td class="highlight">动态压缩器</td>
+                        <td>压缩比 / 启动 / 释放</td>
+                        <td>3:1 / 5ms / 50ms</td>
+                        <td>稳定调制电平</td>
+                    </tr>
+                    <tr>
+                        <td class="highlight">噪声门</td>
+                        <td>阈值</td>
+                        <td>-50dB</td>
+                        <td>不说话时静音背景噪声</td>
+                    </tr>
+                </table>
+
+                <h3>TX 均衡器预设 (传统三频段)</h3>
                 <table class="comparison-table">
                     <tr>
                         <th>预设</th>
@@ -283,37 +318,39 @@
                         <th>适用场景</th>
                     </tr>
                     <tr>
-                        <td>默认</td>
-                        <td>0dB</td>
-                        <td>0dB</td>
-                        <td>0dB</td>
-                        <td>无处理</td>
-                    </tr>
-                    <tr>
                         <td class="highlight">短波语音</td>
                         <td>-20dB</td>
                         <td>+6dB</td>
                         <td>-20dB</td>
-                        <td>标准短波通信</td>
+                        <td>标准 SSB 通信</td>
                     </tr>
                     <tr>
                         <td class="highlight">手机优化</td>
                         <td>-15dB</td>
                         <td>+8dB</td>
                         <td>-24dB</td>
-                        <td>手机麦克风专用</td>
+                        <td>手机麦克风</td>
                     </tr>
                     <tr>
                         <td class="highlight">弱信号</td>
                         <td>-20dB</td>
                         <td>+10dB</td>
                         <td>-25dB</td>
-                        <td>DX弱信号通信</td>
+                        <td>DX / 竞赛</td>
                     </tr>
                 </table>
+            </div>
 
-                <h3>抗混叠滤波</h3>
-                <p>采用6kHz低通滤波器，在降采样前滤除高频，解决iPhone麦克风高频强调导致的尖锐问题。</p>
+            <!-- 网络监控 -->
+            <div class="doc-section" id="network">
+                <h2><span class="feature-icon">📶</span> 实时网络监控</h2>
+                <p>V5.3 引入了实时网络带宽与延迟监控，让操作者全面了解连接质量。</p>
+                <ul>
+                    <li><strong>带宽显示</strong>：实时上下行吞吐量 (kbps)</li>
+                    <li><strong>延迟监控</strong>：WebSocket ping-pong 往返时间显示</li>
+                    <li><strong>视觉增强</strong>：发光效果、大字号、颜色分级阈值</li>
+                    <li><strong>状态栏精简</strong>：移除冗余的 CTL/RX/TX 连接指示器</li>
+                </ul>
             </div>
 
             <!-- 频谱显示 -->
@@ -389,7 +426,7 @@
             <!-- FT8/ULTRON -->
             <div class="doc-section" id="ft8">
                 <h2><span class="feature-icon">📻</span> FT8/ULTRON 自动化工具</h2>
-                <p>ULTRON Enhanced 是 MRRC V4.9 新增的 FT8 数字模式自动化工具，支持 JTDX、WSJT-X、MSHV 软件联动。</p>
+                <p>ULTRON Enhanced 是 MRRC 的 FT8 数字模式自动化工具 (V4.9 引入，V5.4 稳定)，支持 JTDX、WSJT-X、MSHV 软件联动，通过 WebSocket 桥接集成。</p>
                 
                 <h3>核心功能</h3>
                 <div class="feature-grid">
@@ -466,7 +503,7 @@ python dxcc_analyzer.py</code></pre>
             <h2 class="cta-title">准备好开始使用了吗？</h2>
             <p class="cta-text">按照安装指南，5分钟内即可搭建完整的远程电台控制系统</p>
             <div class="cta-buttons">
-                <a href="../installation.html" class="btn btn-primary" data-i18n="cta_install">查看安装指南</a>
+                <a href="installation.html" class="btn btn-primary" data-i18n="cta_install">查看安装指南</a>
                 <a href="docs.html" class="btn btn-secondary" data-i18n="cta_docs">阅读技术文档</a>
             </div>
         </div>
@@ -485,7 +522,7 @@ python dxcc_analyzer.py</code></pre>
                     <ul>
                         <li><a href="../../index.html">首页</a></li>
                         <li><a href="features.html">功能特性</a></li>
-                        <li><a href="../installation.html">安装指南</a></li>
+                        <li><a href="installation.html">安装指南</a></li>
                         <li><a href="docs.html">技术文档</a></li>
                     </ul>
                 </div>
@@ -499,11 +536,11 @@ python dxcc_analyzer.py</code></pre>
                 </div>
             </div>
             <div class="footer-bottom">
-                <p>&copy; 2024 MRRC Project. Open Source under GPL-3.0 License.</p>
+                <p>&copy; 2024-2026 MRRC Project. Open Source under GPL-3.0 License.</p>
             </div>
         </div>
     </footer>
 
-    <script src="../js/main.js"></script>
+    <script src="../../js/main.js"></script>
 </body>
 </html>
