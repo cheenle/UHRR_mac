@@ -247,10 +247,8 @@ class LearningBuffer:
         return True, median_swr
 
     def reset(self):
-        """完全重置 — TX 结束或重大状态变化时调用"""
+        """TX 开始/结束时重置采样窗口（保留继电器和频率状态）"""
         self.samples = []
-        self.current_relay = None
-        self.current_freq = 0
 
 
 # ========== 简化的全局状态 ==========
