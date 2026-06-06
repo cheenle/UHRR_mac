@@ -608,11 +608,11 @@ class ATR1000Client:
                 
                 cache["power"] = power
 
-                # V5.6.1: 调谐超时自动清除 — 继电器稳定 >8s 说明调谐已完成
+                # V5.6.2: 调谐超时自动清除 — 继电器稳定 >5s 或相同继电器确认 >1.5s
                 # 设备不一定发送 TUNE_STATUS=0，依赖此机制防止 tuning 标志永久卡住
                 if cache.get("tuning"):
                     stable_since = cache.get("tuning_relay_stable_since", 0)
-                    if stable_since > 0 and time.time() - stable_since > 8:
+                    if stable_since > 0 and time.time() - stable_since > 5:
                         cache["tuning"] = False
                         cache["tuning_started_at"] = 0
                         cache["tuning_relay_stable_since"] = 0
@@ -670,15 +670,26 @@ class ATR1000Client:
                 cache["sw"] = data[3]      # 网络类型在 data[3]
                 cache["ind"] = data[4]     # 电感值在 data[4] (如 47 = 4.7uH)
                 cache["cap"] = data[5]     # 电容值在 data[5] (如 79 = 790pF)
-                cache["relay_changed_at"] = time.time()  # V5.6.0: 记录继电器变化时间
+
+                # V5.6.0: 记录继电器变化时间 — 仅在参数实际变化时更新
+                # （调谐确认包重复相同参数不重置忽略窗口）
+                _new_relay = (cache["sw"], cache["ind"], cache["cap"])
+                if _new_relay != _old_relay:
+                    cache["relay_changed_at"] = time.time()
 
                 # V5.6.1: 调谐期间跟踪继电器稳定时间
-                _new_relay = (cache["sw"], cache["ind"], cache["cap"])
                 if cache.get("tuning"):
                     if _new_relay != _old_relay:
                         cache["tuning_relay_stable_since"] = time.time()
-                    elif cache.get("tuning_relay_stable_since", 0) == 0:
-                        cache["tuning_relay_stable_since"] = time.time()
+                    else:
+                        if cache.get("tuning_relay_stable_since", 0) == 0:
+                            cache["tuning_relay_stable_since"] = time.time()
+                        # V5.6.2: 相同继电器再次收到且已稳定 >1.5s → 调谐确认完成
+                        elif time.time() - cache["tuning_relay_stable_since"] > 1.5:
+                            cache["tuning"] = False
+                            cache["tuning_started_at"] = 0
+                            cache["tuning_relay_stable_since"] = 0
+                            logger.info("✅ 调谐完成 (继电器确认稳定 >1.5s)")
 
                 _relay_sw = cache["sw"]
                 _relay_ind = cache["ind"]
