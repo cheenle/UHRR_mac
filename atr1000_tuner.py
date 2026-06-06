@@ -109,7 +109,7 @@ class TunerStorage:
                 except OSError:
                     pass
     
-    def learn(self, freq: int, sw: int, ind: int, cap: int, swr: float) -> bool:
+    def learn(self, freq: int, sw: int, ind: int, cap: int, swr: float, force_update: bool = False) -> bool:
         """
         学习天调参数 - 当 SWR 在 1.0-1.5 范围内时记录
         
@@ -119,12 +119,13 @@ class TunerStorage:
             ind: 电感索引 (0-127)
             cap: 电容索引 (0-127)
             swr: 驻波比
+            force_update: 强制更新参数，用于 Tune 联动确认 SWR 已比初始状态改善的场景
         
         Returns:
             是否成功记录
         """
-        # 检查 SWR 范围
-        if swr < SWR_LEARN_MIN or swr > SWR_LEARN_MAX:
+        # 检查 SWR 范围。Tune 联动已用“比初始 SWR 更低”验证过，可强制写入。
+        if not force_update and (swr < SWR_LEARN_MIN or swr > SWR_LEARN_MAX):
             return False
         
         # 检查参数有效性 - ind 和 cap 必须有实际值
@@ -149,8 +150,8 @@ class TunerStorage:
                 record['swr_max'] = max(record['swr_max'], swr)
                 record['last_update'] = time.time()
                 
-                # 如果新参数 SWR 更好，且不是假数据（SWR=1.0 可能是坏点）
-                if swr < record['swr_avg'] and swr >= SWR_OPTIMAL_MIN:
+                # 如果新参数 SWR 更好，或 Tune 联动已确认改善，则更新继电器参数。
+                if force_update or (swr < record['swr_avg'] and swr >= SWR_OPTIMAL_MIN):
                     record['sw'] = sw
                     record['ind'] = ind
                     record['cap'] = cap

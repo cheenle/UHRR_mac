@@ -1468,13 +1468,10 @@ function tuneFrequency(step) {
     
     // 自动加载天调参数（如果存在）
     if (typeof ATR1000 !== 'undefined' && ATR1000.isConnected) {
-        // 同步频率给代理（用于天调学习）
+        // 同步频率给代理，由代理按持久化记忆参数套用天调。
+        // 不再用浏览器 localStorage 二次 setRelay，避免旧/宽范围记录覆盖代理端权威参数。
         ATR1000.setFreq(mobileState.currentFrequency);
-        
-        const tunerRecord = ATR1000.loadTunerForFreq(mobileState.currentFrequency);
-        if (tunerRecord) {
-            console.log(`🎵 自动加载天调: ${(mobileState.currentFrequency/1000).toFixed(1)}kHz`);
-        }
+        console.log(`🎵 已请求 ATR-1000 代理按频率套用记忆参数: ${(mobileState.currentFrequency/1000).toFixed(1)}kHz`);
     }
 }
 
@@ -3243,11 +3240,14 @@ const ATR1000 = {
 
             await this._waitForFullTuneComplete(token);
             if (token.cancelled) {
-                this.setRelay(original.sw, original.ind, original.cap);
                 return;
             }
 
             await this._sleep(800, token);
+            if (token.cancelled) {
+                return;
+            }
+
             const finalSWR = this.lastSWR;
             const improved = Number.isFinite(finalSWR) && finalSWR > 0 && finalSWR < initialSWR - 0.02;
 
@@ -3394,7 +3394,8 @@ const ATR1000 = {
                 sw: tunerData.sw,
                 ind: tunerData.ind,
                 cap: tunerData.cap,
-                swr: swr
+                swr: swr,
+                force_update: true
             }));
         }
 

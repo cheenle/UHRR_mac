@@ -1,16 +1,16 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-ATR-1000 天调代理程序 - V4.5.30 定期刷新版
+ATR-1000 天调代理程序 - V5.6.0 稳定窗口学习版
 
-设计理念：动态轮询 + 缓存广播 + 智能学习 + 通讯监控
+设计理念：动态轮询 + 缓存广播 + 稳定窗口学习 + 通讯监控
 1. 动态轮询间隔，防止设备过载：
    - 空闲时：30秒
    - 有客户端：10秒
    - TX期间：0.5秒
 2. 数据缓存在本地
 3. 客户端请求时直接返回缓存数据（不再请求设备）
-4. 自动学习 SWR 1.0-1.5 的天调参数
+4. V5.6.0: 稳定窗口学习 — 连续 N 样本 SWR 稳定才学习，防止瞬态污染
 5. 支持快速调谐到指定频率
 6. V4.5.18: 专门的通讯日志记录，分析设备压力
 7. V4.5.30: 连接定期刷新（~55分钟），避免设备每小时断连影响 TX
@@ -165,6 +165,94 @@ SCMD_RELAY_STATUS = 5      # 继电器状态（LC/CL、电感、电容）
 SCMD_MEMORY_STATUS = 6     # 存储状态
 SCMD_MEMORY_INFO = 7       # 存储信息
 
+# ========== 稳定窗口学习参数 ==========
+LEARN_WINDOW_SIZE = 4        # 连续稳定样本数（3-5）
+LEARN_SWR_STABILITY = 0.08   # 窗口内 SWR 最大波动
+LEARN_MIN_POWER = 5          # 最小功率 (W)
+LEARN_IGNORE_WINDOW = 1.0    # TX 开始/继电器变化后忽略时间 (s)
+LEARN_SWR_MIN = 1.0          # 学习 SWR 下限
+LEARN_SWR_MAX = 1.8          # 学习 SWR 上限
+
+
+class LearningBuffer:
+    """稳定窗口学习缓冲器 - V5.6.0
+
+    不再从每一个 METER 包学习，而是等待同一组继电器参数连续 N 个采样
+    且 SWR 稳定后才提交学习。防止以下污染：
+    - TX 起始瞬态 SWR=1.00 假好值
+    - 继电器切换瞬间的不匹配 SWR
+    - 单点 SWR 波动导致的错误参数绑定
+    """
+
+    def __init__(self, window_size=LEARN_WINDOW_SIZE, swr_stability=LEARN_SWR_STABILITY,
+                 min_power=LEARN_MIN_POWER, swr_min=LEARN_SWR_MIN, swr_max=LEARN_SWR_MAX):
+        self.window_size = window_size
+        self.swr_stability = swr_stability
+        self.min_power = min_power
+        self.swr_min = swr_min
+        self.swr_max = swr_max
+        self.samples = []          # [(power, swr), ...]
+        self.current_relay = None  # (sw, ind, cap)
+        self.current_freq = 0
+
+    def set_relay(self, sw, ind, cap):
+        """继电器参数改变时调用 — 清空窗口重新积累"""
+        new_relay = (sw, ind, cap)
+        if new_relay != self.current_relay:
+            self.current_relay = new_relay
+            self.samples = []
+
+    def set_freq(self, freq):
+        """频率显著变化时调用（>1kHz 差异清空窗口）"""
+        if abs(freq - self.current_freq) > 1000:
+            self.current_freq = freq
+            self.samples = []
+
+    def add_sample(self, power, swr, sw, ind, cap):
+        """添加一个采样。返回 (should_learn, median_swr)"""
+        # 继电器参数必须与当前窗口一致
+        if (sw, ind, cap) != self.current_relay:
+            return False, None
+
+        # 功率阈值
+        if power < self.min_power:
+            return False, None
+
+        # SWR 范围
+        if swr < self.swr_min or swr > self.swr_max:
+            return False, None
+
+        # 加入窗口
+        self.samples.append((power, swr))
+        while len(self.samples) > self.window_size:
+            self.samples.pop(0)
+
+        # 窗口不足
+        if len(self.samples) < self.window_size:
+            return False, None
+
+        # SWR 稳定性检查
+        swrs = [s[1] for s in self.samples]
+        if max(swrs) - min(swrs) > self.swr_stability:
+            return False, None
+
+        # 中位数 SWR
+        sorted_swrs = sorted(swrs)
+        n = len(sorted_swrs)
+        if n % 2 == 0:
+            median_swr = (sorted_swrs[n // 2 - 1] + sorted_swrs[n // 2]) / 2.0
+        else:
+            median_swr = float(sorted_swrs[n // 2])
+
+        return True, median_swr
+
+    def reset(self):
+        """完全重置 — TX 结束或重大状态变化时调用"""
+        self.samples = []
+        self.current_relay = None
+        self.current_freq = 0
+
+
 # ========== 简化的全局状态 ==========
 running = True
 connected = False
@@ -184,9 +272,14 @@ cache = {
     "cap_pf": 0,    # 电容值 (pF)
     "freq": 0,      # 当前频率 (Hz) - 用于学习
     "tuning": False, # 设备是否处于调谐流程
-    "tuning_started_at": 0
+    "tuning_started_at": 0,
+    "tx_started_at": 0,      # TX 开始时间戳 — 用于学习忽略窗口
+    "relay_changed_at": 0,   # 继电器最后变化时间 — 用于学习忽略窗口
 }
 cache_lock = threading.Lock()
+
+# 稳定窗口学习缓冲器（模块级单例）
+learning_buffer = LearningBuffer()
 
 # 上次设置的继电器参数（用于节流）
 last_relay_params = None
@@ -482,7 +575,12 @@ class ATR1000Client:
         
         # 通讯统计
         comm_stats['bytes_received'] += len(data)
-        
+
+        # V5.6.0: 学习相关变量初始化（在锁内外共享）
+        _learn_freq = 0
+        _relay_updated = False
+        _relay_sw = _relay_ind = _relay_cap = 0
+
         with cache_lock:
             if cmd == SCMD_METER_STATUS and len(data) >= 8:
                 # 通讯日志
@@ -518,7 +616,6 @@ class ATR1000Client:
                         logger.info(f"📊 功率/SWR: {power}W, SWR={cache['swr']:.2f}")
                     else:
                         # V4.5.18: 功率为0的日志节流，每5秒最多记录一次
-                        import time
                         global last_zero_power_log_time
                         current_time = time.time()
                         if current_time - last_zero_power_log_time > 5:
@@ -530,36 +627,25 @@ class ATR1000Client:
                 
                 last_log_power = power
                 last_log_swr = cache["swr"]
-                
-                # V4.5.16: 智能学习天调参数
-                # 条件：功率 > 0, SWR 1.0-1.5 (排除SWR=1.0的假数据), 参数有效（ind>0 或 cap>0）, 频率 > 0
-                if power > 0 and 1.0 <= cache["swr"] <= 1.8:
-                    freq = cache.get("freq", 0)
-                    ind = cache.get("ind", 0)
-                    cap = cache.get("cap", 0)
-                    
-                    # 检查参数有效性
-                    if freq > 0 and (ind > 0 or cap > 0):
-                        try:
-                            tuner = get_storage()
-                            if tuner.learn(
-                                freq=freq,
-                                sw=cache["sw"],
-                                ind=ind,
-                                cap=cap,
-                                swr=cache["swr"]
-                            ):
-                                # 只在频率变化时输出学习日志，减少重复
-                                if freq != last_learn_freq:
-                                    logger.info(f"📝 学习成功: {freq/1000:.1f}kHz, SWR={cache['swr']:.2f}, {'CL' if cache['sw'] else 'LC'}, L={ind}, C={cap}")
-                                    last_learn_freq = freq
-                        except Exception as e:
-                            logger.error(f"学习天调参数失败: {e}")
-                
+
+                # V5.6.0: 稳定窗口学习 — 捕获所需值，实际学习在锁外进行
+                _should_check_learn = (is_tx and not cache.get("tuning") and power > 0)
+                if _should_check_learn:
+                    _learn_freq = cache.get("freq", 0)
+                    _learn_power = power
+                    _learn_swr = cache["swr"]
+                    _learn_sw = cache["sw"]
+                    _learn_ind = cache["ind"]
+                    _learn_cap = cache["cap"]
+                    _learn_tx_started = cache.get("tx_started_at", 0)
+                    _learn_relay_changed = cache.get("relay_changed_at", 0)
+                else:
+                    _learn_freq = 0
+
             elif cmd == SCMD_RELAY_STATUS and len(data) >= 7:
                 # 通讯日志
                 comm_stats['relay_received'] += 1
-                
+
                 # 继电器状态
                 # 实际数据格式（根据实验结果修正）:
                 # data[3] = SW (网络类型 0=LC, 1=CL)
@@ -570,6 +656,11 @@ class ATR1000Client:
                 cache["sw"] = data[3]      # 网络类型在 data[3]
                 cache["ind"] = data[4]     # 电感值在 data[4] (如 47 = 4.7uH)
                 cache["cap"] = data[5]     # 电容值在 data[5] (如 79 = 790pF)
+                cache["relay_changed_at"] = time.time()  # V5.6.0: 记录继电器变化时间
+                _relay_sw = cache["sw"]
+                _relay_ind = cache["ind"]
+                _relay_cap = cache["cap"]
+                _relay_updated = True
                 
                 # 计算实际值（如果有足够数据）
                 if len(data) >= 11:
@@ -592,7 +683,42 @@ class ATR1000Client:
                 cache["tuning"] = bool(data[3])
                 cache["tuning_started_at"] = time.time() if cache["tuning"] else 0
                 log_comm('RX', 'TUNE', data[:4].hex(), f'调谐状态={cache["tuning"]}')
-    
+
+        # ===== V5.6.0: 锁外学习缓冲器操作 =====
+        if _relay_updated:
+            learning_buffer.set_relay(_relay_sw, _relay_ind, _relay_cap)
+
+        if _learn_freq > 0:
+            now = time.time()
+            in_ignore_window = (
+                (_learn_tx_started > 0 and now - _learn_tx_started < LEARN_IGNORE_WINDOW) or
+                (_learn_relay_changed > 0 and now - _learn_relay_changed < LEARN_IGNORE_WINDOW)
+            )
+            if not in_ignore_window:
+                learning_buffer.set_freq(_learn_freq)
+                should_learn, median_swr = learning_buffer.add_sample(
+                    _learn_power, _learn_swr, _learn_sw, _learn_ind, _learn_cap
+                )
+                if should_learn:
+                    try:
+                        tuner = get_storage()
+                        if tuner.learn(
+                            freq=_learn_freq,
+                            sw=_learn_sw,
+                            ind=_learn_ind,
+                            cap=_learn_cap,
+                            swr=median_swr
+                        ):
+                            if _learn_freq != last_learn_freq:
+                                logger.info(
+                                    f"📝 学习成功: {_learn_freq/1000:.1f}kHz, "
+                                    f"SWR={median_swr:.2f}, {'CL' if _learn_sw else 'LC'}, "
+                                    f"L={_learn_ind}, C={_learn_cap}"
+                                )
+                                last_learn_freq = _learn_freq
+                    except Exception as e:
+                        logger.error(f"学习天调参数失败: {e}")
+
     def close(self):
         """关闭连接"""
         if self.ws:
@@ -720,7 +846,7 @@ def handle_unix_client(conn, addr, atr1000):
                         freq = msg.get("freq", 0)
                         with cache_lock:
                             cache["freq"] = freq
-                        
+
                         # 查找并应用天调参数
                         tune_result = None
                         if freq > 0:
@@ -729,12 +855,16 @@ def handle_unix_client(conn, addr, atr1000):
                             if params:
                                 sw, ind, cap = params
                                 # 统一参数顺序: (sw, ind, cap)
-                                set_relay_with_throttle(atr1000, sw, ind, cap)
+                                if set_relay_with_throttle(atr1000, sw, ind, cap):
+                                    # V5.6.0: 自动调谐改变了继电器，更新学习缓冲器
+                                    with cache_lock:
+                                        cache["relay_changed_at"] = time.time()
+                                    learning_buffer.set_relay(sw, ind, cap)
                                 tune_result = {
                                     "sw": sw,
                                     "ind": ind,
                                     "cap": cap,
-                                    "sw_name": "LC" if sw else "CL"
+                                    "sw_name": "CL" if sw else "LC"
                                 }
                                 logger.info(f"🎯 自动调谐: {freq/1000:.1f}kHz -> {'CL' if sw else 'LC'}, L={ind}, C={cap}")
                         
@@ -756,7 +886,11 @@ def handle_unix_client(conn, addr, atr1000):
                             if params:
                                 sw, ind, cap = params
                                 # 统一参数顺序: (sw, ind, cap)
-                                set_relay_with_throttle(atr1000, sw, ind, cap)
+                                if set_relay_with_throttle(atr1000, sw, ind, cap):
+                                    # V5.6.0: 快速调谐改变了继电器，更新学习缓冲器
+                                    with cache_lock:
+                                        cache["relay_changed_at"] = time.time()
+                                    learning_buffer.set_relay(sw, ind, cap)
                                 response = json.dumps({
                                     "type": "quick_tune_result",
                                     "success": True,
@@ -847,17 +981,21 @@ def handle_unix_client(conn, addr, atr1000):
                         is_tx = True
                         comm_stats['tx_count'] += 1
                         comm_stats['tx_start_time'] = time.time()
+                        with cache_lock:
+                            cache["tx_started_at"] = time.time()
+                        learning_buffer.reset()  # V5.6.0: TX 开始重置学习窗口
                         log_comm('TX', 'STATUS', '', 'TX模式开始')
                         logger.info("客户端请求启动数据流 (TX开始)")
-                    
+
                     elif action == "stop":
                         is_tx = False
                         if comm_stats['tx_start_time'] > 0:
                             tx_duration = time.time() - comm_stats['tx_start_time']
                             comm_stats['tx_total_time'] += tx_duration
                             log_comm('RX', 'STATUS', '', f'TX模式结束 (持续{tx_duration:.1f}秒)')
+                        learning_buffer.reset()  # V5.6.0: TX 结束重置学习窗口
                         logger.info("客户端请求停止数据流 (TX结束)")
-                    
+
                     elif action == "set_relay":
                         # 设置继电器参数
                         sw = msg.get("sw", 0)
@@ -865,6 +1003,9 @@ def handle_unix_client(conn, addr, atr1000):
                         cap = msg.get("cap", 0)
                         # 统一参数顺序: (sw, ind, cap)
                         set_relay_with_throttle(atr1000, sw, ind, cap)
+                        with cache_lock:
+                            cache["relay_changed_at"] = time.time()
+                        learning_buffer.set_relay(sw, ind, cap)  # V5.6.0: 继电器变化重置学习窗口
                         logger.info(f"设置继电器: SW={sw}, IND={ind}, CAP={cap}")
                     
                     elif action == "tune":
@@ -883,10 +1024,17 @@ def handle_unix_client(conn, addr, atr1000):
                         ind = msg.get("ind", 0)
                         cap = msg.get("cap", 0)
                         swr = msg.get("swr", 99.0)
+                        force_update = bool(msg.get("force_update", False))
                         if freq > 0:
                             tuner = get_storage()
-                            tuner.learn(freq=freq, sw=sw, ind=ind, cap=cap, swr=swr)
-                            logger.info(f"📝 手动学习: {freq/1000:.1f}kHz SWR={swr:.2f}")
+                            if tuner.learn(freq=freq, sw=sw, ind=ind, cap=cap, swr=swr, force_update=force_update):
+                                if force_update:
+                                    with cache_lock:
+                                        cache["tuning"] = False
+                                        cache["tuning_started_at"] = 0
+                                logger.info(f"📝 {'强制' if force_update else '手动'}学习: {freq/1000:.1f}kHz SWR={swr:.2f}, SW={'CL' if sw else 'LC'}, L={ind}, C={cap}")
+                            else:
+                                logger.info(f"📝 学习被忽略: {freq/1000:.1f}kHz SWR={swr:.2f}, SW={'CL' if sw else 'LC'}, L={ind}, C={cap}")
                         
                 except json.JSONDecodeError:
                     pass
