@@ -271,6 +271,7 @@ cache = {
     "freq": 0,      # 当前频率 (Hz) - 用于学习
     "tuning": False, # 设备是否处于调谐流程
     "tuning_started_at": 0,
+    "tuning_relay_stable_since": 0,  # V5.6.1: 调谐期间继电器稳定起始时间
     "tx_started_at": 0,      # TX 开始时间戳 — 用于学习忽略窗口
     "relay_changed_at": 0,   # 继电器最后变化时间 — 用于学习忽略窗口
 }
@@ -540,6 +541,9 @@ class ATR1000Client:
         self.connection_time = 0  # 重置连接时间
         with cache_lock:
             cache["connected"] = False
+            cache["tuning"] = False  # V5.6.1: 断连清除调谐标志
+            cache["tuning_started_at"] = 0
+            cache["tuning_relay_stable_since"] = 0
         logger.info("ATR-1000 连接关闭")
     
     def _send_sync(self):
@@ -603,7 +607,17 @@ class ATR1000Client:
                     cache["swr"] = 1.0 if power > 0 else 1.0
                 
                 cache["power"] = power
-                
+
+                # V5.6.1: 调谐超时自动清除 — 继电器稳定 >8s 说明调谐已完成
+                # 设备不一定发送 TUNE_STATUS=0，依赖此机制防止 tuning 标志永久卡住
+                if cache.get("tuning"):
+                    stable_since = cache.get("tuning_relay_stable_since", 0)
+                    if stable_since > 0 and time.time() - stable_since > 8:
+                        cache["tuning"] = False
+                        cache["tuning_started_at"] = 0
+                        cache["tuning_relay_stable_since"] = 0
+                        logger.info("✅ 调谐完成 (继电器稳定>8秒，自动清除)")
+
                 # 通讯日志 - 功率/SWR 数据
                 if power > 0:
                     log_comm('RX', 'METER', data[:8].hex(), f'功率={power}W, SWR={cache["swr"]:.2f}')
@@ -644,7 +658,9 @@ class ATR1000Client:
                 # 通讯日志
                 comm_stats['relay_received'] += 1
 
-                # 继电器状态
+                # 继电器状态 - 捕获旧值用于调谐稳定性检测
+                _old_relay = (cache["sw"], cache["ind"], cache["cap"])
+
                 # 实际数据格式（根据实验结果修正）:
                 # data[3] = SW (网络类型 0=LC, 1=CL)
                 # data[4] = IND (电感值，如 47 = 4.7uH)
@@ -655,6 +671,15 @@ class ATR1000Client:
                 cache["ind"] = data[4]     # 电感值在 data[4] (如 47 = 4.7uH)
                 cache["cap"] = data[5]     # 电容值在 data[5] (如 79 = 790pF)
                 cache["relay_changed_at"] = time.time()  # V5.6.0: 记录继电器变化时间
+
+                # V5.6.1: 调谐期间跟踪继电器稳定时间
+                _new_relay = (cache["sw"], cache["ind"], cache["cap"])
+                if cache.get("tuning"):
+                    if _new_relay != _old_relay:
+                        cache["tuning_relay_stable_since"] = time.time()
+                    elif cache.get("tuning_relay_stable_since", 0) == 0:
+                        cache["tuning_relay_stable_since"] = time.time()
+
                 _relay_sw = cache["sw"]
                 _relay_ind = cache["ind"]
                 _relay_cap = cache["cap"]
@@ -992,6 +1017,13 @@ def handle_unix_client(conn, addr, atr1000):
                             comm_stats['tx_total_time'] += tx_duration
                             log_comm('RX', 'STATUS', '', f'TX模式结束 (持续{tx_duration:.1f}秒)')
                         learning_buffer.reset()  # V5.6.0: TX 结束重置学习窗口
+                        # V5.6.1: TX 结束清除调谐标志 (设备不一定发送 TUNE_STATUS=0)
+                        with cache_lock:
+                            if cache.get("tuning"):
+                                cache["tuning"] = False
+                                cache["tuning_started_at"] = 0
+                                cache["tuning_relay_stable_since"] = 0
+                                logger.info("✅ 调谐标志已清除 (TX结束)")
                         logger.info("客户端请求停止数据流 (TX结束)")
 
                     elif action == "set_relay":
@@ -1012,6 +1044,7 @@ def handle_unix_client(conn, addr, atr1000):
                         with cache_lock:
                             cache["tuning"] = True
                             cache["tuning_started_at"] = time.time()
+                            cache["tuning_relay_stable_since"] = 0  # V5.6.1: 等首个 RELAY 来初始化
                         atr1000.start_tune(mode)
                         logger.info(f"启动自动调谐: mode={mode}")
                     
