@@ -293,7 +293,42 @@
         .download-btn::before {
             content: '⬇️';
         }
-        
+
+        /* 分享按钮 */
+        .share-btn {
+            background: linear-gradient(180deg, #2a3a5a, #1a2a4a);
+            border: 1px solid #3a4a6a;
+            color: #8ab4f8;
+            padding: 10px 15px;
+            border-radius: 8px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            flex-shrink: 0;
+        }
+
+        .share-btn:hover {
+            background: linear-gradient(180deg, #3a4a6a, #2a3a5a);
+            color: #aaccff;
+        }
+
+        .share-btn::before {
+            content: '🔗';
+        }
+
+        .share-btn.copied {
+            background: linear-gradient(180deg, #2a5a2a, #1a4a1a);
+            border-color: #3a6a3a;
+            color: #8BC34A;
+        }
+
+        .share-btn.copied::before {
+            content: '✅';
+        }
+
         /* 操作按钮组 */
         .action-buttons {
             display: flex;
@@ -513,6 +548,7 @@
                                 </div>
                                 <div class="action-buttons">
                                     <button class="play-btn" onclick="togglePlay('${rec.filename}', this)" title="播放/暂停">▶️</button>
+                                    <button class="share-btn" onclick="copyShareLink('${rec.filename}', this)" title="复制分享链接">分享</button>
                                     <a href="/recordings/${rec.filename}" class="download-btn" download>下载</a>
                                 </div>
                             </div>
@@ -668,6 +704,41 @@
             }
         }
         
+        // 复制分享链接
+        async function copyShareLink(filename, btn) {
+            const url = `${window.location.origin}/recordings/${filename}`;
+
+            try {
+                // 优先使用 Clipboard API
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    await navigator.clipboard.writeText(url);
+                } else {
+                    // 降级方案：使用传统的 execCommand
+                    const textarea = document.createElement('textarea');
+                    textarea.value = url;
+                    textarea.style.position = 'fixed';
+                    textarea.style.opacity = '0';
+                    document.body.appendChild(textarea);
+                    textarea.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(textarea);
+                }
+
+                // 显示复制成功状态
+                btn.classList.add('copied');
+                btn.textContent = '已复制';
+
+                // 2秒后恢复
+                setTimeout(() => {
+                    btn.classList.remove('copied');
+                    btn.textContent = '分享';
+                }, 2000);
+            } catch (err) {
+                console.error('复制失败:', err);
+                alert('复制链接失败，请手动复制:\n' + url);
+            }
+        }
+
         // 页面加载时自动加载
         document.addEventListener('DOMContentLoaded', loadRecordings);
         

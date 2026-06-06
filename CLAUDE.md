@@ -162,5 +162,5 @@ pip3 install pyaudio numpy tornado pyserial pyrtlsdr
   - ZH: 首页 · 功能 · 演示 · 安装 · 设计 & 架构 · 文档 · FDE · EFHW · GitHub
   - Demo links to `../index.html#demo` (docs/) or `../../index.html#demo` (zh/docs/) or `index.html#demo` (root)
   - EFHW links to `../efhw/index.html` (docs/) or `../../efhw/index.html` (zh/docs/) or `efhw/index.html` (root)
-- **Version references**: Keep current (V5.4). Architecture diagram image files can keep old names (e.g. `architecture52.jpg`), but captions/alt text/titles must reference V5.4
+- **Version references**: Keep current (V5.5). Architecture diagram image files can keep old names (e.g. `architecture52.jpg`), but captions/alt text/titles must reference V5.5
 - **Script paths in zh/docs/**: Must use `../../js/main.js` (two levels up), never `../js/main.js`

@@ -895,6 +895,188 @@ body {
     border-color: var(--accent-primary);
 }
 
+/* ========== 记忆管理面板 - SDR 蓝色风格 ========== */
+.mem-panel-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+    margin-bottom: var(--space-md);
+    max-height: 50vh;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.mem-panel-card {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    padding: var(--space-sm) var(--space-md);
+    background: linear-gradient(135deg, var(--bg-button), var(--bg-tertiary));
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    transition: all var(--transition-fast);
+    flex-shrink: 0;
+}
+
+.mem-panel-card.filled {
+    border-color: rgba(0, 212, 255, 0.15);
+}
+
+.mem-panel-card.empty {
+    opacity: 0.45;
+    border-style: dashed;
+}
+
+.mem-card-index {
+    flex-shrink: 0;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg-tertiary);
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+    font-weight: 800;
+    color: var(--text-secondary);
+    letter-spacing: 0.03em;
+}
+
+.mem-panel-card.filled .mem-card-index {
+    background: rgba(0, 212, 255, 0.12);
+    color: var(--accent-primary);
+}
+
+.mem-card-body {
+    flex: 1;
+    min-width: 0;
+}
+
+.mem-card-freq {
+    font-family: var(--font-mono);
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--accent-primary);
+    letter-spacing: 1px;
+}
+
+.mem-panel-card.empty .mem-card-freq {
+    color: var(--text-muted);
+}
+
+.mem-card-meta {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 2px;
+}
+
+.mem-card-mode {
+    font-size: 11px;
+    color: var(--text-secondary);
+    font-weight: 600;
+}
+
+.mem-card-band {
+    font-size: 10px;
+    padding: 1px 6px;
+    background: rgba(0, 212, 255, 0.1);
+    border-radius: var(--radius-sm);
+    color: var(--accent-primary);
+    font-weight: 600;
+}
+
+.mem-card-time {
+    font-size: 9px;
+    color: var(--text-muted);
+    margin-top: 1px;
+}
+
+.mem-card-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    flex-shrink: 0;
+}
+
+.mem-action-btn {
+    padding: 5px 10px;
+    font-size: 10px;
+    font-weight: 600;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border-color);
+    background: linear-gradient(135deg, var(--bg-button), var(--bg-tertiary));
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    white-space: nowrap;
+    min-height: 28px;
+    touch-action: manipulation;
+}
+
+.mem-action-btn:active {
+    transform: scale(0.95);
+    border-color: var(--accent-primary);
+    background: rgba(0, 212, 255, 0.12);
+    color: var(--accent-primary);
+}
+
+.mem-action-btn.primary {
+    border-color: rgba(0, 212, 255, 0.3);
+    color: var(--accent-primary);
+}
+
+.mem-action-btn.danger {
+    border-color: rgba(239, 68, 68, 0.25);
+    color: var(--text-muted);
+}
+
+.mem-action-btn.danger:active {
+    border-color: var(--accent-danger);
+    background: rgba(239, 68, 68, 0.15);
+    color: var(--accent-danger);
+}
+
+.mem-panel-actions {
+    display: flex;
+    gap: var(--space-sm);
+    flex-wrap: wrap;
+}
+
+.mem-panel-btn {
+    flex: 1;
+    min-width: 60px;
+    padding: 10px 8px;
+    font-size: 11px;
+    font-weight: 600;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-color);
+    background: linear-gradient(135deg, var(--bg-button), var(--bg-tertiary));
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    text-align: center;
+    white-space: nowrap;
+    touch-action: manipulation;
+}
+
+.mem-panel-btn:active {
+    transform: scale(0.96);
+    border-color: var(--accent-primary);
+    background: rgba(0, 212, 255, 0.1);
+    color: var(--accent-primary);
+}
+
+.mem-panel-btn.danger {
+    border-color: rgba(239, 68, 68, 0.2);
+}
+
+.mem-panel-btn.danger:active {
+    border-color: var(--accent-danger);
+    background: rgba(239, 68, 68, 0.15);
+    color: var(--accent-danger);
+}
+
 /* Settings Panel */
 .setting-item {
     margin-bottom: 14px;
@@ -1609,6 +1791,109 @@ body {
     background: var(--bg-button-hover);
     border-color: var(--accent-primary);
     transform: scale(0.95);
+}
+
+/* ========== 频道记忆 3×2 网格 - SDR 蓝色风格 ========== */
+.memory-channel-strip {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: clamp(4px, 0.8vw, 6px);
+    padding: 0 clamp(8px, 2vw, 10px) clamp(4px, 0.8vh, 6px);
+    margin: 0;
+    flex-shrink: 0;
+}
+
+/* 记忆按钮 - 与 .dsp-btn / .quick-btn 设计语言统一 */
+.mem-btn {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1px;
+    min-height: clamp(32px, 5.5vh, 42px);
+    padding: clamp(2px, 0.4vh, 5px) clamp(4px, 1vw, 8px);
+    background: linear-gradient(135deg, var(--bg-button), var(--bg-tertiary));
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+    -webkit-user-select: none;
+    overflow: hidden;
+}
+
+.mem-btn::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: transparent;
+    transition: background var(--transition-fast);
+    pointer-events: none;
+}
+
+.mem-btn:active {
+    transform: scale(0.96);
+    border-color: var(--accent-primary);
+}
+
+.mem-btn:active::after {
+    background: rgba(0, 212, 255, 0.08);
+}
+
+/* 已填充状态 - 青色高亮 */
+.mem-btn.filled {
+    color: var(--text-primary);
+    border-color: rgba(0, 212, 255, 0.25);
+    background: linear-gradient(135deg, rgba(0, 212, 255, 0.08), rgba(0, 212, 255, 0.03));
+}
+
+.mem-btn.filled .mem-name {
+    color: var(--accent-primary);
+}
+
+/* 保存闪烁动画 */
+.mem-btn.saved-flash {
+    border-color: var(--accent-primary);
+    background: linear-gradient(135deg, rgba(0, 212, 255, 0.22), rgba(0, 212, 255, 0.12));
+    box-shadow: 0 0 14px rgba(0, 212, 255, 0.3);
+    transition: all 0.1s ease;
+}
+
+/* 召回闪烁动画 */
+.mem-btn.recall-flash {
+    border-color: var(--accent-primary);
+    background: linear-gradient(135deg, rgba(0, 212, 255, 0.15), rgba(0, 212, 255, 0.08));
+    box-shadow: 0 0 10px rgba(0, 212, 255, 0.2);
+    transition: all 0.08s ease;
+}
+
+.mem-name {
+    font-size: clamp(10px, 2vw, 12px);
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    line-height: 1;
+    transition: color var(--transition-fast);
+}
+
+.mem-info {
+    font-size: clamp(8px, 1.6vw, 10px);
+    font-family: var(--font-mono);
+    color: var(--text-muted);
+    line-height: 1.15;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+    transition: color var(--transition-fast);
+}
+
+.mem-btn.filled .mem-info {
+    color: var(--text-secondary);
 }
 
 /* 底部 TUNE 按钮 - 蓝色 */

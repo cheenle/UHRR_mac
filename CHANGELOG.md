@@ -5,6 +5,42 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [V5.5.0] - 2026-06-06
+
+### 📻 频道记忆 & 登录体验优化
+
+**频道记忆保存/召回**:
+- 新增 6 频道 3×2 网格记忆槽位 (M1-M6)，替代原有 4 频道横排布局
+- 交互模型简化：点按 = 召回频率/模式，长按 = 覆盖保存（无需 SAVE 武装步骤）
+- 完整记忆管理面板：召回 / 保存当前 / 清除 / 导出 JSON / 导入 JSON / 清空全部
+- 视觉风格统一：SDR 蓝色 (#00d4ff) 设计语言，与 DSP 按钮/快捷控制一致
+- 保存/召回闪烁动画 + 触觉反馈
+
+**登录页面重设计**:
+- 全新 SDR 蓝色毛玻璃登录页：深色径向渐变背景 + 品牌 Logo + 玻璃拟态卡片
+- 移动端完整适配：viewport-fit、安全区域、iOS PWA 支持
+- 表单交互优化：自动聚焦、大写键盘适配、输入框聚焦光晕
+- 错误提示：密码错误时红色抖动动画 + 明确错误消息
+
+**录音格式升级**:
+- 录音格式从 WAV 切换为 MP3 (LAME VBR q:0 最高质量)
+- 使用 ffmpeg pipe 编码，大幅减小文件体积
+
+**移动端状态同步**:
+- `controls.js` 频率/模式更新时自动同步 `mobileState`
+- 频段按钮标签随频率变化自动更新
+
+**文件变更**:
+- `www/mobile_modern.html` / `www/mobile_modern_zh.html` - 记忆条带 HTML 重构
+- `www/mobile_modern.css` - 新增记忆按钮 + 面板样式 (~280 行)
+- `www/mobile_modern.js` - 记忆核心逻辑重写 + 管理面板 (~300 行)
+- `MRRC` - 登录页面完整重设计
+- `www/controls.js` - 移动端状态同步
+- `audio_interface.py` - WAV → MP3 录制
+- `atr1000_tuner.json` - 天调数据更新
+
+---
+
 ## [V5.4.0] - 2026-06-06
 
 ### 🔧 FT8 集成修复与前端优化

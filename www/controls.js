@@ -1145,6 +1145,13 @@ function rotatefreq(){
 }
 
 function showTRXfreq(freq){
+	var numericFreq = parseInt(freq, 10);
+	if (!isNaN(numericFreq)) {
+		TRXfrequency = numericFreq;
+		if (typeof mobileState !== 'undefined') {
+			mobileState.currentFrequency = numericFreq;
+		}
+	}
 	freq=freq.toString();
 	while (freq.length < 9){freq="0"+freq;}
 	
@@ -1205,6 +1212,10 @@ function showTRXfreq(freq){
 		var freq1hz = document.getElementById("freq-1hz");
 		if (freq1hz) freq1hz.innerHTML=freq.substring(8, 9);
 	}
+
+	if (typeof updateBandButtonLabel === 'function' && typeof getCurrentMobileBand === 'function') {
+		updateBandButtonLabel(getCurrentMobileBand());
+	}
 }
 
 // 全局频率更新函数
@@ -1221,19 +1232,29 @@ function sendTRXfreq(freq=0){
 
 
 function showTRXmode(mode){
+	var cleanMode = String(mode || '').trim().toUpperCase();
 	// 桌面版元素
-	setAttr("div-mode_menu",mode);
+	setAttr("div-mode_menu",cleanMode);
+	
+	// 移动版状态同步（mobile_modern.js 依赖该状态决定下一档模式）
+	if (typeof mobileState !== 'undefined') {
+		mobileState.currentMode = cleanMode;
+	}
 	
 	// 移动版元素
 	var modeIndicator = document.getElementById("mode-indicator");
 	if (modeIndicator) {
-		modeIndicator.innerHTML = mode;
+		modeIndicator.innerHTML = cleanMode;
 	}
 	
 	// 移动版模式按钮
-	var modeBtn = document.getElementById("mode-btn");
-	if (modeBtn) {
-		modeBtn.innerHTML = mode;
+	if (typeof updateModeButtonLabel === 'function') {
+		updateModeButtonLabel(cleanMode);
+	} else {
+		var modeBtn = document.getElementById("mode-btn");
+		if (modeBtn) {
+			modeBtn.innerHTML = cleanMode;
+		}
 	}
 }
 
@@ -2003,4 +2024,3 @@ function toggleRecord(sendit = false)
 
 
 // Tune/CQ 功能已提取到 modules/tune_cq.js
-

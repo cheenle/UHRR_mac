@@ -22,8 +22,8 @@ import threading
 import time
 import gc
 import numpy as np
-import wave
 import os
+import subprocess
 from datetime import datetime
 from opus.decoder import Decoder as OpusDecoder
 from opus.encoder import Encoder as OpusEncoder
@@ -686,23 +686,36 @@ class PyAudioCapture(threading.Thread):
                 # 交错合并为立体声: [L0, R0, L1, R1, ...]
                 stereo_data = np.column_stack((rx_data, tx_data)).reshape(-1).astype(np.int16)
 
-                # 生成文件名: 频率(kHz)_日期_时间.wav
+                # 生成文件名: 频率(kHz)_日期_时间.mp3
                 freq_khz = int(PyAudioCapture.recording_freq / 1000) if PyAudioCapture.recording_freq > 0 else 0
                 now = datetime.now()
                 date_str = now.strftime('%Y%m%d')
                 time_str = now.strftime('%H%M%S')
-                filename = f"{freq_khz:05d}kHz_{date_str}_{time_str}.wav"
+                filename = f"{freq_khz:05d}kHz_{date_str}_{time_str}.mp3"
                 filepath = os.path.join(PyAudioCapture.recording_dir, filename)
 
-                # 保存为 WAV 文件 (16kHz, 16bit, stereo)
-                with wave.open(filepath, 'wb') as wf:
-                    wf.setnchannels(2)
-                    wf.setsampwidth(2)  # 16-bit
-                    wf.setframerate(16000)  # 16kHz
-                    wf.writeframes(stereo_data.tobytes())
+                # 使用 ffmpeg 编码为高质量 MP3 (LAME VBR q:0, 16kHz stereo PCM -> MP3)
+                ffmpeg_cmd = [
+                    'ffmpeg', '-y',                    # 覆盖已存在的输出文件
+                    '-f', 's16le',                      # 输入格式: 16-bit signed little-endian
+                    '-ar', '16000',                     # 输入采样率: 16kHz
+                    '-ac', '2',                         # 输入声道: stereo
+                    '-i', 'pipe:0',                    # 从 stdin 读取
+                    '-c:a', 'libmp3lame',              # LAME MP3 编码器
+                    '-q:a', '0',                       # 最高质量 VBR (0=best, 9=worst)
+                    filepath
+                ]
+                proc = subprocess.run(
+                    ffmpeg_cmd,
+                    input=stereo_data.tobytes(),
+                    capture_output=True,
+                    timeout=30
+                )
+                if proc.returncode != 0:
+                    raise RuntimeError(f"ffmpeg 编码失败: {proc.stderr.decode()}")
 
                 duration = max_len / 16000
-                print(f"✅ 录音已保存 (立体声): {filename} ({duration:.1f}秒, L={len(rx_data)} R={len(tx_data)}, {os.path.getsize(filepath)} bytes)")
+                print(f"✅ 录音已保存 (MP3高质量): {filename} ({duration:.1f}秒, L={len(rx_data)} R={len(tx_data)}, {os.path.getsize(filepath)} bytes)")
                 return filepath
                 
         except Exception as e:
@@ -892,13 +905,13 @@ def get_recordings_list():
     recordings = []
     try:
         for filename in os.listdir(recording_dir):
-            if filename.endswith('.wav'):
+            if filename.endswith('.mp3'):
                 filepath = os.path.join(recording_dir, filename)
                 stat = os.stat(filepath)
-                
+
                 # 解析文件名获取频率和时间
-                # 格式: 频率(kHz)_日期_时间.wav
-                parts = filename.replace('.wav', '').split('_')
+                # 格式: 频率(kHz)_日期_时间.mp3
+                parts = filename.replace('.mp3', '').split('_')
                 freq_str = parts[0] if len(parts) > 0 else "Unknown"
                 date_str = parts[1] if len(parts) > 1 else ""
                 time_str = parts[2] if len(parts) > 2 else ""

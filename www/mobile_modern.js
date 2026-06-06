@@ -140,6 +140,254 @@ var mobileState = {
     lastRIGSignalTime: 0       // 上次RIG信号值更新时间
 };
 
+const MOBILE_BANDS = [
+    { name: '160m', freq: 1845500, min: 1800000, max: 2000000 },
+    { name: '80m', freq: 3850000, min: 3500000, max: 4000000 },
+    { name: '40m', freq: 7050000, min: 7000000, max: 7300000 },
+    { name: '30m', freq: 10140000, min: 10100000, max: 10150000 },
+    { name: '20m', freq: 14270000, min: 14000000, max: 14350000 },
+    { name: '17m', freq: 18132500, min: 18068000, max: 18168000 },
+    { name: '15m', freq: 21400000, min: 21000000, max: 21450000 },
+    { name: '12m', freq: 24952500, min: 24890000, max: 24990000 },
+    { name: '10m', freq: 28450000, min: 28000000, max: 29700000 }
+];
+const MOBILE_MODES = ['USB', 'LSB', 'CW', 'AM', 'FM'];
+const MEMORY_CHANNELS_KEY = 'mrrc_memory_channels_v1';
+const MEMORY_CHANNEL_COUNT = 6;
+// memorySaveArmed 已移除 — 改用标准 tap=recall, long-press=save 交互
+
+function getMobileBandByName(name) {
+    return MOBILE_BANDS.find(band => band.name === name) || null;
+}
+
+function getMobileBandForFrequency(freq) {
+    const value = parseInt(freq, 10);
+    if (!Number.isFinite(value)) return null;
+    return MOBILE_BANDS.find(band => value >= band.min && value <= band.max) || null;
+}
+
+function getCurrentMobileBand() {
+    const fromFrequency = getMobileBandForFrequency(typeof TRXfrequency !== 'undefined' ? TRXfrequency : mobileState.currentFrequency);
+    if (fromFrequency) return fromFrequency;
+    const bandBtn = document.getElementById('band-btn');
+    return getMobileBandByName(bandBtn ? bandBtn.dataset.currentBand : '') || MOBILE_BANDS[0];
+}
+
+function updateBandButtonLabel(currentBand) {
+    const bandBtn = document.getElementById('band-btn');
+    if (!bandBtn || !currentBand) return;
+    const currentIndex = MOBILE_BANDS.findIndex(band => band.name === currentBand.name);
+    const nextBand = MOBILE_BANDS[(currentIndex + 1) % MOBILE_BANDS.length];
+    bandBtn.dataset.currentBand = currentBand.name;
+    bandBtn.dataset.nextBand = nextBand.name;
+    bandBtn.textContent = currentBand.name + '→' + nextBand.name;
+    bandBtn.title = 'Current band: ' + currentBand.name + '. Tap to switch to ' + nextBand.name + '.';
+    bandBtn.setAttribute('aria-label', 'Current band ' + currentBand.name + ', next band ' + nextBand.name);
+}
+
+function normalizeMobileMode(mode) {
+    const normalized = String(mode || '').trim().toUpperCase();
+    return MOBILE_MODES.includes(normalized) ? normalized : MOBILE_MODES[0];
+}
+
+function updateModeButtonLabel(mode) {
+    const currentMode = normalizeMobileMode(mode);
+    const modeBtn = document.getElementById('mode-btn');
+    if (!modeBtn) return;
+    const currentIndex = MOBILE_MODES.indexOf(currentMode);
+    const nextMode = MOBILE_MODES[(currentIndex + 1) % MOBILE_MODES.length];
+    modeBtn.dataset.currentMode = currentMode;
+    modeBtn.dataset.nextMode = nextMode;
+    modeBtn.textContent = currentMode + '→' + nextMode;
+    modeBtn.title = 'Current mode: ' + currentMode + '. Tap to switch to ' + nextMode + '.';
+    modeBtn.setAttribute('aria-label', 'Current mode ' + currentMode + ', next mode ' + nextMode);
+}
+
+function refreshCycleButtonLabels() {
+    updateBandButtonLabel(getCurrentMobileBand());
+    updateModeButtonLabel(mobileState.currentMode);
+}
+
+// ---- 频道记忆核心 ----
+
+function readMemoryChannels() {
+    try {
+        const saved = JSON.parse(localStorage.getItem(MEMORY_CHANNELS_KEY) || '[]');
+        return Array.from({ length: MEMORY_CHANNEL_COUNT }, (_, index) => saved[index] || null);
+    } catch (e) {
+        console.warn('频道记忆读取失败:', e);
+        return Array.from({ length: MEMORY_CHANNEL_COUNT }, () => null);
+    }
+}
+
+function writeMemoryChannels(channels) {
+    try {
+        localStorage.setItem(MEMORY_CHANNELS_KEY, JSON.stringify(channels));
+    } catch (e) {
+        console.warn('频道记忆保存失败:', e);
+    }
+}
+
+function deleteMemoryChannel(index) {
+    const channels = readMemoryChannels();
+    channels[index] = null;
+    writeMemoryChannels(channels);
+    updateMemButtons();
+    hapticFeedback('light');
+    console.log('频道记忆已清除:', 'M' + (index + 1));
+}
+
+function clearAllMemoryChannels() {
+    writeMemoryChannels(Array.from({ length: MEMORY_CHANNEL_COUNT }, () => null));
+    updateMemButtons();
+    hapticFeedback('medium');
+    console.log('全部频道记忆已清空');
+}
+
+function formatMemoryFreqShort(freq) {
+    const value = parseInt(freq, 10);
+    if (!Number.isFinite(value)) return '--';
+    const mhz = value / 1000000;
+    // 10m频段以上保留3位，以下保留4位
+    return mhz.toFixed(value >= 10000000 ? 3 : 4).replace(/0+$/, '').replace(/\.$/, '');
+}
+
+function formatMemoryFreqFull(freq) {
+    const value = parseInt(freq, 10);
+    if (!Number.isFinite(value)) return '--.---';
+    return (value / 1000000).toFixed(5);
+}
+
+function formatRelativeTime(timestamp) {
+    if (!timestamp) return '';
+    const diff = Date.now() - timestamp;
+    if (diff < 60000) return '刚刚';
+    if (diff < 3600000) return Math.floor(diff / 60000) + '分钟前';
+    if (diff < 86400000) return Math.floor(diff / 3600000) + '小时前';
+    if (diff < 604800000) return Math.floor(diff / 86400000) + '天前';
+    return new Date(timestamp).toLocaleDateString();
+}
+
+function getCurrentMemorySnapshot() {
+    const freq = parseInt(typeof TRXfrequency !== 'undefined' ? TRXfrequency : mobileState.currentFrequency, 10);
+    return {
+        freq: Number.isFinite(freq) ? freq : 7050000,
+        mode: normalizeMobileMode(mobileState.currentMode),
+        savedAt: Date.now()
+    };
+}
+
+// 更新页面内嵌的记忆按钮 (3×2 网格)
+function updateMemButtons() {
+    const channels = readMemoryChannels();
+    document.querySelectorAll('.mem-btn').forEach(button => {
+        const index = parseInt(button.dataset.mem, 10);
+        const memory = channels[index];
+        const nameEl = button.querySelector('.mem-name');
+        const infoEl = button.querySelector('.mem-info');
+
+        button.classList.toggle('filled', !!memory);
+        if (memory) {
+            const band = getMobileBandForFrequency(memory.freq);
+            const bandLabel = band ? band.name : '';
+            if (infoEl) infoEl.textContent = formatMemoryFreqShort(memory.freq) + (bandLabel ? ' ' + bandLabel : '') + '/' + normalizeMobileMode(memory.mode);
+            if (nameEl) nameEl.textContent = 'M' + (index + 1) + ' ▸';
+            button.title = 'M' + (index + 1) + ': ' + formatMemoryFreqFull(memory.freq) + ' MHz ' + normalizeMobileMode(memory.mode) + '\n点按召回 · 长按覆盖保存';
+        } else {
+            if (infoEl) infoEl.textContent = '--';
+            if (nameEl) nameEl.textContent = 'M' + (index + 1);
+            button.title = 'M' + (index + 1) + ': 空\n点按保存当前频率 · 长按保存';
+        }
+    });
+}
+
+function saveMemoryChannel(index) {
+    const channels = readMemoryChannels();
+    channels[index] = getCurrentMemorySnapshot();
+    writeMemoryChannels(channels);
+    updateMemButtons();
+    const button = document.querySelector(`.mem-btn[data-mem="${index}"]`);
+    if (button) {
+        button.classList.add('saved-flash');
+        setTimeout(() => button.classList.remove('saved-flash'), 500);
+    }
+    hapticFeedback('medium');
+    console.log('💾 频道保存:', 'M' + (index + 1), channels[index]);
+}
+
+function recallMemoryChannel(index) {
+    const memory = readMemoryChannels()[index];
+    if (!memory) {
+        // 空槽位点按 → 一键保存当前频率
+        saveMemoryChannel(index);
+        return;
+    }
+    const freq = parseInt(memory.freq, 10);
+    if (Number.isFinite(freq)) {
+        if (typeof TRXfrequency !== 'undefined') TRXfrequency = freq;
+        mobileState.currentFrequency = freq;
+        updateFrequencyDisplay();
+        if (typeof sendTRXfreq === 'function') {
+            sendTRXfreq(freq);
+        }
+    }
+    const mode = normalizeMobileMode(memory.mode);
+    mobileState.currentMode = mode;
+    if (domElements.modeIndicator) {
+        domElements.modeIndicator.textContent = mode;
+    }
+    updateModeButtonLabel(mode);
+    sendWebSocketMessage('setMode:' + mode);
+    hapticFeedback('medium');
+    // 召回闪烁效果
+    const button = document.querySelector(`.mem-btn[data-mem="${index}"]`);
+    if (button) {
+        button.classList.add('recall-flash');
+        setTimeout(() => button.classList.remove('recall-flash'), 350);
+    }
+    console.log('📻 频道召回:', 'M' + (index + 1), memory);
+}
+
+// 设置内嵌记忆按钮的事件 (tap=recall, long-press=save)
+function setupMemChannels() {
+    document.querySelectorAll('.mem-btn').forEach(button => {
+        let longPressTimer = null;
+        let longPressed = false;
+        const index = parseInt(button.dataset.mem, 10);
+
+        const clearLongPress = () => {
+            if (longPressTimer) {
+                clearTimeout(longPressTimer);
+                longPressTimer = null;
+            }
+        };
+
+        button.addEventListener('pointerdown', function(e) {
+            longPressed = false;
+            clearLongPress();
+            longPressTimer = setTimeout(() => {
+                longPressed = true;
+                saveMemoryChannel(index);
+            }, 600);
+        });
+
+        button.addEventListener('pointerup', clearLongPress);
+        button.addEventListener('pointerleave', clearLongPress);
+        button.addEventListener('pointercancel', clearLongPress);
+
+        button.addEventListener('click', function(e) {
+            e.preventDefault();
+            if (longPressed) {
+                longPressed = false;
+                return;
+            }
+            recallMemoryChannel(index);
+        });
+    });
+
+    updateMemButtons();
+}
+
 // PTT 触摸状态由 tx_button_optimized.js 管理
 
 ////////////////////////////////////////////////////////////
@@ -217,6 +465,8 @@ document.addEventListener('DOMContentLoaded', function() {
     
     try {
         updateFrequencyDisplay();
+        refreshCycleButtonLabels();
+        updateMemButtons();
     } catch (e) {
         console.error('❌ updateFrequencyDisplay 失败:', e);
     }
@@ -592,6 +842,8 @@ function setupEventListeners() {
             tuneFrequency(parseInt(this.dataset.step));
         });
     });
+
+    setupMemChannels();
     
     // TUNE天调按钮 - 长按发射1kHz单音
     const tuneHeaderBtn = document.getElementById('tune-header-btn');
@@ -1181,6 +1433,8 @@ function updateFrequencyDisplay() {
     const el10hz = document.getElementById('freq-10hz');
     if (el100hz) el100hz.textContent = hzStr[0];
     if (el10hz) el10hz.textContent = hzStr[1];
+
+    updateBandButtonLabel(getCurrentMobileBand());
 }
 
 // 调节频率
@@ -1621,31 +1875,12 @@ function handleQuickButton(button) {
 
 // 波段切换 - 频率参照 index.html 中的设置
 function cycleBand() {
-    const bands = ['160m', '80m', '40m', '30m', '20m', '17m', '15m', '12m', '10m'];
-    const bandFreqs = {
-        '160m': 1845500,   // 1.845500 MHz
-        '80m': 3850000,    // 3.850000 MHz
-        '40m': 7050000,    // 7.050000 MHz
-        '30m': 10140000,   // 10.140000 MHz
-        '20m': 14270000,   // 14.270000 MHz
-        '17m': 18132500,   // 18.132500 MHz
-        '15m': 21400000,   // 21.400000 MHz
-        '12m': 24952500,   // 24.952500 MHz
-        '10m': 28450000,   // 28.450000 MHz
-    };
-    
-    const bandBtn = document.getElementById('band-btn');
-    if (!bandBtn) return;
-    
-    const currentBand = bandBtn.innerHTML;
-    const currentIndex = bands.indexOf(currentBand);
-    const nextIndex = (currentIndex + 1) % bands.length;
-    const nextBand = bands[nextIndex];
-    
-    bandBtn.innerHTML = nextBand;
-    
+    const currentBand = getCurrentMobileBand();
+    const currentIndex = MOBILE_BANDS.findIndex(band => band.name === currentBand.name);
+    const nextBand = MOBILE_BANDS[(currentIndex + 1) % MOBILE_BANDS.length];
+
     // 设置频率
-    const freq = bandFreqs[nextBand];
+    const freq = nextBand.freq;
     if (freq && typeof TRXfrequency !== 'undefined') {
         TRXfrequency = freq;
         mobileState.currentFrequency = freq;
@@ -1653,7 +1888,8 @@ function cycleBand() {
         if (typeof sendTRXfreq === 'function') {
             sendTRXfreq(freq);
         }
-        console.log('波段切换:', nextBand, '频率:', freq);
+        updateBandButtonLabel(nextBand);
+        console.log('波段切换:', currentBand.name, '→', nextBand.name, '频率:', freq);
     }
 }
 
@@ -1839,21 +2075,11 @@ function setupFullscreenListener() {
 
 // 波段选择器
 function showBandSelector() {
-    const bands = [
-        { name: '160m', freq: 1845500 },
-        { name: '80m', freq: 3850000 },
-        { name: '40m', freq: 7050000 },
-        { name: '30m', freq: 10140000 },
-        { name: '20m', freq: 14270000 },
-        { name: '17m', freq: 18132500 },
-        { name: '15m', freq: 21400000 },
-        { name: '12m', freq: 24952500 },
-        { name: '10m', freq: 28450000 }
-    ];
-    
     let html = '<div class="modal-panel"><h3>波段选择</h3><div class="band-grid">';
-    bands.forEach(band => {
-        html += `<button class="band-select-btn" onclick="selectBand(${band.freq}, '${band.name}')">${band.name}</button>`;
+    const currentBand = getCurrentMobileBand();
+    MOBILE_BANDS.forEach(band => {
+        const active = currentBand && currentBand.name === band.name ? ' active' : '';
+        html += `<button class="band-select-btn${active}" onclick="selectBand(${band.freq}, '${band.name}')">${band.name}</button>`;
     });
     html += '</div><button class="close-panel-btn" onclick="closeModalPanel()">关闭</button></div>';
     
@@ -1867,8 +2093,7 @@ function selectBand(freq, name) {
         updateFrequencyDisplay();
         
         // 更新波段按钮
-        const bandBtn = document.getElementById('band-btn');
-        if (bandBtn) bandBtn.innerHTML = name;
+        updateBandButtonLabel(getMobileBandByName(name));
         
         if (typeof sendTRXfreq === 'function') {
             sendTRXfreq(freq);
@@ -1880,11 +2105,10 @@ function selectBand(freq, name) {
 
 // 模式选择器
 function showModeSelector() {
-    const modes = ['USB', 'LSB', 'AM', 'FM'];
-    
     let html = '<div class="modal-panel"><h3>模式选择</h3><div class="mode-grid">';
-    modes.forEach(mode => {
-        const active = mobileState.currentMode === mode ? 'active' : '';
+    const currentMode = normalizeMobileMode(mobileState.currentMode);
+    MOBILE_MODES.forEach(mode => {
+        const active = currentMode === mode ? 'active' : '';
         html += `<button class="mode-select-btn ${active}" onclick="selectMode('${mode}')">${mode}</button>`;
     });
     html += '</div><button class="close-panel-btn" onclick="closeModalPanel()">关闭</button></div>';
@@ -1893,28 +2117,144 @@ function showModeSelector() {
 }
 
 function selectMode(mode) {
-    mobileState.currentMode = mode;
+    mobileState.currentMode = normalizeMobileMode(mode);
     
     // 更新 UI
     if (domElements.modeIndicator) {
-        domElements.modeIndicator.textContent = mode;
+        domElements.modeIndicator.textContent = mobileState.currentMode;
     }
-    const modeBtn = document.getElementById('mode-btn');
-    if (modeBtn) modeBtn.innerHTML = mode;
+    updateModeButtonLabel(mobileState.currentMode);
     
     // 发送命令
-    sendWebSocketMessage("setMode:" + mode);
-    console.log('选择模式:', mode);
+    sendWebSocketMessage("setMode:" + mobileState.currentMode);
+    console.log('选择模式:', mobileState.currentMode);
     
     closeModalPanel();
 }
 
-// 内存面板（占位）
+// ---- 记忆管理面板 ----
 function showMemoryPanel() {
-    let html = '<div class="modal-panel"><h3>内存管理</h3>';
-    html += '<p>内存功能开发中...</p>';
+    const channels = readMemoryChannels();
+
+    let html = '<div class="modal-panel" style="max-width:380px;"><h3>📻 频道记忆管理</h3>';
+
+    // 频道列表
+    html += '<div class="mem-panel-list">';
+    for (let i = 0; i < MEMORY_CHANNEL_COUNT; i++) {
+        const mem = channels[i];
+        if (mem) {
+            const freqMhz = formatMemoryFreqFull(mem.freq);
+            const mode = normalizeMobileMode(mem.mode);
+            const band = getMobileBandForFrequency(mem.freq);
+            const bandLabel = band ? band.name : '';
+            const timeStr = formatRelativeTime(mem.savedAt);
+
+            html += '<div class="mem-panel-card filled">';
+            html += '<div class="mem-card-index">M' + (i + 1) + '</div>';
+            html += '<div class="mem-card-body">';
+            html += '<div class="mem-card-freq">' + freqMhz + ' <small style="font-size:11px;">MHz</small></div>';
+            html += '<div class="mem-card-meta">';
+            html += '<span class="mem-card-mode">' + mode + '</span>';
+            if (bandLabel) html += '<span class="mem-card-band">' + bandLabel + '</span>';
+            html += '</div>';
+            if (timeStr) html += '<div class="mem-card-time">' + timeStr + '</div>';
+            html += '</div>';
+            html += '<div class="mem-card-actions">';
+            html += '<button class="mem-action-btn primary" onclick="recallMemoryChannel(' + i + ');closeModalPanel();">召回</button>';
+            html += '<button class="mem-action-btn" onclick="saveMemoryChannel(' + i + ');showMemoryPanel();">保存当前</button>';
+            html += '<button class="mem-action-btn danger" onclick="deleteMemoryChannel(' + i + ');showMemoryPanel();">清除</button>';
+            html += '</div>';
+            html += '</div>';
+        } else {
+            html += '<div class="mem-panel-card empty">';
+            html += '<div class="mem-card-index">M' + (i + 1) + '</div>';
+            html += '<div class="mem-card-body">';
+            html += '<div class="mem-card-freq">空</div>';
+            html += '</div>';
+            html += '<div class="mem-card-actions">';
+            html += '<button class="mem-action-btn primary" onclick="saveMemoryChannel(' + i + ');showMemoryPanel();">保存当前</button>';
+            html += '</div>';
+            html += '</div>';
+        }
+    }
+    html += '</div>';
+
+    // 底部操作栏
+    html += '<div class="mem-panel-actions">';
+    html += '<button class="mem-panel-btn" onclick="exportMemories();">📤 导出</button>';
+    html += '<button class="mem-panel-btn" onclick="document.getElementById(\'mem-import-file\').click();">📥 导入</button>';
+    html += '<button class="mem-panel-btn danger" onclick="if(confirm(\'确定清空全部6个频道记忆？\')){clearAllMemoryChannels();showMemoryPanel();}">🗑 清空全部</button>';
+    html += '</div>';
+
+    // 隐藏的文件导入 input
+    html += '<input type="file" id="mem-import-file" accept=".json" style="display:none;" onchange="importMemories(this)">';
+
+    html += '<hr style="border-color:var(--border-color);margin:12px 0;">';
     html += '<button class="close-panel-btn" onclick="closeModalPanel()">关闭</button></div>';
+
     showModalPanel(html);
+}
+
+// 导出记忆为 JSON 文件
+function exportMemories() {
+    const channels = readMemoryChannels();
+    const filled = channels.filter(Boolean);
+    if (filled.length === 0) {
+        alert('没有已保存的频道记忆可导出');
+        return;
+    }
+    const data = {
+        version: 1,
+        exportedAt: new Date().toISOString(),
+        channels: channels
+    };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'MRRC_memories_' + new Date().toISOString().slice(0, 10) + '.json';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    hapticFeedback('medium');
+    console.log('📤 频道记忆已导出:', filled.length, '个');
+}
+
+// 从 JSON 文件导入记忆
+function importMemories(fileInput) {
+    const file = fileInput.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            const data = JSON.parse(e.target.result);
+            if (!data.channels || !Array.isArray(data.channels)) {
+                alert('无效的记忆文件格式');
+                return;
+            }
+            const channels = Array.from({ length: MEMORY_CHANNEL_COUNT }, (_, i) => {
+                const src = data.channels[i];
+                if (!src || typeof src.freq !== 'number') return null;
+                return {
+                    freq: src.freq,
+                    mode: normalizeMobileMode(src.mode),
+                    savedAt: src.savedAt || Date.now()
+                };
+            });
+            writeMemoryChannels(channels);
+            updateMemButtons();
+            showMemoryPanel();
+            hapticFeedback('medium');
+            alert('已导入 ' + channels.filter(Boolean).length + ' 个频道记忆');
+            console.log('📥 频道记忆已导入:', channels.filter(Boolean).length, '个');
+        } catch (err) {
+            console.error('导入记忆失败:', err);
+            alert('导入失败：文件格式错误');
+        }
+    };
+    reader.readAsText(file);
+    fileInput.value = '';
 }
 
 // 设置面板
@@ -2431,20 +2771,20 @@ function closeModalPanel() {
 }
 
 function cycleMode() {
-    const modes = ['LSB', 'USB', 'AM', 'FM'];
-    const currentIndex = modes.indexOf(mobileState.currentMode);
-    const nextIndex = (currentIndex + 1) % modes.length;
-    mobileState.currentMode = modes[nextIndex];
+    const currentMode = normalizeMobileMode(mobileState.currentMode);
+    const currentIndex = MOBILE_MODES.indexOf(currentMode);
+    const nextIndex = (currentIndex + 1) % MOBILE_MODES.length;
+    mobileState.currentMode = MOBILE_MODES[nextIndex];
     
     // 更新显示
-    domElements.modeIndicator.textContent = mobileState.currentMode;
-    var modeBtn = document.getElementById("mode-btn");
-    if (modeBtn) {
-        modeBtn.innerHTML = mobileState.currentMode;
+    if (domElements.modeIndicator) {
+        domElements.modeIndicator.textContent = mobileState.currentMode;
     }
+    updateModeButtonLabel(mobileState.currentMode);
     
     // 发送模式命令
     sendWebSocketMessage("setMode:" + mobileState.currentMode);
+    console.log('模式切换:', currentMode, '→', mobileState.currentMode);
 }
 
 ////////////////////////////////////////////////////////////
@@ -2476,12 +2816,18 @@ window.addEventListener('orientationchange', function() {
 // 供 controls.js 调用的接口
 window.mobileModemUpdateFrequency = function(freq) {
     mobileState.currentFrequency = freq;
+    if (typeof TRXfrequency !== 'undefined') {
+        TRXfrequency = parseInt(freq, 10);
+    }
     updateFrequencyDisplay();
 };
 
 window.mobileModemUpdateMode = function(mode) {
-    mobileState.currentMode = mode;
-    domElements.modeIndicator.textContent = mode;
+    mobileState.currentMode = normalizeMobileMode(mode);
+    if (domElements.modeIndicator) {
+        domElements.modeIndicator.textContent = mobileState.currentMode;
+    }
+    updateModeButtonLabel(mobileState.currentMode);
 };
 
 window.mobileModemUpdatePTT = function(state) {
@@ -4187,4 +4533,3 @@ function handleCQCompleteMobile() {
 // 导出 CQ 相关函数
 window.playCQAudio = playCQAudio;
 window.handleCQCompleteMobile = handleCQCompleteMobile;
-
