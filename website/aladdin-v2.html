@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aladdin V2 — Veteran Judgment + Vibe Coding Engineering Method</title>
+    <meta name="description" content="Aladdin V2 is a software engineering methodology derived from MRRC: IT veteran judgment awakened by vibe coding, structured by FDE, SDD, harness, and agentic engineering.">
+    <meta name="keywords" content="Aladdin V2, veteran engineering, vibe coding, agentic engineering, FDE, SDD, harness, software architecture methodology, MRRC">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/octen.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .hero { min-height: auto; padding: 160px 24px 80px; }
+        .section { padding: 96px 0; border-bottom: 1px solid var(--border); }
+        .section:last-child { border-bottom: none; }
+        .section-header { text-align: center; margin-bottom: 56px; }
+        .section-label { display: inline-block; font-size: 0.8rem; color: var(--accent); text-transform: uppercase; letter-spacing: 0.12em; margin-bottom: 14px; }
+        .section-title { font-size: 2.25rem; font-weight: 700; letter-spacing: -0.03em; }
+        .section-subtitle { color: var(--text-secondary); font-size: 1.05rem; margin-top: 12px; max-width: 760px; margin-left: auto; margin-right: auto; }
+        .formula-box { background: var(--bg-card); border: 1px solid var(--border); border-radius: 18px; padding: 34px 40px; text-align: center; margin: 40px auto; max-width: 920px; font-family: var(--font-mono); }
+        .formula { font-size: 1.35rem; color: var(--accent); font-weight: 600; line-height: 1.8; }
+        .formula-desc { margin-top: 14px; color: var(--text-secondary); font-family: var(--font-sans); }
+        .grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 24px; }
+        .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px; }
+        .card-lite { background: var(--bg-card); border: 1px solid var(--border); border-radius: 16px; padding: 28px; transition: all .25s; }
+        .card-lite:hover { border-color: var(--accent); transform: translateY(-3px); }
+        .card-lite .icon { width: 54px; height: 54px; border-radius: 14px; display: flex; align-items: center; justify-content: center; background: var(--accent-glow); color: var(--accent); font-size: 1.4rem; margin-bottom: 18px; }
+        .card-lite h3 { font-size: 1.2rem; margin-bottom: 10px; }
+        .card-lite p, .card-lite li { color: var(--text-secondary); font-size: .92rem; line-height: 1.7; }
+        .card-lite ul { list-style: none; padding: 0; }
+        .card-lite li { padding: 5px 0 5px 18px; position: relative; }
+        .card-lite li::before { content: '•'; position: absolute; left: 0; color: var(--accent); }
+        .flow { display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px; margin-top: 34px; }
+        .flow-step { background: rgba(0,0,0,.28); border: 1px solid var(--border); border-radius: 14px; padding: 22px 16px; text-align: center; }
+        .flow-step span { display: block; font-family: var(--font-mono); color: var(--accent); font-size: .78rem; margin-bottom: 8px; }
+        .flow-step strong { display: block; font-size: 1rem; }
+        .quote-box { background: linear-gradient(135deg, var(--accent-glow), rgba(245,158,11,.08)); border: 1px solid var(--border); border-radius: 18px; padding: 34px; color: var(--text-secondary); line-height: 1.8; }
+        .principle-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 18px; }
+        .principle { display: flex; gap: 14px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 14px; padding: 22px; }
+        .principle-num { width: 34px; height: 34px; border-radius: 9px; background: var(--accent-glow); color: var(--accent); display: flex; align-items: center; justify-content: center; font-weight: 700; flex-shrink: 0; }
+        .principle p { color: var(--text-secondary); line-height: 1.6; font-size: .9rem; }
+        @media (max-width: 900px) { .grid-2, .grid-3, .flow { grid-template-columns: 1fr; } .hero { padding-top: 120px; } }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container navbar-content">
+            <a href="index.html" class="logo"><span class="logo-icon">📻</span><span>MRRC</span></a>
+            <ul class="nav-links">
+                <li><a href="index.html">Home</a></li>
+                <li><a href="docs/features.html">Features</a></li>
+                <li><a href="index.html#demo">Demo</a></li>
+                <li><a href="docs/installation.html">Installation</a></li>
+                <li><a href="docs/design.html">Design &amp; Architecture</a></li>
+                <li><a href="docs/docs.html">Docs</a></li>
+                <li><a href="fde.html">FDE</a></li>
+                <li><a href="aladdin-v2.html">Aladdin V2</a></li>
+                <li><a href="efhw/index.html">EFHW</a></li>
+                <li><a href="https://github.com/cheenle/UHRR_mac" target="_blank" rel="noopener"><i class="fab fa-github"></i> GitHub</a></li>
+            </ul>
+            <div class="nav-actions">
+                <a href="zh/aladdin-v2.html" class="lang-btn">中文</a>
+                <button class="mobile-menu-toggle"><i class="fas fa-bars"></i></button>
+            </div>
+        </div>
+    </nav>
+
+    <section class="hero">
+        <div class="hero-content">
+            <div class="hero-badge"><i class="fas fa-wand-magic-sparkles"></i><span>Research Methodology · Aladdin V2</span></div>
+            <h1 class="hero-title">Old Lamp,<br><span class="gradient">New Spirit</span></h1>
+            <p class="hero-subtitle" style="max-width: 780px;">
+                Aladdin V2 is the engineering method distilled from MRRC: IT veteran judgment awakened by vibe coding and agentic engineering, then disciplined by FDE, SDD, harness, and product leverage.
+            </p>
+            <div class="hero-stats">
+                <div class="stat-item"><span class="stat-value">7</span><span class="stat-label">Layers</span></div>
+                <div class="stat-item"><span class="stat-value">3</span><span class="stat-label">FDE Phases</span></div>
+                <div class="stat-item"><span class="stat-value">14</span><span class="stat-label">SDD Chapters</span></div>
+                <div class="stat-item"><span class="stat-value">1</span><span class="stat-label">OpenCode Skill</span></div>
+            </div>
+        </div>
+    </section>
+
+    <section class="section">
+        <div class="container">
+            <div class="section-header">
+                <span class="section-label">Definition</span>
+                <h2 class="section-title">What is Aladdin V2?</h2>
+                <p class="section-subtitle">A software engineering method for turning veteran experience into reusable agentic engineering assets.</p>
+            </div>
+            <div class="formula-box">
+                <div class="formula">Aladdin V2 = 老灯新灵 + FDE Cycle + SDD Spine + Agentic Harness + Product Leverage</div>
+                <div class="formula">老灯新灵 = Veteran Judgment + Vibe Coding + Field Truth</div>
+                <div class="formula-desc">Veteran judgment defines direction and constraints; vibe coding releases execution speed; field truth keeps both honest.</div>
+            </div>
+            <div class="quote-box">
+                In the Aladdin story, an old lamp looks ordinary until it is rubbed and the sealed spirit is released. In software engineering, the old lamp is the IT veteran's accumulated judgment, often sealed inside personal experience. The new spirit is the execution power released by vibe coding and AI agents. Aladdin V2 turns that release into a disciplined engineering system.
+            </div>
+        </div>
+    </section>
+
+    <section class="section" style="background: var(--bg-secondary);">
+        <div class="container">
+            <div class="section-header">
+                <span class="section-label">Seven Layers</span>
+                <h2 class="section-title">From Hidden Experience to Engineering Leverage</h2>
+            </div>
+            <div class="grid-3">
+                <div class="card-lite"><div class="icon"><i class="fas fa-user-tie"></i></div><h3>Old Lamp</h3><p>IT veteran judgment: production experience, failure intuition, architecture taste, and tradeoff ability.</p></div>
+                <div class="card-lite"><div class="icon"><i class="fas fa-satellite-dish"></i></div><h3>Field Truth</h3><p>Evidence from real systems: logs, measurements, hardware behavior, browser quirks, and user experience.</p></div>
+                <div class="card-lite"><div class="icon"><i class="fas fa-wand-magic-sparkles"></i></div><h3>New Spirit</h3><p>Vibe coding and agentic coding as execution power, constrained by veteran judgment and measurable outcomes.</p></div>
+                <div class="card-lite"><div class="icon"><i class="fas fa-route"></i></div><h3>FDE Cycle</h3><p>Echo discovers the real problem, Delta validates quickly, Product turns learning into reusable assets.</p></div>
+                <div class="card-lite"><div class="icon"><i class="fas fa-diagram-project"></i></div><h3>SDD Spine</h3><p>IBM TeamSD-style architecture memory: context, NFRs, use cases, decisions, services, components, operations.</p></div>
+                <div class="card-lite"><div class="icon"><i class="fas fa-shield-halved"></i></div><h3>Harness</h3><p>AGENTS, specs, plans, tests, scripts, postmortems, and guardrails that make agent work safe and repeatable.</p></div>
+            </div>
+        </div>
+    </section>
+
+    <section class="section">
+        <div class="container">
+            <div class="section-header">
+                <span class="section-label">Workflow</span>
+                <h2 class="section-title">Aladdin V2 Cycle</h2>
+                <p class="section-subtitle">Each cycle must create a demo and a reusable engineering asset.</p>
+            </div>
+            <div class="flow">
+                <div class="flow-step"><span>01</span><strong>Veteran Judgment</strong></div>
+                <div class="flow-step"><span>02</span><strong>Field Evidence</strong></div>
+                <div class="flow-step"><span>03</span><strong>Echo Demo</strong></div>
+                <div class="flow-step"><span>04</span><strong>Delta Prototype</strong></div>
+                <div class="flow-step"><span>05</span><strong>Product Leverage</strong></div>
+            </div>
+        </div>
+    </section>
+
+    <section class="section" style="background: var(--bg-secondary);">
+        <div class="container">
+            <div class="section-header">
+                <span class="section-label">MRRC Case Study</span>
+                <h2 class="section-title">Why MRRC is the Proof Ground</h2>
+            </div>
+            <div class="grid-2">
+                <div class="card-lite"><h3>Real Hardware</h3><p>Radios, USB audio devices, ATR-1000 tuner, serial control, RTL-SDR, TLS, and local system dependencies prevent purely imaginary solutions.</p></div>
+                <div class="card-lite"><h3>Real-Time Constraints</h3><p>PTT timing, TX/RX audio queues, AudioWorklet buffering, Opus frame alignment, and WebSocket scheduling expose real engineering risk.</p></div>
+                <div class="card-lite"><h3>Complete Architecture Memory</h3><p>FDE retrospectives, SDD 14 chapters, DESIGN docs, postmortems, AGENTS, and agentic plans show how knowledge becomes reusable.</p></div>
+                <div class="card-lite"><h3>Repo-Local Skill</h3><p>The methodology is operationalized as an OpenCode skill: <code>.opencode/skills/aladdin-v2/SKILL.md</code>.</p></div>
+            </div>
+        </div>
+    </section>
+
+    <section class="section">
+        <div class="container">
+            <div class="section-header">
+                <span class="section-label">Principles</span>
+                <h2 class="section-title">The Aladdin V2 Rules</h2>
+            </div>
+            <div class="principle-list">
+                <div class="principle"><div class="principle-num">1</div><p>Veteran judgment defines direction, boundaries, risk, and quality lines.</p></div>
+                <div class="principle"><div class="principle-num">2</div><p>Field truth is the highest evidence source; specs must answer to reality.</p></div>
+                <div class="principle"><div class="principle-num">3</div><p>Vibe coding provides speed, but only inside explicit guardrails.</p></div>
+                <div class="principle"><div class="principle-num">4</div><p>Delta code can be rough; Product artifacts must be reusable.</p></div>
+                <div class="principle"><div class="principle-num">5</div><p>Every cycle must make the next similar cycle cheaper.</p></div>
+                <div class="principle"><div class="principle-num">6</div><p>Postmortems, AGENTS, SDD, ADRs, and skills are future speed.</p></div>
+            </div>
+        </div>
+    </section>
+
+    <section class="cta-section">
+        <div class="container">
+            <h2>Read the Methodology</h2>
+            <p>Aladdin V2 is maintained in the MRRC repository under <code>docs/aldv2/</code>, together with the OpenCode skill definition.</p>
+            <a href="https://github.com/cheenle/UHRR_mac/tree/main/docs/aldv2" class="btn btn-primary btn-large" target="_blank" rel="noopener"><i class="fab fa-github"></i> View Docs</a>
+        </div>
+    </section>
+
+    <script src="js/main.js"></script>
+</body>
+</html>
