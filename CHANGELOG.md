@@ -5,6 +5,54 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [V5.4.0] - 2026-06-06
+
+### 🔧 FT8 集成修复与前端优化
+
+**FT8 WebSocket 桥接稳定化**:
+- 修复 Python-JS 方法名不匹配导致的 FT8 功能异常
+- `ft8_integration.py` 重构，前后端方法对齐
+- FT8 Ultron 前端界面优化 (`www/ft8_ultron.html`, `www/ft8_ultron.js`)
+
+**网站与文档**:
+- 双语网站全面更新 (EN/ZH)，导航栏一致性修复
+- 新增 EFHW 知识库章节 (`website/efhw/`, `website/zh/efhw/`)
+- 架构文档与图表更新至 V5.4
+- 设计文档页面风格统一
+
+**部署自动化**:
+- 新增 Ansible playbook 部署脚本 (`ansible/`)
+- `deploy_website.sh` 优化
+
+**文件变更**:
+- `ft8_integration.py` - FT8 集成重构
+- `www/ft8_ultron.html`, `www/ft8_ultron.js` - FT8 前端优化
+- `website/` - 16 个 HTML/CSS 页面更新
+- `ansible/` - Ansible 部署脚本
+- `atr1000_tuner.json` - 天调数据更新
+
+---
+
+## [V5.3.0] - 2026-05-25
+
+### 🌐 网络监控与 UI 打磨
+
+**网络状态可视化**:
+- 实时带宽/延迟显示，网络状态监控
+- 状态栏精简，信息密度优化
+- 频宽可视化美化
+
+**UI 打磨**:
+- 界面细节打磨，现代化风格统一
+- 移动端/桌面端体验一致性提升
+
+**文件变更**:
+- `www/controls.js` - 网络监控逻辑
+- `www/mobile_modern.*` - UI 打磨
+- `website/` - 网站页面更新
+
+---
+
 ## [V5.2.0] - 2026-05-18
 
 ### ⚡ WDSP 配置缓存优化 & RX 音频播放引擎重写
