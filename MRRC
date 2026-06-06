@@ -20,6 +20,8 @@ import sys
 import logging
 import json
 import struct
+import html
+import urllib.parse
 
 # Set up minimal logging to reduce I/O overhead
 # V4.8.1: 优化logging配置，减少文件I/O操作以降低CPU占用
@@ -162,9 +164,52 @@ def writte_log(logmsg):
 	logfile.close()
 
 ############ BaseHandler tornado ##############
+def auth_enabled():
+	try:
+		auth_value = config['SERVER'].get('auth', '')
+	except Exception:
+		return False
+	return auth_value.strip().upper() not in ('', '0', 'FALSE', 'NO', 'NONE', 'OFF')
+
+def safe_next_url(next_url):
+	if not next_url or not next_url.startswith('/') or next_url.startswith('//'):
+		return '/'
+	return next_url
+
 class BaseHandler(tornado.web.RequestHandler):
 	def get_current_user(self):
 		return self.get_secure_cookie("user")
+
+	def prepare(self):
+		if self.request.path in ('/login', '/logout'):
+			return
+		if auth_enabled() and not self.current_user:
+			if self.request.method in ('GET', 'HEAD'):
+				self.redirect('/login?next=' + urllib.parse.quote(self.request.uri, safe=''))
+			else:
+				self.set_status(403)
+				self.finish('Authentication required')
+
+class AuthenticatedWebSocketHandler(tornado.websocket.WebSocketHandler):
+	def get_current_user(self):
+		return self.get_secure_cookie("user")
+
+	def prepare(self):
+		if auth_enabled() and not self.current_user:
+			self.set_status(403)
+			self.finish('Authentication required')
+
+class AuthenticatedStaticFileHandler(tornado.web.StaticFileHandler):
+	def get_current_user(self):
+		return self.get_secure_cookie("user")
+
+	def prepare(self):
+		if auth_enabled() and not self.current_user:
+			if self.request.method in ('GET', 'HEAD'):
+				self.redirect('/login?next=' + urllib.parse.quote(self.request.uri, safe=''))
+			else:
+				self.set_status(403)
+				self.finish('Authentication required')
 
 ############ Generate and send FFT from RTLSDR ##############
 is_rtlsdr_present = True
@@ -296,7 +341,7 @@ class loadFFTdata(threading.Thread):
 
 
 
-class WS_panFFTHandler(tornado.websocket.WebSocketHandler):
+class WS_panFFTHandler(AuthenticatedWebSocketHandler):
 
 	@tornado.gen.coroutine
 	def sendFFT(self):
@@ -408,7 +453,7 @@ class loadWavdata(threading.Thread):
 					time.sleep(0.01)
 				
 
-class WS_AudioRXHandler(tornado.websocket.WebSocketHandler):
+class WS_AudioRXHandler(AuthenticatedWebSocketHandler):
 
 	def open(self):
 		self.set_nodelay(True)
@@ -522,7 +567,7 @@ class WS_AudioRXHandler(tornado.websocket.WebSocketHandler):
 last_AudioTXHandler_msg_time=0
 AudioTXHandlerClients = []
 
-class WS_AudioTXHandler(tornado.websocket.WebSocketHandler):
+class WS_AudioTXHandler(AuthenticatedWebSocketHandler):
 
 	def stoppttontimeout(self):
 		global last_AudioTXHandler_msg_time, tune_playing, cq_playing
@@ -1314,7 +1359,7 @@ class AtuWebSocketClient:
         pass
 
 ############ ATU监控WebSocket处理器 ##############
-class AtuWebSocketHandler(tornado.websocket.WebSocketHandler):
+class AtuWebSocketHandler(AuthenticatedWebSocketHandler):
     """ATU监控WebSocket处理器"""
     
     def check_origin(self, origin):
@@ -1830,7 +1875,7 @@ class ATR1000ProxyManager:
 # 全局代理管理器实例
 atr1000_proxy_manager = ATR1000ProxyManager()
 
-class WS_ATR1000Handler(tornado.websocket.WebSocketHandler):
+class WS_ATR1000Handler(AuthenticatedWebSocketHandler):
     """
     ATR-1000 天调 WebSocket 处理器
     
@@ -1883,7 +1928,7 @@ class WS_ATR1000Handler(tornado.websocket.WebSocketHandler):
         logger.info(f"🔌 ATR-1000 客户端断开，剩余 {len(ATR1000HandlerClients)} 个")
 
 
-class WS_ATUAutoTunerHandler(tornado.websocket.WebSocketHandler):
+class WS_ATUAutoTunerHandler(AuthenticatedWebSocketHandler):
     """
     ATU 自动调谐 WebSocket 处理器
     
@@ -1985,7 +2030,7 @@ class WS_ATUAutoTunerHandler(tornado.websocket.WebSocketHandler):
 # FT8 WebSocket 客户端列表
 FT8HandlerClients = []
 
-class WS_FT8Handler(tornado.websocket.WebSocketHandler):
+class WS_FT8Handler(AuthenticatedWebSocketHandler):
     """
     FT8/ULTRON WebSocket 处理器
     
@@ -2712,7 +2757,7 @@ class ticksTRXRIG(threading.Thread):
 				CTRX.getStrgLVL()
 			time.sleep(0.5)  # 优化：从 0.1s 改为 0.5s，减少CPU消耗
 
-class WS_ControlTRX(tornado.websocket.WebSocketHandler):
+class WS_ControlTRX(AuthenticatedWebSocketHandler):
 
 	def send_to_all_clients(self,msg):
 		# print ("Send to all: "+msg)  # 已移除：此 print 语句产生大量 I/O 操作
@@ -3136,7 +3181,7 @@ class threadtimeoutTRXshutdown(threading.Thread):
 class ConfigHandler(BaseHandler):
 	def get(self):
 	
-		if bool(config['SERVER']['auth']) and not self.current_user:
+		if auth_enabled() and not self.current_user:
 			self.redirect("/login")
 			return
 	
@@ -3307,7 +3352,7 @@ class ConfigHandler(BaseHandler):
 		
 	def post(self):
 	
-		if bool(config['SERVER']['auth']) and not self.current_user:
+		if auth_enabled() and not self.current_user:
 			self.redirect("/login")
 			return
 			
@@ -3329,12 +3374,14 @@ class ConfigHandler(BaseHandler):
 class AuthLoginHandler(BaseHandler):
 
 	def get(self):
-		if not bool(config['SERVER']['auth']):
+		if not auth_enabled():
 			self.redirect("/")
 			return
+		next_url = html.escape(safe_next_url(self.get_argument('next', '/')), quote=True)
 		self.write('<html><body><form action="/login" method="post">'
 					'CallSign: <input type="text" name="name"></br>'
 					'Password: <input type="password" name="passwd"></br>'
+					'<input type="hidden" name="next" value="'+next_url+'">'
 					'<input type="submit" value="Sign in">'
 					'</form></body></html>')
 
@@ -3346,17 +3393,19 @@ class AuthLoginHandler(BaseHandler):
 				self.set_cookie("autha", "1")
 			else:
 				writte_log("Auth error for CallSign:"+str(self.get_argument("name")))
-		self.redirect("/")
+		self.redirect(safe_next_url(self.get_argument('next', '/')))
 		
 	def bind(self,user="",password=""):
 		retval = False
 		if (user!="" and password!=""):
 			if config['SERVER']['auth'].find("FILE") != -1: #test with users db file
-				f = open(config['SERVER']['db_users_file'], "r") 
-				for x in f:
-					if x[0]!="#":
-						db=x.strip('\n').split(" ")
-						if db[0] == user and db[1]== password:
+				with open(config['SERVER']['db_users_file'], "r") as f:
+					for x in f:
+						line = x.strip()
+						if not line or line.startswith("#"):
+							continue
+						db = line.split(None, 1)
+						if len(db) == 2 and db[0] == user and db[1] == password:
 							retval = True
 							break		
 			if not retval and config['SERVER']['auth'].find("PAM") != -1:#test with pam module
@@ -3369,7 +3418,7 @@ class AuthLogoutHandler(BaseHandler):
 	def get(self):
 		self.clear_cookie("user")
 		self.clear_cookie("autha")
-		self.redirect(self.get_argument("next", "/"))
+		self.redirect(safe_next_url(self.get_argument("next", "/")))
 		
 ############ Test Handler for Radio Control ##############
 class TestRadioHandler(BaseHandler):
@@ -3434,7 +3483,7 @@ class MobileHandler(BaseHandler):
 	def get(self):
 		print("=== MobileHandler.get() called ===")
 		print("Tornado current user:"+str(self.current_user))
-		if bool(config['SERVER']['auth']) and not self.current_user:
+		if auth_enabled() and not self.current_user:
 			print("Redirecting to login")
 			self.redirect("/login")
 			return
@@ -3460,7 +3509,7 @@ class MainHandler(BaseHandler):
 	def get(self):
 		print("=== MainHandler.get() called ===")
 		print("Tornado current user:"+str(self.current_user))
-		if bool(config['SERVER']['auth']) and not self.current_user:
+		if auth_enabled() and not self.current_user:
 			print("Redirecting to login")
 			self.redirect("/login")
 			return
@@ -3525,14 +3574,14 @@ if __name__ == "__main__":
 			(r'/WSATU', WS_ATUAutoTunerHandler),  # ATU 自动调谐 WebSocket
 			(r'/WSFT8', WS_FT8Handler),  # FT8 数字模式 WebSocket
 			
-			(r'/(panfft.*)', tornado.web.StaticFileHandler, { 'path' : './www/panadapter' }),
+			(r'/(panfft.*)', AuthenticatedStaticFileHandler, { 'path' : './www/panadapter' }),
 					(r'/CONFIG', ConfigHandler),
 					(r'/test', TestRadioHandler),
 					(r'/mobile', MobileHandler),
 					(r'/api/recordings', RecordingsListHandler),  # 录音列表API
 					(r'/recordings/([^/]+)', RecordingsDownloadHandler),  # 录音下载
 					(r'/', MainHandler),
-					(r'/(.*)', tornado.web.StaticFileHandler, { 'path' : './www' })			],debug=bool(config['SERVER']['debug']), websocket_ping_interval=30, cookie_secret=config['SERVER']['cookie_secret'])
+					(r'/(.*)', AuthenticatedStaticFileHandler, { 'path' : './www' })			],debug=bool(config['SERVER']['debug']), websocket_ping_interval=30, cookie_secret=config['SERVER']['cookie_secret'])
 	except:
 		e = str(sys.exc_info())
 		print("=== SERVER FALLING BACK TO CONFIG-ONLY MODE ===")
@@ -3566,4 +3615,3 @@ if __name__ == "__main__":
 	http_server.listen(int(config['SERVER']['port']))
 	print('HTTP server started.')
 	tornado.ioloop.IOLoop.instance().start()
-
