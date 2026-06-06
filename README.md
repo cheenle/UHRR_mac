@@ -135,6 +135,7 @@ MRRC integrates with ATR-1000 antenna tuner for intelligent operation:
 | 📊 **Real-time Monitor** | Power (0-200W) and SWR display |
 | 🧠 **Smart Learning** | Auto-learn frequency-tuner mapping during TX |
 | ⚡ **Quick Tune** | Auto-apply tuner params when frequency changes |
+| 🎵 **Tune Assist** | Long-press Tune triggers full ATR-1000 tune when SWR > 1.6, updates memory if SWR improves, and restores old LC/CL/L/C if it does not |
 | 💾 **Persistence** | Tuner records saved in JSON file |
 | 🔌 **REST API** | External software can query/control tuner |
 
@@ -145,6 +146,9 @@ TX Start → Sample SWR → SWR ≤ 1.5? → Record params → Save to JSON
 
 Quick Tune Flow:
 Freq Change → Lookup JSON → Found? → Apply params → Ready to TX!
+
+Tune Assist Flow:
+Tune Press → Sample SWR → SWR > 1.6? → Full tune → Improved? → Update memory / Restore old params
 ```
 
 **API Example**:

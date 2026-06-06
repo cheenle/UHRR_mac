@@ -40,6 +40,11 @@ function startTune() {
             ATR1000.onTXStart();
         }
 
+        // Tune 发射建立后，若 SWR 偏高则联动 ATR-1000 执行完整调谐。
+        if (typeof ATR1000 !== 'undefined' && ATR1000.autoFullTuneIfHighSWR) {
+            ATR1000.autoFullTuneIfHighSWR();
+        }
+
         // 更新状态显示
         var tuneStatus = document.getElementById('tune-status');
         if (tuneStatus) {
@@ -91,6 +96,9 @@ function stopTune() {
         }
 
         // V4.5.8: 停止 ATR-1000 数据流并清零功率显示
+        if (typeof ATR1000 !== 'undefined' && ATR1000.cancelTuneAssist) {
+            ATR1000.cancelTuneAssist();
+        }
         if (typeof ATR1000 !== 'undefined' && ATR1000.onTXStop) {
             ATR1000.onTXStop();
         }

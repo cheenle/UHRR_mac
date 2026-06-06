@@ -2945,6 +2945,9 @@ const ATR1000 = {
     _deviceOnline: false,  // V4.5.10: 设备在线状态
     _smoothPower: 0,  // V4.5.10: 平滑后的功率
     _smoothSWR: 1.0,  // V4.5.10: 平滑后的SWR
+    tuning: false,
+    _tuneAssistToken: null,
+    _tuneAssistRunning: false,
     // 继电器状态
     relayStatus: {
         sw: 0,        // 网络类型: 0=LC, 1=CL
@@ -3164,6 +3167,10 @@ const ATR1000 = {
             this.relayStatus.ind_uh = msg.ind_uh || 0;
             this.relayStatus.cap_pf = msg.cap_pf || 0;
         }
+
+        if (msg.tuning !== undefined) {
+            this.tuning = !!msg.tuning;
+        }
         
         // 直接更新 DOM
         this._doUpdateDisplay();
@@ -3202,7 +3209,198 @@ const ATR1000 = {
             console.log(`🔧 启动调谐: mode=${mode}`);
         }
     },
-    
+
+    // Tune 按钮联动：SWR > 1.6 时执行完整调谐；若未改善则恢复原继电器参数。
+    autoFullTuneIfHighSWR: async function() {
+        if (this._tuneAssistRunning) {
+            return;
+        }
+
+        const token = {cancelled: false, restore: null, tuneStarted: false};
+        this._tuneAssistToken = token;
+        this._tuneAssistRunning = true;
+
+        try {
+            if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+                return;
+            }
+
+            const startedAt = Date.now();
+            await this._waitForTuneMeter(startedAt, token);
+            if (token.cancelled) return;
+
+            const initialSWR = this.lastSWR;
+            if (!Number.isFinite(initialSWR) || initialSWR <= 1.6) {
+                return;
+            }
+
+            const original = this._snapshotRelay();
+            token.restore = original;
+            console.log(`🔧 Tune 联动 ATR-1000 完整调谐: 初始 SWR=${initialSWR.toFixed(2)}`);
+
+            this.startTune(2);
+            token.tuneStarted = true;
+
+            await this._waitForFullTuneComplete(token);
+            if (token.cancelled) {
+                this.setRelay(original.sw, original.ind, original.cap);
+                return;
+            }
+
+            await this._sleep(800, token);
+            const finalSWR = this.lastSWR;
+            const improved = Number.isFinite(finalSWR) && finalSWR > 0 && finalSWR < initialSWR - 0.02;
+
+            if (!improved) {
+                this.setRelay(original.sw, original.ind, original.cap);
+                console.log(`↩️ ATR-1000 完整调谐未降低 SWR (${initialSWR.toFixed(2)} -> ${finalSWR.toFixed(2)})，恢复原参数`);
+            } else {
+                this._rememberTuneAssistResult(finalSWR);
+                console.log(`✅ ATR-1000 完整调谐改善 SWR: ${initialSWR.toFixed(2)} -> ${finalSWR.toFixed(2)}`);
+            }
+        } catch (e) {
+            if (!token.cancelled) {
+                console.error('ATR-1000 Tune 联动失败:', e);
+            }
+        } finally {
+            if (this._tuneAssistToken === token) {
+                this._tuneAssistToken = null;
+            }
+            this._tuneAssistRunning = false;
+        }
+    },
+
+    cancelTuneAssist: function() {
+        if (this._tuneAssistToken) {
+            this._tuneAssistToken.cancelled = true;
+        }
+    },
+
+    _snapshotRelay: function() {
+        return {
+            sw: this.relayStatus.sw || 0,
+            ind: this.relayStatus.ind || 0,
+            cap: this.relayStatus.cap || 0
+        };
+    },
+
+    _waitForTuneMeter: async function(startedAt, token) {
+        const deadline = Date.now() + 2500;
+        while (!token.cancelled && Date.now() < deadline) {
+            if (this._lastDataTime >= startedAt && this.lastPower > 0 && this.lastSWR >= 1) {
+                return;
+            }
+            await this._sleep(100, token);
+        }
+    },
+
+    _waitForFullTuneComplete: async function(token) {
+        const deadline = Date.now() + 45000;
+        const minWaitUntil = Date.now() + 5000;
+        let sawTuning = false;
+        let lastRelay = JSON.stringify(this._snapshotRelay());
+        let lastSWR = this.lastSWR;
+        let stableSince = Date.now();
+
+        while (!token.cancelled && Date.now() < deadline) {
+            if (this.tuning) {
+                sawTuning = true;
+                stableSince = Date.now();
+            }
+
+            const relay = JSON.stringify(this._snapshotRelay());
+            const swr = this.lastSWR;
+            if (relay !== lastRelay || Math.abs(swr - lastSWR) > 0.03) {
+                lastRelay = relay;
+                lastSWR = swr;
+                stableSince = Date.now();
+            }
+
+            if (sawTuning && !this.tuning && Date.now() >= minWaitUntil) {
+                return;
+            }
+
+            if (!sawTuning && Date.now() >= minWaitUntil && Date.now() - stableSince >= 2500) {
+                return;
+            }
+
+            await this._sleep(200, token);
+        }
+    },
+
+    _sleep: function(ms, token) {
+        return new Promise(resolve => {
+            setTimeout(resolve, token && token.cancelled ? 0 : ms);
+        });
+    },
+
+    _getCurrentFreq: function() {
+        if (typeof TRXfrequency !== 'undefined') {
+            const freq = parseInt(TRXfrequency, 10);
+            if (freq > 0) return freq;
+        }
+
+        if (typeof mobileState !== 'undefined' && mobileState.currentFrequency) {
+            const freq = parseInt(mobileState.currentFrequency, 10);
+            if (freq > 0) return freq;
+        }
+
+        const freqInput = document.getElementById('freq_disp');
+        if (freqInput) {
+            const freq = parseInt(freqInput.textContent.replace(/\D/g, ''), 10);
+            if (freq > 0) return freq;
+        }
+
+        return 0;
+    },
+
+    _rememberTuneAssistResult: function(swr) {
+        const freq = this._getCurrentFreq();
+        if (!freq) {
+            console.warn('ATR-1000 Tune 联动已改善 SWR，但无法获取当前频率，跳过记忆更新');
+            return;
+        }
+
+        const tunerData = {
+            freq: freq,
+            sw: this.relayStatus.sw,
+            ind: this.relayStatus.ind,
+            cap: this.relayStatus.cap,
+            ind_uh: this.relayStatus.ind_uh,
+            cap_pf: this.relayStatus.cap_pf,
+            swr: swr,
+            power: this.lastPower,
+            timestamp: new Date().toISOString(),
+            source: 'tune-assist'
+        };
+
+        try {
+            let records = JSON.parse(localStorage.getItem('atr1000_tuner_records') || '[]');
+            const existingIndex = records.findIndex(r => Math.abs(r.freq - freq) < 10000);
+            if (existingIndex >= 0) {
+                records[existingIndex] = tunerData;
+            } else {
+                records.push(tunerData);
+            }
+            localStorage.setItem('atr1000_tuner_records', JSON.stringify(records));
+        } catch (e) {
+            console.warn('更新本地天调记忆失败:', e);
+        }
+
+        if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+            this.ws.send(JSON.stringify({
+                action: 'learn',
+                freq: freq,
+                sw: tunerData.sw,
+                ind: tunerData.ind,
+                cap: tunerData.cap,
+                swr: swr
+            }));
+        }
+
+        console.log(`💾 Tune 联动更新天调记忆: ${(freq / 1000).toFixed(1)}kHz, SWR=${swr.toFixed(2)}, SW=${tunerData.sw}, L=${tunerData.ind}, C=${tunerData.cap}`);
+    },
+
     // 保存当前天调参数
     saveCurrentTuner: function() {
         // 获取当前频率

@@ -182,7 +182,9 @@ cache = {
     "cap": 0,       # 电容索引
     "ind_uh": 0.0,  # 电感值 (uH)
     "cap_pf": 0,    # 电容值 (pF)
-    "freq": 0       # 当前频率 (Hz) - 用于学习
+    "freq": 0,      # 当前频率 (Hz) - 用于学习
+    "tuning": False, # 设备是否处于调谐流程
+    "tuning_started_at": 0
 }
 cache_lock = threading.Lock()
 
@@ -585,6 +587,11 @@ class ATR1000Client:
                 if current_relay != last_log_relay:
                     logger.info(f"🎛️ 继电器: SW={'CL' if cache['sw'] else 'LC'}, L={cache['ind']}, C={cache['cap']}")
                     last_log_relay = current_relay
+
+            elif cmd == SCMD_TUNE_STATUS and len(data) >= 4:
+                cache["tuning"] = bool(data[3])
+                cache["tuning_started_at"] = time.time() if cache["tuning"] else 0
+                log_comm('RX', 'TUNE', data[:4].hex(), f'调谐状态={cache["tuning"]}')
     
     def close(self):
         """关闭连接"""
@@ -690,6 +697,9 @@ def handle_unix_client(conn, addr, atr1000):
                     if action in ("sync", "get_data"):
                         # 直接返回缓存数据
                         with cache_lock:
+                            if cache.get("tuning") and time.time() - cache.get("tuning_started_at", 0) > 45:
+                                cache["tuning"] = False
+                                cache["tuning_started_at"] = 0
                             response = json.dumps({
                                 "type": "atr1000_meter",
                                 "power": cache["power"],
@@ -700,7 +710,8 @@ def handle_unix_client(conn, addr, atr1000):
                                 "cap": cache["cap"],
                                 "ind_uh": cache["ind_uh"],
                                 "cap_pf": cache["cap_pf"],
-                                "freq": cache.get("freq", 0)
+                                "freq": cache.get("freq", 0),
+                                "tuning": cache.get("tuning", False)
                             }) + "\n"
                         conn.send(response.encode())
                     
@@ -859,6 +870,9 @@ def handle_unix_client(conn, addr, atr1000):
                     elif action == "tune":
                         # 启动自动调谐
                         mode = msg.get("mode", 2)  # 默认完整调谐
+                        with cache_lock:
+                            cache["tuning"] = True
+                            cache["tuning_started_at"] = time.time()
                         atr1000.start_tune(mode)
                         logger.info(f"启动自动调谐: mode={mode}")
                     

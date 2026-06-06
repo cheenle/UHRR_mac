@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [V5.5.0] - 2026-06-06
 
+### 🔧 ATR-1000 Tune 联动调谐
+
+- Tune 按下发射 1kHz 单音后，若 ATR-1000 监测到 SWR > 1.6，自动触发完整调谐 (`mode=2`)
+- 完整调谐结束后比较初始/最终 SWR；如果降低，则更新当前频率记忆参数；如果未降低，则恢复调谐前的 LC/CL、电感、电容参数
+- ATR-1000 代理新增 `tuning` 状态转发和 45 秒超时保护，前端可等待调谐完成或稳定后再判断
+- 松开 Tune 会取消联动流程，避免无 RF 输出时继续调谐判断
+
+### 文件变更
+
+- `www/modules/tune_cq.js` - Tune 启停接入 ATR-1000 联动流程
+- `www/mobile_modern.js` - 新增 SWR 阈值判断、完整调谐等待和参数回滚
+- `atr1000_proxy.py` - 转发 ATR-1000 调谐状态并增加超时保护
+- `docs/ATR1000_Tuner_Auto_Learning.md` - 补充 Tune 联动完整调谐流程
+
+---
+
 ### 📻 频道记忆 & 登录体验优化
 
 **频道记忆保存/召回**:
