@@ -180,9 +180,9 @@ function updateBandButtonLabel(currentBand) {
     const nextBand = MOBILE_BANDS[(currentIndex + 1) % MOBILE_BANDS.length];
     bandBtn.dataset.currentBand = currentBand.name;
     bandBtn.dataset.nextBand = nextBand.name;
-    bandBtn.textContent = currentBand.name + '→' + nextBand.name;
-    bandBtn.title = 'Current band: ' + currentBand.name + '. Tap to switch to ' + nextBand.name + '.';
-    bandBtn.setAttribute('aria-label', 'Current band ' + currentBand.name + ', next band ' + nextBand.name);
+    bandBtn.textContent = nextBand.name;
+    bandBtn.title = '当前: ' + currentBand.name + ' · 点按切换到 ' + nextBand.name;
+    bandBtn.setAttribute('aria-label', '当前波段 ' + currentBand.name + ', 点按切换到 ' + nextBand.name);
 }
 
 function normalizeMobileMode(mode) {
@@ -198,9 +198,9 @@ function updateModeButtonLabel(mode) {
     const nextMode = MOBILE_MODES[(currentIndex + 1) % MOBILE_MODES.length];
     modeBtn.dataset.currentMode = currentMode;
     modeBtn.dataset.nextMode = nextMode;
-    modeBtn.textContent = currentMode + '→' + nextMode;
-    modeBtn.title = 'Current mode: ' + currentMode + '. Tap to switch to ' + nextMode + '.';
-    modeBtn.setAttribute('aria-label', 'Current mode ' + currentMode + ', next mode ' + nextMode);
+    modeBtn.textContent = nextMode;
+    modeBtn.title = '当前: ' + currentMode + ' · 点按切换到 ' + nextMode;
+    modeBtn.setAttribute('aria-label', '当前模式 ' + currentMode + ', 点按切换到 ' + nextMode);
 }
 
 function refreshCycleButtonLabels() {

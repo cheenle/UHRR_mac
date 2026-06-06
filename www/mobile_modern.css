@@ -919,7 +919,7 @@ body {
 }
 
 .mem-panel-card.filled {
-    border-color: rgba(0, 212, 255, 0.15);
+    border-color: rgba(245, 158, 11, 0.2);
 }
 
 .mem-panel-card.empty {
@@ -943,8 +943,8 @@ body {
 }
 
 .mem-panel-card.filled .mem-card-index {
-    background: rgba(0, 212, 255, 0.12);
-    color: var(--accent-primary);
+    background: rgba(245, 158, 11, 0.12);
+    color: var(--accent-warning);
 }
 
 .mem-card-body {
@@ -956,7 +956,7 @@ body {
     font-family: var(--font-mono);
     font-size: 16px;
     font-weight: 700;
-    color: var(--accent-primary);
+    color: var(--accent-warning);
     letter-spacing: 1px;
 }
 
@@ -980,9 +980,9 @@ body {
 .mem-card-band {
     font-size: 10px;
     padding: 1px 6px;
-    background: rgba(0, 212, 255, 0.1);
+    background: rgba(245, 158, 11, 0.1);
     border-radius: var(--radius-sm);
-    color: var(--accent-primary);
+    color: var(--accent-warning);
     font-weight: 600;
 }
 
@@ -1016,14 +1016,14 @@ body {
 
 .mem-action-btn:active {
     transform: scale(0.95);
-    border-color: var(--accent-primary);
-    background: rgba(0, 212, 255, 0.12);
-    color: var(--accent-primary);
+    border-color: var(--accent-warning);
+    background: rgba(245, 158, 11, 0.12);
+    color: var(--accent-warning);
 }
 
 .mem-action-btn.primary {
-    border-color: rgba(0, 212, 255, 0.3);
-    color: var(--accent-primary);
+    border-color: rgba(245, 158, 11, 0.3);
+    color: var(--accent-warning);
 }
 
 .mem-action-btn.danger {
@@ -1062,9 +1062,9 @@ body {
 
 .mem-panel-btn:active {
     transform: scale(0.96);
-    border-color: var(--accent-primary);
-    background: rgba(0, 212, 255, 0.1);
-    color: var(--accent-primary);
+    border-color: var(--accent-warning);
+    background: rgba(245, 158, 11, 0.1);
+    color: var(--accent-warning);
 }
 
 .mem-panel-btn.danger {
@@ -1793,7 +1793,7 @@ body {
     transform: scale(0.95);
 }
 
-/* ========== 频道记忆 3×2 网格 - SDR 蓝色风格 ========== */
+/* ========== 频道记忆 3×2 网格 - 琥珀色区分风格 ========== */
 .memory-channel-strip {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
@@ -1803,7 +1803,7 @@ body {
     flex-shrink: 0;
 }
 
-/* 记忆按钮 - 与 .dsp-btn / .quick-btn 设计语言统一 */
+/* 记忆按钮 - 琥珀色 (#f59e0b) 区分于蓝色控制按钮 */
 .mem-btn {
     position: relative;
     display: flex;
@@ -1838,37 +1838,37 @@ body {
 
 .mem-btn:active {
     transform: scale(0.96);
-    border-color: var(--accent-primary);
+    border-color: var(--accent-warning);
 }
 
 .mem-btn:active::after {
-    background: rgba(0, 212, 255, 0.08);
+    background: rgba(245, 158, 11, 0.08);
 }
 
-/* 已填充状态 - 青色高亮 */
+/* 已填充状态 - 琥珀色高亮 */
 .mem-btn.filled {
     color: var(--text-primary);
-    border-color: rgba(0, 212, 255, 0.25);
-    background: linear-gradient(135deg, rgba(0, 212, 255, 0.08), rgba(0, 212, 255, 0.03));
+    border-color: rgba(245, 158, 11, 0.3);
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.08), rgba(245, 158, 11, 0.03));
 }
 
 .mem-btn.filled .mem-name {
-    color: var(--accent-primary);
+    color: var(--accent-warning);
 }
 
 /* 保存闪烁动画 */
 .mem-btn.saved-flash {
-    border-color: var(--accent-primary);
-    background: linear-gradient(135deg, rgba(0, 212, 255, 0.22), rgba(0, 212, 255, 0.12));
-    box-shadow: 0 0 14px rgba(0, 212, 255, 0.3);
+    border-color: var(--accent-warning);
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.22), rgba(245, 158, 11, 0.12));
+    box-shadow: 0 0 14px rgba(245, 158, 11, 0.3);
     transition: all 0.1s ease;
 }
 
 /* 召回闪烁动画 */
 .mem-btn.recall-flash {
-    border-color: var(--accent-primary);
-    background: linear-gradient(135deg, rgba(0, 212, 255, 0.15), rgba(0, 212, 255, 0.08));
-    box-shadow: 0 0 10px rgba(0, 212, 255, 0.2);
+    border-color: var(--accent-warning);
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.15), rgba(245, 158, 11, 0.08));
+    box-shadow: 0 0 10px rgba(245, 158, 11, 0.2);
     transition: all 0.08s ease;
 }
 
