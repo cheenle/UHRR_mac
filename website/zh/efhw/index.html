@@ -130,7 +130,7 @@ a:hover { text-decoration:underline; }
 <!-- ========== TOC ========== -->
 <nav class="max-w-4xl mx-auto px-6 py-16" id="toc">
   <div class="card card-glow p-8 md:p-10 fade-up">
-    <p class="section-label mb-4">// 目录 — 15 章 <span class="new-badge">增补版</span></p>
+    <p class="section-label mb-4">// 目录 — 16 章 <span class="new-badge">增补版</span></p>
     <div class="grid md:grid-cols-2 gap-x-8 gap-y-2">
       <a href="#sec1" class="toc-link block py-1.5 text-gray-400 hover:text-white"><span class="mono text-xs text-gray-600 mr-2">01</span>EFHW 基本原理与阻抗特性</a>
       <a href="#sec2" class="toc-link block py-1.5 text-gray-400 hover:text-white"><span class="mono text-xs text-gray-600 mr-2">02</span>49:1 vs 64:1 变压器设计 <span class="new-badge">+3:21</span></a>
@@ -144,9 +144,10 @@ a:hover { text-decoration:underline; }
       <a href="#sec10" class="toc-link block py-1.5 text-gray-400 hover:text-white"><span class="mono text-xs text-gray-600 mr-2">10</span>背靠背测量神话 <span class="new-badge">NEW</span></a>
       <a href="#sec11" class="toc-link block py-1.5 text-gray-400 hover:text-white"><span class="mono text-xs text-gray-600 mr-2">11</span>正确的 VNA 测量方法 <span class="new-badge">NEW</span></a>
       <a href="#sec12" class="toc-link block py-1.5 text-gray-400 hover:text-white"><span class="mono text-xs text-gray-600 mr-2">12</span>陷波器 EFHW 设计 <span class="new-badge">NEW</span></a>
-      <a href="#sec13" class="toc-link block py-1.5 text-gray-400 hover:text-white"><span class="mono text-xs text-gray-600 mr-2">13</span>L-Network 替代匹配方案</a>
-      <a href="#sec14" class="toc-link block py-1.5 text-gray-400 hover:text-white"><span class="mono text-xs text-gray-600 mr-2">14</span>辐射方向图与 NEC 建模</a>
-      <a href="#sec15" class="toc-link block py-1.5 text-gray-400 hover:text-white"><span class="mono text-xs text-gray-600 mr-2">15</span>便携部署 / 安全 / 核心结论</a>
+      <a href="#sec13" class="toc-link block py-1.5 text-gray-400 hover:text-white"><span class="mono text-xs text-gray-600 mr-2">13</span>A+C 双模匹配系统 <span class="new-badge">NEW</span></a>
+      <a href="#sec14" class="toc-link block py-1.5 text-gray-400 hover:text-white"><span class="mono text-xs text-gray-600 mr-2">14</span>L-Network 替代匹配方案</a>
+      <a href="#sec15" class="toc-link block py-1.5 text-gray-400 hover:text-white"><span class="mono text-xs text-gray-600 mr-2">15</span>辐射方向图与 NEC 建模</a>
+      <a href="#sec16" class="toc-link block py-1.5 text-gray-400 hover:text-white"><span class="mono text-xs text-gray-600 mr-2">16</span>便携部署 / 安全 / 核心结论</a>
     </div>
   </div>
 </nav>
@@ -657,9 +658,90 @@ a:hover { text-decoration:underline; }
   </div>
 </section>
 
-<!-- ========== SEC 13: L-NETWORK ========== -->
+<!-- ========== SEC 13: A+C DUAL-MODE ========== -->
 <section id="sec13" class="max-w-4xl mx-auto px-6 py-16">
-  <p class="section-label fade-up">13 / L-Network</p>
+  <p class="section-label fade-up">13 / 双模匹配 <span class="new-badge">NEW</span></p>
+  <h2 class="text-3xl md:text-4xl font-bold mt-3 mb-8 fade-up">A+C 双模匹配系统 — 高低波段兼顾新方向</h2>
+
+  <div class="fade-up mb-8">
+    <p class="text-gray-300 mb-4">传统单一 49:1 铁氧体变压器在 <strong class="text-white">80m（电感不足）</strong>和 <strong class="text-white">10m（容性主导、效率崩溃至 55%）</strong>同时失效。A+C 方案将问题拆解：<strong class="text-[var(--neon-green)]">低频用铁氧体宽带变压器，高频用粉末铁芯谐振耦合器</strong>，各取所长。</p>
+  </div>
+
+  <div class="card card-glow p-6 md:p-8 mb-8 fade-up">
+    <p class="mono text-sm text-[var(--neon-green)] mb-4">// 系统架构</p>
+    <table>
+      <thead><tr><th>参数</th><th>Unit A (低频段)</th><th>Unit C (高频段)</th></tr></thead>
+      <tbody>
+        <tr><td class="text-gray-400">磁芯</td><td>2&times;FT240-43 堆叠</td><td>T200-2 粉末铁芯 (Type 2)</td></tr>
+        <tr><td class="text-gray-400">材质</td><td>Mn-Zn Mix 43, &mu;=850</td><td>羰基铁粉, &mu;=10</td></tr>
+        <tr><td class="text-gray-400">拓扑</td><td>49:1 宽带变压器 (3T:21T)</td><td>AA5TB 并联 LC 耦合器 (3T:19T)</td></tr>
+        <tr><td class="text-gray-400">覆盖波段</td><td class="text-green-400">80m, 40m</td><td class="text-green-400">30m, 20m, 17m, 15m, 12m, 10m</td></tr>
+        <tr><td class="text-gray-400">带宽</td><td>宽带免调谐</td><td>窄带（每波段需调谐可变电容）</td></tr>
+        <tr><td class="text-gray-400">效率目标</td><td>~92% (0.3dB)</td><td>90-95% (0.2-0.5dB)</td></tr>
+        <tr><td class="text-gray-400">天线导线</td><td colspan="2">20m（同一条，DPDT 切换）</td></tr>
+        <tr><td class="text-gray-400">Counterpoise</td><td colspan="2">4m（共用）</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3 class="text-xl font-bold mb-4 fade-up">为什么铁氧体和粉末铁芯必须分开</h3>
+  <div class="fade-up mb-8">
+    <p class="text-gray-300 mb-4">铁氧体 Type 43 和粉末铁芯 Type 2 的物理特性决定了它们各自的最佳频段：</p>
+    <table>
+      <thead><tr><th>特性</th><th>铁氧体 (Type 43)</th><th>粉末铁芯 (Type 2)</th><th>优势</th></tr></thead>
+      <tbody>
+        <tr><td class="text-gray-400">&mu; (磁导率)</td><td>850</td><td>10</td><td>低 &mu; = 低磁芯损耗</td></tr>
+        <tr><td class="text-gray-400">电阻率</td><td>1-10 &Omega;&middot;m</td><td>10&sup5;-10&sup6; &Omega;&middot;m（颗粒绝缘）</td><td>T200-2 高频涡流极低</td></tr>
+        <tr><td class="text-gray-400">30MHz 损耗</td><td class="text-red-400">显著</td><td class="text-green-400">极低</td><td>T200-2 胜</td></tr>
+        <tr><td class="text-gray-400">温度稳定性</td><td class="text-red-400">一般</td><td class="text-green-400">优秀 (95ppm/&deg;C)</td><td>T200-2 胜</td></tr>
+        <tr><td class="text-gray-400">饱和磁通</td><td>~0.3T</td><td>~0.8-1.0T</td><td>T200-2 极难饱和</td></tr>
+        <tr><td class="text-gray-400">100W 发热</td><td class="text-red-400">明显</td><td class="text-green-400">几乎不发热</td><td>T200-2 胜</td></tr>
+        <tr><td class="text-gray-400">带宽</td><td class="text-green-400">宽带</td><td class="text-red-400">窄带（需调谐）</td><td>FT240-43 胜</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3 class="text-xl font-bold mb-4 fade-up">关键工程问题</h3>
+  <div class="fade-up mb-8">
+    <p class="text-gray-300 mb-4">经过定量分析，A+C 方案<strong class="text-white">理论方向正确</strong>（分频段用不同磁芯），但当前原型有 <span class="mono text-[var(--neon-pink)]">8 个工程问题</span>需解决：</p>
+    <table>
+      <thead><tr><th>#</th><th>问题</th><th>严重度</th><th>改进方案</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td><strong>非谐振波段阻抗失配</strong> — 20m 线在 20m/10m 是整数倍波长，端阻抗 ~50-300&Omega; 而非 ~2500&Omega;</td><td class="text-red-400">🔴 根本性</td><td>Unit C 增加可切换匝比</td></tr>
+        <tr><td>2</td><td><strong>可变电容耐压不足</strong> — LC 谐振升压效应使 V_peak 达 1900-6300V</td><td class="text-red-400">🔴 安全</td><td>真空可变电容 (3-15kV)</td></tr>
+        <tr><td>3</td><td><strong>Counterpoise 不兼容</strong> — 4m 在 10m = 0.38&lambda;，已变成辐射体</td><td class="text-red-400">🔴 严重</td><td>Unit C 切 0.5m counterpoise</td></tr>
+        <tr><td>4</td><td>可变电容户外可靠性 — 冷凝/腐蚀/触点氧化，寿命 6-24 月</td><td class="text-amber-400">🟡 可靠性</td><td>真空电容 + 干燥剂</td></tr>
+        <tr><td>5</td><td>DPDT 高压切换 — 707V peak 超出 250VAC 额定 2&times;</td><td class="text-amber-400">🟡 中等</td><td>改为 50&Omega; 端切换</td></tr>
+        <tr><td>6</td><td>设计过度 — DMEGC Ni-Zn 单磁芯可达 90%+ 效果，成本 1/5</td><td class="text-amber-400">🟡 设计</td><td>先评估单磁芯方案</td></tr>
+        <tr><td>7</td><td>Unit 间寄生耦合 — 闲置 Unit 吸收 ~2W</td><td class="text-blue-400">🟢 轻微</td><td>闲置 Unit 初级短路</td></tr>
+        <tr><td>8</td><td>T200-2 磁芯饱和</td><td class="text-green-400">🟢 非问题</td><td>39 gauss vs 800 gauss</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3 class="text-xl font-bold mb-4 fade-up">与更简单方案对比</h3>
+  <div class="overflow-x-auto fade-up mb-8">
+    <table>
+      <thead><tr><th>方案</th><th>80m</th><th>40m</th><th>20m</th><th>10m</th><th>复杂度</th><th>成本</th><th>可靠性</th></tr></thead>
+      <tbody>
+        <tr><td>单 FT240-43 2T:14T</td><td class="text-red-400">差</td><td class="text-green-400">好</td><td class="text-green-400">好</td><td class="text-amber-400">一般</td><td>极低</td><td>&yen;50</td><td>★★★★★</td></tr>
+        <tr><td class="text-[var(--neon-green)]"><strong>DMEGC Ni-Zn &mu;=1000</strong></td><td class="text-green-400"><strong>好</strong></td><td class="text-green-400"><strong>好</strong></td><td class="text-green-400"><strong>好</strong></td><td class="text-green-400"><strong>好</strong></td><td><strong>低</strong></td><td><strong>&yen;80</strong></td><td><strong>★★★★★</strong></td></tr>
+        <tr><td>A+C 双模</td><td class="text-green-400">好</td><td class="text-green-400">好</td><td class="text-green-400">优秀*</td><td class="text-green-400">优秀*</td><td class="text-red-400">极高</td><td>&yen;400-600</td><td>★★</td></tr>
+      </tbody>
+    </table>
+    <p class="text-xs text-gray-500 mt-2">* 高频段效率优势约 0.2-0.4 dB，在 FT8 弱信号模式下不可感知。FT8 真正的瓶颈是 RX 噪声基底。</p>
+  </div>
+
+  <div class="highlight-box fade-up">
+    <p class="text-gray-300 mb-2"><strong class="text-white">一句话总结：</strong>A+C 方案代表了一个重要的探索方向——<strong class="text-white">承认单一铁氧体变压器的物理极限，用分频段多磁芯方案突破瓶颈</strong>。当前原型需要工程迭代（高压切换、电容可靠性、阻抗匹配范围），但方向正确，值得继续探索。</p>
+    <p class="mono text-xs text-gray-500 mt-2">// 完整分析见 EFHW 知识库: efhw-knowledge/references/efhw_ac_dual_mode.md</p>
+  </div>
+</section>
+
+
+<!-- ========== SEC 13: L-NETWORK ========== -->
+<section id="sec14" class="max-w-4xl mx-auto px-6 py-16">
+  <p class="section-label fade-up">14 / L-Network</p>
   <h2 class="text-3xl md:text-4xl font-bold mt-3 mb-8 fade-up">L-Network 替代匹配方案</h2>
 
   <div class="fade-up mb-6">
@@ -678,9 +760,9 @@ a:hover { text-decoration:underline; }
   </div>
 </section>
 
-<!-- ========== SEC 14: RADIATION ========== -->
-<section id="sec14" class="max-w-4xl mx-auto px-6 py-16">
-  <p class="section-label fade-up">14 / 辐射方向图</p>
+<!-- ========== SEC 15: RADIATION ========== -->
+<section id="sec15" class="max-w-4xl mx-auto px-6 py-16">
+  <p class="section-label fade-up">15 / 辐射方向图</p>
   <h2 class="text-3xl md:text-4xl font-bold mt-3 mb-8 fade-up">辐射方向图与 NEC 建模</h2>
 
   <div class="fade-up mb-6">
@@ -703,8 +785,8 @@ a:hover { text-decoration:underline; }
 </section>
 
 <!-- ========== SEC 15: PORTABLE + SAFETY + CONCLUSION ========== -->
-<section id="sec15" class="max-w-4xl mx-auto px-6 py-16">
-  <p class="section-label fade-up">15 / 便携 · 安全 · 结论</p>
+<section id="sec16" class="max-w-4xl mx-auto px-6 py-16">
+  <p class="section-label fade-up">16 / 便携 · 安全 · 结论</p>
   <h2 class="text-3xl md:text-4xl font-bold mt-3 mb-8 fade-up">便携部署、安全防护与核心结论</h2>
 
   <h3 class="text-xl font-bold mb-4 fade-up">2026 便携产品 <span class="new-badge">更新</span></h3>
