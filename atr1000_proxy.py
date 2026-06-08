@@ -291,6 +291,10 @@ last_log_relay = None
 last_learn_freq = 0  # 上次学习的频率（用于减少学习日志频率）
 last_zero_power_log_time = 0  # 上次记录功率为0的时间（用于节流）
 
+# V5.6.3: 学习去重 — 防止每个 METER 采样都触发 tuner.learn()+原子写盘
+# key=(freq_key, sw, ind, cap) → {"swr": last_learned_swr, "time": timestamp}
+_last_learned_state = {}
+
 def set_relay_with_throttle(atr1000, sw, ind, cap):
     """带节流的继电器设置 - V4.5.19 增强版
     
@@ -734,24 +738,44 @@ class ATR1000Client:
                     _learn_power, _learn_swr, _learn_sw, _learn_ind, _learn_cap
                 )
                 if should_learn:
-                    try:
-                        tuner = get_storage()
-                        if tuner.learn(
-                            freq=_learn_freq,
-                            sw=_learn_sw,
-                            ind=_learn_ind,
-                            cap=_learn_cap,
-                            swr=median_swr
-                        ):
-                            if _learn_freq != last_learn_freq:
-                                logger.info(
-                                    f"📝 学习成功: {_learn_freq/1000:.1f}kHz, "
-                                    f"SWR={median_swr:.2f}, {'CL' if _learn_sw else 'LC'}, "
-                                    f"L={_learn_ind}, C={_learn_cap}"
-                                )
-                                last_learn_freq = _learn_freq
-                    except Exception as e:
-                        logger.error(f"学习天调参数失败: {e}")
+                    # V5.6.3: 去重 — 相同 (freq,sw,ind,cap) + 相同 SWR 在 2s 内不重复学习
+                    freq_key = str(_learn_freq // 1000)
+                    state_key = (freq_key, _learn_sw, _learn_ind, _learn_cap)
+                    prev = _last_learned_state.get(state_key)
+                    now_ts = time.time()
+
+                    do_learn = True
+                    if prev:
+                        swr_delta = abs(median_swr - prev["swr"])
+                        time_delta = now_ts - prev["time"]
+                        # 跳过条件：SWR 无实质性变化 (<0.03) 且冷却时间未到 (<2s)
+                        if swr_delta < 0.03 and time_delta < 2.0:
+                            do_learn = False
+
+                    if do_learn:
+                        try:
+                            tuner = get_storage()
+                            if tuner.learn(
+                                freq=_learn_freq,
+                                sw=_learn_sw,
+                                ind=_learn_ind,
+                                cap=_learn_cap,
+                                swr=median_swr
+                            ):
+                                _last_learned_state[state_key] = {"swr": median_swr, "time": now_ts}
+                                # 日志去重：同频率只在首次或 SWR 改善 >0.02 时打印
+                                prev_best = _last_learned_state.get(("best", freq_key), {}).get("swr", 99)
+                                if _learn_freq != last_learn_freq or median_swr < prev_best - 0.02:
+                                    logger.info(
+                                        f"📝 学习成功: {_learn_freq/1000:.1f}kHz, "
+                                        f"SWR={median_swr:.2f}, {'CL' if _learn_sw else 'LC'}, "
+                                        f"L={_learn_ind}, C={_learn_cap}"
+                                    )
+                                    last_learn_freq = _learn_freq
+                                if median_swr < prev_best:
+                                    _last_learned_state[("best", freq_key)] = {"swr": median_swr, "time": now_ts}
+                        except Exception as e:
+                            logger.error(f"学习天调参数失败: {e}")
 
     def close(self):
         """关闭连接"""
