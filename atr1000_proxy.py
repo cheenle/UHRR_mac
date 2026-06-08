@@ -738,7 +738,7 @@ class ATR1000Client:
                     _learn_power, _learn_swr, _learn_sw, _learn_ind, _learn_cap
                 )
                 if should_learn:
-                    # V5.6.3: 去重 — 相同 (freq,sw,ind,cap) + 相同 SWR 在 2s 内不重复学习
+                    # V5.6.4: 分级去重 — SWR 改善立即学，不变则长冷却，变差则跳过
                     freq_key = str(_learn_freq // 1000)
                     state_key = (freq_key, _learn_sw, _learn_ind, _learn_cap)
                     prev = _last_learned_state.get(state_key)
@@ -746,11 +746,17 @@ class ATR1000Client:
 
                     do_learn = True
                     if prev:
-                        swr_delta = abs(median_swr - prev["swr"])
+                        swr_delta = median_swr - prev["swr"]  # 负值=改善，正值=恶化
                         time_delta = now_ts - prev["time"]
-                        # 跳过条件：SWR 无实质性变化 (<0.03) 且冷却时间未到 (<2s)
-                        if swr_delta < 0.03 and time_delta < 2.0:
+
+                        if swr_delta > 0.01:
+                            # SWR 恶化 → 不学（旧参数更好）
                             do_learn = False
+                        elif swr_delta >= -0.01:
+                            # SWR 基本不变 (±0.01) → 长冷却 5s，避免反复写盘
+                            if time_delta < 5.0:
+                                do_learn = False
+                        # else: swr_delta < -0.01 (改善 ≥0.02) → 立即学
 
                     if do_learn:
                         try:
@@ -763,7 +769,7 @@ class ATR1000Client:
                                 swr=median_swr
                             ):
                                 _last_learned_state[state_key] = {"swr": median_swr, "time": now_ts}
-                                # 日志去重：同频率只在首次或 SWR 改善 >0.02 时打印
+                                # 日志：首次记录 或 SWR 改善 >0.02 时打印
                                 prev_best = _last_learned_state.get(("best", freq_key), {}).get("swr", 99)
                                 if _learn_freq != last_learn_freq or median_swr < prev_best - 0.02:
                                     logger.info(
