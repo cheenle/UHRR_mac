@@ -128,6 +128,42 @@ else:
 
 logger.info(f"📂 使用 Unix Socket: {INSTANCE_UNIX_SOCKET}")
 
+# ---- 频道记忆服务端持久化 ----
+import threading
+MEMORY_CHANNELS_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'memory_channels.json')
+MEMORY_CHANNEL_COUNT = 6
+user_memory_channels = {}  # {user_callsign: [ch1, ch2, ...]}
+memory_lock = threading.RLock()  # 保护 user_memory_channels 的并发访问
+
+def load_memory_channels():
+    global user_memory_channels
+    with memory_lock:
+        try:
+            if os.path.exists(MEMORY_CHANNELS_FILE):
+                with open(MEMORY_CHANNELS_FILE, 'r') as f:
+                    user_memory_channels = json.load(f)
+                logger.info(f"📻 频道记忆已加载: {len(user_memory_channels)} 个用户")
+            else:
+                user_memory_channels = {}
+                _save_memory_channels_to_file_unlocked()
+                logger.info("📻 频道记忆文件已创建（初始为空）")
+        except Exception as e:
+            logger.warning(f"加载频道记忆文件失败: {e}")
+            user_memory_channels = {}
+            _save_memory_channels_to_file_unlocked()
+
+def _save_memory_channels_to_file_unlocked():
+    """内部方法：保存到文件（不加锁，调用者需持有锁）"""
+    try:
+        with open(MEMORY_CHANNELS_FILE, 'w') as f:
+            json.dump(user_memory_channels, f, indent=2)
+    except Exception as e:
+        logger.warning(f"保存频道记忆文件失败: {e}")
+
+def save_memory_channels_to_file():
+    with memory_lock:
+        _save_memory_channels_to_file_unlocked()
+
 e="No"
 
 # ATU相关功能已移除
@@ -3151,6 +3187,49 @@ class WS_ControlTRX(AuthenticatedWebSocketHandler):
 			status = get_recording_status()
 			yield self.send_to_all_clients(f"recordingStatus:{json.dumps(status)}")
 
+		# ---- 频道记忆服务端持久化 ----
+		elif(action == "memLoadAll"):
+			# 从服务端加载当前用户的频道记忆
+			user = self.get_secure_cookie("user") or "default"
+			with memory_lock:
+				channels = user_memory_channels.get(user, [None] * MEMORY_CHANNEL_COUNT)
+			# 确保长度为 MEMORY_CHANNEL_COUNT
+			if len(channels) < MEMORY_CHANNEL_COUNT:
+				channels = channels + [None] * (MEMORY_CHANNEL_COUNT - len(channels))
+			self.write_message("memChannels:" + json.dumps(channels))
+			logger.debug(f"📻 频道记忆已发送: user={user}, channels={len(channels)}")
+
+		elif(action == "memSaveAll"):
+			# 保存当前用户的频道记忆到服务端，并广播给所有同用户客户端
+			user = self.get_secure_cookie("user") or "default"
+			try:
+				channels = json.loads(datato)
+				if not isinstance(channels, list):
+					raise ValueError("channels must be list")
+				# 限制长度
+				channels = channels[:MEMORY_CHANNEL_COUNT]
+				with memory_lock:
+					user_memory_channels[user] = channels
+					_save_memory_channels_to_file_unlocked()
+				logger.info(f"💾 频道记忆已保存: user={user}, filled={sum(1 for c in channels if c)}")
+				# 广播给所有同用户客户端（跨设备实时同步）
+				mem_msg = "memChannels:" + json.dumps(channels)
+				broadcast_count = 0
+				for client in ControlTRXHandlerClients:
+					try:
+						client_user = client.get_secure_cookie("user") or "default"
+						if client_user == user and client is not self:
+							if client.ws_connection and not client.close_code:
+								client.write_message(mem_msg)
+								broadcast_count += 1
+					except Exception:
+						pass
+				if broadcast_count > 0:
+					logger.info(f"📡 频道记忆已广播给 {broadcast_count} 个其他客户端")
+			except Exception as e:
+				logger.error(f"保存频道记忆失败: {e}")
+				self.write_message("memError:" + str(e))
+
 		LastPing = time.time();
 			
 	def send_frequency_to_atu(self, frequency):
@@ -3662,6 +3741,49 @@ class MobileHandler(BaseHandler):
 			print(f"Error reading mobile_modern.html: {e}")
 			self.write("<html><body><h1>Mobile Interface Error</h1><p>Please check the server logs.</p></body></html>")
 
+############ 频道记忆 HTTP API ##############
+class MemChannelsHandler(BaseHandler):
+
+	def get(self):
+		"""返回当前用户的频道记忆"""
+		if auth_enabled() and not self.current_user:
+			self.set_status(401)
+			self.finish(json.dumps({"error": "Authentication required"}))
+			return
+		user = self.get_secure_cookie("user") or "default"
+		with memory_lock:
+			channels = user_memory_channels.get(user, [None] * MEMORY_CHANNEL_COUNT)
+		if len(channels) < MEMORY_CHANNEL_COUNT:
+			channels = channels + [None] * (MEMORY_CHANNEL_COUNT - len(channels))
+		self.set_header("Content-Type", "application/json")
+		self.set_header("Cache-Control", "no-store")
+		self.write(json.dumps({"user": user, "channels": channels}))
+
+	def post(self):
+		"""保存当前用户的频道记忆"""
+		if auth_enabled() and not self.current_user:
+			self.set_status(401)
+			self.finish(json.dumps({"error": "Authentication required"}))
+			return
+		user = self.get_secure_cookie("user") or "default"
+		try:
+			body = json.loads(self.request.body)
+			channels = body.get("channels", [])
+			if not isinstance(channels, list):
+				raise ValueError("channels must be list")
+			channels = channels[:MEMORY_CHANNEL_COUNT]
+			with memory_lock:
+				user_memory_channels[user] = channels
+				_save_memory_channels_to_file_unlocked()
+			logger.info(f"💾 频道记忆已保存(HTTP): user={user}, filled={sum(1 for c in channels if c)}")
+			self.set_header("Content-Type", "application/json")
+			self.write(json.dumps({"ok": True}))
+		except Exception as e:
+			logger.error(f"保存频道记忆失败(HTTP): {e}")
+			self.set_status(400)
+			self.set_header("Content-Type", "application/json")
+			self.write(json.dumps({"error": str(e)}))
+
 ############ Main ##############
 class MainHandler(BaseHandler):
 
@@ -3688,6 +3810,9 @@ class MainHandler(BaseHandler):
 			self.write("<html><body><h1>Error loading page</h1><p>Please check the server logs.</p></body></html>")
 
 if __name__ == "__main__":	
+	# 加载频道记忆（服务端持久化）
+	load_memory_channels()
+
 	
 	try:
 		if is_rtlsdr_present:
@@ -3737,6 +3862,7 @@ if __name__ == "__main__":
 					(r'/CONFIG', ConfigHandler),
 					(r'/test', TestRadioHandler),
 					(r'/mobile', MobileHandler),
+					(r'/api/mem_channels', MemChannelsHandler),  # 频道记忆 API
 					(r'/api/recordings', RecordingsListHandler),  # 录音列表API
 					(r'/recordings/([^/]+)', RecordingsDownloadHandler),  # 录音下载
 					(r'/', MainHandler),
