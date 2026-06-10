@@ -10,6 +10,7 @@
 <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;700;900&family=JetBrains+Mono:wght@300;400;600&family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <style>
 :root {
   --neon-green: #00ffa3;
@@ -87,14 +88,114 @@ a:hover { text-decoration:underline; }
 .new-badge { background: linear-gradient(135deg, var(--neon-pink), var(--neon-purple));
   color:#fff; padding:0.1rem 0.5rem; border-radius:3px; font-size:0.6rem;
   font-family:'JetBrains Mono',monospace; vertical-align:middle; margin-left:0.3rem; }
+
+/* === MRRC Site Navbar & Footer === */
+.site-navbar {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 1001;
+  background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(20px);
+  border-bottom: 1px solid #262626;
+  font-family: 'Inter', sans-serif; line-height: 1.2;
+}
+.site-navbar .navbar-inner {
+  display: flex; align-items: center; justify-content: space-between;
+  max-width: 1200px; margin: 0 auto; padding: 0 24px; height: 64px;
+}
+.site-navbar .logo {
+  display: flex; align-items: center; gap: 10px;
+  font-size: 1.15rem; font-weight: 600; color: #fff; text-decoration: none;
+}
+.site-navbar .logo-icon {
+  width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;
+  background: #22d3ee; border-radius: 8px; font-size: 0.9rem;
+}
+.site-navbar .nav-links {
+  display: flex; align-items: center; gap: 28px; list-style: none; margin: 0; padding: 0;
+}
+.site-navbar .nav-links a {
+  font-size: 0.85rem; color: #a3a3a3; text-decoration: none; transition: color 0.2s;
+}
+.site-navbar .nav-links a:hover { color: #fff; }
+.site-navbar .nav-links a.nav-active { color: #22d3ee; }
+.site-navbar .nav-actions { display: flex; align-items: center; gap: 12px; }
+.site-navbar .lang-btn {
+  background: transparent; border: 1px solid #404040; color: #a3a3a3;
+  padding: 5px 10px; border-radius: 6px; font-size: 0.78rem;
+  cursor: pointer; transition: all 0.2s; text-decoration: none;
+}
+.site-navbar .lang-btn:hover { border-color: #22d3ee; color: #22d3ee; }
+.site-navbar .mobile-menu-toggle {
+  display: none; background: transparent; border: none;
+  color: #fff; font-size: 1.4rem; cursor: pointer;
+}
+
+/* site footer */
+.site-footer {
+  padding: 60px 0 32px; border-top: 1px solid #262626;
+  font-family: 'Inter', sans-serif; line-height: 1.6;
+}
+.site-footer .ft-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 40px; margin-bottom: 40px;
+}
+.site-footer h4 { font-size: 0.95rem; font-weight: 600; margin-bottom: 16px; color: #fff; }
+.site-footer p, .site-footer li { color: #a3a3a3; font-size: 0.85rem; line-height: 1.7; }
+.site-footer ul { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 10px; }
+.site-footer a { color: #a3a3a3; text-decoration: none; transition: color 0.2s; }
+.site-footer a:hover { color: #fff; }
+.site-footer .ft-bottom {
+  text-align: center; padding-top: 28px; border-top: 1px solid #262626;
+}
+.site-footer .ft-bottom p { color: #525252; font-size: 0.8rem; }
+
+@media (max-width: 768px) {
+  .site-navbar .nav-links { display: none; }
+  .site-navbar .nav-links.mobile-open {
+    display: flex; flex-direction: column; position: absolute;
+    top: 64px; left: 0; right: 0; background: rgba(0,0,0,0.95);
+    backdrop-filter: blur(20px); padding: 20px 24px; gap: 16px;
+    border-bottom: 1px solid #262626;
+  }
+  .site-navbar .mobile-menu-toggle { display: block; }
+  .site-footer .ft-grid { grid-template-columns: 1fr 1fr; }
+}
 </style>
 </head>
 <body class="bg-[#0a0e1a] text-gray-200 overflow-x-hidden">
+
+<!-- ========== MRRC Site Navbar ========== -->
+<nav class="site-navbar">
+  <div class="navbar-inner">
+    <a href="../../index.html" class="logo">
+      <span class="logo-icon">📻</span>
+      <span>MRRC</span>
+    </a>
+    <ul class="nav-links" id="navLinks">
+      <li><a href="../../index.html">Home</a></li>
+      <li><a href="../../index.html#features">Features</a></li>
+      <li><a href="../../index.html#demo">Demo</a></li>
+      <li><a href="../../docs/installation.html">Installation</a></li>
+      <li><a href="../../docs/design.html">Design &amp; Architecture</a></li>
+      <li><a href="../../docs/docs.html">Docs</a></li>
+      <li><a href="../../fde.html">FDE</a></li>
+      <li><a href="../../aladdin-v2.html">Aladdin V2</a></li>
+      <li><a href="index.html" class="nav-active">EFHW</a></li>
+      <li><a href="https://github.com/cheenle/UHRR_mac" target="_blank" rel="noopener">GitHub</a></li>
+    </ul>
+    <div class="nav-actions">
+      <a href="../../efhw/index.html" class="lang-btn">English</a>
+      <button class="mobile-menu-toggle" id="mobileMenuToggle" aria-label="Menu">
+        <i class="fas fa-bars"></i>
+      </button>
+    </div>
+  </div>
+</nav>
+
 <div class="grain"></div>
 <div class="progress-bar" id="progressBar"></div>
 
 <!-- ========== HERO ========== -->
-<header class="relative min-h-screen flex items-center justify-center overflow-hidden">
+<header class="relative min-h-screen flex items-center justify-center overflow-hidden" style="padding-top:64px;">
   <div class="absolute inset-0" style="background:radial-gradient(ellipse at 30% 50%, rgba(0,200,255,0.08) 0%, transparent 60%),radial-gradient(ellipse at 70% 30%, rgba(255,61,127,0.06) 0%, transparent 50%);"></div>
   <div class="absolute top-0 left-0 w-full h-full opacity-10">
     <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
@@ -863,7 +964,49 @@ a:hover { text-decoration:underline; }
   </div>
 </footer>
 
+<!-- ========== MRRC Site Footer ========== -->
+<footer class="site-footer">
+  <div style="max-width:1200px;margin:0 auto;padding:0 24px;">
+    <div class="ft-grid">
+      <div>
+        <h4>MRRC</h4>
+        <p>Mobile Remote Radio Control<br>Amateur Radio, Anytime, Anywhere</p>
+      </div>
+      <div>
+        <h4>Quick Links</h4>
+        <ul>
+          <li><a href="../../index.html">Home</a></li>
+          <li><a href="../../index.html#features">Features</a></li>
+          <li><a href="../../index.html#demo">Demo</a></li>
+          <li><a href="../../docs/installation.html">Installation</a></li>
+          <li><a href="../../docs/design.html">Design &amp; Architecture</a></li>
+          <li><a href="../../docs/docs.html">Documentation</a></li>
+          <li><a href="../../fde.html">FDE</a></li>
+          <li><a href="../../aladdin-v2.html">Aladdin V2</a></li>
+          <li><a href="index.html">EFHW Antenna</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Resources</h4>
+        <ul>
+          <li><a href="https://github.com/cheenle/UHRR_mac" target="_blank" rel="noopener">GitHub</a></li>
+          <li><a href="https://github.com/cheenle/UHRR_mac/issues" target="_blank" rel="noopener">Issue Tracker</a></li>
+          <li><a href="https://radio.vlsc.net:8877/" target="_blank" rel="noopener">Live System</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="ft-bottom">
+      <p>&copy; 2024-2026 MRRC Project. Open Source under GPL-3.0 License.</p>
+    </div>
+  </div>
+</footer>
+
 <script>
+// --- Mobile menu toggle ---
+document.getElementById('mobileMenuToggle').addEventListener('click', function() {
+  document.getElementById('navLinks').classList.toggle('mobile-open');
+});
+
 // --- Progress bar ---
 window.addEventListener('scroll', () => {
   const h = document.documentElement;

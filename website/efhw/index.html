@@ -1,15 +1,16 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="en">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>EFHW 天线深度研究报告 | 2026 增补版</title>
-<meta name="description" content="EFHW 天线深度研究增补版：PA3HHO 磁芯堆叠实测、2643251002 vs FT240-43 对决、AI6XG VNA 三步分离法、RF.Guru 背靠背测量神话揭穿、陷波器 EFHW 设计、3:21 绕法效率飞跃 — BG1SB 综合 25+ 权威来源">
+<title>EFHW Antenna Deep Research Report | 2026 Supplement</title>
+<meta name="description" content="EFHW Antenna Deep Research — Supplement Edition: PA3HHO stacked core measurements, 2643251002 vs FT240-43 showdown, AI6XG VNA 3-step separation method, RF.Guru back-to-back measurement myth debunked, trapped EFHW design, 3:21 winding efficiency leap — BG1SB synthesizing 25+ authoritative sources">
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;700;900&family=JetBrains+Mono:wght@300;400;600&family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <style>
 :root {
   --neon-green: #00ffa3;
@@ -23,7 +24,7 @@
 }
 * { box-sizing: border-box; }
 body { font-family: 'Inter', sans-serif; line-height: 1.8; }
-h1,h2,h3,h4 { font-family: 'Noto Serif SC', serif; }
+h1,h2,h3,h4 { font-family: 'Georgia', 'Times New Roman', serif; }
 code, .mono { font-family: 'JetBrains Mono', monospace; }
 .grain::before {
   content:''; position:fixed; top:0; left:0; width:100%; height:100%;
@@ -87,14 +88,114 @@ a:hover { text-decoration:underline; }
 .new-badge { background: linear-gradient(135deg, var(--neon-pink), var(--neon-purple));
   color:#fff; padding:0.1rem 0.5rem; border-radius:3px; font-size:0.6rem;
   font-family:'JetBrains Mono',monospace; vertical-align:middle; margin-left:0.3rem; }
+
+/* === MRRC Site Navbar & Footer === */
+.site-navbar {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 1001;
+  background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(20px);
+  border-bottom: 1px solid #262626;
+  font-family: 'Inter', sans-serif; line-height: 1.2;
+}
+.site-navbar .navbar-inner {
+  display: flex; align-items: center; justify-content: space-between;
+  max-width: 1200px; margin: 0 auto; padding: 0 24px; height: 64px;
+}
+.site-navbar .logo {
+  display: flex; align-items: center; gap: 10px;
+  font-size: 1.15rem; font-weight: 600; color: #fff; text-decoration: none;
+}
+.site-navbar .logo-icon {
+  width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;
+  background: #22d3ee; border-radius: 8px; font-size: 0.9rem;
+}
+.site-navbar .nav-links {
+  display: flex; align-items: center; gap: 28px; list-style: none; margin: 0; padding: 0;
+}
+.site-navbar .nav-links a {
+  font-size: 0.85rem; color: #a3a3a3; text-decoration: none; transition: color 0.2s;
+}
+.site-navbar .nav-links a:hover { color: #fff; }
+.site-navbar .nav-links a.nav-active { color: #22d3ee; }
+.site-navbar .nav-actions { display: flex; align-items: center; gap: 12px; }
+.site-navbar .lang-btn {
+  background: transparent; border: 1px solid #404040; color: #a3a3a3;
+  padding: 5px 10px; border-radius: 6px; font-size: 0.78rem;
+  cursor: pointer; transition: all 0.2s; text-decoration: none;
+}
+.site-navbar .lang-btn:hover { border-color: #22d3ee; color: #22d3ee; }
+.site-navbar .mobile-menu-toggle {
+  display: none; background: transparent; border: none;
+  color: #fff; font-size: 1.4rem; cursor: pointer;
+}
+
+/* site footer */
+.site-footer {
+  padding: 60px 0 32px; border-top: 1px solid #262626;
+  font-family: 'Inter', sans-serif; line-height: 1.6;
+}
+.site-footer .ft-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 40px; margin-bottom: 40px;
+}
+.site-footer h4 { font-size: 0.95rem; font-weight: 600; margin-bottom: 16px; color: #fff; }
+.site-footer p, .site-footer li { color: #a3a3a3; font-size: 0.85rem; line-height: 1.7; }
+.site-footer ul { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 10px; }
+.site-footer a { color: #a3a3a3; text-decoration: none; transition: color 0.2s; }
+.site-footer a:hover { color: #fff; }
+.site-footer .ft-bottom {
+  text-align: center; padding-top: 28px; border-top: 1px solid #262626;
+}
+.site-footer .ft-bottom p { color: #525252; font-size: 0.8rem; }
+
+@media (max-width: 768px) {
+  .site-navbar .nav-links { display: none; }
+  .site-navbar .nav-links.mobile-open {
+    display: flex; flex-direction: column; position: absolute;
+    top: 64px; left: 0; right: 0; background: rgba(0,0,0,0.95);
+    backdrop-filter: blur(20px); padding: 20px 24px; gap: 16px;
+    border-bottom: 1px solid #262626;
+  }
+  .site-navbar .mobile-menu-toggle { display: block; }
+  .site-footer .ft-grid { grid-template-columns: 1fr 1fr; }
+}
 </style>
 </head>
 <body class="bg-[#0a0e1a] text-gray-200 overflow-x-hidden">
+
+<!-- ========== MRRC Site Navbar ========== -->
+<nav class="site-navbar">
+  <div class="navbar-inner">
+    <a href="../index.html" class="logo">
+      <span class="logo-icon">📻</span>
+      <span>MRRC</span>
+    </a>
+    <ul class="nav-links" id="navLinks">
+      <li><a href="../index.html">Home</a></li>
+      <li><a href="../index.html#features">Features</a></li>
+      <li><a href="../index.html#demo">Demo</a></li>
+      <li><a href="../docs/installation.html">Installation</a></li>
+      <li><a href="../docs/design.html">Design &amp; Architecture</a></li>
+      <li><a href="../docs/docs.html">Docs</a></li>
+      <li><a href="../fde.html">FDE</a></li>
+      <li><a href="../aladdin-v2.html">Aladdin V2</a></li>
+      <li><a href="index.html" class="nav-active">EFHW</a></li>
+      <li><a href="https://github.com/cheenle/UHRR_mac" target="_blank" rel="noopener">GitHub</a></li>
+    </ul>
+    <div class="nav-actions">
+      <a href="../zh/efhw/index.html" class="lang-btn">中文</a>
+      <button class="mobile-menu-toggle" id="mobileMenuToggle" aria-label="Menu">
+        <i class="fas fa-bars"></i>
+      </button>
+    </div>
+  </div>
+</nav>
+
 <div class="grain"></div>
 <div class="progress-bar" id="progressBar"></div>
 
 <!-- ========== HERO ========== -->
-<header class="relative min-h-screen flex items-center justify-center overflow-hidden">
+<header class="relative min-h-screen flex items-center justify-center overflow-hidden" style="padding-top:64px;">
   <div class="absolute inset-0" style="background:radial-gradient(ellipse at 30% 50%, rgba(0,200,255,0.08) 0%, transparent 60%),radial-gradient(ellipse at 70% 30%, rgba(255,61,127,0.06) 0%, transparent 50%);"></div>
   <div class="absolute top-0 left-0 w-full h-full opacity-10">
     <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
@@ -105,21 +206,21 @@ a:hover { text-decoration:underline; }
     </svg>
   </div>
   <div class="relative z-10 text-center px-6 max-w-5xl mx-auto">
-    <p class="section-label mb-6 fade-up">Deep Research Report / 增补版 / 2026-05</p>
-    <h1 class="text-4xl md:text-6xl lg:text-7xl font-black leading-tight mb-6 glow-text fade-up" style="font-family:'Noto Serif SC',serif;">
-      EFHW 天线<br class="hidden md:block">深度研究报告
+    <p class="section-label mb-6 fade-up">Deep Research Report / Supplement Edition / 2026-05</p>
+    <h1 class="text-4xl md:text-6xl lg:text-7xl font-black leading-tight mb-6 glow-text fade-up" style="font-family:'Georgia','Times New Roman',serif;">
+      EFHW Antenna<br class="hidden md:block">Deep Research Report
     </h1>
     <p class="text-lg md:text-xl text-gray-400 max-w-3xl mx-auto mb-4 fade-up" style="line-height:1.9;">
-      PA3HHO 磁芯堆叠实测 · AI6XG VNA 测量方法论 · RF.Guru 背靠背神话揭穿 · 陷波器 EFHW 设计
+      PA3HHO Stacked Core Measurements · AI6XG VNA Methodology · RF.Guru Back-to-Back Myth Debunked · Trapped EFHW Design
     </p>
-    <p class="mono text-xs text-gray-500 mb-3 fade-up">BG1SB Knowledge Base | 综合 25+ 权威来源 | 增补 5 个全新章节</p>
-    <p class="mono text-xs text-pink-400 mb-10 fade-up"><span class="new-badge">NEW</span> 2643251002 磁芯对决 · PA3HHO 4 配置实测 · AI6XG 三步分离法 · 陷波器 EFHW 20/30/40m</p>
+    <p class="mono text-xs text-gray-500 mb-3 fade-up">BG1SB Knowledge Base | Synthesizing 25+ Authoritative Sources | 5 New Chapters Added</p>
+    <p class="mono text-xs text-pink-400 mb-10 fade-up"><span class="new-badge">NEW</span> 2643251002 Core Showdown · PA3HHO 4-Config Measurements · AI6XG 3-Step Separation · Trapped EFHW 20/30/40m</p>
     <div class="flex flex-wrap justify-center gap-3 mb-12 fade-up">
-      <span class="tag tag-green">3:21 > 2:14 绕法</span>
-      <span class="tag tag-blue">2643251002 磁芯</span>
-      <span class="tag tag-pink">PA3HHO 实测数据</span>
-      <span class="tag tag-amber">陷波器 EFHW</span>
-      <span class="tag tag-green">AI6XG VNA 方法论</span>
+      <span class="tag tag-green">3:21 > 2:14 Winding</span>
+      <span class="tag tag-blue">2643251002 Core</span>
+      <span class="tag tag-pink">PA3HHO Measured Data</span>
+      <span class="tag tag-amber">Trapped EFHW</span>
+      <span class="tag tag-green">AI6XG VNA Methodology</span>
     </div>
     <div class="fade-up animate-bounce" style="animation-delay:2s;">
       <svg class="mx-auto w-6 h-6 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"/></svg>
@@ -130,66 +231,66 @@ a:hover { text-decoration:underline; }
 <!-- ========== TOC ========== -->
 <nav class="max-w-4xl mx-auto px-6 py-16" id="toc">
   <div class="card card-glow p-8 md:p-10 fade-up">
-    <p class="section-label mb-4">// 目录 — 16 章 <span class="new-badge">增补版</span></p>
+    <p class="section-label mb-4">// Table of Contents — 16 Chapters <span class="new-badge">Supplement</span></p>
     <div class="grid md:grid-cols-2 gap-x-8 gap-y-2">
-      <a href="#sec1" class="toc-link block py-1.5 text-gray-400 hover:text-white"><span class="mono text-xs text-gray-600 mr-2">01</span>EFHW 基本原理与阻抗特性</a>
-      <a href="#sec2" class="toc-link block py-1.5 text-gray-400 hover:text-white"><span class="mono text-xs text-gray-600 mr-2">02</span>49:1 vs 64:1 变压器设计 <span class="new-badge">+3:21</span></a>
-      <a href="#sec3" class="toc-link block py-1.5 text-gray-400 hover:text-white"><span class="mono text-xs text-gray-600 mr-2">03</span>绕线方法与 W8JI 实测纠正</a>
-      <a href="#sec4" class="toc-link block py-1.5 text-gray-400 hover:text-white"><span class="mono text-xs text-gray-600 mr-2">04</span>共模扼流圈 (CMC) 深度解析</a>
-      <a href="#sec5" class="toc-link block py-1.5 text-gray-400 hover:text-white"><span class="mono text-xs text-gray-600 mr-2">05</span>平衡地线 (Counterpoise)</a>
-      <a href="#sec6" class="toc-link block py-1.5 text-gray-400 hover:text-white"><span class="mono text-xs text-gray-600 mr-2">06</span>多波段谐波运作机制</a>
-      <a href="#sec7" class="toc-link block py-1.5 text-gray-400 hover:text-white"><span class="mono text-xs text-gray-600 mr-2">07</span>49:1 变压器真实损耗实测 <span class="new-badge">更新</span></a>
-      <a href="#sec8" class="toc-link block py-1.5 text-gray-400 hover:text-white"><span class="mono text-xs text-gray-600 mr-2">08</span>磁芯材料对决 <span class="new-badge">NEW</span></a>
-      <a href="#sec9" class="toc-link block py-1.5 text-gray-400 hover:text-white"><span class="mono text-xs text-gray-600 mr-2">09</span>PA3HHO 堆叠磁芯实测 <span class="new-badge">NEW</span></a>
-      <a href="#sec10" class="toc-link block py-1.5 text-gray-400 hover:text-white"><span class="mono text-xs text-gray-600 mr-2">10</span>背靠背测量神话 <span class="new-badge">NEW</span></a>
-      <a href="#sec11" class="toc-link block py-1.5 text-gray-400 hover:text-white"><span class="mono text-xs text-gray-600 mr-2">11</span>正确的 VNA 测量方法 <span class="new-badge">NEW</span></a>
-      <a href="#sec12" class="toc-link block py-1.5 text-gray-400 hover:text-white"><span class="mono text-xs text-gray-600 mr-2">12</span>陷波器 EFHW 设计 <span class="new-badge">NEW</span></a>
-      <a href="#sec13" class="toc-link block py-1.5 text-gray-400 hover:text-white"><span class="mono text-xs text-gray-600 mr-2">13</span>A+C 双模匹配系统 <span class="new-badge">NEW</span></a>
-      <a href="#sec14" class="toc-link block py-1.5 text-gray-400 hover:text-white"><span class="mono text-xs text-gray-600 mr-2">14</span>L-Network 替代匹配方案</a>
-      <a href="#sec15" class="toc-link block py-1.5 text-gray-400 hover:text-white"><span class="mono text-xs text-gray-600 mr-2">15</span>辐射方向图与 NEC 建模</a>
-      <a href="#sec16" class="toc-link block py-1.5 text-gray-400 hover:text-white"><span class="mono text-xs text-gray-600 mr-2">16</span>便携部署 / 安全 / 核心结论</a>
+      <a href="#sec1" class="toc-link block py-1.5 text-gray-400 hover:text-white"><span class="mono text-xs text-gray-600 mr-2">01</span>EFHW Fundamentals &amp; Impedance Characteristics</a>
+      <a href="#sec2" class="toc-link block py-1.5 text-gray-400 hover:text-white"><span class="mono text-xs text-gray-600 mr-2">02</span>49:1 vs 64:1 Transformer Design <span class="new-badge">+3:21</span></a>
+      <a href="#sec3" class="toc-link block py-1.5 text-gray-400 hover:text-white"><span class="mono text-xs text-gray-600 mr-2">03</span>Winding Methods &amp; W8JI Measurement Corrections</a>
+      <a href="#sec4" class="toc-link block py-1.5 text-gray-400 hover:text-white"><span class="mono text-xs text-gray-600 mr-2">04</span>Common-Mode Choke (CMC) In-Depth Analysis</a>
+      <a href="#sec5" class="toc-link block py-1.5 text-gray-400 hover:text-white"><span class="mono text-xs text-gray-600 mr-2">05</span>Counterpoise — Balance Ground</a>
+      <a href="#sec6" class="toc-link block py-1.5 text-gray-400 hover:text-white"><span class="mono text-xs text-gray-600 mr-2">06</span>Multi-Band Harmonic Operation Mechanism</a>
+      <a href="#sec7" class="toc-link block py-1.5 text-gray-400 hover:text-white"><span class="mono text-xs text-gray-600 mr-2">07</span>49:1 Transformer Real Loss Measurements <span class="new-badge">Updated</span></a>
+      <a href="#sec8" class="toc-link block py-1.5 text-gray-400 hover:text-white"><span class="mono text-xs text-gray-600 mr-2">08</span>Core Material Showdown <span class="new-badge">NEW</span></a>
+      <a href="#sec9" class="toc-link block py-1.5 text-gray-400 hover:text-white"><span class="mono text-xs text-gray-600 mr-2">09</span>PA3HHO Stacked Core Measurements <span class="new-badge">NEW</span></a>
+      <a href="#sec10" class="toc-link block py-1.5 text-gray-400 hover:text-white"><span class="mono text-xs text-gray-600 mr-2">10</span>Back-to-Back Measurement Myth <span class="new-badge">NEW</span></a>
+      <a href="#sec11" class="toc-link block py-1.5 text-gray-400 hover:text-white"><span class="mono text-xs text-gray-600 mr-2">11</span>Correct VNA Measurement Methods <span class="new-badge">NEW</span></a>
+      <a href="#sec12" class="toc-link block py-1.5 text-gray-400 hover:text-white"><span class="mono text-xs text-gray-600 mr-2">12</span>Trapped EFHW Design <span class="new-badge">NEW</span></a>
+      <a href="#sec13" class="toc-link block py-1.5 text-gray-400 hover:text-white"><span class="mono text-xs text-gray-600 mr-2">13</span>A+C Dual-Mode Matching System <span class="new-badge">NEW</span></a>
+      <a href="#sec14" class="toc-link block py-1.5 text-gray-400 hover:text-white"><span class="mono text-xs text-gray-600 mr-2">14</span>L-Network Alternative Matching Solutions</a>
+      <a href="#sec15" class="toc-link block py-1.5 text-gray-400 hover:text-white"><span class="mono text-xs text-gray-600 mr-2">15</span>Radiation Patterns &amp; NEC Modeling</a>
+      <a href="#sec16" class="toc-link block py-1.5 text-gray-400 hover:text-white"><span class="mono text-xs text-gray-600 mr-2">16</span>Portable Deployment / Safety / Key Conclusions</a>
     </div>
   </div>
 </nav>
 
 <!-- ========== SEC 1: FUNDAMENTALS ========== -->
 <section id="sec1" class="max-w-4xl mx-auto px-6 py-16">
-  <p class="section-label fade-up">01 / 基本原理</p>
-  <h2 class="text-3xl md:text-4xl font-bold mt-3 mb-8 fade-up">EFHW 基本原理与阻抗特性</h2>
+  <p class="section-label fade-up">01 / Fundamentals</p>
+  <h2 class="text-3xl md:text-4xl font-bold mt-3 mb-8 fade-up">EFHW Fundamentals &amp; Impedance Characteristics</h2>
 
   <div class="fade-up mb-8">
-    <p class="text-gray-300 mb-4">EFHW（End-Fed Half-Wave）天线本质上是<strong class="text-white">在一端馈电的半波偶极子</strong>。相比中心馈电的偶极子，其核心优势在于架设简便——仅需一个支撑点、馈电点在电台附近、利用谐波实现多波段覆盖。</p>
+    <p class="text-gray-300 mb-4">The EFHW (End-Fed Half-Wave) antenna is essentially <strong class="text-white">a half-wave dipole fed at one end</strong>. Compared to center-fed dipoles, its core advantages are simple deployment — only one support point needed, feed point near the radio, and harmonic-based multi-band coverage.</p>
   </div>
 
   <div class="card card-glow p-6 md:p-8 mb-8 fade-up">
-    <p class="mono text-sm text-[var(--neon-green)] mb-4">// 阻抗特性</p>
+    <p class="mono text-sm text-[var(--neon-green)] mb-4">// Impedance Characteristics</p>
     <ul class="space-y-3 text-gray-300">
-      <li class="flex items-start gap-3"><span class="text-[var(--neon-blue)] mt-1">&#9656;</span>半波天线末端呈现<strong class="text-white">极高阻抗</strong>，典型值约 <span class="mono text-[var(--neon-amber)]">2000-3000 &Omega;</span>（远高于 50 &Omega;）</li>
-      <li class="flex items-start gap-3"><span class="text-[var(--neon-blue)] mt-1">&#9656;</span>需要阻抗变换器：49:1（7:1 匝数比，如 3:21）或 64:1（8:1 匝数比）</li>
-      <li class="flex items-start gap-3"><span class="text-[var(--neon-blue)] mt-1">&#9656;</span>实际阻抗受架设高度、环境介电常数、地面电导率、导线直径等多重因素影响</li>
-      <li class="flex items-start gap-3"><span class="text-[var(--neon-blue)] mt-1">&#9656;</span>电流分布：半波导线中部电流最大、两端电流为零，与偶极子物理特性完全一致</li>
-      <li class="flex items-start gap-3"><span class="text-[var(--neon-blue)] mt-1">&#9656;</span>馈电点处于<strong class="text-white">高电压、低电流</strong>节点 —— <span class="mono text-[var(--neon-pink)]">100W @ 2500&Omega; = 500V RMS / 700V 峰值</span></li>
+      <li class="flex items-start gap-3"><span class="text-[var(--neon-blue)] mt-1">&#9656;</span>The end of a half-wave antenna presents <strong class="text-white">extremely high impedance</strong>, typically <span class="mono text-[var(--neon-amber)]">2000-3000 &Omega;</span> (far above 50 &Omega;)</li>
+      <li class="flex items-start gap-3"><span class="text-[var(--neon-blue)] mt-1">&#9656;</span>Requires an impedance transformer: 49:1 (7:1 turns ratio, e.g. 3:21) or 64:1 (8:1 turns ratio)</li>
+      <li class="flex items-start gap-3"><span class="text-[var(--neon-blue)] mt-1">&#9656;</span>Actual impedance is affected by deployment height, environmental dielectric constant, ground conductivity, wire diameter, and other factors</li>
+      <li class="flex items-start gap-3"><span class="text-[var(--neon-blue)] mt-1">&#9656;</span>Current distribution: maximum at the center of the half-wave wire, zero at both ends — identical to dipole physics</li>
+      <li class="flex items-start gap-3"><span class="text-[var(--neon-blue)] mt-1">&#9656;</span>Feed point is a <strong class="text-white">high-voltage, low-current</strong> node — <span class="mono text-[var(--neon-pink)]">100W @ 2500&Omega; = 500V RMS / 700V peak</span></li>
     </ul>
   </div>
 
   <div class="highlight-box fade-up">
-    <p class="mono text-xs text-[var(--neon-amber)] mb-2">关键物理学事实</p>
-    <p class="text-gray-300">EFHW 与偶极子的辐射方向图<strong class="text-white">几乎相同</strong>（两者电流分布一致）。EFHW 并非"神奇天线"，差别仅在于馈电方式和阻抗匹配挑战。</p>
+    <p class="mono text-xs text-[var(--neon-amber)] mb-2">Key Physics Fact</p>
+    <p class="text-gray-300">The EFHW and dipole radiation patterns are <strong class="text-white">nearly identical</strong> — both share the same current distribution. The EFHW is not a "magic antenna"; the only difference is the feed method and the resulting impedance matching challenge.</p>
   </div>
 
   <div class="divider"></div>
 
-  <h3 class="text-xl font-bold mb-4 fade-up">EFHW vs 偶极子对比</h3>
+  <h3 class="text-xl font-bold mb-4 fade-up">EFHW vs Dipole Comparison</h3>
   <div class="overflow-x-auto fade-up">
     <table>
-      <thead><tr><th>特性</th><th>EFHW (端馈半波)</th><th>中心馈电偶极子</th></tr></thead>
+      <thead><tr><th>Characteristic</th><th>EFHW (End-Fed Half-Wave)</th><th>Center-Fed Dipole</th></tr></thead>
       <tbody>
-        <tr><td class="text-gray-400">馈电阻抗</td><td class="mono text-sm">~2500 &Omega;，需 49:1 变压器</td><td class="mono text-sm">~50-75 &Omega;，直连同轴</td></tr>
-        <tr><td class="text-gray-400">架设支撑</td><td>仅需一个支撑点</td><td>需中心支撑 + 两端对称</td></tr>
-        <tr><td class="text-gray-400">同轴长度</td><td>极短（馈电点在电台附近）</td><td>通常较长</td></tr>
-        <tr><td class="text-gray-400">多波段</td><td>利用谐波，免调谐器</td><td>需调谐器或多根天线</td></tr>
-        <tr><td class="text-gray-400">变压器损耗</td><td><span class="tag tag-pink">0.3-3dB</span> (取决于配置)</td><td><span class="tag tag-green">无</span></td></tr>
-        <tr><td class="text-gray-400">RFI 风险</td><td>需要 CMC 抑制</td><td>天然平衡，较低</td></tr>
+        <tr><td class="text-gray-400">Feed Impedance</td><td class="mono text-sm">~2500 &Omega;, Needs 49:1 transformer</td><td class="mono text-sm">~50-75 &Omega;, Direct coax</td></tr>
+        <tr><td class="text-gray-400">Support Needed</td><td>Single support point</td><td>Center support + symmetric ends</td></tr>
+        <tr><td class="text-gray-400">Coax Length</td><td>Very short (feed near radio)</td><td>Usually longer</td></tr>
+        <tr><td class="text-gray-400">Multi-Band</td><td>Harmonic-based, no tuner</td><td>Needs tuner or multiple antennas</td></tr>
+        <tr><td class="text-gray-400">Transformer Loss</td><td><span class="tag tag-pink">0.3-3dB</span> (depends on config)</td><td><span class="tag tag-green">None</span></td></tr>
+        <tr><td class="text-gray-400">RFI Risk</td><td>CMC suppression needed</td><td>Naturally balanced, lower</td></tr>
       </tbody>
     </table>
   </div>
@@ -197,98 +298,98 @@ a:hover { text-decoration:underline; }
 
 <!-- ========== SEC 2: TRANSFORMER ========== -->
 <section id="sec2" class="max-w-4xl mx-auto px-6 py-16">
-  <p class="section-label fade-up">02 / 变压器设计 <span class="new-badge">+3:21</span></p>
-  <h2 class="text-3xl md:text-4xl font-bold mt-3 mb-8 fade-up">49:1 vs 64:1 变压器设计与选择</h2>
+  <p class="section-label fade-up">02 / Transformer Design <span class="new-badge">+3:21</span></p>
+  <h2 class="text-3xl md:text-4xl font-bold mt-3 mb-8 fade-up">49:1 vs 64:1 Transformer Design &amp; Selection</h2>
 
   <div class="fade-up mb-6">
-    <p class="text-gray-300 mb-4"><span class="mono text-[var(--neon-green)]">天线实际阻抗 &divide; 50 = 理想变压比</span>。实际阻抗约 2000-3000 &Omega;，49:1 提供了通用折中。<strong class="text-white">但匝数比相同 &ne; 性能相同</strong> —— PA3HHO 的实测揭示了被长期忽视的关键变量：<span class="mono text-[var(--neon-pink)]">初级匝数越多，低频段效率越高</span>。</p>
+    <p class="text-gray-300 mb-4"><span class="mono text-[var(--neon-green)]">Antenna Actual Impedance &divide; 50 = Ideal Transformation Ratio</span>.Actual impedance is ~2000-3000 &Omega;, and 49:1 provides a universal compromise. <strong class="text-white">But identical turns ratios do not guarantee identical performance</strong> — PA3HHO's measurements reveal a critical, long-overlooked variable: <span class="mono text-[var(--neon-pink)]">more primary turns dramatically improve low-band efficiency</span>.</p>
   </div>
 
-  <h3 class="text-xl font-bold mb-4 fade-up">匝数比对决：2:14 vs 3:21</h3>
+  <h3 class="text-xl font-bold mb-4 fade-up">Turns Ratio Showdown: 2:14 vs 3:21</h3>
   <div class="overflow-x-auto fade-up mb-8">
     <table>
-      <thead><tr><th>特性</th><th>49:1 (传统 2:14)</th><th>49:1 (新 3:21)</th><th>64:1 (2:16)</th></tr></thead>
+      <thead><tr><th>Characteristic</th><th>49:1 (Traditional 2:14)</th><th>49:1 (New 3:21)</th><th>64:1 (2:16)</th></tr></thead>
       <tbody>
-        <tr><td class="text-gray-400">80m 损耗 (PA3HHO)</td><td class="mono text-red-400">2.3 dB (41%)</td><td class="mono text-green-400">0.3 dB (8%)</td><td class="mono">N/A</td></tr>
-        <tr><td class="text-gray-400">40m 损耗 (PA3HHO)</td><td class="mono text-yellow-400">1.9 dB (36%)</td><td class="mono text-green-400">0.3 dB (8%)</td><td class="mono">N/A</td></tr>
-        <tr><td class="text-gray-400">效率对比</td><td class="text-red-400">基准</td><td class="text-green-400">低频高 5&times;</td><td>类似 2:14</td></tr>
-        <tr><td class="text-gray-400">适合场景</td><td>已被新数据淘汰</td><td class="text-green-400">80-20m 最佳</td><td>低波段专用</td></tr>
+        <tr><td class="text-gray-400">80m Loss (PA3HHO)</td><td class="mono text-red-400">2.3 dB (41%)</td><td class="mono text-green-400">0.3 dB (8%)</td><td class="mono">N/A</td></tr>
+        <tr><td class="text-gray-400">40m Loss (PA3HHO)</td><td class="mono text-yellow-400">1.9 dB (36%)</td><td class="mono text-green-400">0.3 dB (8%)</td><td class="mono">N/A</td></tr>
+        <tr><td class="text-gray-400">Efficiency Comparison</td><td class="text-red-400">Baseline</td><td class="text-green-400">5&times; better on low bands</td><td>Similar to 2:14</td></tr>
+        <tr><td class="text-gray-400">Best Scenario</td><td>Obsoleted by new data</td><td class="text-green-400">Best for 80-20m</td><td>Low-band only</td></tr>
       </tbody>
     </table>
   </div>
 
   <div class="highlight-box fade-up mb-8">
-    <p class="mono text-xs text-[var(--neon-amber)] mb-2">PA3HHO 关键发现 (2025)</p>
-    <p class="text-gray-300"><strong class="text-white">3:21 绕法比 2:14 在低频段效率高 5 倍</strong>。原因：更多匝数 = 更高感抗 = 更低磁化电流 = 更低磁芯损耗。80m 上 3:21 损耗仅 0.3dB (8%)，而 2:14 高达 2.3dB (41%)。代价是绕线空间紧张，需堆叠磁芯。</p>
+    <p class="mono text-xs text-[var(--neon-amber)] mb-2">PA3HHO Key Finding (2025)</p>
+    <p class="text-gray-300"><strong class="text-white">The 3:21 winding is 5&times; more efficient on low bands than 2:14</strong>. The mechanism: more turns → higher inductive reactance → lower magnetizing current → dramatically lower core loss. On 80m, 3:21 loss is only 0.3dB (8%), while 2:14 reaches 2.3dB (41%). The trade-off is tighter winding space, which requires stacked cores to accommodate the extra turns.</p>
   </div>
 
-  <h3 class="text-xl font-bold mb-4 fade-up">铁氧体磁芯选择</h3>
-  <p class="text-gray-300 mb-4 fade-up">RF.Guru 和 F5NPV 的研究揭示：<strong class="text-white">没有单一磁芯能在 80m-10m 全段同时保持高效率</strong>。</p>
+  <h3 class="text-xl font-bold mb-4 fade-up">Ferrite Core Selection</h3>
+  <p class="text-gray-300 mb-4 fade-up">Research by RF.Guru and F5NPV reveals: <strong class="text-white">no single core can maintain high efficiency across the entire 80m-10m range</strong>.</p>
 
   <div class="overflow-x-auto fade-up mb-8">
     <table>
-      <thead><tr><th>磁芯材料</th><th>&mu; 值</th><th>最佳频段</th><th>推荐用途</th></tr></thead>
+      <thead><tr><th>Core Material</th><th>&mu; Value</th><th>Best Bands</th><th>Recommended Use</th></tr></thead>
       <tbody>
-        <tr><td class="mono text-[var(--neon-green)]">Type 43 (FT240)</td><td class="mono">850</td><td>3.5-14 MHz</td><td>最通用的 EFHW</td></tr>
-        <tr><td class="mono text-[var(--neon-green)]">2643251002</td><td class="mono">850</td><td>3.5-14 MHz</td><td>新一代双孔: 效率 90-93%</td></tr>
-        <tr><td class="mono text-[var(--neon-green)]">Type 77 (FT240)</td><td class="mono">2000</td><td>&lt;10 MHz</td><td>80m / 40m 专用</td></tr>
-        <tr><td class="mono text-[var(--neon-green)]">Type 52 (FT240)</td><td class="mono">250</td><td>14-30 MHz</td><td>20m / 10m 高波段</td></tr>
-        <tr><td class="mono text-[var(--neon-green)]">Type 31 (FT240)</td><td class="mono">1500</td><td>1-20 MHz</td><td>CMC 扼流圈专用</td></tr>
+        <tr><td class="mono text-[var(--neon-green)]">Type 43 (FT240)</td><td class="mono">850</td><td>3.5-14 MHz</td><td>Most universal EFHW</td></tr>
+        <tr><td class="mono text-[var(--neon-green)]">2643251002</td><td class="mono">850</td><td>3.5-14 MHz</td><td>New-gen dual-aperture: 90-93% efficiency</td></tr>
+        <tr><td class="mono text-[var(--neon-green)]">Type 77 (FT240)</td><td class="mono">2000</td><td>&lt;10 MHz</td><td>80m / 40m only</td></tr>
+        <tr><td class="mono text-[var(--neon-green)]">Type 52 (FT240)</td><td class="mono">250</td><td>14-30 MHz</td><td>20m / 10m high bands</td></tr>
+        <tr><td class="mono text-[var(--neon-green)]">Type 31 (FT240)</td><td class="mono">1500</td><td>1-20 MHz</td><td>CMC choke only</td></tr>
       </tbody>
     </table>
   </div>
 
   <div class="warn-box fade-up mb-8">
-    <p class="mono text-xs text-[var(--neon-pink)] mb-2">RF.Guru 警告</p>
-    <p class="text-gray-300">Type 43 在 10m 效率低至约 <span class="mono text-[var(--neon-pink)]">55%</span>；Type 52 在 80m 效率仅约 <span class="mono text-[var(--neon-pink)]">50%</span>。所谓"宽带 80-10m EFHW 变压器"更多是营销承诺。</p>
+    <p class="mono text-xs text-[var(--neon-pink)] mb-2">RF.Guru Warning</p>
+    <p class="text-gray-300">Type 43 efficiency on 10m drops as low as <span class="mono text-[var(--neon-pink)]">55%</span>; Type 52 on 80m reaches only ~<span class="mono text-[var(--neon-pink)]">50%</span>. The so-called "wideband 80-10m EFHW transformer" is more marketing promise than reality.</p>
   </div>
 
-  <h3 class="text-xl font-bold mb-4 fade-up">PA3HHO 推荐 <span class="tag tag-green">实战指导</span></h3>
+  <h3 class="text-xl font-bold mb-4 fade-up">PA3HHO Recommendations <span class="tag tag-green">Practical Guide</span></h3>
   <div class="card card-glow p-6 fade-up">
     <ul class="space-y-3 text-gray-300">
-      <li class="flex items-start gap-3"><span class="text-[var(--neon-green)]">&#9656;</span><strong class="text-white">80/40m 专用</strong>：2&times;FT240-43，3:21 绕法 (49:1)，损耗仅 0.3dB (8%)</li>
-      <li class="flex items-start gap-3"><span class="text-[var(--neon-green)]">&#9656;</span><strong class="text-white">20/15/10m 专用</strong>：2&times;FT240-52，3:21 绕法，高波段效率最优</li>
-      <li class="flex items-start gap-3"><span class="text-[var(--neon-green)]">&#9656;</span><strong class="text-white">分频段专用 &gt; 追求全段覆盖</strong> —— 增补版最重要的设计哲学转变</li>
-      <li class="flex items-start gap-3"><span class="text-[var(--neon-green)]">&#9656;</span>2&times;43 3:21 可处理 400W PEP SSB；3&times;52 (N4LQ 方案) 可达 1kW PEP</li>
+      <li class="flex items-start gap-3"><span class="text-[var(--neon-green)]">&#9656;</span><strong class="text-white">80/40m dedicated</strong>: 2&times;FT240-43, 3:21 winding (49:1), only 0.3dB (8%) loss</li>
+      <li class="flex items-start gap-3"><span class="text-[var(--neon-green)]">&#9656;</span><strong class="text-white">20/15/10m dedicated</strong>: 2&times;FT240-52, 3:21 winding, optimal high-band efficiency</li>
+      <li class="flex items-start gap-3"><span class="text-[var(--neon-green)]">&#9656;</span><strong class="text-white">Band-specific > all-band coverage</strong> — the most important design philosophy shift in this supplement</li>
+      <li class="flex items-start gap-3"><span class="text-[var(--neon-green)]">&#9656;</span>2&times;43 3:21 handles 400W PEP SSB; 3&times;52 (N4LQ design) reaches 1kW PEP</li>
     </ul>
   </div>
 </section>
 
 <!-- ========== SEC 3: WINDING ========== -->
 <section id="sec3" class="max-w-4xl mx-auto px-6 py-16">
-  <p class="section-label fade-up">03 / 绕线方法</p>
-  <h2 class="text-3xl md:text-4xl font-bold mt-3 mb-8 fade-up">绕线方法与 W8JI 实测纠正</h2>
+  <p class="section-label fade-up">03 / Winding Methods</p>
+  <h2 class="text-3xl md:text-4xl font-bold mt-3 mb-8 fade-up">Winding Methods &amp; W8JI Measurement Corrections</h2>
 
   <div class="grid md:grid-cols-3 gap-4 mb-8">
     <div class="card card-glow p-5 fade-up">
-      <p class="mono text-sm text-[var(--neon-blue)] mb-3">传统绞合绕法</p>
+      <p class="mono text-sm text-[var(--neon-blue)] mb-3">Traditional Twisted-Pair</p>
       <ul class="text-sm text-gray-400 space-y-2">
-        <li>初级和次级前 2 匝绞在一起</li><li>剩余匝通过磁芯磁通耦合</li><li>存在交叉绕线</li>
+        <li>First 2 turns of primary &amp; secondary twisted together</li><li>Remaining turns coupled via core flux</li><li>Has crossover winding</li>
       </ul>
     </div>
     <div class="card card-glow p-5 fade-up">
-      <p class="mono text-sm text-[var(--neon-green)] mb-3">Fuchs 分绕法</p>
+      <p class="mono text-sm text-[var(--neon-green)] mb-3">Fuchs Split-Winding</p>
       <ul class="text-sm text-gray-400 space-y-2">
-        <li>次级单独绕在磁芯上</li><li>初级单独绕在次级中间</li><li>需要 0.05&lambda; 平衡地线</li>
+        <li>Secondary wound alone on core</li><li>Primary wound alone between secondary</li><li>Needs 0.05&lambda; counterpoise</li>
       </ul>
     </div>
     <div class="card card-glow p-5 fade-up">
-      <p class="mono text-sm text-[var(--neon-amber)] mb-3">简单并绕法（推荐）</p>
+      <p class="mono text-sm text-[var(--neon-amber)] mb-3">Simple Parallel Winding (Recommended)</p>
       <ul class="text-sm text-gray-400 space-y-2">
-        <li>初级与次级并行缠绕</li><li>W8JI 实测：HF 段更优</li><li>分布电容可增加共模阻抗</li>
+        <li>Primary &amp; secondary wound in parallel</li><li>W8JI measured: better on HF</li><li>Distributed capacitance adds CM impedance</li>
       </ul>
     </div>
   </div>
 
-  <h3 class="text-xl font-bold mb-4 fade-up">W8JI VNA 实测对比 <span class="tag tag-pink">神话揭穿</span></h3>
+  <h3 class="text-xl font-bold mb-4 fade-up">W8JI VNA Measurement Comparison <span class="tag tag-pink">Myth Debunked</span></h3>
   <div class="overflow-x-auto fade-up mb-6">
     <table>
-      <thead><tr><th>频率</th><th>分绕法</th><th>并绕法</th><th>优胜者</th></tr></thead>
+      <thead><tr><th>Frequency</th><th>Split Winding</th><th>Parallel Winding</th><th>Winner</th></tr></thead>
       <tbody>
-        <tr><td class="mono text-sm">15.71 MHz</td><td class="mono">-33 dB</td><td class="mono text-green-400">-47 dB</td><td><span class="tag tag-green">并绕法 +14dB</span></td></tr>
-        <tr><td class="mono text-sm">37.1 MHz</td><td class="mono text-green-400">-46 dB</td><td class="mono">-41 dB</td><td><span class="tag tag-amber">分绕法 +5dB</span></td></tr>
-        <tr><td class="mono text-sm">134.8 MHz</td><td class="mono text-green-400">-19 dB</td><td class="mono">-4.6 dB</td><td><span class="tag tag-amber">分绕法 +14dB</span></td></tr>
-        <tr><td class="mono text-sm">157 MHz</td><td class="mono">-3 dB</td><td class="mono text-green-400">-11 dB</td><td><span class="tag tag-green">并绕法 +8dB</span></td></tr>
+        <tr><td class="mono text-sm">15.71 MHz</td><td class="mono">-33 dB</td><td class="mono text-green-400">-47 dB</td><td><span class="tag tag-green">Parallel +14dB</span></td></tr>
+        <tr><td class="mono text-sm">37.1 MHz</td><td class="mono text-green-400">-46 dB</td><td class="mono">-41 dB</td><td><span class="tag tag-amber">Split +5dB</span></td></tr>
+        <tr><td class="mono text-sm">134.8 MHz</td><td class="mono text-green-400">-19 dB</td><td class="mono">-4.6 dB</td><td><span class="tag tag-amber">Split +14dB</span></td></tr>
+        <tr><td class="mono text-sm">157 MHz</td><td class="mono">-3 dB</td><td class="mono text-green-400">-11 dB</td><td><span class="tag tag-green">Parallel +8dB</span></td></tr>
       </tbody>
     </table>
   </div>
@@ -299,120 +400,120 @@ a:hover { text-decoration:underline; }
   </div>
 
   <div class="highlight-box fade-up mt-6">
-    <p class="mono text-xs text-[var(--neon-amber)] mb-2">核心结论</p>
+    <p class="mono text-xs text-[var(--neon-amber)] mb-2">Key Conclusion</p>
     <ul class="text-gray-300 space-y-2">
-      <li>&#8226; 分绕法只是将峰值移到更高频率，并非全面提升</li>
-      <li>&#8226; HF 频段（&lt;30MHz），简单并绕法反而更优</li>
+      <li>&#8226; Split winding merely shifts peaks to higher frequencies, not a universal improvement</li>
+      <li>&#8226; On HF (&lt;30MHz), simple parallel winding is actually better</li>
     </ul>
   </div>
 </section>
 
 <!-- ========== SEC 4: CMC ========== -->
 <section id="sec4" class="max-w-4xl mx-auto px-6 py-16">
-  <p class="section-label fade-up">04 / CMC 深度解析</p>
-  <h2 class="text-3xl md:text-4xl font-bold mt-3 mb-8 fade-up">共模扼流圈 (CMC) 深度解析</h2>
+  <p class="section-label fade-up">04 / CMC In-Depth</p>
+  <h2 class="text-3xl md:text-4xl font-bold mt-3 mb-8 fade-up">Common-Mode Choke (CMC) In-Depth Analysis</h2>
 
   <div class="grid md:grid-cols-2 gap-4 mb-8">
     <div class="card card-glow p-5 fade-up" style="border-left:3px solid var(--neon-pink);">
-      <p class="mono text-sm text-[var(--neon-pink)] mb-2">100W+ 高功率</p>
-      <p class="text-2xl font-bold text-white mb-2">必须使用</p>
-      <p class="text-sm text-gray-400">无 CMC，同轴外皮成为天线系统一部分 → RFI 干扰全家电器</p>
+      <p class="mono text-sm text-[var(--neon-pink)] mb-2">100W+ High Power</p>
+      <p class="text-2xl font-bold text-white mb-2">Must Use</p>
+      <p class="text-sm text-gray-400">Without CMC, the coax shield becomes part of the antenna system → RFI into every appliance in the house</p>
     </div>
     <div class="card card-glow p-5 fade-up" style="border-left:3px solid var(--neon-amber);">
       <p class="mono text-sm text-[var(--neon-amber)] mb-2">QRP (&lt;10W)</p>
-      <p class="text-2xl font-bold text-white mb-2">强烈建议</p>
-      <p class="text-sm text-gray-400">问题较轻但仍存在，养成好习惯避免追踪奇怪的 RF 问题</p>
+      <p class="text-2xl font-bold text-white mb-2">Strongly Recommended</p>
+      <p class="text-sm text-gray-400">Problems are milder but still present — develop good habits to avoid chasing mysterious RF issues</p>
     </div>
   </div>
 
-  <h3 class="text-xl font-bold mb-4 fade-up">CMC 放置位置</h3>
+  <h3 class="text-xl font-bold mb-4 fade-up">CMC Placement</h3>
   <div class="card card-glow p-6 mb-6 fade-up" style="font-family:'JetBrains Mono',monospace; font-size:0.8rem; color:var(--neon-green); overflow-x:auto; white-space:pre;">
-[电台] ─── [同轴] ─── [CMC] ─── [49:1 变压器] ─── [天线导线]
+[Radio] ─── [Coax] ─── [CMC] ─── [49:1 Transformer] ─── [Antenna Wire]
                       &uarr;              &uarr;
-               距馈电点 ≥3m      0.05&lambda; 平衡地线
+               ≥3m from feed point      0.05&lambda; counterpoise
   </div>
 
   <div class="warn-box fade-up mb-6">
-    <p class="mono text-xs text-[var(--neon-pink)] mb-2">关键警告</p>
-    <p class="text-gray-300"><strong class="text-white">切勿在馈电点直接安装 CMC</strong>，否则会扼杀平衡线并影响 SWR。ARRL 手册建议距馈电点至少 10 英尺（约 3m）。</p>
+    <p class="mono text-xs text-[var(--neon-pink)] mb-2">Critical Warning</p>
+    <p class="text-gray-300"><strong class="text-white">Never install CMC directly at the feed point</strong>, as it chokes the counterpoise and affects SWR. The ARRL Handbook recommends at least 10 feet (~3m) from the feed point.</p>
   </div>
 
   <div class="overflow-x-auto fade-up mb-8">
     <table>
-      <thead><tr><th>波段</th><th>铁氧体</th><th>形式</th><th>匝数</th></tr></thead>
+      <thead><tr><th>Band</th><th>Ferrite</th><th>Form</th><th>Turns</th></tr></thead>
       <tbody>
-        <tr><td>80-20m</td><td class="mono">Mix 31</td><td>FT240-31</td><td>5-9 圈 RG-8X</td></tr>
-        <tr><td>40-10m</td><td class="mono">Mix 43</td><td>FT240-43</td><td>6-10 圈 RG-8X</td></tr>
+        <tr><td>80-20m</td><td class="mono">Mix 31</td><td>FT240-31</td><td>5-9 turns RG-8X</td></tr>
+        <tr><td>40-10m</td><td class="mono">Mix 43</td><td>FT240-43</td><td>6-10 turns RG-8X</td></tr>
       </tbody>
     </table>
   </div>
 
   <div class="warn-box fade-up">
-    <p class="mono text-xs text-[var(--neon-pink)] mb-2">RF.Guru VNA 警告 <span class="new-badge">NEW</span></p>
-    <p class="text-gray-300">用 VNA 测同轴屏蔽层共模阻抗<strong class="text-white">不能证明扼流圈有效</strong>——需在实际天线安装环境中测量屏蔽层电流。实验台上的 VNA 数据无法反映 CMC 的真实工况。</p>
+    <p class="mono text-xs text-[var(--neon-pink)] mb-2">RF.Guru VNA Warning <span class="new-badge">NEW</span></p>
+    <p class="text-gray-300">Measuring coax shield common-mode impedance with a VNA <strong class="text-white">does not prove choke effectiveness</strong> — shield current must be measured in the actual antenna installation. Bench VNA data cannot reflect real CMC operating conditions.</p>
   </div>
 </section>
 
 <!-- ========== SEC 5+6: COUNTERPOISE + MULTIBAND ========== -->
 <section id="sec5" class="max-w-4xl mx-auto px-6 py-16">
-  <p class="section-label fade-up">05 / 平衡地线</p>
-  <h2 class="text-3xl md:text-4xl font-bold mt-3 mb-8 fade-up">平衡地线 (Counterpoise)</h2>
+  <p class="section-label fade-up">05 / Counterpoise</p>
+  <h2 class="text-3xl md:text-4xl font-bold mt-3 mb-8 fade-up">Counterpoise — Balance Ground</h2>
 
   <div class="warn-box fade-up mb-8">
-    <p class="mono text-xs text-[var(--neon-pink)] mb-2">常见误区 (PA9X)</p>
-    <p class="text-gray-300">"半波 EFHW 不需要平衡地线" —— <strong class="text-[var(--neon-pink)]">错误</strong>。无专用平衡地线 → 同轴屏蔽层 → 电台机壳 → 电源 → 全家电器接地 → 整栋房子辐射 RF。</p>
+    <p class="mono text-xs text-[var(--neon-pink)] mb-2">Common Misconception (PA9X)</p>
+    <p class="text-gray-300">"A half-wave EFHW doesn't need a counterpoise" — <strong class="text-[var(--neon-pink)]">WRONG</strong>. No dedicated counterpoise → coax shield → radio chassis → power supply → every appliance ground → entire house radiates RF.</p>
   </div>
 
-  <h3 class="text-xl font-bold mb-4 fade-up">长度公式</h3>
+  <h3 class="text-xl font-bold mb-4 fade-up">Length Formula</h3>
   <div class="highlight-box fade-up mb-6">
     <p class="text-xl text-white mono mb-2">L = 0.05 &times; &lambda;<sub>max</sub></p>
-    <p class="text-sm text-gray-400">40m→2m | 80m→4m | 160m→8m。非谐振长度，足以传导 RF 回流但不显著辐射。</p>
+    <p class="text-sm text-gray-400">40m→2m | 80m→4m | 160m→8m. Non-resonant length, sufficient to provide an RF return path without becoming a significant radiator.</p>
   </div>
 
   <div class="card card-glow p-6 fade-up">
-    <p class="mono text-sm text-[var(--neon-purple)] mb-3">AI6XG 极简方案 <span class="new-badge">NEW</span></p>
-    <p class="text-gray-300"><strong class="text-white">6ft RG316 同轴 = 0.05&lambda; (40m)</strong>。变压器到 CMC 之间的同轴段本身即可充当平衡地线，不需要额外导线。</p>
+    <p class="mono text-sm text-[var(--neon-purple)] mb-3">AI6XG Minimalist Solution <span class="new-badge">NEW</span></p>
+    <p class="text-gray-300"><strong class="text-white">6ft RG316 coax = 0.05&lambda; (40m)</strong>. The coax segment between the transformer and CMC itself acts as the counterpoise — no extra wire needed.</p>
   </div>
 </section>
 
 <section id="sec6" class="max-w-4xl mx-auto px-6 py-16">
-  <p class="section-label fade-up">06 / 多波段机制</p>
-  <h2 class="text-3xl md:text-4xl font-bold mt-3 mb-8 fade-up">多波段谐波运作机制</h2>
+  <p class="section-label fade-up">06 / Multi-Band Mechanism</p>
+  <h2 class="text-3xl md:text-4xl font-bold mt-3 mb-8 fade-up">Multi-Band Harmonic Operation Mechanism</h2>
 
   <div class="overflow-x-auto fade-up mb-8">
     <table>
-      <thead><tr><th>频段</th><th>倍数</th><th>匹配</th><th>说明</th></tr></thead>
+      <thead><tr><th>Band</th><th>Multiple</th><th>Match</th><th>Notes</th></tr></thead>
       <tbody>
-        <tr><td class="text-white">40m</td><td>1&times; &lambda;/2</td><td><span class="tag tag-green">最佳</span></td><td>基波谐振</td></tr>
-        <tr><td class="text-white">20m</td><td>2&times; &lambda;/2</td><td><span class="tag tag-green">良好</span></td><td>偶次谐波</td></tr>
-        <tr><td class="text-white">15m</td><td>3&times; &lambda;/2</td><td><span class="tag tag-amber">较差</span></td><td>奇次谐波</td></tr>
-        <tr><td class="text-white">10m</td><td>4&times; &lambda;/2</td><td><span class="tag tag-green">尚可</span></td><td>寄生电容</td></tr>
-        <tr><td class="text-gray-500">30m/60m/17m/12m</td><td>-</td><td><span class="tag tag-pink">不工作</span></td><td>非谐波</td></tr>
+        <tr><td class="text-white">40m</td><td>1&times; &lambda;/2</td><td><span class="tag tag-green">Best</span></td><td>Fundamental resonance</td></tr>
+        <tr><td class="text-white">20m</td><td>2&times; &lambda;/2</td><td><span class="tag tag-green">Good</span></td><td>Even harmonic</td></tr>
+        <tr><td class="text-white">15m</td><td>3&times; &lambda;/2</td><td><span class="tag tag-amber">Poor</span></td><td>Odd harmonic</td></tr>
+        <tr><td class="text-white">10m</td><td>4&times; &lambda;/2</td><td><span class="tag tag-green">Fair</span></td><td>Parasitic capacitance</td></tr>
+        <tr><td class="text-gray-500">30m/60m/17m/12m</td><td>-</td><td><span class="tag tag-pink">Inoperable</span></td><td>Non-harmonic</td></tr>
       </tbody>
     </table>
   </div>
 
   <div class="highlight-box fade-up">
-    <p class="text-gray-300">WARC 波段不工作。<strong class="text-[var(--neon-green)]">第 12 章陷波器方案可以解决 30m 问题</strong>。</p>
+    <p class="text-gray-300">WARC bands are inoperable. <strong class="text-[var(--neon-green)]">Chapter 12 trapped EFHW design solves the 30m problem</strong>.</p>
   </div>
 
   <div id="chartMultiband" class="chart-container card card-glow p-4 mt-8 fade-up"></div>
-  <p class="mono text-xs text-gray-500 mt-2 text-center fade-up">// 40m EFHW 各频段典型 SWR</p>
+  <p class="mono text-xs text-gray-500 mt-2 text-center fade-up">// Typical SWR by band for 40m EFHW</p>
 </section>
 
 <!-- ========== SEC 7: REAL PERFORMANCE ========== -->
 <section id="sec7" class="max-w-4xl mx-auto px-6 py-16">
-  <p class="section-label fade-up">07 / 真实性能 <span class="new-badge">PA3HHO 数据</span></p>
-  <h2 class="text-3xl md:text-4xl font-bold mt-3 mb-8 fade-up">49:1 变压器真实性能与损耗实测</h2>
+  <p class="section-label fade-up">07 / Real Performance <span class="new-badge">PA3HHO Data</span></p>
+  <h2 class="text-3xl md:text-4xl font-bold mt-3 mb-8 fade-up">49:1 Transformer Real Performance &amp; Loss Measurements</h2>
 
   <div class="fade-up mb-6">
-    <p class="text-gray-300">PA3HHO 的系统实测揭示了<strong class="text-white">配置差异导致的损耗差距可达 40%</strong>。以下数据是社区目前最完整的 EFHW 变压器效率对比。</p>
+    <p class="text-gray-300">PA3HHO's systematic measurements reveal that <strong class="text-white">configuration differences can cause up to 40% loss variation</strong>. This is currently the community's most comprehensive EFHW transformer efficiency comparison.</p>
   </div>
 
-  <h3 class="text-xl font-bold mb-4 fade-up">PA3HHO: 四种配置实测对比</h3>
+  <h3 class="text-xl font-bold mb-4 fade-up">PA3HHO: Four-Configuration Measurement Comparison</h3>
   <div class="overflow-x-auto fade-up mb-8">
     <table>
-      <thead><tr><th>配置</th><th>80m</th><th>40m</th><th>20m</th><th>功率</th></tr></thead>
+      <thead><tr><th>Configuration</th><th>80m</th><th>40m</th><th>20m</th><th>Power</th></tr></thead>
       <tbody>
         <tr><td class="mono">1&times;43 2:14</td><td class="mono text-red-400">2.3dB (41%)</td><td class="mono text-red-400">1.9dB (36%)</td><td class="mono text-yellow-400">1.6dB (31%)</td><td>100W</td></tr>
         <tr><td class="mono">2&times;43 2:14</td><td class="mono text-yellow-400">0.8dB (17%)</td><td class="mono text-yellow-400">0.7dB (15%)</td><td class="mono text-yellow-400">0.6dB (13%)</td><td>200W</td></tr>
@@ -423,204 +524,204 @@ a:hover { text-decoration:underline; }
   </div>
 
   <div class="warn-box fade-up mb-8">
-    <p class="mono text-xs text-[var(--neon-pink)] mb-2">3&times;52 的代价</p>
-    <p class="text-gray-300">3&times;FT240-52 在 80m 损耗仅 1%，<strong class="text-white">但 VSWR 偏高，需要补偿元件</strong>。Type 52 带宽窄，高波段匹配差。这不是"全段完美方案"。</p>
+    <p class="mono text-xs text-[var(--neon-pink)] mb-2">The 3&times;52 Trade-off</p>
+    <p class="text-gray-300">3&times;FT240-52 achieves only 1% loss on 80m, <strong class="text-white">but VSWR is elevated, requiring compensation components</strong>. Type 52 has narrow bandwidth and poor high-band matching. This is not a "perfect all-band solution."</p>
   </div>
 
   <div class="quote-box fade-up">
-    <p class="text-gray-300">"低 SWR 不等于高效率。SWR 1.5:1 的天线可能正在把 30-50% 功率变成热量。100pF 补偿电容改善的是 SWR 读数，不是辐射效率。"</p>
+    <p class="text-gray-300">"Low SWR does not equal high efficiency. An antenna at SWR 1.5:1 may be turning 30-50% of power into heat. A 100pF compensation capacitor improves SWR readings, not radiation efficiency."</p>
     <p class="mono text-xs text-gray-500 mt-2">&mdash; RF.Guru (ON6URE)</p>
   </div>
 
   <div id="chartPA3HHO" class="chart-container card card-glow p-4 mt-8 fade-up"></div>
-  <p class="mono text-xs text-gray-500 mt-2 text-center fade-up">// PA3HHO 四种配置损耗对比 (dB)</p>
+  <p class="mono text-xs text-gray-500 mt-2 text-center fade-up">// PA3HHO Four-Configuration Loss Comparison (dB)</p>
 </section>
 
 <!-- ========== SEC 8: CORE SHOWDOWN ========== -->
 <section id="sec8" class="max-w-4xl mx-auto px-6 py-16">
-  <p class="section-label fade-up">08 / 磁芯对决 <span class="new-badge">NEW</span></p>
+  <p class="section-label fade-up">08 / Core Showdown <span class="new-badge">NEW</span></p>
   <h2 class="text-3xl md:text-4xl font-bold mt-3 mb-8 fade-up">Fair-Rite 2643251002 vs FT240-43</h2>
 
   <div class="fade-up mb-6">
-    <p class="text-gray-300">2643251002 双孔磁芯是近年社区热点。SP9TKW 和 SurvivalComms 评测表明其效率可达 <strong class="text-white">90-93%</strong>（正确绕制），比单芯 FT240-43 高 <strong class="text-[var(--neon-green)]">8-11%</strong>。</p>
+    <p class="text-gray-300">The 2643251002 dual-aperture core is a recent community highlight. SP9TKW and SurvivalComms reviews show efficiency reaching <strong class="text-white">90-93%</strong> (properly wound), <strong class="text-[var(--neon-green)]">8-11%</strong> higher than single-core FT240-43.</p>
   </div>
 
   <div class="overflow-x-auto fade-up mb-8">
     <table>
-      <thead><tr><th>参数</th><th>2643251002</th><th>FT240-43</th></tr></thead>
+      <thead><tr><th>Parameter</th><th>2643251002</th><th>FT240-43</th></tr></thead>
       <tbody>
-        <tr><td class="text-gray-400">效率</td><td class="mono text-green-400">90-93%</td><td class="mono">82-84% (单芯)</td></tr>
-        <tr><td class="text-gray-400">功率</td><td>300W SSB</td><td>100W SSB (单芯)</td></tr>
-        <tr><td class="text-gray-400">内径</td><td class="mono text-red-400">16.75mm (空间紧张)</td><td class="mono text-green-400">35.6mm (空间充裕)</td></tr>
-        <tr><td class="text-gray-400">匝数比</td><td>56:1 (7.5:1)</td><td>49:1 (7:1)</td></tr>
-        <tr><td class="text-gray-400">160-20m</td><td class="text-green-400">优秀</td><td>一般</td></tr>
-        <tr><td class="text-gray-400">10m+</td><td class="text-red-400">急剧下降</td><td class="text-yellow-400">尚可</td></tr>
-        <tr><td class="text-gray-400">效率提升</td><td class="mono text-green-400">+8-11%</td><td>基准</td></tr>
+        <tr><td class="text-gray-400">Efficiency</td><td class="mono text-green-400">90-93%</td><td class="mono">82-84% (single core)</td></tr>
+        <tr><td class="text-gray-400">Power</td><td>300W SSB</td><td>100W SSB (single core)</td></tr>
+        <tr><td class="text-gray-400">Inner Diameter</td><td class="mono text-red-400">16.75mm (tight space)</td><td class="mono text-green-400">35.6mm (ample space)</td></tr>
+        <tr><td class="text-gray-400">Turns Ratio</td><td>56:1 (7.5:1)</td><td>49:1 (7:1)</td></tr>
+        <tr><td class="text-gray-400">160-20m</td><td class="text-green-400">Excellent</td><td>Fair</td></tr>
+        <tr><td class="text-gray-400">10m+</td><td class="text-red-400">Steep drop-off</td><td class="text-yellow-400">Fair</td></tr>
+        <tr><td class="text-gray-400">Efficiency Gain</td><td class="mono text-green-400">+8-11%</td><td>Baseline</td></tr>
       </tbody>
     </table>
   </div>
 
   <div class="highlight-box fade-up mb-6">
-    <p class="mono text-xs text-[var(--neon-amber)] mb-2">核心权衡</p>
+    <p class="mono text-xs text-[var(--neon-amber)] mb-2">Core Trade-off</p>
     <ul class="text-gray-300 space-y-2">
-      <li>&#8226; 2643251002 效率更高，但 ID 仅 16.75mm，几乎无法实现 3:21 绕法</li>
-      <li>&#8226; FT240-43 空间充裕，可实现 3:21，堆叠 2 个后效率 (~92%) 基本追平</li>
-      <li>&#8226; SOTA Reflector 实测: 两者差异仅 <span class="mono">±2%</span></li>
+      <li>&#8226; 2643251002 is more efficient, but ID is only 16.75mm, making 3:21 winding nearly impossible</li>
+      <li>&#8226; FT240-43 has ample space for 3:21; stacking 2 cores brings efficiency (~92%) nearly equal</li>
+      <li>&#8226; SOTA Reflector measurements: only <span class="mono">±2%</span> difference</li>
     </ul>
   </div>
 
   <div class="card card-glow p-6 fade-up">
-    <p class="mono text-sm text-[var(--neon-purple)] mb-3">结论</p>
-    <p class="text-gray-300">2643251002 是优秀的磁芯，但<strong class="text-white">不是 FT240-43 的全面替代品</strong>。2&times;FT240-43 3:21 的效率基本追平 2643251002。选择取决于绕线能力和目标频段。</p>
+    <p class="mono text-sm text-[var(--neon-purple)] mb-3">Conclusion</p>
+    <p class="text-gray-300">The 2643251002 is an excellent core, but <strong class="text-white">not a wholesale replacement for FT240-43</strong>. 2&times;FT240-43 3:21 efficiency essentially matches 2643251002. Choice depends on winding ability and target bands.</p>
   </div>
 </section>
 
 <!-- ========== SEC 9: PA3HHO STACKED ========== -->
 <section id="sec9" class="max-w-4xl mx-auto px-6 py-16">
-  <p class="section-label fade-up">09 / 堆叠实测 <span class="new-badge">NEW</span></p>
-  <h2 class="text-3xl md:text-4xl font-bold mt-3 mb-8 fade-up">PA3HHO 磁芯堆叠实测对比</h2>
+  <p class="section-label fade-up">09 / Stacked Measurements <span class="new-badge">NEW</span></p>
+  <h2 class="text-3xl md:text-4xl font-bold mt-3 mb-8 fade-up">PA3HHO Stacked Core Measurement Comparison</h2>
 
   <div class="fade-up mb-6">
-    <p class="text-gray-300">PA3HHO (Pleun) 对四种变压器配置进行了系统测量。这是目前社区最完整的 EFHW 变压器效率对比数据。</p>
+    <p class="text-gray-300">PA3HHO (Pleun) conducted systematic measurements of four transformer configurations. This is the community's most comprehensive EFHW transformer efficiency comparison dataset.</p>
   </div>
 
   <div class="grid md:grid-cols-2 gap-4 mb-8">
     <div class="card card-glow p-5 fade-up" style="border-top:2px solid var(--neon-green);">
-      <p class="mono text-sm text-[var(--neon-green)] mb-2">发现 1: 堆叠降损耗</p>
-      <p class="text-sm text-gray-300"><strong class="text-white">2 个磁芯: 损耗降一半</strong>。1&times;43→2&times;43，80m 从 2.3dB→0.8dB。截面积翻倍 → 磁通密度降一半 → 损耗指数级下降。</p>
+      <p class="mono text-sm text-[var(--neon-green)] mb-2">Finding 1: Stacking Reduces Loss</p>
+      <p class="text-sm text-gray-300"><strong class="text-white">2 cores: loss cut in half</strong>. 1&times;43→2&times;43, 80m from 2.3dB→0.8dB. Doubled cross-section → halved flux density → exponentially reduced loss.</p>
     </div>
     <div class="card card-glow p-5 fade-up" style="border-top:2px solid var(--neon-blue);">
-      <p class="mono text-sm text-[var(--neon-blue)] mb-2">发现 2: 3:21 效率跃升</p>
-      <p class="text-sm text-gray-300"><strong class="text-white">比 2:14 低频效率高 5×</strong>。更多匝数 = 更高感抗 = 更低磁化电流。这是最被低估的优化。</p>
+      <p class="mono text-sm text-[var(--neon-blue)] mb-2">Finding 2: 3:21 Efficiency Leap</p>
+      <p class="text-sm text-gray-300"><strong class="text-white">5&times; more efficient on low bands vs 2:14</strong>. More turns = higher inductive reactance = lower magnetizing current. The most underappreciated optimization.</p>
     </div>
     <div class="card card-glow p-5 fade-up" style="border-top:2px solid var(--neon-amber);">
-      <p class="mono text-sm text-[var(--neon-amber)] mb-2">发现 3: Type 52 三联</p>
-      <p class="text-sm text-gray-300"><strong class="text-white">80m 仅 1% 损耗</strong>。但 VSWR 偏高、带宽窄。N4LQ 方案可达 1kW PEP。</p>
+      <p class="mono text-sm text-[var(--neon-amber)] mb-2">Finding 3: Type 52 Triple Stack</p>
+      <p class="text-sm text-gray-300"><strong class="text-white">Only 1% loss on 80m</strong>. But elevated VSWR and narrow bandwidth. N4LQ design reaches 1kW PEP.</p>
     </div>
     <div class="card card-glow p-5 fade-up" style="border-top:2px solid var(--neon-purple);">
-      <p class="mono text-sm text-[var(--neon-purple)] mb-2">发现 4: 分频段哲学</p>
-      <p class="text-sm text-gray-300"><strong class="text-white">80/40m 用 43，20/15/10m 用 52</strong>。分频段专用 > 追求全段覆盖。</p>
+      <p class="mono text-sm text-[var(--neon-purple)] mb-2">Finding 4: Band-Specific Philosophy</p>
+      <p class="text-sm text-gray-300"><strong class="text-white">43 for 80/40m, 52 for 20/15/10m</strong>. Band-specific optimization > all-band coverage.</p>
     </div>
   </div>
 
   <div id="chartEfficiency" class="chart-container card card-glow p-4 fade-up"></div>
-  <p class="mono text-xs text-gray-500 mt-2 text-center fade-up">// PA3HHO 效率 vs 频率 (4 种配置)</p>
+  <p class="mono text-xs text-gray-500 mt-2 text-center fade-up">// PA3HHO Efficiency vs Frequency (4 Configurations)</p>
 </section>
 
 <!-- ========== SEC 10: BACK-TO-BACK MYTH ========== -->
 <section id="sec10" class="max-w-4xl mx-auto px-6 py-16">
-  <p class="section-label fade-up">10 / 测量神话 <span class="new-badge">NEW</span></p>
-  <h2 class="text-3xl md:text-4xl font-bold mt-3 mb-8 fade-up">背靠背测量神话 —— RF.Guru 批判</h2>
+  <p class="section-label fade-up">10 / Measurement Myth <span class="new-badge">NEW</span></p>
+  <h2 class="text-3xl md:text-4xl font-bold mt-3 mb-8 fade-up">Back-to-Back Measurement Myth — RF.Guru Critique</h2>
 
   <div class="fade-up mb-6">
-    <p class="text-gray-300">RF.Guru (ON6URE) 在 2025 年 11 月发表文章，<strong class="text-[var(--neon-pink)]">从根本上揭示了"背靠背"测试方法的缺陷</strong>。</p>
+    <p class="text-gray-300">RF.Guru (ON6URE) published an article in November 2025 that <strong class="text-[var(--neon-pink)]">fundamentally exposed the flaws of "back-to-back" testing</strong>.</p>
   </div>
 
-  <h3 class="text-xl font-bold mb-4 fade-up">流行做法（错误）</h3>
+  <h3 class="text-xl font-bold mb-4 fade-up">Popular Method (WRONG)</h3>
   <div class="card card-glow p-6 mb-8 fade-up" style="font-family:'JetBrains Mono',monospace; font-size:0.8rem; color:var(--neon-pink); overflow-x:auto; white-space:pre;">
-[电台 50&Omega;] → [变压器A] → [变压器B] → [假负载 50&Omega;]
-"输入 100W 输出 94W = 每个变压器 3W 损耗"
-"0.13dB ≈ 几乎无损！" ← 这是安慰剂
+[Radio 50&Omega;] → [Transformer A] → [Transformer B] → [Dummy Load 50&Omega;]
+"100W in, 94W out = 3W loss per transformer"
+"0.13dB ≈ nearly lossless!" ← This is a placebo
   </div>
 
-  <h3 class="text-xl font-bold mb-4 fade-up">为什么是错的</h3>
+  <h3 class="text-xl font-bold mb-4 fade-up">Why It's Wrong</h3>
   <div class="card card-glow p-6 mb-8 fade-up">
     <div class="grid md:grid-cols-2 gap-6">
       <div>
-        <p class="mono text-xs text-[var(--neon-pink)] mb-3">背靠背的理想条件</p>
+        <p class="mono text-xs text-[var(--neon-pink)] mb-3">Back-to-Back Ideal Conditions</p>
         <ul class="text-sm text-gray-300 space-y-2">
-          <li>&#8226; 两端完美 50&Omega; 匹配</li><li>&#8226; 对称结构消除共模</li><li>&#8226; 纯阻性、零电抗</li>
+          <li>&#8226; Perfect 50&Omega; at both ends</li><li>&#8226; Symmetric structure cancels CM</li><li>&#8226; Purely resistive, zero reactance</li>
         </ul>
       </div>
       <div>
-        <p class="mono text-xs text-[var(--neon-green)] mb-3">EFHW 真实环境</p>
+        <p class="mono text-xs text-[var(--neon-green)] mb-3">EFHW Real-World Conditions</p>
         <ul class="text-sm text-gray-300 space-y-2">
-          <li>&#8226; 负载 2-5k&Omega; + 电抗</li><li>&#8226; 无功电流循环发热</li><li>&#8226; SWR 3:1-5:1</li><li>&#8226; 同轴外皮 = 第三导体</li>
+          <li>&#8226; Load 2-5k&Omega; + reactance</li><li>&#8226; Reactive current circulates as heat</li><li>&#8226; SWR 3:1-5:1</li><li>&#8226; Coax shield = third conductor</li>
         </ul>
       </div>
     </div>
   </div>
 
   <div class="quote-box fade-up">
-    <p class="text-gray-300 text-lg">"背靠背测量只证明变压器在 easy-mode 下能存活。500W 不冒烟 &ne; 500W 高效辐射。"</p>
+    <p class="text-gray-300 text-lg">"Back-to-back testing only proves the transformer survives in easy-mode. 500W without smoke &ne; 500W efficient radiation."</p>
     <p class="mono text-xs text-gray-500 mt-2">&mdash; ON6URE, RF.Guru (2025-11)</p>
   </div>
 
   <div class="highlight-box fade-up mt-6">
-    <p class="mono text-xs text-[var(--neon-amber)] mb-2">正确评估方法</p>
+    <p class="mono text-xs text-[var(--neon-amber)] mb-2">Correct Evaluation Method</p>
     <ul class="text-gray-300 space-y-2">
-      <li>&#8226; 使用 <strong class="text-white">2.4k&Omega; 复阻抗负载</strong>（非纯阻性）</li>
-      <li>&#8226; 射频电流探针测同轴屏蔽层共模电流</li>
-      <li>&#8226; 实际功率 + 占空比下的温升测试</li>
+      <li>&#8226; Use <strong class="text-white">2.4k&Omega; complex-impedance load</strong> (not purely resistive)</li>
+      <li>&#8226; RF current probe to measure coax shield common-mode current</li>
+      <li>&#8226; Temperature rise test at actual power + duty cycle</li>
     </ul>
   </div>
 </section>
 
 <!-- ========== SEC 11: VNA METHODOLOGY ========== -->
 <section id="sec11" class="max-w-4xl mx-auto px-6 py-16">
-  <p class="section-label fade-up">11 / VNA 方法论 <span class="new-badge">NEW</span></p>
-  <h2 class="text-3xl md:text-4xl font-bold mt-3 mb-8 fade-up">正确的 VNA 测量方法 —— AI6XG 三步分离法</h2>
+  <p class="section-label fade-up">11 / VNA Methodology <span class="new-badge">NEW</span></p>
+  <h2 class="text-3xl md:text-4xl font-bold mt-3 mb-8 fade-up">Correct VNA Measurement Method — AI6XG 3-Step Separation</h2>
 
   <div class="fade-up mb-6">
-    <p class="text-gray-300">AI6XG (Dan) 提出了一套严谨的方法论，<strong class="text-white">将变压器损耗分解为三个独立分量</strong>。这是区分"变压器不行"还是"天线不匹配"的关键。</p>
+    <p class="text-gray-300">AI6XG (Dan) proposed a rigorous methodology to <strong class="text-white">decompose transformer loss into three independent components</strong>. This is key to distinguishing "bad transformer" from "antenna mismatch".</p>
   </div>
 
   <div class="card card-glow p-6 mb-8 fade-up">
-    <p class="mono text-sm text-[var(--neon-green)] mb-4">// AI6XG 三步分离法</p>
+    <p class="mono text-sm text-[var(--neon-green)] mb-4">// AI6XG 3-Step Separation Method</p>
     <div class="space-y-4">
       <div style="border-left:3px solid var(--neon-pink); padding-left:1rem;">
-        <p class="mono text-sm text-[var(--neon-pink)] mb-1">Step 1: 失配损耗 MM</p>
+        <p class="mono text-sm text-[var(--neon-pink)] mb-1">Step 1: Mismatch Loss MM</p>
         <p class="mono text-lg text-white">MM = -10·log(1 - |S&#x2081;&#x2081;|&sup2;)</p>
-        <p class="text-sm text-gray-400">阻抗不匹配的反射损耗。能量被反射回发射机，不是变成热量。</p>
+        <p class="text-sm text-gray-400">Reflection loss from impedance mismatch. Energy is reflected back to the transmitter, not turned into heat.</p>
       </div>
       <div style="border-left:3px solid var(--neon-amber); padding-left:1rem;">
-        <p class="mono text-sm text-[var(--neon-amber)] mb-1">Step 2: 负载损耗 LL</p>
+        <p class="mono text-sm text-[var(--neon-amber)] mb-1">Step 2: Load Loss LL</p>
         <p class="mono text-lg text-white">LL = |S&#x2082;&#x2081;|&sup2; / (1 - |S&#x2081;&#x2081;|&sup2;)</p>
-        <p class="text-sm text-gray-400">负载电阻本身损耗。<strong>必须先用 Series-Through 测负载复阻抗</strong>！</p>
+        <p class="text-sm text-gray-400">Loss in the load resistor itself. <strong>Must first measure load complex impedance via Series-Through!</strong></p>
       </div>
       <div style="border-left:3px solid var(--neon-green); padding-left:1rem;">
-        <p class="mono text-sm text-[var(--neon-green)] mb-1">Step 3: 变压器损耗 TL</p>
+        <p class="mono text-sm text-[var(--neon-green)] mb-1">Step 3: Transformer Loss TL</p>
         <p class="mono text-lg text-white">TL = S&#x2082;&#x2081; - MM - LL</p>
-        <p class="text-sm text-gray-400">真正的变压器损耗。这才是磁芯、绕法、匝数比的真实表现。</p>
+        <p class="text-sm text-gray-400">The real transformer loss. This reflects the actual performance of the core, winding, and turns ratio.</p>
       </div>
     </div>
   </div>
 
   <div class="warn-box fade-up mb-8">
-    <p class="mono text-xs text-[var(--neon-pink)] mb-2">常见错误</p>
-    <p class="text-gray-300"><strong class="text-white">假设负载为理想电阻 → 高频段算出效率 >100%（荒谬）</strong>。不测量负载实际复阻抗，MM 和 LL 无法正确分离，变压器损耗计算毫无意义。</p>
+    <p class="mono text-xs text-[var(--neon-pink)] mb-2">Common Mistake</p>
+    <p class="text-gray-300"><strong class="text-white">Assuming load is an ideal resistor → efficiency calculated >100% on high bands (absurd)</strong>. Without measuring actual load complex impedance, MM and LL cannot be correctly separated, making transformer loss calculation meaningless.</p>
   </div>
 
   <div class="highlight-box fade-up mb-6">
-    <p class="mono text-xs text-[var(--neon-amber)] mb-2">AI6XG 核心发现</p>
+    <p class="mono text-xs text-[var(--neon-amber)] mb-2">AI6XG Key Findings</p>
     <ul class="text-gray-300 space-y-2">
-      <li>&#8226; <strong class="text-white">初级电容不影响变压器效率</strong> —— 仅影响失配损耗 MM</li>
-      <li>&#8226; <strong class="text-white">磁芯越大，变压器损耗越低</strong>。FT240 > FT140 > FT50</li>
-      <li>&#8226; NanoVNA-F + OSLIT 校准 + 夹具 = 可重复的业余测量</li>
+      <li>&#8226; <strong class="text-white">Primary capacitance does not affect transformer efficiency</strong> — only affects mismatch loss MM</li>
+      <li>&#8226; <strong class="text-white">Larger core = lower transformer loss</strong>. FT240 > FT140 > FT50</li>
+      <li>&#8226; NanoVNA-F + OSLIT calibration + fixture = repeatable amateur measurements</li>
     </ul>
   </div>
 </section>
 
 <!-- ========== SEC 12: TRAPPED EFHW ========== -->
 <section id="sec12" class="max-w-4xl mx-auto px-6 py-16">
-  <p class="section-label fade-up">12 / 陷波器 EFHW <span class="new-badge">NEW</span></p>
-  <h2 class="text-3xl md:text-4xl font-bold mt-3 mb-8 fade-up">陷波器 EFHW 设计 —— 多波段免调谐</h2>
+  <p class="section-label fade-up">12 / Trapped EFHW <span class="new-badge">NEW</span></p>
+  <h2 class="text-3xl md:text-4xl font-bold mt-3 mb-8 fade-up">Trapped EFHW Design — Multi-Band, No Tuner Needed</h2>
 
   <div class="fade-up mb-6">
-    <p class="text-gray-300">AI6XG、K6ARK 和 W2AEW 各自开发了陷波器 EFHW 方案，解决了 EFHW 最大的痛点之一：<strong class="text-white">30m WARC 波段无法覆盖</strong>。</p>
+    <p class="text-gray-300">AI6XG, K6ARK, and W2AEW have each developed trapped EFHW designs, solving one of EFHW's biggest pain points: <strong class="text-white">no 30m WARC band coverage</strong>.</p>
   </div>
 
-  <h3 class="text-xl font-bold mb-4 fade-up">AI6XG 20m/30m/40m 陷波器方案</h3>
+  <h3 class="text-xl font-bold mb-4 fade-up">AI6XG 20m/30m/40m Trapped Design</h3>
   <div class="card card-glow p-6 mb-6 fade-up" style="font-family:'JetBrains Mono',monospace; font-size:0.8rem; color:var(--neon-green); overflow-x:auto; white-space:pre;">
-[变压器]──[9.4m]──[20m陷波]──[1.18m]──[30m陷波]──[2.06m]
+[Transformer]──[9.4m]──[20m Trap]──[1.18m]──[30m Trap]──[2.06m]
 
-20m: 仅用 9.4m | 30m: 9.4+1.18m | 40m: 全部
+20m: only 9.4m | 30m: 9.4+1.18m | 40m: all
   </div>
 
-  <h3 class="text-xl font-bold mb-4 fade-up">微型陷波器参数</h3>
+  <h3 class="text-xl font-bold mb-4 fade-up">Miniature Trap Parameters</h3>
   <div class="overflow-x-auto fade-up mb-8">
     <table>
-      <thead><tr><th>陷波器</th><th>电容</th><th>线圈</th><th>磁芯</th><th>谐振频率</th></tr></thead>
+      <thead><tr><th>Trap</th><th>Capacitor</th><th>Coil</th><th>Core</th><th>Resonant Freq</th></tr></thead>
       <tbody>
         <tr><td>20m</td><td class="mono">15pF NP0</td><td class="mono">39T</td><td class="mono">T50-2</td><td class="mono text-green-400">13.9 MHz</td></tr>
         <tr><td>30m</td><td class="mono">33pF NP0</td><td class="mono">37T</td><td class="mono">T50-2</td><td class="mono text-green-400">10.0 MHz</td></tr>
@@ -628,7 +729,7 @@ a:hover { text-decoration:underline; }
     </table>
   </div>
 
-  <h3 class="text-xl font-bold mb-4 fade-up">实测 SWR</h3>
+  <h3 class="text-xl font-bold mb-4 fade-up">Measured SWR</h3>
   <div class="grid md:grid-cols-3 gap-4 mb-8">
     <div class="card card-glow p-5 fade-up text-center">
       <p class="mono text-3xl text-[var(--neon-green)] mb-2">1.2</p><p class="text-sm text-gray-400">20m</p>
@@ -641,120 +742,120 @@ a:hover { text-decoration:underline; }
     </div>
   </div>
 
-  <h3 class="text-xl font-bold mb-4 fade-up">方案对比</h3>
+  <h3 class="text-xl font-bold mb-4 fade-up">Design Comparison</h3>
   <div class="overflow-x-auto fade-up mb-8">
     <table>
-      <thead><tr><th>方案</th><th>换频段</th><th>30m</th><th>效率</th><th>适用</th></tr></thead>
+      <thead><tr><th>Design</th><th>Band Change</th><th>30m</th><th>Efficiency</th><th>Best For</th></tr></thead>
       <tbody>
-        <tr><td class="text-green-400">陷波器</td><td class="text-green-400">自动</td><td class="text-green-400">有</td><td>较高</td><td>SOTA/POTA</td></tr>
-        <tr><td>链式</td><td>需操作</td><td>可选</td><td class="text-green-400">最高</td><td>不急换频</td></tr>
-        <tr><td>纯谐波</td><td class="text-green-400">自动</td><td class="text-red-400">无</td><td>中等</td><td>最简单</td></tr>
+        <tr><td class="text-green-400">Trapped</td><td class="text-green-400">Auto</td><td class="text-green-400">Yes</td><td>Higher</td><td>SOTA/POTA</td></tr>
+        <tr><td>Linked</td><td>Manual</td><td>Optional</td><td class="text-green-400">Highest</td><td>No rush to change bands</td></tr>
+        <tr><td>Pure Harmonic</td><td class="text-green-400">Auto</td><td class="text-red-400">None</td><td>Moderate</td><td>Simplest</td></tr>
       </tbody>
     </table>
   </div>
 
   <div class="highlight-box fade-up">
-    <p class="text-gray-300">如果需要 30m 波段且不想用 ATU，<strong class="text-white">陷波器 EFHW 是目前最优雅的方案</strong>。K6ARK 开源设计，总成本 <$15。</p>
+    <p class="text-gray-300">If you need 30m and don't want an ATU, <strong class="text-white">the trapped EFHW is currently the most elegant solution</strong>. K6ARK open-source design, total cost &lt;$15.</p>
   </div>
 </section>
 
 <!-- ========== SEC 13: A+C DUAL-MODE ========== -->
 <section id="sec13" class="max-w-4xl mx-auto px-6 py-16">
-  <p class="section-label fade-up">13 / 双模匹配 <span class="new-badge">NEW</span></p>
-  <h2 class="text-3xl md:text-4xl font-bold mt-3 mb-8 fade-up">A+C 双模匹配系统 — 高低波段兼顾新方向</h2>
+  <p class="section-label fade-up">13 / Dual-Mode Matching <span class="new-badge">NEW</span></p>
+  <h2 class="text-3xl md:text-4xl font-bold mt-3 mb-8 fade-up">A+C Dual-Mode Matching System — A New Direction for Low + High Bands</h2>
 
   <div class="fade-up mb-8">
-    <p class="text-gray-300 mb-4">传统单一 49:1 铁氧体变压器在 <strong class="text-white">80m（电感不足）</strong>和 <strong class="text-white">10m（容性主导、效率崩溃至 55%）</strong>同时失效。A+C 方案将问题拆解：<strong class="text-[var(--neon-green)]">低频用铁氧体宽带变压器，高频用粉末铁芯谐振耦合器</strong>，各取所长。</p>
+    <p class="text-gray-300 mb-4">A traditional single 49:1 ferrite transformer fails at both <strong class="text-white">80m (insufficient inductance)</strong> and <strong class="text-white">10m (capacitive-dominant, efficiency collapses to 55%)</strong>. The A+C approach decomposes the problem: <strong class="text-[var(--neon-green)]">ferrite wideband transformer for low bands, powdered-iron resonant coupler for high bands</strong>, each playing to its strengths.</p>
   </div>
 
   <div class="card card-glow p-6 md:p-8 mb-8 fade-up">
-    <p class="mono text-sm text-[var(--neon-green)] mb-4">// 系统架构</p>
+    <p class="mono text-sm text-[var(--neon-green)] mb-4">// System Architecture</p>
     <table>
-      <thead><tr><th>参数</th><th>Unit A (低频段)</th><th>Unit C (高频段)</th></tr></thead>
+      <thead><tr><th>Parameter</th><th>Unit A (Low Bands)</th><th>Unit C (High Bands)</th></tr></thead>
       <tbody>
-        <tr><td class="text-gray-400">磁芯</td><td>2&times;FT240-43 堆叠</td><td>T200-2 粉末铁芯 (Type 2)</td></tr>
-        <tr><td class="text-gray-400">材质</td><td>Mn-Zn Mix 43, &mu;=850</td><td>羰基铁粉, &mu;=10</td></tr>
-        <tr><td class="text-gray-400">拓扑</td><td>49:1 宽带变压器 (3T:21T)</td><td>AA5TB 并联 LC 耦合器 (3T:19T)</td></tr>
-        <tr><td class="text-gray-400">覆盖波段</td><td class="text-green-400">80m, 40m</td><td class="text-green-400">30m, 20m, 17m, 15m, 12m, 10m</td></tr>
-        <tr><td class="text-gray-400">带宽</td><td>宽带免调谐</td><td>窄带（每波段需调谐可变电容）</td></tr>
-        <tr><td class="text-gray-400">效率目标</td><td>~92% (0.3dB)</td><td>90-95% (0.2-0.5dB)</td></tr>
-        <tr><td class="text-gray-400">天线导线</td><td colspan="2">20m（同一条，DPDT 切换）</td></tr>
-        <tr><td class="text-gray-400">Counterpoise</td><td colspan="2">4m（共用）</td></tr>
+        <tr><td class="text-gray-400">Core</td><td>2&times;FT240-43 Stacked</td><td>T200-2 Powdered Iron (Type 2)</td></tr>
+        <tr><td class="text-gray-400">Material</td><td>Mn-Zn Mix 43, &mu;=850</td><td>Carbonyl Iron Powder, &mu;=10</td></tr>
+        <tr><td class="text-gray-400">Topology</td><td>49:1 Wideband Transformer (3T:21T)</td><td>AA5TB Parallel LC Coupler (3T:19T)</td></tr>
+        <tr><td class="text-gray-400">Band Coverage</td><td class="text-green-400">80m, 40m</td><td class="text-green-400">30m, 20m, 17m, 15m, 12m, 10m</td></tr>
+        <tr><td class="text-gray-400">Bandwidth</td><td>Wideband, no tuning</td><td>Narrowband (per-band variable capacitor tuning)</td></tr>
+        <tr><td class="text-gray-400">Efficiency Target</td><td>~92% (0.3dB)</td><td>90-95% (0.2-0.5dB)</td></tr>
+        <tr><td class="text-gray-400">Antenna Wire</td><td colspan="2">20m (same wire, DPDT switched)</td></tr>
+        <tr><td class="text-gray-400">Counterpoise</td><td colspan="2">4m (shared)</td></tr>
       </tbody>
     </table>
   </div>
 
-  <h3 class="text-xl font-bold mb-4 fade-up">为什么铁氧体和粉末铁芯必须分开</h3>
+  <h3 class="text-xl font-bold mb-4 fade-up">Why Ferrite and Powdered Iron Must Be Separate</h3>
   <div class="fade-up mb-8">
-    <p class="text-gray-300 mb-4">铁氧体 Type 43 和粉末铁芯 Type 2 的物理特性决定了它们各自的最佳频段：</p>
+    <p class="text-gray-300 mb-4">The physical properties of ferrite Type 43 and powdered iron Type 2 determine their respective optimal frequency ranges:</p>
     <table>
-      <thead><tr><th>特性</th><th>铁氧体 (Type 43)</th><th>粉末铁芯 (Type 2)</th><th>优势</th></tr></thead>
+      <thead><tr><th>Property</th><th>Ferrite (Type 43)</th><th>Powdered Iron (Type 2)</th><th>Advantage</th></tr></thead>
       <tbody>
-        <tr><td class="text-gray-400">&mu; (磁导率)</td><td>850</td><td>10</td><td>低 &mu; = 低磁芯损耗</td></tr>
-        <tr><td class="text-gray-400">电阻率</td><td>1-10 &Omega;&middot;m</td><td>10&sup5;-10&sup6; &Omega;&middot;m（颗粒绝缘）</td><td>T200-2 高频涡流极低</td></tr>
-        <tr><td class="text-gray-400">30MHz 损耗</td><td class="text-red-400">显著</td><td class="text-green-400">极低</td><td>T200-2 胜</td></tr>
-        <tr><td class="text-gray-400">温度稳定性</td><td class="text-red-400">一般</td><td class="text-green-400">优秀 (95ppm/&deg;C)</td><td>T200-2 胜</td></tr>
-        <tr><td class="text-gray-400">饱和磁通</td><td>~0.3T</td><td>~0.8-1.0T</td><td>T200-2 极难饱和</td></tr>
-        <tr><td class="text-gray-400">100W 发热</td><td class="text-red-400">明显</td><td class="text-green-400">几乎不发热</td><td>T200-2 胜</td></tr>
-        <tr><td class="text-gray-400">带宽</td><td class="text-green-400">宽带</td><td class="text-red-400">窄带（需调谐）</td><td>FT240-43 胜</td></tr>
+        <tr><td class="text-gray-400">&mu; (Permeability)</td><td>850</td><td>10</td><td>Low &mu; = low core loss</td></tr>
+        <tr><td class="text-gray-400">Resistivity</td><td>1-10 &Omega;&middot;m</td><td>10&sup5;-10&sup6; &Omega;&middot;m (Granular insulation)</td><td>T200-2: extremely low HF eddy currents</td></tr>
+        <tr><td class="text-gray-400">30MHz Loss</td><td class="text-red-400">Significant</td><td class="text-green-400">Very Low</td><td>T200-2 wins</td></tr>
+        <tr><td class="text-gray-400">Temp Stability</td><td class="text-red-400">Fair</td><td class="text-green-400">Excellent (95ppm/&deg;C)</td><td>T200-2 wins</td></tr>
+        <tr><td class="text-gray-400">Saturation Flux</td><td>~0.3T</td><td>~0.8-1.0T</td><td>T200-2: extremely hard to saturate</td></tr>
+        <tr><td class="text-gray-400">100W Heating</td><td class="text-red-400">Noticeable</td><td class="text-green-400">Almost no heating</td><td>T200-2 wins</td></tr>
+        <tr><td class="text-gray-400">Bandwidth</td><td class="text-green-400">Wideband</td><td class="text-red-400">Narrowband (needs tuning)</td><td>FT240-43 wins</td></tr>
       </tbody>
     </table>
   </div>
 
-  <h3 class="text-xl font-bold mb-4 fade-up">关键工程问题</h3>
+  <h3 class="text-xl font-bold mb-4 fade-up">Key Engineering Challenges</h3>
   <div class="fade-up mb-8">
-    <p class="text-gray-300 mb-4">经过定量分析，A+C 方案<strong class="text-white">理论方向正确</strong>（分频段用不同磁芯），但当前原型有 <span class="mono text-[var(--neon-pink)]">8 个工程问题</span>需解决：</p>
+    <p class="text-gray-300 mb-4">Quantitative analysis shows the A+C approach is <strong class="text-white">theoretically sound</strong> (band-specific core materials), but the current prototype has <span class="mono text-[var(--neon-pink)]">8 engineering challenges</span> to resolve:</p>
     <table>
-      <thead><tr><th>#</th><th>问题</th><th>严重度</th><th>改进方案</th></tr></thead>
+      <thead><tr><th>#</th><th>Issue</th><th>Severity</th><th>Proposed Fix</th></tr></thead>
       <tbody>
-        <tr><td>1</td><td><strong>非谐振波段阻抗失配</strong> — 20m 线在 20m/10m 是整数倍波长，端阻抗 ~50-300&Omega; 而非 ~2500&Omega;</td><td class="text-red-400">🔴 根本性</td><td>Unit C 增加可切换匝比</td></tr>
-        <tr><td>2</td><td><strong>可变电容耐压不足</strong> — LC 谐振升压效应使 V_peak 达 1900-6300V</td><td class="text-red-400">🔴 安全</td><td>真空可变电容 (3-15kV)</td></tr>
-        <tr><td>3</td><td><strong>Counterpoise 不兼容</strong> — 4m 在 10m = 0.38&lambda;，已变成辐射体</td><td class="text-red-400">🔴 严重</td><td>Unit C 切 0.5m counterpoise</td></tr>
-        <tr><td>4</td><td>可变电容户外可靠性 — 冷凝/腐蚀/触点氧化，寿命 6-24 月</td><td class="text-amber-400">🟡 可靠性</td><td>真空电容 + 干燥剂</td></tr>
-        <tr><td>5</td><td>DPDT 高压切换 — 707V peak 超出 250VAC 额定 2&times;</td><td class="text-amber-400">🟡 中等</td><td>改为 50&Omega; 端切换</td></tr>
-        <tr><td>6</td><td>设计过度 — DMEGC Ni-Zn 单磁芯可达 90%+ 效果，成本 1/5</td><td class="text-amber-400">🟡 设计</td><td>先评估单磁芯方案</td></tr>
-        <tr><td>7</td><td>Unit 间寄生耦合 — 闲置 Unit 吸收 ~2W</td><td class="text-blue-400">🟢 轻微</td><td>闲置 Unit 初级短路</td></tr>
-        <tr><td>8</td><td>T200-2 磁芯饱和</td><td class="text-green-400">🟢 非问题</td><td>39 gauss vs 800 gauss</td></tr>
+        <tr><td>1</td><td><strong>Non-resonant band impedance mismatch</strong> — 20m wire at 20m/10m is integer wavelength multiples, end impedance ~50-300&Omega; not ~2500&Omega;</td><td class="text-red-400">🔴 Fundamental</td><td>Add switchable turns ratio to Unit C</td></tr>
+        <tr><td>2</td><td><strong>Variable capacitor voltage rating inadequate</strong> — LC resonant boost effect yields V_peak of 1900-6300V</td><td class="text-red-400">🔴 Safety</td><td>Vacuum variable capacitor (3-15kV)</td></tr>
+        <tr><td>3</td><td><strong>Counterpoise incompatibility</strong> — 4m at 10m = 0.38&lambda;, becomes a radiator</td><td class="text-red-400">🔴 Severe</td><td>Switch to 0.5m counterpoise for Unit C</td></tr>
+        <tr><td>4</td><td>Variable capacitor outdoor reliability — condensation/corrosion/contact oxidation, 6-24 month lifespan</td><td class="text-amber-400">🟡 Reliability</td><td>Vacuum cap + desiccant</td></tr>
+        <tr><td>5</td><td>DPDT high-voltage switching — 707V peak exceeds 250VAC rating by 2&times;</td><td class="text-amber-400">🟡 Moderate</td><td>Move switching to 50&Omega; side</td></tr>
+        <tr><td>6</td><td>Over-design — DMEGC Ni-Zn single core achieves 90%+ results at 1/5 cost</td><td class="text-amber-400">🟡 Design</td><td>Evaluate single-core approach first</td></tr>
+        <tr><td>7</td><td>Inter-unit parasitic coupling — idle unit absorbs ~2W</td><td class="text-blue-400">🟢 Minor</td><td>Short idle unit primary</td></tr>
+        <tr><td>8</td><td>T200-2 core saturation</td><td class="text-green-400">🟢 Non-Issue</td><td>39 gauss vs 800 gauss</td></tr>
       </tbody>
     </table>
   </div>
 
-  <h3 class="text-xl font-bold mb-4 fade-up">与更简单方案对比</h3>
+  <h3 class="text-xl font-bold mb-4 fade-up">Comparison with Simpler Solutions</h3>
   <div class="overflow-x-auto fade-up mb-8">
     <table>
-      <thead><tr><th>方案</th><th>80m</th><th>40m</th><th>20m</th><th>10m</th><th>复杂度</th><th>成本</th><th>可靠性</th></tr></thead>
+      <thead><tr><th>Design</th><th>80m</th><th>40m</th><th>20m</th><th>10m</th><th>Complexity</th><th>Cost</th><th>Reliability</th></tr></thead>
       <tbody>
-        <tr><td>单 FT240-43 2T:14T</td><td class="text-red-400">差</td><td class="text-green-400">好</td><td class="text-green-400">好</td><td class="text-amber-400">一般</td><td>极低</td><td>&yen;50</td><td>★★★★★</td></tr>
-        <tr><td class="text-[var(--neon-green)]"><strong>DMEGC Ni-Zn &mu;=1000</strong></td><td class="text-green-400"><strong>好</strong></td><td class="text-green-400"><strong>好</strong></td><td class="text-green-400"><strong>好</strong></td><td class="text-green-400"><strong>好</strong></td><td><strong>低</strong></td><td><strong>&yen;80</strong></td><td><strong>★★★★★</strong></td></tr>
-        <tr><td>A+C 双模</td><td class="text-green-400">好</td><td class="text-green-400">好</td><td class="text-green-400">优秀*</td><td class="text-green-400">优秀*</td><td class="text-red-400">极高</td><td>&yen;400-600</td><td>★★</td></tr>
+        <tr><td>Single FT240-43 2T:14T</td><td class="text-red-400">Poor</td><td class="text-green-400">Good</td><td class="text-green-400">Good</td><td class="text-amber-400">Fair</td><td>Very Low</td><td>&yen;50</td><td>★★★★★</td></tr>
+        <tr><td class="text-[var(--neon-green)]"><strong>DMEGC Ni-Zn &mu;=1000</strong></td><td class="text-green-400"><strong>Good</strong></td><td class="text-green-400"><strong>Good</strong></td><td class="text-green-400"><strong>Good</strong></td><td class="text-green-400"><strong>Good</strong></td><td><strong>Low</strong></td><td><strong>&yen;80</strong></td><td><strong>★★★★★</strong></td></tr>
+        <tr><td>A+C Dual-Mode</td><td class="text-green-400">Good</td><td class="text-green-400">Good</td><td class="text-green-400">Excellent*</td><td class="text-green-400">Excellent*</td><td class="text-red-400">Very High</td><td>&yen;400-600</td><td>★★</td></tr>
       </tbody>
     </table>
-    <p class="text-xs text-gray-500 mt-2">* 高频段效率优势约 0.2-0.4 dB，在 FT8 弱信号模式下不可感知。FT8 真正的瓶颈是 RX 噪声基底。</p>
+    <p class="text-xs text-gray-500 mt-2">* High-band efficiency advantage is ~0.2-0.4 dB, imperceptible in FT8 weak-signal modes. The real FT8 bottleneck is RX noise floor.</p>
   </div>
 
   <div class="highlight-box fade-up">
-    <p class="text-gray-300 mb-2"><strong class="text-white">一句话总结：</strong>A+C 方案代表了一个重要的探索方向——<strong class="text-white">承认单一铁氧体变压器的物理极限，用分频段多磁芯方案突破瓶颈</strong>。当前原型需要工程迭代（高压切换、电容可靠性、阻抗匹配范围），但方向正确，值得继续探索。</p>
-    <p class="mono text-xs text-gray-500 mt-2">// 完整分析见 EFHW 知识库: efhw-knowledge/references/efhw_ac_dual_mode.md</p>
+    <p class="text-gray-300 mb-2"><strong class="text-white">One-line summary:</strong> The A+C approach represents an important exploration direction — <strong class="text-white">acknowledging the physical limits of single ferrite transformers and using band-specific multi-core designs to break through bottlenecks</strong>. The current prototype needs engineering iteration (HV switching, capacitor reliability, impedance matching range), but the direction is sound and worth continued exploration.</p>
+    <p class="mono text-xs text-gray-500 mt-2">// Full analysis in EFHW knowledge base: efhw-knowledge/references/efhw_ac_dual_mode.md</p>
   </div>
 </section>
 
 
-<!-- ========== SEC 13: L-NETWORK ========== -->
+<!-- ========== SEC 14: L-NETWORK ========== -->
 <section id="sec14" class="max-w-4xl mx-auto px-6 py-16">
   <p class="section-label fade-up">14 / L-Network</p>
-  <h2 class="text-3xl md:text-4xl font-bold mt-3 mb-8 fade-up">L-Network 替代匹配方案</h2>
+  <h2 class="text-3xl md:text-4xl font-bold mt-3 mb-8 fade-up">L-Network Alternative Matching Solutions</h2>
 
   <div class="fade-up mb-6">
-    <p class="text-gray-300">VA3KOT 对比了 49:1 与 L-Network。<strong class="text-white">带 100pF 电容的 49:1 自耦变压器在拓扑上就是 L-Network</strong>。</p>
+    <p class="text-gray-300">VA3KOT compared 49:1 vs L-Network. <strong class="text-white">A 49:1 autotransformer with 100pF capacitor is topologically an L-Network</strong>.</p>
   </div>
 
   <div class="overflow-x-auto fade-up mb-8">
     <table>
-      <thead><tr><th>对比项</th><th>49:1 变压器</th><th>L-Network</th></tr></thead>
+      <thead><tr><th>Comparison</th><th>49:1 Transformer</th><th>L-Network</th></tr></thead>
       <tbody>
-        <tr><td class="text-gray-400">带宽</td><td>宽带多频段</td><td><span class="text-[var(--neon-amber)]">单波段</span></td></tr>
-        <tr><td class="text-gray-400">效率</td><td>有磁芯损耗</td><td><span class="text-[var(--neon-green)]">更高 (无磁芯)</span></td></tr>
-        <tr><td class="text-gray-400">便携</td><td>即装即用</td><td>需现场调试</td></tr>
+        <tr><td class="text-gray-400">Bandwidth</td><td>Wideband multi-band</td><td><span class="text-[var(--neon-amber)]">Single-band</span></td></tr>
+        <tr><td class="text-gray-400">Efficiency</td><td>Has core loss</td><td><span class="text-[var(--neon-green)]">Higher (no core)</span></td></tr>
+        <tr><td class="text-gray-400">Portable</td><td>Ready to use</td><td>Needs on-site tuning</td></tr>
       </tbody>
     </table>
   </div>
@@ -762,93 +863,93 @@ a:hover { text-decoration:underline; }
 
 <!-- ========== SEC 15: RADIATION ========== -->
 <section id="sec15" class="max-w-4xl mx-auto px-6 py-16">
-  <p class="section-label fade-up">15 / 辐射方向图</p>
-  <h2 class="text-3xl md:text-4xl font-bold mt-3 mb-8 fade-up">辐射方向图与 NEC 建模</h2>
+  <p class="section-label fade-up">15 / Radiation Patterns</p>
+  <h2 class="text-3xl md:text-4xl font-bold mt-3 mb-8 fade-up">Radiation Patterns &amp; NEC Modeling</h2>
 
   <div class="fade-up mb-6">
-    <p class="text-gray-300">N6CC 通过 NEC 建模进行深度分析。<strong class="text-white">EFHW 是 80/60/40/30m 区域覆盖时的"最后选择"</strong>。</p>
+    <p class="text-gray-300">N6CC conducted in-depth NEC modeling analysis. <strong class="text-white">The EFHW is the "last resort" for 80/60/40/30m regional coverage</strong>.</p>
   </div>
 
   <div class="card card-glow p-5 fade-up mb-6">
     <ul class="text-sm text-gray-300 space-y-1.5">
-      <li>&#8226; 80m 斜拉 45&deg;: DX 仰角 4 个零点，后方 -25dB，两侧 -9dB</li>
-      <li>&#8226; 高次谐波：零点更深、波瓣更多。50ft: 8dB 前零。20ft: 10dB 前零</li>
-      <li>&#8226; Inverted L: 地波/天波干涉 → 热点死区 → 自致 QSB</li>
-      <li>&#8226; NVIS 6m 高: 80/40m 全向 ±1dB，300km 区域可用</li>
+      <li>&#8226; 80m sloper 45&deg;: 4 nulls in DX elevation, -25dB rear, -9dB sides</li>
+      <li>&#8226; Higher harmonics: deeper nulls, more lobes. 50ft: 8dB front null. 20ft: 10dB front null</li>
+      <li>&#8226; Inverted L: ground/sky wave interference → hot-spot dead zones → self-induced QSB</li>
+      <li>&#8226; NVIS at 6m height: 80/40m omnidirectional ±1dB, usable for 300km regional</li>
     </ul>
   </div>
 
   <div class="quote-box fade-up">
-    <p class="text-gray-300 text-lg">"高增益、宽带宽、小体积 —— 三选二。EFHW 在实际中三个都不占。"</p>
+    <p class="text-gray-300 text-lg">"High gain, wide bandwidth, small size — pick two. The EFHW in practice delivers none of the three."</p>
     <p class="mono text-xs text-gray-500 mt-2">&mdash; N6CC (Tim)</p>
   </div>
 </section>
 
-<!-- ========== SEC 15: PORTABLE + SAFETY + CONCLUSION ========== -->
+<!-- ========== SEC 16: PORTABLE + SAFETY + CONCLUSION ========== -->
 <section id="sec16" class="max-w-4xl mx-auto px-6 py-16">
-  <p class="section-label fade-up">16 / 便携 · 安全 · 结论</p>
-  <h2 class="text-3xl md:text-4xl font-bold mt-3 mb-8 fade-up">便携部署、安全防护与核心结论</h2>
+  <p class="section-label fade-up">16 / Portable · Safety · Conclusions</p>
+  <h2 class="text-3xl md:text-4xl font-bold mt-3 mb-8 fade-up">PortableDeployment, SafetySafety &Key Conclusion</h2>
 
-  <h3 class="text-xl font-bold mb-4 fade-up">2026 便携产品 <span class="new-badge">更新</span></h3>
+  <h3 class="text-xl font-bold mb-4 fade-up">2026 Portable Products <span class="new-badge">Updated</span></h3>
   <div class="overflow-x-auto fade-up mb-8">
     <table>
-      <thead><tr><th>产品</th><th>频段</th><th>功率</th><th>特点</th></tr></thead>
+      <thead><tr><th>Product</th><th>Bands</th><th>Power</th><th>Features</th></tr></thead>
       <tbody>
-        <tr><td>Spooltenna Ultra</td><td>40/20/15/10m</td><td>100W SSB</td><td class="mono text-green-400">162g 开源</td></tr>
-        <tr><td>AI6XG Trapped</td><td>40/30/20m</td><td>5W QRP</td><td>免调谐 SOTA</td></tr>
-        <tr><td>K6ARK 迷你</td><td>40/20/15/10m</td><td>QRP</td><td>变压器做在 BNC 上</td></tr>
+        <tr><td>Spooltenna Ultra</td><td>40/20/15/10m</td><td>100W SSB</td><td class="mono text-green-400">162g open-source</td></tr>
+        <tr><td>AI6XG Trapped</td><td>40/30/20m</td><td>5W QRP</td><td>No-tuner SOTA</td></tr>
+        <tr><td>K6ARK Mini</td><td>40/20/15/10m</td><td>QRP</td><td>Transformer built into BNC connector</td></tr>
         <tr><td>Chameleon LEFS</td><td>40/20/15/10m</td><td>25W SSB</td><td class="mono text-green-400">113g</td></tr>
       </tbody>
     </table>
   </div>
 
-  <h3 class="text-xl font-bold mb-4 fade-up">高压安全</h3>
+  <h3 class="text-xl font-bold mb-4 fade-up">High-Voltage Safety</h3>
   <div class="warn-box fade-up mb-8">
     <ul class="text-gray-300 space-y-2">
-      <li>&#8226; 100W @ 2500&Omega; = <span class="mono text-[var(--neon-pink)]">500V RMS / 700V 峰值</span></li>
-      <li>&#8226; 使用额定 <strong class="text-white">1kV+</strong> 绝缘线</li>
-      <li>&#8226; 30 MHz / 100W: 安全距离 <span class="mono">≥ 2.26m</span></li>
-      <li>&#8226; FT8 高占空比: 功率降额 <strong class="text-white">50%</strong> 或用更大磁芯</li>
+      <li>&#8226; 100W @ 2500&Omega; = <span class="mono text-[var(--neon-pink)]">500V RMS / 700V peak</span></li>
+      <li>&#8226; Use <strong class="text-white">1kV+</strong> rated insulation wire</li>
+      <li>&#8226; 30 MHz / 100W: safe distance <span class="mono">≥ 2.26m</span></li>
+      <li>&#8226; FT8 high duty cycle: derate power <strong class="text-white">50%</strong> or use larger cores</li>
     </ul>
   </div>
 
-  <h3 class="text-xl font-bold mb-4 fade-up">快速部署技巧</h3>
+  <h3 class="text-xl font-bold mb-4 fade-up">Quick Deployment Tips</h3>
   <div class="card card-glow p-6 fade-up mb-8">
     <ul class="space-y-2 text-gray-300">
-      <li class="flex items-start gap-3"><span class="text-[var(--neon-green)]">&#9656;</span><strong class="text-white">Sloper</strong>: 馈电点 1m，远端 6-8m，5 分钟</li>
-      <li class="flex items-start gap-3"><span class="text-[var(--neon-green)]">&#9656;</span><strong class="text-white">AI6XG 单馈线</strong>: 6ft RG316 同轴 = 0.05&lambda; 平衡地线</li>
-      <li class="flex items-start gap-3"><span class="text-[var(--neon-green)]">&#9656;</span><strong class="text-white">K6ARK 极致轻量</strong>: 变压器做在 BNC 接头上</li>
+      <li class="flex items-start gap-3"><span class="text-[var(--neon-green)]">&#9656;</span><strong class="text-white">Sloper</strong>: feed point 1m, far end 6-8m, 5 minutes</li>
+      <li class="flex items-start gap-3"><span class="text-[var(--neon-green)]">&#9656;</span><strong class="text-white">AI6XG Single Feedline</strong>: 6ft RG316 coax = 0.05&lambda; counterpoise</li>
+      <li class="flex items-start gap-3"><span class="text-[var(--neon-green)]">&#9656;</span><strong class="text-white">K6ARK Ultralight</strong>: transformer built into BNC connector</li>
     </ul>
   </div>
 
   <div class="divider"></div>
 
-  <h2 class="text-3xl md:text-4xl font-bold mt-3 mb-8 fade-up">核心结论（增补版）</h2>
+  <h2 class="text-3xl md:text-4xl font-bold mt-3 mb-8 fade-up">Key Conclusion (Supplement Edition)</h2>
 
   <div class="grid md:grid-cols-2 gap-4 mb-8">
     <div class="card card-glow p-5 fade-up" style="border-top:2px solid var(--neon-green);">
       <p class="mono text-sm text-[var(--neon-green)] mb-2">01 3:21 > 2:14</p>
-      <p class="text-sm text-gray-300">相同 49:1 匝数比，3 匝初级在低频效率高 5×。最被低估的优化。</p>
+      <p class="text-sm text-gray-300">Same 49:1 turns ratio, 3-turn primary is 5× more efficient on low bands. The most underappreciated optimization.</p>
     </div>
     <div class="card card-glow p-5 fade-up" style="border-top:2px solid var(--neon-blue);">
-      <p class="mono text-sm text-[var(--neon-blue)] mb-2">02 分频段专用</p>
-      <p class="text-sm text-gray-300">避免追求 80-10m 全段。80/40m 用 43，20/15/10m 用 52。</p>
+      <p class="mono text-sm text-[var(--neon-blue)] mb-2">02 Band-Specific Design</p>
+      <p class="text-sm text-gray-300">Avoid pursuing full 80-10m coverage. Use 43 for 80/40m, 52 for 20/15/10m.</p>
     </div>
     <div class="card card-glow p-5 fade-up" style="border-top:2px solid var(--neon-purple);">
-      <p class="mono text-sm text-[var(--neon-purple)] mb-2">03 最佳平衡方案</p>
-      <p class="text-sm text-gray-300">2×FT240-43 3:21，损耗仅 0.3dB 全段，400W PEP。</p>
+      <p class="mono text-sm text-[var(--neon-purple)] mb-2">03 Optimal Balanced Solution</p>
+      <p class="text-sm text-gray-300">2×FT240-43 3:21, only 0.3dB loss across all bands, 400W PEP.</p>
     </div>
     <div class="card card-glow p-5 fade-up" style="border-top:2px solid var(--neon-amber);">
-      <p class="mono text-sm text-[var(--neon-amber)] mb-2">04 测量与底线</p>
-      <p class="text-sm text-gray-300">背靠背测试是安慰剂。CMC + 0.05&lambda; 地线不可省。低 SWR ≠ 高效率。</p>
+      <p class="mono text-sm text-[var(--neon-amber)] mb-2">04 Measurement &amp; Bottom Line</p>
+      <p class="text-sm text-gray-300">Back-to-back testing is a placebo. CMC + 0.05&lambda; counterpoise are non-negotiable. Low SWR ≠ high efficiency.</p>
     </div>
     <div class="card card-glow p-5 fade-up" style="border-top:2px solid var(--neon-green);">
-      <p class="mono text-sm text-[var(--neon-green)] mb-2">05 陷波器方案</p>
-      <p class="text-sm text-gray-300">陷波器 EFHW 解决 30m 问题。AI6XG/K6ARK 设计已开源，成本 &lt;$15。</p>
+      <p class="mono text-sm text-[var(--neon-green)] mb-2">05 Trapped Design</p>
+      <p class="text-sm text-gray-300">Trapped EFHW solves the 30m problem. AI6XG/K6ARK designs are open-source, cost &lt;$15.</p>
     </div>
     <div class="card card-glow p-5 fade-up" style="border-top:2px solid var(--neon-pink);">
-      <p class="mono text-sm text-[var(--neon-pink)] mb-2">06 VNA 三步法</p>
-      <p class="text-sm text-gray-300">AI6XG: 先测负载复阻抗，再分离 MM/LL/TL。假设理想电阻 → 效率 &gt;100% 错误。</p>
+      <p class="mono text-sm text-[var(--neon-pink)] mb-2">06 VNA 3-Step Method</p>
+      <p class="text-sm text-gray-300">AI6XG: measure load complex impedance first, then separate MM/LL/TL. Assuming ideal resistor → efficiency &gt;100% error.</p>
     </div>
   </div>
 </section>
@@ -857,13 +958,55 @@ a:hover { text-decoration:underline; }
 <footer class="max-w-4xl mx-auto px-6 py-16">
   <div class="divider"></div>
   <div class="text-center">
-    <p class="mono text-xs text-gray-600 mb-2">EFHW Deep Research Report — 增补版</p>
-    <p class="mono text-xs text-gray-600 mb-2">BG1SB Knowledge Base | 综合 25+ 权威来源 | 2026-05</p>
+    <p class="mono text-xs text-gray-600 mb-2">EFHW Deep Research Report — Supplement Edition</p>
+    <p class="mono text-xs text-gray-600 mb-2">BG1SB Knowledge Base | Synthesizing 25+ Authoritative Sources | 2026-05</p>
     <p class="mono text-xs text-gray-700">PA3HHO · AI6XG · RF.Guru · W8JI · N6CC · F5NPV · VK3TXD · VA3KOT · PA9X · VE3IPS · KB9VBR · K6ARK · N4LQ · SP9TKW · Owen Duffy</p>
   </div>
 </footer>
 
+<!-- ========== MRRC Site Footer ========== -->
+<footer class="site-footer">
+  <div style="max-width:1200px;margin:0 auto;padding:0 24px;">
+    <div class="ft-grid">
+      <div>
+        <h4>MRRC</h4>
+        <p>Mobile Remote Radio Control<br>Amateur Radio, Anytime, Anywhere</p>
+      </div>
+      <div>
+        <h4>Quick Links</h4>
+        <ul>
+          <li><a href="../index.html">Home</a></li>
+          <li><a href="../index.html#features">Features</a></li>
+          <li><a href="../index.html#demo">Demo</a></li>
+          <li><a href="../docs/installation.html">Installation</a></li>
+          <li><a href="../docs/design.html">Design &amp; Architecture</a></li>
+          <li><a href="../docs/docs.html">Documentation</a></li>
+          <li><a href="../fde.html">FDE</a></li>
+          <li><a href="../aladdin-v2.html">Aladdin V2</a></li>
+          <li><a href="index.html">EFHW Antenna</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Resources</h4>
+        <ul>
+          <li><a href="https://github.com/cheenle/UHRR_mac" target="_blank" rel="noopener">GitHub</a></li>
+          <li><a href="https://github.com/cheenle/UHRR_mac/issues" target="_blank" rel="noopener">Issue Tracker</a></li>
+          <li><a href="https://radio.vlsc.net:8877/" target="_blank" rel="noopener">Live System</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="ft-bottom">
+      <p>&copy; 2024-2026 MRRC Project. Open Source under GPL-3.0 License.</p>
+    </div>
+  </div>
+</footer>
+
 <script>
+// --- Mobile menu toggle ---
+document.getElementById('mobileMenuToggle').addEventListener('click', function() {
+  document.getElementById('navLinks').classList.toggle('mobile-open');
+});
+
 // --- Progress bar ---
 window.addEventListener('scroll', () => {
   const h = document.documentElement;
@@ -907,7 +1050,7 @@ function initChart(id, opt) {
 
 // Chart 1: SWR by band
 initChart('chartMultiband', {
-  title: { text: '40m EFHW 各频段典型 SWR', textStyle: { color: '#fff', fontSize: 14, fontFamily: 'Noto Serif SC' } },
+  title: { text: '40m EFHW Typical SWR by Band', textStyle: { color: '#fff', fontSize: 14, fontFamily: 'Georgia, serif' } },
   xAxis: { type: 'category', data: ['80m','40m','30m','20m','17m','15m','12m','10m'],
     axisLine: { lineStyle: { color: C.grid } }, axisLabel: { color: C.text } },
   yAxis: { type: 'value', name: 'SWR', min: 1, max: 12,
@@ -932,10 +1075,10 @@ initChart('chartMultiband', {
 
 // Chart 2: PA3HHO 4-config bar chart
 initChart('chartPA3HHO', {
-  title: { text: 'PA3HHO: 四种配置损耗对比', textStyle: { color: '#fff', fontSize: 14, fontFamily: 'Noto Serif SC' } },
+  title: { text: 'PA3HHO: Four-Configuration Loss Comparison', textStyle: { color: '#fff', fontSize: 14, fontFamily: 'Georgia, serif' } },
   legend: { data: ['1×43 2:14','2×43 2:14','2×43 3:21','3×52 2:14'], textStyle: { color: C.text }, top: 8 },
   xAxis: { type: 'category', data: ['80m','40m','20m'], axisLine: { lineStyle: { color: C.grid } }, axisLabel: { color: C.text } },
-  yAxis: { type: 'value', name: '损耗 (dB)', min: 0, max: 3, axisLine: { lineStyle: { color: C.grid } },
+  yAxis: { type: 'value', name: 'Loss (dB)', min: 0, max: 3, axisLine: { lineStyle: { color: C.grid } },
     splitLine: { lineStyle: { color: C.grid } }, axisLabel: { color: C.text } },
   series: [
     { name: '1×43 2:14', type: 'bar', data: [2.3, 1.9, 1.6], itemStyle: { color: C.pink },
@@ -951,11 +1094,11 @@ initChart('chartPA3HHO', {
 
 // Chart 3: Efficiency curve
 initChart('chartEfficiency', {
-  title: { text: 'EFHW 变压器效率 vs 频率 (PA3HHO 数据)', textStyle: { color: '#fff', fontSize: 14, fontFamily: 'Noto Serif SC' } },
+  title: { text: 'EFHW Transformer Efficiency vs Frequency (PA3HHO Data)', textStyle: { color: '#fff', fontSize: 14, fontFamily: 'Georgia, serif' } },
   legend: { data: ['1×43 2:14','2×43 2:14','2×43 3:21','3×52 2:14'], textStyle: { color: C.text }, top: 8, right: 10 },
   xAxis: { type: 'category', data: ['3.5','7','10','14','18','21','25','28'],
     name: 'MHz', axisLine: { lineStyle: { color: C.grid } }, axisLabel: { color: C.text } },
-  yAxis: { type: 'value', name: '效率 %', min: 50, max: 100,
+  yAxis: { type: 'value', name: 'Efficiency %', min: 50, max: 100,
     axisLine: { lineStyle: { color: C.grid } }, splitLine: { lineStyle: { color: C.grid } }, axisLabel: { color: C.text } },
   series: [
     { name: '1×43 2:14', type: 'line', smooth: true, symbol: 'circle', symbolSize: 5,

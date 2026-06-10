@@ -1,81 +1,50 @@
-const CACHE_NAME = 'hamradio-mobile-v15.0';
-const urlsToCache = [
-  '/',
-  '/mobile_modern.html',
+// 只缓存静态资源 — JS/HTML 始终走网络，避免缓存旧代码
+const CACHE_NAME = 'hamradio-static-v17.0';
+const STATIC_ASSETS = [
   '/mobile_modern.css',
-  '/mobile_modern.js',
   '/favicon.png',
   '/manifest.json'
 ];
 
-// Install event - cache essential files
+// Install
 self.addEventListener('install', function(event) {
-  console.log('HamRadio Service Worker installing...');
+  console.log('SW v17.0 installing...');
+  self.skipWaiting();
   event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then(function(cache) {
-        console.log('Opened cache');
-        return cache.addAll(urlsToCache);
-      })
-      .catch(function(error) {
-        console.error('Failed to cache files during install:', error);
-      })
-  );
-});
-
-// Activate event - clean up old caches
-self.addEventListener('activate', function(event) {
-  console.log('HamRadio Service Worker activating...');
-  event.waitUntil(
-    caches.keys().then(function(cacheNames) {
-      return Promise.all(
-        cacheNames.filter(function(cacheName) {
-          return cacheName !== CACHE_NAME;
-        }).map(function(cacheName) {
-          console.log('Deleting old cache:', cacheName);
-          return caches.delete(cacheName);
-        })
-      );
+    caches.open(CACHE_NAME).then(function(cache) {
+      return cache.addAll(STATIC_ASSETS);
+    }).catch(function(e) {
+      console.error('SW cache error:', e);
     })
   );
 });
 
-// Fetch event - serve cached content when offline
+// Activate — 立即接管并清理旧缓存
+self.addEventListener('activate', function(event) {
+  console.log('SW v17.0 activating...');
+  event.waitUntil(
+    caches.keys().then(function(keys) {
+      return Promise.all(
+        keys.filter(function(k) { return k !== CACHE_NAME; })
+            .map(function(k) { console.log('Deleting:', k); return caches.delete(k); })
+      );
+    }).then(function() {
+      return self.clients.claim();
+    })
+  );
+});
+
+// Fetch — 只拦截静态资源，JS/HTML 直通网络
 self.addEventListener('fetch', function(event) {
+  const url = new URL(event.request.url);
+  // JS/HTML: 完全不拦截，直接走网络
+  if (url.pathname.endsWith('.js') || url.pathname.endsWith('.html') || url.pathname === '/') {
+    return; // 不拦截 → 浏览器正常请求
+  }
+  // 静态资源: cache-first
   event.respondWith(
-    caches.match(event.request)
-      .then(function(response) {
-        // Return cached version if available
-        if (response) {
-          return response;
-        }
-        
-        // Clone the request because it's a stream and can only be consumed once
-        const fetchRequest = event.request.clone();
-        
-        // Try to fetch from network
-        return fetch(fetchRequest)
-          .then(function(response) {
-            // Check if we received a valid response
-            if (!response || response.status !== 200 || response.type !== 'basic') {
-              return response;
-            }
-            
-            // Clone the response because it's a stream and can only be consumed once
-            const responseToCache = response.clone();
-            
-            caches.open(CACHE_NAME)
-              .then(function(cache) {
-                cache.put(event.request, responseToCache);
-              });
-            
-            return response;
-          })
-          .catch(function(error) {
-            console.error('Fetch failed:', error);
-            // Return a fallback response if available
-            return caches.match('/mobile_modern.html');
-          });
-      })
+    caches.match(event.request).then(function(r) {
+      return r || fetch(event.request);
+    })
   );
 });

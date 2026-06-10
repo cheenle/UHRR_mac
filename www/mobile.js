@@ -1594,7 +1594,7 @@ window.addEventListener('error', function(e) {
 
 // PWA support
 if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/sw.js').then(function(registration) {
+    navigator.serviceWorker.register('/sw.js', { updateViaCache: 'none' }).then(function(registration) {
         console.log('ServiceWorker registration successful');
     }).catch(function(err) {
         console.log('ServiceWorker registration failed');

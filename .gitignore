@@ -38,3 +38,23 @@ logs/
 recordings/
 .iflow_logs/
 website/logs/
+
+# Virtual environments
+venv_voxcpm/
+
+# Backup files
+*.bak
+*.bakkk
+MRRC.bak.conf
+
+# Certificate backups
+certs/backup/
+
+# Local databases
+website/stats/
+
+# Claude Code session data
+.claude/
+
+# Presentations (large binaries)
+*.pptx

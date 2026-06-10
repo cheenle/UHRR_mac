@@ -1,0 +1,26 @@
+idf_component_register(
+    SRCS
+        "atu_main.c"
+        "ws_client.c"
+        "tune_engine.c"
+        "servo_ctrl.c"
+        "health_mon.c"
+        "nvs_cache.c"
+        "protocol.c"
+    INCLUDE_DIRS
+        "."
+    REQUIRES
+        nvs_flash
+        esp_wifi
+        esp_netif
+        esp_websocket_client
+        esp_ota_ops
+        ledc
+        driver
+        esp_adc
+        temperature_sensor
+        json
+        esp_event
+        freertos
+        spi_flash
+)

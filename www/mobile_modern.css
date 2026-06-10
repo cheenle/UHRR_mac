@@ -1881,7 +1881,7 @@ body {
 }
 
 .mem-info {
-    font-size: clamp(8px, 1.6vw, 10px);
+    font-size: clamp(10px, 2vw, 12px);
     font-family: var(--font-mono);
     color: var(--text-muted);
     line-height: 1.15;
