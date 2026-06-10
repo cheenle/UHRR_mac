@@ -459,25 +459,32 @@ function getCurrentMemorySnapshot() {
     };
 }
 
-// 更新页面内嵌的记忆按钮 (3×2 网格)
+// 更新页面内嵌的记忆按钮 (3×2 网格) — 批量 DOM 优化
+let _memButtonsPending = false;
 function updateMemButtons() {
-    const channels = readMemoryChannels();
-    document.querySelectorAll('.mem-btn').forEach(button => {
-        const index = parseInt(button.dataset.mem, 10);
-        const memory = channels[index];
-        const nameEl = button.querySelector('.mem-name');
-        const infoEl = button.querySelector('.mem-info');
-
-        button.classList.toggle('filled', !!memory);
-        if (memory) {
-            if (infoEl) infoEl.textContent = formatMemoryFreqShort(memory.freq) + '/' + normalizeMobileMode(memory.mode);
-            if (nameEl) nameEl.textContent = 'M' + (index + 1) + ' ▸';
-            button.title = 'M' + (index + 1) + ': ' + formatMemoryFreqFull(memory.freq) + ' MHz ' + normalizeMobileMode(memory.mode) + '\n点按召回 · 长按覆盖保存';
-        } else {
-            if (infoEl) infoEl.textContent = '--';
-            if (nameEl) nameEl.textContent = 'M' + (index + 1);
-            button.title = 'M' + (index + 1) + ': 空\n点按保存当前频率 · 长按保存';
-        }
+    const channels = memoryManager.getAll();
+    if (_memButtonsPending) return;
+    _memButtonsPending = true;
+    requestAnimationFrame(() => {
+        _memButtonsPending = false;
+        const buttons = document.querySelectorAll('.mem-btn');
+        const updates = Array.from(buttons).map(button => {
+            const index = parseInt(button.dataset.mem, 10);
+            return { button, index, memory: channels[index] };
+        });
+        updates.forEach(({ button, index, memory }) => {
+            const nameEl = button.querySelector('.mem-name');
+            const infoEl = button.querySelector('.mem-info');
+            const isFilled = !!memory;
+            button.classList.toggle('filled', isFilled);
+            if (infoEl) infoEl.textContent = isFilled
+                ? formatMemoryFreqShort(memory.freq) + '/' + normalizeMobileMode(memory.mode)
+                : '--';
+            if (nameEl) nameEl.textContent = 'M' + (index + 1) + (isFilled ? ' ▸' : '');
+            button.title = 'M' + (index + 1) + ': ' + (isFilled
+                ? formatMemoryFreqFull(memory.freq) + ' MHz ' + normalizeMobileMode(memory.mode) + '\n点按召回 · 长按覆盖保存'
+                : '空\n点按保存当前频率 · 长按保存');
+        });
     });
 }
 
