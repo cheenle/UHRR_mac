@@ -115,15 +115,15 @@
             </div>
             <h1 class="hero-title">Forward Deployed<br><span class="gradient">Engineering</span></h1>
             <p class="hero-subtitle" style="max-width: 700px;">
-                Palantir FDE 方法论如何驱动 MRRC 跨越 12 个完整 Cycle ——
+                Palantir FDE 方法论如何驱动 MRRC 跨越 15 个完整 Cycle ——
                 从一份原始分支到功能完备的远程电台控制系统。
-                12 个 FDE Cycle、240+ 次提交、从 V1.0 到 V5.4 的完整演进过程。
+                15 个 FDE Cycle、280+ 次提交、从 V1.0 到 V5.6.5 的完整演进过程。
             </p>
             <div class="hero-stats">
-                <div class="stat-item"><span class="stat-value">12</span><span class="stat-label">FDE Cycle</span></div>
-                <div class="stat-item"><span class="stat-value">240+</span><span class="stat-label">次提交</span></div>
-                <div class="stat-item"><span class="stat-value">0→13</span><span class="stat-label">产品杠杆</span></div>
-                <div class="stat-item"><span class="stat-value">55+</span><span class="stat-label">设计文档</span></div>
+                <div class="stat-item"><span class="stat-value">15</span><span class="stat-label">FDE Cycle</span></div>
+                <div class="stat-item"><span class="stat-value">280+</span><span class="stat-label">次提交</span></div>
+                <div class="stat-item"><span class="stat-value">0→16</span><span class="stat-label">产品杠杆</span></div>
+                <div class="stat-item"><span class="stat-value">60+</span><span class="stat-label">设计文档</span></div>
             </div>
         </div>
     </section>
@@ -190,8 +190,8 @@
         <div class="container">
             <div class="section-header">
                 <span class="section-label">完整案例</span>
-                <h2 class="section-title">MRRC 的 12 个 FDE Cycle</h2>
-                <p class="section-subtitle">每个 Cycle 都是完整的 Echo → Delta → Product 循环。20个月从 V1.0 走到 V5.4</p>
+                <h2 class="section-title">MRRC 的 15 个 FDE Cycle</h2>
+                <p class="section-subtitle">每个 Cycle 都是完整的 Echo → Delta → Product 循环。20个月从 V1.0 走到 V5.6.5</p>
             </div>
             <div style="overflow-x: auto;">
                 <table>
@@ -210,6 +210,9 @@
                         <tr><td>10</td><td><strong>性能调优</strong></td><td>2026-05</td><td>~1w</td><td>V5.2</td><td>RX音频帧间空隙、WDSP逐帧CPU开销</td><td>多节点调度播放</td><td>audio_rx.js重写、WDSP哈希缓存</td><td>10→11</td></tr>
                         <tr><td>11</td><td><strong>网络&UI打磨</strong></td><td>2026-05</td><td>~1w</td><td>V5.3</td><td>无网络可见性、状态栏杂乱</td><td>实时带宽/延迟显示</td><td>网络监控、精简UI、带宽显示增强</td><td>11→12</td></tr>
                         <tr><td>12</td><td><strong>FT8集成修复</strong></td><td>2026-05</td><td>~0.5w</td><td>V5.4</td><td>FT8方法名不一致、前端问题</td><td>Python-JS方法对齐</td><td>FT8 WebSocket桥接稳定化</td><td>12→13</td></tr>
+                        <tr><td>13</td><td><strong>频道记忆</strong></td><td>2026-06</td><td>~2w</td><td>V5.5</td><td>频道保存/召回流程繁琐</td><td>MemoryChannelManager服务+批量DOM更新</td><td>MemoryChannelManager类、优化的updateMemButtons</td><td>13→14</td></tr>
+                        <tr><td>14</td><td><strong>ATR-1000稳定性</strong></td><td>2026-06</td><td>~2w</td><td>V5.6.0-6.4</td><td>假SWR读数污染调谐器学习</td><td>稳定窗口学习缓冲器+去重</td><td>LearningBuffer、6级去重流水线</td><td>14→15</td></tr>
+                        <tr><td>15</td><td><strong>EFHW集成</strong></td><td>2026-06</td><td>~1w</td><td>V5.6.5</td><td>EFHW天线设计研究文档</td><td>静态站点生成+深度研究</td><td>EFHW知识库、A+C匹配系统</td><td>15→16</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -290,6 +293,9 @@
                         <tr><td>硬编码音频参数</td><td><span class="tag product">Product</span> 预设系统(DEFAULT/RAGCHEW)</td><td>TX 音频预设系统</td><td>可扩展至新预设</td></tr>
                         <tr><td>手动 SSH + SCP 部署</td><td><span class="tag product">Product</span> Ansible 幂等化部署</td><td>Ansible 自动化部署</td><td>N 个 Web 服务器</td></tr>
                         <tr><td>Emoji 图标(平台不一致)</td><td><span class="tag product">Product</span> Unicode + SVG 图标系统</td><td>玻璃态设计系统</td><td>全平台+浏览器</td></tr>
+                        <tr><td>逐按钮保存/召回记忆</td><td><span class="tag product">Product</span> 服务导向批量DOM更新</td><td><code>MemoryChannelManager</code></td><td>全部记忆频道用户</td></tr>
+                        <tr><td>假SWR污染调谐器学习</td><td><span class="tag product">Product</span> 稳定窗口缓冲器+6级去重</td><td><code>LearningBuffer</code></td><td>带调谐器的ATR-1000用户</td></tr>
+                        <tr><td>手动EFHW设计研究</td><td><span class="tag product">Product</span> 静态站点+深度研究方法</td><td>EFHW知识库、A+C匹配</td><td>HF天线制作爱好者</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -317,7 +323,7 @@
                 </p>
                 <p style="color: var(--text-secondary); line-height: 1.85;">
                     <strong style="color: var(--text-primary);">衡量方式：</strong>每个 Cycle 的 Product 阶段产出一个（或多个）可独立复用的模块，杠杆数 +1（或 +N）。
-                    杠杆从 0 开始（只有一份原始 fork，没有任何自有资产），到 V5.4 累计 13 个可复用模块。
+                    杠杆从 0 开始（只有一份原始 fork，没有任何自有资产），到 V5.6.5 累计 16 个可复用模块。
                 </p>
             </div>
 
@@ -333,7 +339,10 @@
                 <div class="leverage-bar"><span class="leverage-value">10</span><div class="leverage-fill" style="height:232px;"></div><span class="leverage-label">V5.1</span></div>
                 <div class="leverage-bar"><span class="leverage-value">11</span><div class="leverage-fill" style="height:256px;"></div><span class="leverage-label">V5.2</span></div>
                 <div class="leverage-bar"><span class="leverage-value">12</span><div class="leverage-fill" style="height:280px;"></div><span class="leverage-label">V5.3</span></div>
-                <div class="leverage-bar"><span class="leverage-value">13</span><div class="leverage-fill" style="height:304px;"></div><span class="leverage-label">V5.4</span></div>
+                <div class="leverage-bar"><span class="leverage-value">13</span><div class="leverage-fill" style="height:300px;"></div><span class="leverage-label">V5.4</span></div>
+                <div class="leverage-bar"><span class="leverage-value">14</span><div class="leverage-fill" style="height:324px;"></div><span class="leverage-label">V5.5</span></div>
+                <div class="leverage-bar"><span class="leverage-value">15</span><div class="leverage-fill" style="height:344px;"></div><span class="leverage-label">V5.6.0</span></div>
+                <div class="leverage-bar"><span class="leverage-value">16</span><div class="leverage-fill" style="height:368px;"></div><span class="leverage-label">V5.6.5</span></div>
             </div>
             <p style="text-align:center; color: var(--text-muted); margin-top: 12px; font-size: 0.8rem;">柱高 = 累积可复用资产数量。每个 Cycle 都在上一 Cycle 的基础上"叠罗汉"，而非从零开始。</p>
 
@@ -351,12 +360,13 @@
                             <tr><td>4–7</td><td>Cycle 4–6 (V4.0–V4.9)</td><td><strong>~1–3 周</strong></td><td>音频框架、PTT 框架、移动端框架已就绪。新功能直接复用。</td></tr>
                             <tr><td>8–10</td><td>Cycle 7–9 (V5.0–V5.1)</td><td><strong>~1–1.5 周</strong></td><td>DSP 管线、ATR 代理、Ansible 部署全部到位。新功能即插即用。</td></tr>
                             <tr><td>11–13</td><td>Cycle 10–12 (V5.2–V5.4)</td><td><strong>~0.5–1 周</strong></td><td>设计系统、音频预设、网络监控均已沉淀。每个新功能只需极少量增量代码。</td></tr>
+                            <tr><td>14–16</td><td>Cycle 13–15 (V5.5–V5.6.5)</td><td><strong>~1–2 周</strong></td><td>MemoryChannelManager、LearningBuffer、EFHW知识库。前端优化、ATR稳定性、天线研究。</td></tr>
                         </tbody>
                     </table>
                 </div>
                 <p style="color: var(--text-secondary); line-height: 1.85; margin-top: 20px;">
-                    <strong style="color: var(--accent);">结论：</strong>Cycle 1 花 4 周搭建基础架构，Cycle 12 花 0.5 周集成 FT8 —— 同样是"交付一个完整功能"，后者的实际投入仅为前者的 <strong style="color: var(--text-primary);">1/8</strong>。
-                    这背后的原因不是开发者变快了，而是 13 个可复用资产在替他工作。这就是产品杠杆的本质：<strong style="color: var(--accent);">每一次交付都在降低下一次交付的成本。</strong>
+                    <strong style="color: var(--accent);">结论：</strong>Cycle 1 花 4 周搭建基础架构，Cycle 15 花 1 周集成 EFHW 文档 —— 同样是"交付一个完整功能"，后者的实际投入仅为前者的 <strong style="color: var(--text-primary);">1/4</strong>。
+                    这背后的原因不是开发者变快了，而是 16 个可复用资产在替他工作。这就是产品杠杆的本质：<strong style="color: var(--accent);">每一次交付都在降低下一次交付的成本。</strong>
                 </p>
             </div>
         </div>

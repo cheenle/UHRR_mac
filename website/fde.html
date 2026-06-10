@@ -149,15 +149,15 @@
             </div>
             <h1 class="hero-title">Forward Deployed<br><span class="gradient">Engineering</span></h1>
             <p class="hero-subtitle" style="max-width: 700px;">
-                How Palantir's FDE methodology drove MRRC through 12 cycles of evolution —
+                How Palantir's FDE methodology drove MRRC through 15 cycles of evolution —
                 from a bare fork to a full-featured remote radio control system.
-                240+ commits, V1.0 to V5.4, with complete methodology, patterns, and lessons learned.
+                280+ commits, V1.0 to V5.6.5, with complete methodology, patterns, and lessons learned.
             </p>
             <div class="hero-stats">
-                <div class="stat-item"><span class="stat-value">12</span><span class="stat-label">FDE Cycles</span></div>
-                <div class="stat-item"><span class="stat-value">240+</span><span class="stat-label">Commits</span></div>
-                <div class="stat-item"><span class="stat-value">0→13</span><span class="stat-label">Product Leverage</span></div>
-                <div class="stat-item"><span class="stat-value">55+</span><span class="stat-label">Design Docs</span></div>
+                <div class="stat-item"><span class="stat-value">15</span><span class="stat-label">FDE Cycles</span></div>
+                <div class="stat-item"><span class="stat-value">280+</span><span class="stat-label">Commits</span></div>
+                <div class="stat-item"><span class="stat-value">0→16</span><span class="stat-label">Product Leverage</span></div>
+                <div class="stat-item"><span class="stat-value">60+</span><span class="stat-label">Design Docs</span></div>
             </div>
         </div>
     </section>
@@ -224,8 +224,8 @@
         <div class="container">
             <div class="section-header">
                 <span class="section-label">Case Study</span>
-                <h2 class="section-title">MRRC's 12 FDE Cycles</h2>
-                <p class="section-subtitle">Each cycle is a complete Echo → Delta → Product iteration. 20 months from V1.0 to V5.4.</p>
+                <h2 class="section-title">MRRC's 15 FDE Cycles</h2>
+                <p class="section-subtitle">Each cycle is a complete Echo → Delta → Product iteration. 20 months from V1.0 to V5.6.5.</p>
             </div>
             <div style="overflow-x: auto;">
                 <table>
@@ -244,6 +244,9 @@
                         <tr><td>10</td><td><strong>Performance Tuning</strong></td><td>2026-05</td><td>~1w</td><td>V5.2</td><td>RX audio inter-frame gaps, WDSP per-frame CPU overhead</td><td>Multi-node scheduled playback</td><td>audio_rx.js rewrite, WDSP hash caching</td><td>10→11</td></tr>
                         <tr><td>11</td><td><strong>Network &amp; UI Polish</strong></td><td>2026-05</td><td>~1w</td><td>V5.3</td><td>No network visibility, cluttered status bar</td><td>Real-time bandwidth/latency display</td><td>Network monitoring, streamlined UI, bandwidth visual polish</td><td>11→12</td></tr>
                         <tr><td>12</td><td><strong>FT8 Integration Fix</strong></td><td>2026-05</td><td>~0.5w</td><td>V5.4</td><td>FT8 method name mismatch, frontend issues</td><td>Python-JS method alignment</td><td>FT8 WebSocket bridge stabilization</td><td>12→13</td></tr>
+                        <tr><td>13</td><td><strong>Memory Channels</strong></td><td>2026-06</td><td>~2w</td><td>V5.5</td><td>Memory channel recall/save workflow cumbersome</td><td>MemoryChannelManager service + batch DOM updates</td><td>MemoryChannelManager class, optimized updateMemButtons</td><td>13→14</td></tr>
+                        <tr><td>14</td><td><strong>ATR-1000 Stability</strong></td><td>2026-06</td><td>~2w</td><td>V5.6.0-6.4</td><td>False SWR readings corrupting tuner learning</td><td>Stable window learning buffer + deduplication</td><td>LearningBuffer, 6-stage dedup pipeline</td><td>14→15</td></tr>
+                        <tr><td>15</td><td><strong>EFHW Integration</strong></td><td>2026-06</td><td>~1w</td><td>V5.6.5</td><td>EFHW antenna design research documentation</td><td>Static site generation + deep research</td><td>EFHW knowledge base, A+C matching system</td><td>15→16</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -324,6 +327,9 @@
                         <tr><td>Hardcoded audio params</td><td><span class="tag product">Product</span> Preset system (DEFAULT/RAGCHEW)</td><td>TX audio preset system</td><td>Extensible to new presets</td></tr>
                         <tr><td>Manual SSH + SCP deploy</td><td><span class="tag product">Product</span> Ansible idempotent playbook</td><td>Ansible deploy automation</td><td>N web servers</td></tr>
                         <tr><td>Emoji icons (platform-inconsistent)</td><td><span class="tag product">Product</span> Unicode + SVG icon system</td><td>Glassmorphism design system</td><td>All platforms + browsers</td></tr>
+                        <tr><td>Per-button memory save/recall</td><td><span class="tag product">Product</span> Service-oriented batch DOM updates</td><td><code>MemoryChannelManager</code></td><td>All memory channel users</td></tr>
+                        <tr><td>False SWR corrupting tuner learning</td><td><span class="tag product">Product</span> Stable window buffer + 6-stage dedup</td><td><code>LearningBuffer</code></td><td>ATR-1000 users with tuner</td></tr>
+                        <tr><td>Manual EFHW design research</td><td><span class="tag product">Product</span> Static site + deep research methodology</td><td>EFHW knowledge base, A+C matching</td><td>HF antenna builders</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -351,7 +357,7 @@
                 </p>
                 <p style="color: var(--text-secondary); line-height: 1.85;">
                     <strong style="color: var(--text-primary);">How it's measured:</strong> Each cycle's Product phase produces one (or more) independently reusable modules, adding +1 (or +N) to the leverage count.
-                    Starting from 0 (a raw fork with zero proprietary assets), reaching 13 reusable modules by V5.4.
+                    Starting from 0 (a raw fork with zero proprietary assets), reaching 16 reusable modules by V5.6.5.
                 </p>
             </div>
 
@@ -367,7 +373,10 @@
                 <div class="leverage-bar"><span class="leverage-value">10</span><div class="leverage-fill" style="height:232px;"></div><span class="leverage-label">V5.1</span></div>
                 <div class="leverage-bar"><span class="leverage-value">11</span><div class="leverage-fill" style="height:256px;"></div><span class="leverage-label">V5.2</span></div>
                 <div class="leverage-bar"><span class="leverage-value">12</span><div class="leverage-fill" style="height:280px;"></div><span class="leverage-label">V5.3</span></div>
-                <div class="leverage-bar"><span class="leverage-value">13</span><div class="leverage-fill" style="height:304px;"></div><span class="leverage-label">V5.4</span></div>
+                <div class="leverage-bar"><span class="leverage-value">13</span><div class="leverage-fill" style="height:300px;"></div><span class="leverage-label">V5.4</span></div>
+                <div class="leverage-bar"><span class="leverage-value">14</span><div class="leverage-fill" style="height:324px;"></div><span class="leverage-label">V5.5</span></div>
+                <div class="leverage-bar"><span class="leverage-value">15</span><div class="leverage-fill" style="height:344px;"></div><span class="leverage-label">V5.6.0</span></div>
+                <div class="leverage-bar"><span class="leverage-value">16</span><div class="leverage-fill" style="height:368px;"></div><span class="leverage-label">V5.6.5</span></div>
             </div>
             <p style="text-align:center; color: var(--text-muted); margin-top: 12px; font-size: 0.8rem;">Bar height = cumulative reusable assets. Each cycle stacks on top of the last — never starting from zero.</p>
 
@@ -385,12 +394,13 @@
                             <tr><td>4–7</td><td>Cycle 4–6 (V4.0–V4.9)</td><td><strong>~1–3 weeks</strong></td><td>Audio framework, PTT framework, mobile framework ready. New features plug in directly.</td></tr>
                             <tr><td>8–10</td><td>Cycle 7–9 (V5.0–V5.1)</td><td><strong>~1–1.5 weeks</strong></td><td>DSP pipeline, ATR proxy, Ansible deploy all in place. New features are plug-and-play.</td></tr>
                             <tr><td>11–13</td><td>Cycle 10–12 (V5.2–V5.4)</td><td><strong>~0.5–1 week</strong></td><td>Design system, audio presets, network monitoring all baked in. Each new feature needs minimal incremental code.</td></tr>
+                            <tr><td>14–16</td><td>Cycle 13–15 (V5.5–V5.6.5)</td><td><strong>~1–2 weeks</strong></td><td>MemoryChannelManager, LearningBuffer, EFHW knowledge base. Frontend optimization, ATR stability, antenna research.</td></tr>
                         </tbody>
                     </table>
                 </div>
                 <p style="color: var(--text-secondary); line-height: 1.85; margin-top: 20px;">
-                    <strong style="color: var(--accent);">Conclusion:</strong> Cycle 1 took 4 weeks to build the foundation. Cycle 12 took 0.5 weeks to integrate FT8 — both "delivering a complete feature," but the latter required only <strong style="color: var(--text-primary);">1/8</strong> the actual effort.
-                    The developer didn't get faster. The 13 reusable assets did the heavy lifting. That's product leverage in action: <strong style="color: var(--accent);">every delivery reduces the cost of the next.</strong>
+                    <strong style="color: var(--accent);">Conclusion:</strong> Cycle 1 took 4 weeks to build the foundation. Cycle 15 took 1 week to integrate EFHW documentation — both "delivering a complete feature," but the latter required only <strong style="color: var(--text-primary);">1/4</strong> the actual effort.
+                    The developer didn't get faster. The 16 reusable assets did the heavy lifting. That's product leverage in action: <strong style="color: var(--accent);">every delivery reduces the cost of the next.</strong>
                 </p>
             </div>
         </div>
