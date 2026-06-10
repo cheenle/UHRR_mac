@@ -208,41 +208,223 @@ function refreshCycleButtonLabels() {
     updateModeButtonLabel(mobileState.currentMode);
 }
 
-// ---- 频道记忆核心 ----
+// ---- 频道记忆核心 (V5.6.5 完全服务导向) ----
 
-function readMemoryChannels() {
-    try {
-        const saved = JSON.parse(localStorage.getItem(MEMORY_CHANNELS_KEY) || '[]');
-        return Array.from({ length: MEMORY_CHANNEL_COUNT }, (_, index) => saved[index] || null);
-    } catch (e) {
-        console.warn('频道记忆读取失败:', e);
-        return Array.from({ length: MEMORY_CHANNEL_COUNT }, () => null);
+/**
+ * 记忆频道管理器 — 完全服务导向架构
+ * - 所有操作通过服务端 API，不再依赖 localStorage 作为主存储
+ * - localStorage 仅作离线降级缓存（90 天过期）
+ * - 支持 WebSocket 实时推送同步
+ * - 订阅/通知模式，UI 自动更新
+ */
+class MemoryChannelManager {
+    static CHANNEL_COUNT = 6;
+    static API_ENDPOINT = '/api/mem_channels';
+    static WS_PREFIX = 'memChannels:';
+    static CACHE_KEY = 'mrrc_mem_channels_cache';
+    static CACHE_TTL = 90 * 24 * 60 * 60 * 1000; // 90 days
+
+    constructor() {
+        this._channels = new Array(MemoryChannelManager.CHANNEL_COUNT).fill(null);
+        this._pending = false;
+        this._offlineQueue = [];
+        this._listeners = new Set();
+        this._wsSetup = false;
+    }
+
+    async load() {
+        if (this._pending) return this._channels;
+        this._pending = true;
+        try {
+            const resp = await fetch(MemoryChannelManager.API_ENDPOINT, { credentials: 'include' });
+            if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+            const data = await resp.json();
+            this._channels = this._padChannels(data.channels);
+            this._notify();
+            this._saveToCache();
+            return this._channels;
+        } catch (e) {
+            console.warn('服务端正载失败，使用离线缓存:', e.message);
+            return this._loadFromCache();
+        } finally {
+            this._pending = false;
+        }
+    }
+
+    async save(index, channel) {
+        const updated = [...this._channels];
+        updated[index] = channel;
+        await this._saveAll(updated);
+    }
+
+    recall(index) { return this._channels[index] || null; }
+
+    async delete(index) {
+        const updated = [...this._channels];
+        updated[index] = null;
+        await this._saveAll(updated);
+    }
+
+    async clearAll() {
+        await this._saveAll(new Array(MemoryChannelManager.CHANNEL_COUNT).fill(null));
+    }
+
+    getAll() { return [...this._channels]; }
+
+    async _saveAll(channels) {
+        if (this._pending) { this._offlineQueue.push(channels); return; }
+        this._pending = true;
+        try {
+            const resp = await fetch(MemoryChannelManager.API_ENDPOINT, {
+                method: 'POST', credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ channels })
+            });
+            if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+            this._channels = channels;
+            this._notify();
+            this._saveToCache();
+            console.log('频道已保存:', channels.filter(Boolean).length, '个');
+        } catch (e) {
+            console.error('保存失败:', e.message);
+            this._offlineQueue.push(channels);
+            throw e;
+        } finally {
+            this._pending = false;
+            this._flushQueue();
+        }
+    }
+
+    _padChannels(channels) {
+        const padded = [...(channels || [])];
+        while (padded.length < MemoryChannelManager.CHANNEL_COUNT) padded.push(null);
+        return padded.slice(0, MemoryChannelManager.CHANNEL_COUNT);
+    }
+
+    _flushQueue() {
+        if (this._offlineQueue.length > 0) {
+            const latest = this._offlineQueue.pop();
+            this._offlineQueue = [];
+            this._saveAll(latest);
+        }
+    }
+
+    _saveToCache() {
+        try {
+            localStorage.setItem(MemoryChannelManager.CACHE_KEY, JSON.stringify({
+                channels: this._channels, ts: Date.now()
+            }));
+        } catch (e) { /* storage full */ }
+    }
+
+    _loadFromCache() {
+        try {
+            const raw = localStorage.getItem(MemoryChannelManager.CACHE_KEY);
+            if (!raw) return this._channels;
+            const { channels, ts } = JSON.parse(raw);
+            if (Date.now() - ts > MemoryChannelManager.CACHE_TTL) {
+                localStorage.removeItem(MemoryChannelManager.CACHE_KEY);
+                return this._channels;
+            }
+            this._channels = this._padChannels(channels);
+            this._notify();
+            return this._channels;
+        } catch (e) { return this._channels; }
+    }
+
+    subscribe(callback) { this._listeners.add(callback); return () => this._listeners.delete(callback); }
+    _notify() { this._listeners.forEach(cb => cb([...this._channels])); }
+
+    handleWSMessage(data) {
+        if (data.startsWith(MemoryChannelManager.WS_PREFIX)) {
+            try {
+                const channels = JSON.parse(data.slice(MemoryChannelManager.WS_PREFIX.length));
+                this._channels = this._padChannels(channels);
+                this._notify();
+                this._saveToCache();
+                console.log('WS推送已应用:', channels.filter(Boolean).length, '个频道');
+            } catch (e) { console.warn('WS解析失败:', e); }
+        }
+    }
+
+    setupWSInterceptor() {
+        if (this._wsSetup) return;
+        this._wsSetup = true;
+        const checkInterval = setInterval(() => {
+            if (typeof wsControlTRX !== 'undefined' && wsControlTRX && wsControlTRX.readyState === WebSocket.OPEN) {
+                clearInterval(checkInterval);
+                const _orig = wsControlTRX.onmessage;
+                wsControlTRX.onmessage = (event) => {
+                    if (event?.data?.startsWith?.(MemoryChannelManager.WS_PREFIX)) {
+                        this.handleWSMessage(event.data); return;
+                    }
+                    if (_orig) _orig.call(wsControlTRX, event);
+                };
+                wsControlTRX.send('memLoadAll');
+                console.log('频道记忆WS同步已就绪');
+            }
+        }, 500);
+        setTimeout(() => clearInterval(checkInterval), 30000);
     }
 }
+
+const memoryManager = new MemoryChannelManager();
+
+// ─── 兼容旧接口 ───
+function readMemoryChannels() { return memoryManager.getAll(); }
 
 function writeMemoryChannels(channels) {
-    try {
-        localStorage.setItem(MEMORY_CHANNELS_KEY, JSON.stringify(channels));
-    } catch (e) {
-        console.warn('频道记忆保存失败:', e);
+    memoryManager._channels = memoryManager._padChannels(channels);
+    memoryManager._notify();
+}
+
+let _memServerSyncPending = false;
+
+function _wsReady() {
+    return typeof wsControlTRX !== 'undefined' && wsControlTRX && wsControlTRX.readyState === WebSocket.OPEN;
+}
+
+function syncMemoryToServer() {
+    if (_memServerSyncPending) return;
+    _memServerSyncPending = true;
+    setTimeout(async () => {
+        _memServerSyncPending = false;
+        const channels = memoryManager.getAll();
+        if (_wsReady()) {
+            wsControlTRX.send('memSaveAll:' + JSON.stringify(channels));
+        } else {
+            memoryManager._offlineQueue.push(channels);
+        }
+    }, 300);
+}
+
+function loadMemoryFromServer() {
+    if (_wsReady()) {
+        wsControlTRX.send('memLoadAll');
+    } else {
+        memoryManager.load();
     }
 }
 
+function setupMemChannelWSListener() { memoryManager.setupWSInterceptor(); }
+
 function deleteMemoryChannel(index) {
-    const channels = readMemoryChannels();
-    channels[index] = null;
-    writeMemoryChannels(channels);
-    updateMemButtons();
+    memoryManager.delete(index);
     hapticFeedback('light');
-    console.log('频道记忆已清除:', 'M' + (index + 1));
+    console.log('频道已清除: M' + (index + 1));
 }
 
 function clearAllMemoryChannels() {
-    writeMemoryChannels(Array.from({ length: MEMORY_CHANNEL_COUNT }, () => null));
-    updateMemButtons();
-    hapticFeedback('medium');
-    console.log('全部频道记忆已清空');
+    memoryManager.clearAll();
+    console.log('全部频道已清除');
 }
+
+// ─── UI订阅：状态变更自动刷新 ───
+memoryManager.subscribe((channels) => {
+    if (typeof updateMemButtons === 'function') updateMemButtons();
+});
+
+// ─── 兼容旧接口 ───
 
 function formatMemoryFreqShort(freq) {
     const value = parseInt(freq, 10);
@@ -288,9 +470,7 @@ function updateMemButtons() {
 
         button.classList.toggle('filled', !!memory);
         if (memory) {
-            const band = getMobileBandForFrequency(memory.freq);
-            const bandLabel = band ? band.name : '';
-            if (infoEl) infoEl.textContent = formatMemoryFreqShort(memory.freq) + (bandLabel ? ' ' + bandLabel : '') + '/' + normalizeMobileMode(memory.mode);
+            if (infoEl) infoEl.textContent = formatMemoryFreqShort(memory.freq) + '/' + normalizeMobileMode(memory.mode);
             if (nameEl) nameEl.textContent = 'M' + (index + 1) + ' ▸';
             button.title = 'M' + (index + 1) + ': ' + formatMemoryFreqFull(memory.freq) + ' MHz ' + normalizeMobileMode(memory.mode) + '\n点按召回 · 长按覆盖保存';
         } else {
@@ -302,17 +482,17 @@ function updateMemButtons() {
 }
 
 function saveMemoryChannel(index) {
-    const channels = readMemoryChannels();
-    channels[index] = getCurrentMemorySnapshot();
-    writeMemoryChannels(channels);
-    updateMemButtons();
-    const button = document.querySelector(`.mem-btn[data-mem="${index}"]`);
-    if (button) {
-        button.classList.add('saved-flash');
-        setTimeout(() => button.classList.remove('saved-flash'), 500);
-    }
-    hapticFeedback('medium');
-    console.log('💾 频道保存:', 'M' + (index + 1), channels[index]);
+    memoryManager.save(index, getCurrentMemorySnapshot()).then(() => {
+        const button = document.querySelector(`.mem-btn[data-mem="${index}"]`);
+        if (button) {
+            button.classList.add('saved-flash');
+            setTimeout(() => button.classList.remove('saved-flash'), 500);
+        }
+        hapticFeedback('medium');
+        console.log('频道已保存: M' + (index + 1), memoryManager.recall(index));
+    }).catch(e => {
+        console.error('保存失败:', e);
+    });
 }
 
 function recallMemoryChannel(index) {
@@ -418,8 +598,24 @@ const domElements = {
 ////////////////////////////////////////////////////////////
 
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('🚀 Mobile Modern 界面初始化... (v4.8.0 - 步进按钮修复版)');
-    
+    console.log('🚀 Mobile Modern 界面初始化... (v5.5.0 - 频道记忆服务端同步)');
+
+    // 强制更新 Service Worker（解决旧 SW 缓存 JS 导致代码不更新）
+    if ('serviceWorker' in navigator) {
+        // 强制更新已有的 SW
+        navigator.serviceWorker.getRegistrations().then(function(regs) {
+            regs.forEach(function(reg) {
+                reg.update();
+                console.log('🔄 SW 更新检查:', reg.scope);
+            });
+            // 如果没有注册过，注册一个新的（防止完全依赖旧 mobile.js 的注册）
+            if (regs.length === 0) {
+                navigator.serviceWorker.register('/sw.js', { updateViaCache: 'none' });
+                console.log('📦 SW 新注册');
+            }
+        });
+    }
+
     try {
         initializeElements();
         console.log('✅ DOM元素初始化完成');
@@ -467,10 +663,14 @@ document.addEventListener('DOMContentLoaded', function() {
         updateFrequencyDisplay();
         refreshCycleButtonLabels();
         updateMemButtons();
+        // 从服务端加载频道记忆（HTTP API，不依赖 WebSocket）
+        loadMemoryFromServer();
+        // 监听 WebSocket 推送的频道更新（跨设备实时同步）
+        setupMemChannelWSListener();
     } catch (e) {
         console.error('❌ updateFrequencyDisplay 失败:', e);
     }
-    
+
     // 初始化步进显示和按钮
     try {
         const stepBtn = document.getElementById('step-btn');
@@ -2142,17 +2342,14 @@ function showMemoryPanel() {
         if (mem) {
             const freqMhz = formatMemoryFreqFull(mem.freq);
             const mode = normalizeMobileMode(mem.mode);
-            const band = getMobileBandForFrequency(mem.freq);
-            const bandLabel = band ? band.name : '';
             const timeStr = formatRelativeTime(mem.savedAt);
 
             html += '<div class="mem-panel-card filled">';
             html += '<div class="mem-card-index">M' + (i + 1) + '</div>';
             html += '<div class="mem-card-body">';
-            html += '<div class="mem-card-freq">' + freqMhz + ' <small style="font-size:11px;">MHz</small></div>';
+            html += '<div class="mem-card-freq">' + freqMhz + ' <small style="font-size:12px;">MHz</small></div>';
             html += '<div class="mem-card-meta">';
             html += '<span class="mem-card-mode">' + mode + '</span>';
-            if (bandLabel) html += '<span class="mem-card-band">' + bandLabel + '</span>';
             html += '</div>';
             if (timeStr) html += '<div class="mem-card-time">' + timeStr + '</div>';
             html += '</div>';
@@ -2241,6 +2438,7 @@ function importMemories(fileInput) {
             });
             writeMemoryChannels(channels);
             updateMemButtons();
+            syncMemoryToServer();
             showMemoryPanel();
             hapticFeedback('medium');
             alert('已导入 ' + channels.filter(Boolean).length + ' 个频道记忆');
