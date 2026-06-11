@@ -40,7 +40,42 @@
         .principle { display: flex; gap: 14px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 14px; padding: 22px; }
         .principle-num { width: 34px; height: 34px; border-radius: 9px; background: var(--accent-glow); color: var(--accent); display: flex; align-items: center; justify-content: center; font-weight: 700; flex-shrink: 0; }
         .principle p { color: var(--text-secondary); line-height: 1.6; font-size: .9rem; }
-        @media (max-width: 900px) { .grid-2, .grid-3, .flow { grid-template-columns: 1fr; } .hero { padding-top: 120px; } }
+        .balance-box { background: var(--bg-card); border: 1px solid var(--border); border-radius: 18px; padding: 34px 40px; margin: 0 auto 40px; max-width: 920px; }
+        .balance-box .lead { font-size: 1.15rem; color: var(--text-primary); line-height: 1.7; font-weight: 600; }
+        .balance-box .lead .accent { color: var(--accent); }
+        .balance-cols { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; margin-top: 28px; }
+        .balance-col { background: rgba(0,0,0,.28); border: 1px solid var(--border); border-radius: 14px; padding: 22px; }
+        .balance-col .tag { display: inline-block; font-family: var(--font-mono); font-size: .72rem; padding: 3px 10px; border-radius: 6px; margin-bottom: 12px; letter-spacing: .08em; }
+        .balance-col.thesis .tag { background: rgba(16,185,129,.16); color: #10b981; }
+        .balance-col.antithesis .tag { background: rgba(239,68,68,.16); color: #ef4444; }
+        .balance-col.synthesis .tag { background: var(--accent-glow); color: var(--accent); }
+        .balance-col p { color: var(--text-secondary); font-size: .9rem; line-height: 1.65; }
+        .tool-table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: .9rem; }
+        .tool-table th, .tool-table td { text-align: left; padding: 14px 16px; border-bottom: 1px solid var(--border); vertical-align: top; }
+        .tool-table th { color: var(--accent); font-weight: 600; font-size: .8rem; text-transform: uppercase; letter-spacing: .06em; }
+        .tool-table td { color: var(--text-secondary); line-height: 1.6; }
+        .tool-table td strong { color: var(--text-primary); }
+        .tool-table tr:last-child td { border-bottom: none; }
+        .tool-num { display: inline-flex; width: 26px; height: 26px; border-radius: 7px; background: var(--accent-glow); color: var(--accent); align-items: center; justify-content: center; font-weight: 700; font-size: .82rem; }
+        .new-badge { display: inline-block; font-size: .66rem; background: var(--accent); color: #000; padding: 2px 7px; border-radius: 5px; margin-left: 8px; font-weight: 700; letter-spacing: .04em; vertical-align: middle; }
+        .scope-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0; border: 1px solid var(--border); border-radius: 14px; overflow: hidden; margin-top: 8px; }
+        .scope-grid .scope-head { padding: 16px 20px; font-weight: 700; font-size: .95rem; }
+        .scope-grid .scope-head.fit { background: rgba(16,185,129,.12); color: #10b981; }
+        .scope-grid .scope-head.unfit { background: rgba(239,68,68,.12); color: #ef4444; }
+        .scope-grid .scope-cell { padding: 14px 20px; border-top: 1px solid var(--border); color: var(--text-secondary); font-size: .88rem; line-height: 1.6; }
+        .verdict-box { background: var(--bg-card); border: 1px solid var(--border); border-left: 3px solid var(--accent); border-radius: 14px; padding: 30px 34px; max-width: 920px; margin: 0 auto; color: var(--text-secondary); line-height: 1.8; font-size: 1.02rem; }
+        .verdict-box strong { color: var(--text-primary); }
+        .card-lite.verified { border-top: 3px solid #10b981; }
+        .card-lite.verified h3 i { color: #10b981; margin-right: 8px; }
+        .card-lite.gap { border-top: 3px solid #ef4444; }
+        .card-lite.gap h3 i { color: #ef4444; margin-right: 8px; }
+        .layer-card .layer-num { display:inline-block; font-family:var(--font-mono); font-size:.8rem; color:var(--accent); background:var(--accent-glow); padding:3px 11px; border-radius:6px; margin-bottom:14px; }
+        .layer-card .layer-who { font-size:.84rem; color:var(--accent); margin:0 0 2px; }
+        .layer-meta { margin-top:16px; border-top:1px solid var(--border); padding-top:14px; }
+        .layer-meta div { font-size:.86rem; line-height:1.6; margin:7px 0; color:var(--text-secondary); }
+        .layer-meta b { display:block; color:var(--text-primary); font-size:.72rem; text-transform:uppercase; letter-spacing:.06em; margin-bottom:2px; }
+        .loop-formula { background:var(--bg-card); border:1px solid var(--border); border-radius:14px; padding:22px 30px; text-align:center; margin:34px auto 0; max-width:760px; font-family:var(--font-mono); font-size:1.05rem; color:var(--accent); font-weight:600; }
+        @media (max-width: 900px) { .grid-2, .grid-3, .flow, .balance-cols, .scope-grid { grid-template-columns: 1fr; } .hero { padding-top: 120px; } .tool-table th:nth-child(3), .tool-table td:nth-child(3) { display: none; } }
     </style>
 </head>
 <body>
@@ -74,10 +109,10 @@
                 Aladdin V2 is the engineering method distilled from MRRC: IT veteran judgment awakened by vibe coding and agentic engineering, then disciplined by FDE, SDD, harness, and product leverage.
             </p>
             <div class="hero-stats">
-                <div class="stat-item"><span class="stat-value">7</span><span class="stat-label">Layers</span></div>
-                <div class="stat-item"><span class="stat-value">3</span><span class="stat-label">FDE Phases</span></div>
-                <div class="stat-item"><span class="stat-value">14</span><span class="stat-label">SDD Chapters</span></div>
-                <div class="stat-item"><span class="stat-value">1</span><span class="stat-label">OpenCode Skill</span></div>
+                <div class="stat-item"><span class="stat-value">3</span><span class="stat-label">Layer Loop</span></div>
+                <div class="stat-item"><span class="stat-value">1</span><span class="stat-label">Boundary Card</span></div>
+                <div class="stat-item"><span class="stat-value">5</span><span class="stat-label">Business Tools</span></div>
+                <div class="stat-item"><span class="stat-value">∞</span><span class="stat-label">Reuse Leverage</span></div>
             </div>
         </div>
     </section>
@@ -103,17 +138,43 @@
     <section class="section" style="background: var(--bg-secondary);">
         <div class="container">
             <div class="section-header">
-                <span class="section-label">Seven Layers</span>
-                <h2 class="section-title">From Hidden Experience to Engineering Leverage</h2>
+                <span class="section-label">The Core Loop</span>
+                <h2 class="section-title">Three Layers, One Loop</h2>
+                <p class="section-subtitle">The seven-layer model collapses to one operational loop. Each layer answers a single question, carries one constraint, and buys one effect.</p>
             </div>
             <div class="grid-3">
-                <div class="card-lite"><div class="icon"><i class="fas fa-user-tie"></i></div><h3>Old Lamp</h3><p>IT veteran judgment: production experience, failure intuition, architecture taste, and tradeoff ability.</p></div>
-                <div class="card-lite"><div class="icon"><i class="fas fa-satellite-dish"></i></div><h3>Field Truth</h3><p>Evidence from real systems: logs, measurements, hardware behavior, browser quirks, and user experience.</p></div>
-                <div class="card-lite"><div class="icon"><i class="fas fa-wand-magic-sparkles"></i></div><h3>New Spirit</h3><p>Vibe coding and agentic coding as execution power, constrained by veteran judgment and measurable outcomes.</p></div>
-                <div class="card-lite"><div class="icon"><i class="fas fa-route"></i></div><h3>FDE Cycle</h3><p>Echo discovers the real problem, Delta validates quickly, Product turns learning into reusable assets.</p></div>
-                <div class="card-lite"><div class="icon"><i class="fas fa-diagram-project"></i></div><h3>SDD Spine</h3><p>IBM TeamSD-style architecture memory: context, NFRs, use cases, decisions, services, components, operations.</p></div>
-                <div class="card-lite"><div class="icon"><i class="fas fa-shield-halved"></i></div><h3>Harness</h3><p>AGENTS, specs, plans, tests, scripts, postmortems, and guardrails that make agent work safe and repeatable.</p></div>
+                <div class="card-lite layer-card">
+                    <div class="layer-num">L1 · Constrain</div>
+                    <h3><i class="fas fa-compass-drafting" style="color:var(--accent);margin-right:8px;"></i>Set the Boundary</h3>
+                    <p class="layer-who">Who: veteran + field truth</p>
+                    <p>Decide what to do, what not to do, what must hold — before any code.</p>
+                    <div class="layer-meta">
+                        <div><b>Constraint</b>Write the Boundary Card first; over 10 lines means it isn't clear yet.</div>
+                        <div><b>Effect</b>Turns AI's fast <em>guessing</em> into fast <em>execution</em>.</div>
+                    </div>
+                </div>
+                <div class="card-lite layer-card">
+                    <div class="layer-num">L2 · Execute</div>
+                    <h3><i class="fas fa-bolt" style="color:var(--accent);margin-right:8px;"></i>Run Inside It</h3>
+                    <p class="layer-who">Who: AI / agent, inside the boundary</p>
+                    <p>Vibe coding for speed; the FDE rhythm (Echo→Delta→Product) for direction.</p>
+                    <div class="layer-meta">
+                        <div><b>Constraint</b>Validate the biggest uncertainty first; converge in 3–5 rounds; demo each round.</div>
+                        <div><b>Effect</b>The speed the boundary just bought you.</div>
+                    </div>
+                </div>
+                <div class="card-lite layer-card">
+                    <div class="layer-num">L3 · Capture</div>
+                    <h3><i class="fas fa-box-archive" style="color:var(--accent);margin-right:8px;"></i>Turn It Into Asset</h3>
+                    <p class="layer-who">Who: human + AI together</p>
+                    <p>SDD, harness, ADR, postmortem — the carriers that outlive this cycle.</p>
+                    <div class="layer-meta">
+                        <div><b>Constraint</b>Every cycle leaves at least one reusable asset, or it isn't done.</div>
+                        <div><b>Effect</b>Next time is cheaper — that is leverage.</div>
+                    </div>
+                </div>
             </div>
+            <div class="loop-formula">Boundary → Speed → Asset → (cheaper) Boundary</div>
         </div>
     </section>
 
@@ -121,15 +182,13 @@
         <div class="container">
             <div class="section-header">
                 <span class="section-label">Workflow</span>
-                <h2 class="section-title">Aladdin V2 Cycle</h2>
-                <p class="section-subtitle">Each cycle must create a demo and a reusable engineering asset.</p>
+                <h2 class="section-title">One Turn of the Loop</h2>
+                <p class="section-subtitle">Constrain, execute, capture — then the next boundary is cheaper to draw.</p>
             </div>
-            <div class="flow">
-                <div class="flow-step"><span>01</span><strong>Veteran Judgment</strong></div>
-                <div class="flow-step"><span>02</span><strong>Field Evidence</strong></div>
-                <div class="flow-step"><span>03</span><strong>Echo Demo</strong></div>
-                <div class="flow-step"><span>04</span><strong>Delta Prototype</strong></div>
-                <div class="flow-step"><span>05</span><strong>Product Leverage</strong></div>
+            <div class="flow" style="grid-template-columns: repeat(3, 1fr);">
+                <div class="flow-step"><span>L1</span><strong>Set the Boundary</strong></div>
+                <div class="flow-step"><span>L2</span><strong>Execute Inside It</strong></div>
+                <div class="flow-step"><span>L3</span><strong>Capture the Asset</strong></div>
             </div>
         </div>
     </section>
@@ -156,12 +215,64 @@
                 <h2 class="section-title">The Aladdin V2 Rules</h2>
             </div>
             <div class="principle-list">
-                <div class="principle"><div class="principle-num">1</div><p>Veteran judgment defines direction, boundaries, risk, and quality lines.</p></div>
-                <div class="principle"><div class="principle-num">2</div><p>Field truth is the highest evidence source; specs must answer to reality.</p></div>
-                <div class="principle"><div class="principle-num">3</div><p>Vibe coding provides speed, but only inside explicit guardrails.</p></div>
-                <div class="principle"><div class="principle-num">4</div><p>Delta code can be rough; Product artifacts must be reusable.</p></div>
-                <div class="principle"><div class="principle-num">5</div><p>Every cycle must make the next similar cycle cheaper.</p></div>
-                <div class="principle"><div class="principle-num">6</div><p>Postmortems, AGENTS, SDD, ADRs, and skills are future speed.</p></div>
+                <div class="principle"><div class="principle-num">1</div><p>Write the boundary before the code. No boundary, no agent.</p></div>
+                <div class="principle"><div class="principle-num">2</div><p>Field truth outranks opinion; speed lives only inside the boundary.</p></div>
+                <div class="principle"><div class="principle-num">3</div><p>Delta code is disposable; the captured asset is what you keep.</p></div>
+                <div class="principle"><div class="principle-num">4</div><p>Every cycle must make the next one cheaper — or it isn't finished.</p></div>
+            </div>
+        </div>
+    </section>
+
+    <section class="section" style="background: var(--bg-secondary);">
+        <div class="container">
+            <div class="section-header">
+                <span class="section-label">Dialectical Review</span>
+                <h2 class="section-title">An Honest Look: Uneven Maturity</h2>
+                <p class="section-subtitle">A method is only trustworthy once it marks its own boundaries. Here is where Aladdin V2 is strong, and where it has never been pressure-tested.</p>
+            </div>
+            <div class="verdict-box">
+                Aladdin V2 is not an <em>immature</em> methodology — it is a methodology of <strong>highly uneven maturity</strong>. On the dimensions a solo hardware project hammered repeatedly (execution constraints, knowledge capture, architecture memory) it reaches rare engineering density. On the dimensions that project never stressed (multi-person judgment, authority correction, budget &amp; safety, high-frequency feedback) it is near-blank. The blanks are not design failures — they are an <strong>unexplored range</strong>.
+            </div>
+            <div class="grid-2" style="margin-top: 40px;">
+                <div class="card-lite verified">
+                    <h3><i class="fas fa-circle-check"></i> Verified by real artifacts</h3>
+                    <ul>
+                        <li>Executable plans with exact line numbers, code blocks, <code>py_compile</code> checks, expected output, even pre-written commits.</li>
+                        <li>SDD spine: all 14 chapters present, not an empty shell.</li>
+                        <li>Memory harness: multiple postmortems hardened into <code>AGENTS.md</code> guardrails.</li>
+                        <li>A triggerable OpenCode skill with real phase detection, not motivational prose.</li>
+                    </ul>
+                </div>
+                <div class="card-lite gap">
+                    <h3><i class="fas fa-circle-exclamation"></i> Never pressure-tested</h3>
+                    <ul>
+                        <li><strong>Team dimension</strong>: no arbitration when two veterans' judgments conflict; no cold-start path when there is no veteran.</li>
+                        <li><strong>Correction loop</strong>: veteran judgment is the top authority with no falsification entry when it is itself wrong.</li>
+                        <li><strong>Cost &amp; safety</strong>: token blow-ups, agent touching production, supply-chain risk — unmentioned.</li>
+                        <li><strong>Feedback latency</strong>: never modeled as a first-class variable.</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="quote-box" style="margin-top: 32px;">
+                The correct stance is not "this method is flawed, so discount it." It is: <strong>within its range it is precision-built; outside that range you must bring your own equipment</strong> — and the only real omission of the original author was failing to mark the range boundary. The toolkit below is that equipment.
+            </div>
+        </div>
+    </section>
+
+    <section class="section">
+        <div class="container">
+            <div class="section-header">
+                <span class="section-label">Business Toolkit</span>
+                <h2 class="section-title">Five Tools to Take Into New Waters</h2>
+                <p class="section-subtitle">Pick what you need. Lowest barrier: just use the Boundary Card. The rest scale with team maturity.</p>
+            </div>
+            <div class="grid-3">
+                <div class="card-lite"><div class="icon"><i class="fas fa-id-card"></i></div><h3>1 · Boundary Card</h3><p>Under 10 lines, written before anyone (or any agent) starts: goal, what's out of scope, what must hold, the 3 things most likely to be guessed wrong, how failure is detected. Highest ROI, lowest migration cost.</p></div>
+                <div class="card-lite"><div class="icon"><i class="fas fa-shield-halved"></i></div><h3>2 · Seven Harnesses</h3><p>The original six (Context / Spec / Plan / Verification / Runtime / Memory) plus a new <strong>Safety/Cost harness</strong>: what an agent may touch, the budget ceiling, the human-confirm points before production.</p></div>
+                <div class="card-lite"><div class="icon"><i class="fas fa-chart-line"></i></div><h3>3 · Three Hard Metrics</h3><p>Replace qualitative scores with falsifiable trend lines: handoff exploration time, repeat-incident count, marginal cost of a similar feature. Leverage is real only if these curves bend down.</p></div>
+                <div class="card-lite"><div class="icon"><i class="fas fa-scale-balanced"></i></div><h3>4 · Correction Loop</h3><p>At each key decision, one lightweight challenge: a peer's reverse argument, an "if the veteran is wrong" stress test, or an evidence-source audit. A falsification entry for the single judgment source.</p></div>
+                <div class="card-lite"><div class="icon"><i class="fas fa-map-location-dot"></i></div><h3>5 · Range Annotation</h3><p>Mark applicability before adopting: stable domain, concentrated judgment, long feedback cycle = high fit. High-churn discovery or regulation-over-field domains need the FDE rhythm rewritten.</p></div>
+                <div class="card-lite" style="display:flex;flex-direction:column;justify-content:center;"><h3 style="color:var(--accent);">Each tool patches one blind spot</h3><p>Correction loop ↔ single-hero gap · Range annotation ↔ n=1 overfit · Hard metrics ↔ qualitative self-comfort · Safety/Cost harness ↔ the cost &amp; safety silence.</p></div>
             </div>
         </div>
     </section>

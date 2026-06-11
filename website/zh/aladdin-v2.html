@@ -28,6 +28,21 @@
         .card-lite .icon { width: 54px; height: 54px; border-radius: 14px; display: flex; align-items: center; justify-content: center; background: var(--accent-glow); color: var(--accent); font-size: 1.4rem; margin-bottom: 18px; }
         .card-lite h3 { font-size: 1.2rem; margin-bottom: 10px; }
         .card-lite p { color: var(--text-secondary); font-size: .92rem; line-height: 1.7; }
+        .card-lite ul { list-style: none; padding: 0; }
+        .card-lite li { padding: 5px 0 5px 18px; position: relative; color: var(--text-secondary); font-size: .92rem; line-height: 1.7; }
+        .card-lite li::before { content: '•'; position: absolute; left: 0; color: var(--accent); }
+        .verdict-box { background: var(--bg-card); border: 1px solid var(--border); border-left: 3px solid var(--accent); border-radius: 14px; padding: 30px 34px; max-width: 920px; margin: 0 auto; color: var(--text-secondary); line-height: 1.9; font-size: 1.02rem; }
+        .verdict-box strong { color: var(--text-primary); }
+        .card-lite.verified { border-top: 3px solid #10b981; }
+        .card-lite.verified h3 i { color: #10b981; margin-right: 8px; }
+        .card-lite.gap { border-top: 3px solid #ef4444; }
+        .card-lite.gap h3 i { color: #ef4444; margin-right: 8px; }
+        .layer-card .layer-num { display:inline-block; font-family:var(--font-mono); font-size:.8rem; color:var(--accent); background:var(--accent-glow); padding:3px 11px; border-radius:6px; margin-bottom:14px; }
+        .layer-card .layer-who { font-size:.84rem; color:var(--accent); margin:0 0 2px; }
+        .layer-meta { margin-top:16px; border-top:1px solid var(--border); padding-top:14px; }
+        .layer-meta div { font-size:.86rem; line-height:1.6; margin:9px 0; color:var(--text-secondary); }
+        .layer-meta b { display:block; color:var(--text-primary); font-size:.74rem; text-transform:uppercase; letter-spacing:.06em; margin-bottom:2px; }
+        .loop-formula { background:var(--bg-card); border:1px solid var(--border); border-radius:14px; padding:22px 30px; text-align:center; margin:34px auto 0; max-width:760px; font-family:var(--font-mono); font-size:1.05rem; color:var(--accent); font-weight:600; }
         .flow { display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px; margin-top: 34px; }
         .flow-step { background: rgba(0,0,0,.28); border: 1px solid var(--border); border-radius: 14px; padding: 22px 16px; text-align: center; }
         .flow-step span { display: block; font-family: var(--font-mono); color: var(--accent); font-size: .78rem; margin-bottom: 8px; }
@@ -71,10 +86,10 @@
                 阿拉丁 V2 是从 MRRC 实践中提炼的方法论：IT 老兵的工程判断力被 vibe coding 和 agentic engineering 唤醒，再由 FDE、SDD、harness 与产品杠杆约束落地。
             </p>
             <div class="hero-stats">
-                <div class="stat-item"><span class="stat-value">7</span><span class="stat-label">层模型</span></div>
-                <div class="stat-item"><span class="stat-value">3</span><span class="stat-label">FDE 阶段</span></div>
-                <div class="stat-item"><span class="stat-value">14</span><span class="stat-label">SDD 章节</span></div>
-                <div class="stat-item"><span class="stat-value">1</span><span class="stat-label">OpenCode Skill</span></div>
+                <div class="stat-item"><span class="stat-value">3</span><span class="stat-label">层循环</span></div>
+                <div class="stat-item"><span class="stat-value">1</span><span class="stat-label">边界卡</span></div>
+                <div class="stat-item"><span class="stat-value">5</span><span class="stat-label">业务工具</span></div>
+                <div class="stat-item"><span class="stat-value">∞</span><span class="stat-label">复用杠杆</span></div>
             </div>
         </div>
     </section>
@@ -99,27 +114,50 @@
 
     <section class="section" style="background: var(--bg-secondary);">
         <div class="container">
-            <div class="section-header"><span class="section-label">七层模型</span><h2 class="section-title">从隐性经验到工程杠杆</h2></div>
+            <div class="section-header"><span class="section-label">核心循环</span><h2 class="section-title">三层，一个循环</h2><p class="section-subtitle">七层模型坍缩成一个可实操的循环。每层只回答一个问题、只背一条约束、只换一个效果。</p></div>
             <div class="grid-3">
-                <div class="card-lite"><div class="icon"><i class="fas fa-user-tie"></i></div><h3>老灯</h3><p>IT 老兵判断力：生产经验、故障直觉、架构嗅觉和取舍能力。</p></div>
-                <div class="card-lite"><div class="icon"><i class="fas fa-satellite-dish"></i></div><h3>现场事实</h3><p>真实系统证据：日志、测量、硬件行为、浏览器限制和用户体感。</p></div>
-                <div class="card-lite"><div class="icon"><i class="fas fa-wand-magic-sparkles"></i></div><h3>新灵</h3><p>Vibe coding 与 agentic coding 释放执行力，但必须受老兵边界约束。</p></div>
-                <div class="card-lite"><div class="icon"><i class="fas fa-route"></i></div><h3>FDE Cycle</h3><p>Echo 找真问题，Delta 快速验证，Product 把学习变成资产。</p></div>
-                <div class="card-lite"><div class="icon"><i class="fas fa-diagram-project"></i></div><h3>SDD Spine</h3><p>架构记忆：上下文、NFR、用例、决策、服务、组件和运维。</p></div>
-                <div class="card-lite"><div class="icon"><i class="fas fa-shield-halved"></i></div><h3>Harness</h3><p>AGENTS、spec、plan、测试、脚本、复盘和 guardrail，让 agent 安全协作。</p></div>
+                <div class="card-lite layer-card">
+                    <div class="layer-num">L1 · 定界</div>
+                    <h3><i class="fas fa-compass-drafting" style="color:var(--accent);margin-right:8px;"></i>先画边界</h3>
+                    <p class="layer-who">谁：老兵 + 现场事实</p>
+                    <p>动手前先定：做什么、不做什么、必须守住什么。</p>
+                    <div class="layer-meta">
+                        <div><b>约束</b>先写边界卡；超过 10 行说明还没想清楚。</div>
+                        <div><b>效果</b>把 AI 的高速<em>猜测</em>变成高速<em>执行</em>。</div>
+                    </div>
+                </div>
+                <div class="card-lite layer-card">
+                    <div class="layer-num">L2 · 提速</div>
+                    <h3><i class="fas fa-bolt" style="color:var(--accent);margin-right:8px;"></i>在界内跑快</h3>
+                    <p class="layer-who">谁：AI / agent，在边界内</p>
+                    <p>Vibe coding 出速度，FDE 节奏（Echo→Delta→Product）定方向。</p>
+                    <div class="layer-meta">
+                        <div><b>约束</b>先验最大不确定性；3–5 轮收敛；每轮能 demo。</div>
+                        <div><b>效果</b>边界刚刚为你换来的那份速度。</div>
+                    </div>
+                </div>
+                <div class="card-lite layer-card">
+                    <div class="layer-num">L3 · 沉淀</div>
+                    <h3><i class="fas fa-box-archive" style="color:var(--accent);margin-right:8px;"></i>变成资产</h3>
+                    <p class="layer-who">谁：人 + AI 一起</p>
+                    <p>SDD、harness、ADR、postmortem——能活过本轮的载体。</p>
+                    <div class="layer-meta">
+                        <div><b>约束</b>每轮至少留一个可复用资产，否则不算完成。</div>
+                        <div><b>效果</b>下次更便宜——这就是杠杆。</div>
+                    </div>
+                </div>
             </div>
+            <div class="loop-formula">边界 → 速度 → 资产 →（更省的）边界</div>
         </div>
     </section>
 
     <section class="section">
         <div class="container">
-            <div class="section-header"><span class="section-label">工作流</span><h2 class="section-title">阿拉丁 V2 Cycle</h2><p class="section-subtitle">每个 Cycle 必须同时产出可演示结果和可复用工程资产。</p></div>
-            <div class="flow">
-                <div class="flow-step"><span>01</span><strong>老兵判断</strong></div>
-                <div class="flow-step"><span>02</span><strong>现场证据</strong></div>
-                <div class="flow-step"><span>03</span><strong>Echo Demo</strong></div>
-                <div class="flow-step"><span>04</span><strong>Delta 原型</strong></div>
-                <div class="flow-step"><span>05</span><strong>Product 杠杆</strong></div>
+            <div class="section-header"><span class="section-label">工作流</span><h2 class="section-title">循环的一圈</h2><p class="section-subtitle">定界、提速、沉淀——然后下一次边界更省力。</p></div>
+            <div class="flow" style="grid-template-columns: repeat(3, 1fr);">
+                <div class="flow-step"><span>L1</span><strong>先画边界</strong></div>
+                <div class="flow-step"><span>L2</span><strong>在界内跑快</strong></div>
+                <div class="flow-step"><span>L3</span><strong>沉淀成资产</strong></div>
             </div>
         </div>
     </section>
@@ -140,12 +178,64 @@
         <div class="container">
             <div class="section-header"><span class="section-label">原则</span><h2 class="section-title">阿拉丁 V2 规则</h2></div>
             <div class="principle-list">
-                <div class="principle"><div class="principle-num">1</div><p>老兵判断负责定义方向、边界、风险和质量底线。</p></div>
-                <div class="principle"><div class="principle-num">2</div><p>现场事实是最高证据源，架构判断必须接受现实校验。</p></div>
-                <div class="principle"><div class="principle-num">3</div><p>Vibe coding 提供速度，但必须运行在明确 guardrail 内。</p></div>
-                <div class="principle"><div class="principle-num">4</div><p>Delta 代码可以粗糙，Product 资产必须可复用。</p></div>
-                <div class="principle"><div class="principle-num">5</div><p>每个 Cycle 都必须让下一个类似 Cycle 更便宜。</p></div>
-                <div class="principle"><div class="principle-num">6</div><p>Postmortem、AGENTS、SDD、ADR 和 skill 都是未来速度。</p></div>
+                <div class="principle"><div class="principle-num">1</div><p>先写边界，再写代码。没有边界，就不放 agent。</p></div>
+                <div class="principle"><div class="principle-num">2</div><p>现场事实高于观点；速度只存在于边界之内。</p></div>
+                <div class="principle"><div class="principle-num">3</div><p>Delta 代码是消耗品；沉淀下来的资产才是你留住的东西。</p></div>
+                <div class="principle"><div class="principle-num">4</div><p>每个 Cycle 都必须让下一个更便宜——否则它还没完成。</p></div>
+            </div>
+        </div>
+    </section>
+
+    <section class="section" style="background: var(--bg-secondary);">
+        <div class="container">
+            <div class="section-header">
+                <span class="section-label">批判性辩证</span>
+                <h2 class="section-title">客观一面：成熟度高度不均衡</h2>
+                <p class="section-subtitle">一个标注了自己边界的方法论，才是成熟的方法论。下面是阿拉丁 V2 强在哪里，又在哪里从未被压力测试过。</p>
+            </div>
+            <div class="verdict-box">
+                阿拉丁 V2 不是一个<em>不成熟</em>的方法论，而是一个<strong>成熟度高度不均衡</strong>的方法论。在单人硬件项目反复锤炼的维度上（执行约束、知识沉淀、架构记忆），它达到了少见的工程密度；在该项目从未施加压力的维度上（多人判断、权威纠错、预算与安全、高频反馈），它接近空白。这些空白不是设计失败，而是<strong>尚未被探索的射程</strong>。
+            </div>
+            <div class="grid-2" style="margin-top: 40px;">
+                <div class="card-lite verified">
+                    <h3><i class="fas fa-circle-check"></i> 已被实物验证</h3>
+                    <ul>
+                        <li>可执行 plan 带精确行号、完整代码块、<code>py_compile</code> 验证命令、预期输出，甚至预写 git commit。</li>
+                        <li>SDD 骨架：14 章完整存在，不是空壳目录。</li>
+                        <li>Memory harness：多份 postmortem 已固化进 <code>AGENTS.md</code> guardrail。</li>
+                        <li>可触发的 OpenCode skill，有真正的 phase detection，而非动机性散文。</li>
+                    </ul>
+                </div>
+                <div class="card-lite gap">
+                    <h3><i class="fas fa-circle-exclamation"></i> 从未被压力测试</h3>
+                    <ul>
+                        <li><strong>团队维度</strong>：两个老兵判断冲突时无仲裁；没有老兵时无冷启动路径。</li>
+                        <li><strong>纠错回路</strong>：老兵判断是最高权威，当它本身错时没有证伪入口。</li>
+                        <li><strong>成本与安全</strong>：token 失控、agent 误碰生产、供应链投毒——只字未提。</li>
+                        <li><strong>反馈延迟</strong>：从未作为一等变量建模。</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="quote-box" style="margin-top: 32px;">
+                正确的态度不是"这个方法论有缺陷所以打折用"，而是：<strong>在它的射程内是精良的，出了射程要自己补装备</strong>——而射程边界，原作者没标，这才是唯一真正的疏漏。下面这套工具包，就是那套装备。
+            </div>
+        </div>
+    </section>
+
+    <section class="section">
+        <div class="container">
+            <div class="section-header">
+                <span class="section-label">业务工具包</span>
+                <h2 class="section-title">驶入新水域的五个工具</h2>
+                <p class="section-subtitle">按需取用。最低门槛：只用边界卡。其余四个随团队成熟度逐步引入。</p>
+            </div>
+            <div class="grid-3">
+                <div class="card-lite"><div class="icon"><i class="fas fa-id-card"></i></div><h3>1 · 边界卡</h3><p>10 行以内，在任何人（或 agent）动手前写下：目标、不做什么、必须守住什么、最容易猜错的 3 点、失败如何被发现。ROI 最高、迁移成本最低。</p></div>
+                <div class="card-lite"><div class="icon"><i class="fas fa-shield-halved"></i></div><h3>2 · 七类 Harness</h3><p>原六类（Context / Spec / Plan / Verification / Runtime / Memory）加新增第七类 <strong>Safety/Cost harness</strong>：agent 能碰什么、预算上限、生产环境前的人工确认点。</p></div>
+                <div class="card-lite"><div class="icon"><i class="fas fa-chart-line"></i></div><h3>3 · 三个硬指标</h3><p>用可证伪的趋势线替代定性评分：接手探索时间、同类事故复发次数、相似功能边际成本。曲线下降，杠杆才是真的。</p></div>
+                <div class="card-lite"><div class="icon"><i class="fas fa-scale-balanced"></i></div><h3>4 · 纠错回路</h3><p>每个关键决策点插入一道轻量挑战：同伴反向论证、"如果老兵错了"压力测试、或证据来源审计。给单一判断源一个证伪入口。</p></div>
+                <div class="card-lite"><div class="icon"><i class="fas fa-map-location-dot"></i></div><h3>5 · 失效场景标注</h3><p>引入前先标注适用性：领域稳定、判断集中、反馈周期长 = 高适用。需求高频变化或合规高于现场的领域，需大幅改写 FDE 节奏。</p></div>
+                <div class="card-lite" style="display:flex;flex-direction:column;justify-content:center;"><h3 style="color:var(--accent);">每个工具补一个盲点</h3><p>纠错回路 ↔ 单英雄空白 · 失效标注 ↔ n=1 过拟合 · 硬指标 ↔ 定性自我安慰 · Safety/Cost harness ↔ 成本与安全的沉默。</p></div>
             </div>
         </div>
     </section>

@@ -52,97 +52,56 @@
 - 真实现场如何持续校验架构判断。
 - 软件工程方法如何在个人/小团队中低成本落地。
 
-## 4. 七层模型
+## 4. 三层循环（核心模型）
 
-### 4.1 老灯层：Veteran Judgment
+> 早期版本用过"七层模型"。实操中证明层太多、记不住、彼此重叠。现在压缩成**三层一循环**——每层只回答一个问题，只背一条约束，只换一个效果。七个旧概念没有消失，而是降级为三层内部的"角色"或"载体"。
 
-老灯层负责定义“什么是真问题”。
+```text
+L1 定界 Constrain → L2 提速 Execute → L3 沉淀 Capture →（更省的）L1
+```
 
-输入：
+| 层 | 一句话职责 | 谁来做 | 唯一约束 | 换来的效果 |
+|----|-----------|--------|----------|-----------|
+| **L1 定界** | 动手前划清边界 | 老兵 + 现场事实 | 先写边界卡，超过 10 行说明没想清 | 把 AI 的"高速猜测"变成"高速执行" |
+| **L2 提速** | 在边界内快速验证 | AI / agent | 先验最大不确定性，3–5 轮收敛，每轮能 demo | 边界换来的速度本身 |
+| **L3 沉淀** | 把学习变成可复用资产 | 人 + AI | 每个 cycle 至少留一个可复用资产，否则不算完 | 下次更便宜——这就是杠杆 |
 
-- 生产经验：上线、故障、长期维护、性能瓶颈、跨平台兼容。
-- 故障直觉：哪些路径会在真实运行中爆炸。
-- 架构嗅觉：边界、耦合、状态、时序、配置、部署风险。
-- 取舍能力：何时 hardcode，何时抽象，何时停止迭代。
+### 4.1 L1 定界 Constrain
 
-MRRC 示例：PTT 时序优先级高于 UI 微调，ATR-1000 连接要独立代理，`/CONFIG` 写死 `MRRC.conf` 必须进入 guardrail。
+回答"什么是真问题、边界在哪"。
 
-### 4.2 现场事实层：Field Truth
+- **角色"老灯"**：老兵判断——生产经验、故障直觉、架构嗅觉、取舍能力。决定方向、风险、质量底线。
+- **角色"现场事实"**：给判断提供证据锚点——日志、hex dump、延迟测量、用户体感、硬件/浏览器真实行为。实测优先于手册（强监管领域反转，见批判分析）。
+- **产物**：一张边界卡（目标 / 不做什么 / 必须守住什么 / 最容易猜错的 3 点 / 失败如何被发现）。
 
-现场事实层负责给老兵判断提供证据锚点。
+MRRC 示例：PTT 时序优先级高于 UI 微调；ATR-1000 连接要独立代理；`/CONFIG` 写死 `MRRC.conf` 必须进 guardrail。证据：TX→RX 2-3 秒延迟、ATR-1000 高频 SYNC 假死、Safari AudioContext 异常。
 
-证据来源：
+> 铁律：**没有边界的 vibe coding 只是高速猜测。** L1 不完成，不进 L2。
 
-- 长期运行观察。
-- 用户体感和实际操作路径。
-- 日志、抓包、hex dump、延迟测量。
-- 硬件/浏览器/网络的真实行为。
+### 4.2 L2 提速 Execute
 
-MRRC 示例：TX→RX 2-3 秒延迟、ATR-1000 高频 SYNC 假死、Safari AudioContext 异常、WDSP NR2 听感收益。
+回答"在边界内怎样最快验证路能不能通"。
 
-### 4.3 新灵层：Vibe Coding
+- **角色"新灵"**：vibe coding / agent——快速建上下文、生成原型补丁、按 checklist 执行、把事故经验转成 guardrail。
+- **节奏"FDE"**：Echo（定义值得做的 demo）→ Delta（允许粗糙，验证最大不确定性）→ Product（在 L3 固化）。
 
-新灵层负责把老兵判断转成速度。
+约束：先验最大不确定性；hardcode 可以但假设要记录；每 2-3 天能 demo；超过 5 轮不收敛就换方案；不在早期写大抽象。
 
-能力：
+MRRC 示例：ATR-1000 从主进程直连 → 线程 → 300ms 轮询 → 节流 → 独立代理，5 轮收敛。
 
-- 快速阅读代码和文档建立上下文。
-- 快速生成方案、原型、补丁、文档、测试命令。
-- 按 checklist 执行多步骤任务。
-- 把事故经验转化为 guardrail。
-- 把隐性模式提炼成模板和 skill。
+### 4.3 L3 沉淀 Capture
 
-约束：新灵必须在老灯定义的边界内工作。没有边界的 vibe coding 只是“高速猜测”。
+回答"这次学习如何降低下次成本"。
 
-### 4.4 FDE 层：Echo → Delta → Product
+把 Delta 的消耗品代码，提炼成三类长寿载体：
 
-FDE 层负责推进节奏。
+- **SDD Spine（架构记忆）**：开发后的证据驱动 SDD，不让 SDD 反拖开发。MRRC 用 14 章承载上下文、NFR、决策、服务、组件、运维、版本史。
+- **Harness（agent 轨道）**：Context / Spec / Plan / Verification / Runtime / Memory，业务场景再加第七类 **Safety/Cost**（见业务工具包）。
+- **Product 杠杆（复用资产）**：`audio_interface.py` 让跨平台音频变配置问题；`atr1000_proxy.py` 让硬件独占变代理；`wdsp_wrapper.py` 让 C 库变 Python 可配置；`AGENTS.md` 让未来 agent 不再猜错入口/端口/PTT 时序。
 
-Echo：发现真实痛点，定义 demo 和边界。
+约束：每个 cycle 至少留一个可复用资产。验收问题——6 个月后的自己或新 agent 能否 15 分钟内理解这次决策并安全改代码。
 
-Delta：快速验证，允许粗糙，目标是证明路能通。
-
-Product：抽象固化，形成模块、ADR、SDD、harness 和复盘。
-
-原则：Delta 代码是消耗品，Product 产物才是资产。
-
-### 4.5 SDD 层：Architecture Spine
-
-SDD 层负责让系统设计可传承。
-
-在 MRRC 中，SDD 14 章承担这些职责：
-
-- Ch4/Ch6：把现场和 demo 转成上下文与用例。
-- Ch5：把体感转成可测 NFR。
-- Ch8：记录关键架构决策。
-- Ch9-Ch12：描述架构、服务、组件和运维。
-- Ch14：维护版本演进。
-
-原则：开发后的证据驱动 SDD，不让 SDD 反过来拖死开发。
-
-### 4.6 Harness 层：Agentic Guardrail
-
-Harness 层负责让人和 agent 都能安全复现工程动作。
-
-最小集合：
-
-- Context harness：`AGENTS.md`、架构索引、已知坑。
-- Spec harness：设计目标、范围、不做事项。
-- Plan harness：agent 可逐步执行的 checklist。
-- Verification harness：测试脚本、语法检查、NFR 验证。
-- Runtime harness：启动、停止、部署、日志、Docker、多实例脚本。
-- Memory harness：ADR、postmortem、troubleshooting journey。
-
-### 4.7 杠杆层：Product Leverage
-
-杠杆层负责衡量“这次迭代是否让下一次更容易”。
-
-MRRC 示例：
-
-- `audio_interface.py` 让跨平台音频变成配置问题。
-- `atr1000_proxy.py` 让硬件独占连接变成代理模式。
-- `wdsp_wrapper.py` 让 C DSP 库变成 Python 可配置能力。
-- `AGENTS.md` 让未来 agent 不再猜错入口、端口、PTT 时序。
+> 循环闭合：L3 产出的资产成为下一次 L1 的起点，于是下一次定界更快、边界更准、猜错更少。**每次迭代都要问：这次是否让下一次更便宜。**
 
 ## 5. 标准工作流
 

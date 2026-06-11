@@ -9,20 +9,33 @@ Use this skill to apply the 阿拉丁 V2 / 老灯新灵 method: IT veteran judgm
 
 ## Core Model
 
+The model is **three layers, one loop**. Each layer answers one question, carries one constraint, buys one effect.
+
+```text
+L1 Constrain → who: veteran + field truth → constraint: write the Boundary Card first
+                                           → effect: turns AI's fast GUESSING into fast EXECUTION
+L2 Execute   → who: AI/agent inside the boundary, FDE rhythm (Echo→Delta→Product)
+                                           → constraint: validate biggest uncertainty first, converge in 3–5 rounds
+                                           → effect: the speed the boundary just bought
+L3 Capture   → who: human + AI → carriers: SDD, harness, ADR, postmortem
+                                           → constraint: every cycle leaves ≥1 reusable asset, or it isn't done
+                                           → effect: next time is cheaper = leverage
+
+Loop: Boundary → Speed → Asset → (cheaper) Boundary
+```
+
+The earlier seven concepts are NOT gone — they are roles/carriers inside the three layers:
+
 ```text
 Aladdin V2 = 老灯新灵 + FDE Cycle + SDD Spine + Agentic Harness + Product Leverage
 老灯新灵 = Veteran Judgment + Vibe Coding + Field Truth
 ```
 
-Meaning:
+- L1 Constrain: 老灯 (veteran judgment) + Field Truth define what to do / not do / must-hold.
+- L2 Execute: 新灵 (vibe/agentic coding) for speed + FDE Cycle (Echo→Delta→Product) for direction.
+- L3 Capture: SDD Spine (architecture memory) + Harness (context/specs/plans/tests/guardrails/postmortems) + Product Leverage (lower next-cycle cost).
 
-- 老灯: IT veteran judgment, production experience, failure intuition, architecture taste, tradeoff ability.
-- 新灵: AI/vibe coding/agentic coding execution power released and constrained by veteran judgment.
-- Field Truth: evidence from real operation, logs, measurements, user experience, hardware/browser behavior.
-- FDE Cycle: Echo -> Delta -> Product.
-- SDD Spine: architecture memory and decision structure.
-- Harness: context, specs, plans, commands, tests, guardrails, postmortems.
-- Product Leverage: each cycle must reduce the next cycle's marginal cost.
+One sentence: **no boundary, no agent; rough Delta is fine, but every loop must leave an asset that makes the next boundary cheaper to draw.**
 
 ## When To Use
 
