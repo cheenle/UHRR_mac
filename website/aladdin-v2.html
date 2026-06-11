@@ -40,6 +40,8 @@
         .principle { display: flex; gap: 14px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 14px; padding: 22px; }
         .principle-num { width: 34px; height: 34px; border-radius: 9px; background: var(--accent-glow); color: var(--accent); display: flex; align-items: center; justify-content: center; font-weight: 700; flex-shrink: 0; }
         .principle p { color: var(--text-secondary); line-height: 1.6; font-size: .9rem; }
+        .layer-tag { display:inline-block; font-family:var(--font-mono); font-size:.68rem; font-weight:700; color:var(--accent); background:var(--accent-glow); padding:1px 8px; border-radius:5px; margin-right:8px; vertical-align:middle; }
+        .principle .ptag { display:inline-block; font-family:var(--font-mono); font-size:.66rem; color:var(--accent); background:var(--accent-glow); padding:2px 8px; border-radius:5px; margin-bottom:6px; letter-spacing:.04em; }
         .balance-box { background: var(--bg-card); border: 1px solid var(--border); border-radius: 18px; padding: 34px 40px; margin: 0 auto 40px; max-width: 920px; }
         .balance-box .lead { font-size: 1.15rem; color: var(--text-primary); line-height: 1.7; font-weight: 600; }
         .balance-box .lead .accent { color: var(--accent); }
@@ -215,10 +217,11 @@
                 <h2 class="section-title">The Aladdin V2 Rules</h2>
             </div>
             <div class="principle-list">
-                <div class="principle"><div class="principle-num">1</div><p>Write the boundary before the code. No boundary, no agent.</p></div>
-                <div class="principle"><div class="principle-num">2</div><p>Field truth outranks opinion; speed lives only inside the boundary.</p></div>
-                <div class="principle"><div class="principle-num">3</div><p>Delta code is disposable; the captured asset is what you keep.</p></div>
-                <div class="principle"><div class="principle-num">4</div><p>Every cycle must make the next one cheaper — or it isn't finished.</p></div>
+                <div class="principle"><div class="principle-num">1</div><p><span class="layer-tag">L1</span>Write the boundary before the code. No boundary, no agent.</p></div>
+                <div class="principle"><div class="principle-num">2</div><p><span class="layer-tag">L1</span>Field truth outranks opinion; speed lives only inside the boundary.</p></div>
+                <div class="principle"><div class="principle-num">3</div><p><span class="layer-tag">L2</span>Delta code is disposable; the captured asset is what you keep.</p></div>
+                <div class="principle"><div class="principle-num">4</div><p><span class="layer-tag">L3</span>Every cycle must make the next one cheaper — or it isn't finished.</p></div>
+                <div class="principle"><div class="principle-num">5</div><p><span class="layer-tag">∞</span>A method must mark its own range. Outside it, bring your own equipment.</p></div>
             </div>
         </div>
     </section>

@@ -52,6 +52,8 @@
         .principle { display: flex; gap: 14px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 14px; padding: 22px; }
         .principle-num { width: 34px; height: 34px; border-radius: 9px; background: var(--accent-glow); color: var(--accent); display: flex; align-items: center; justify-content: center; font-weight: 700; flex-shrink: 0; }
         .principle p { color: var(--text-secondary); line-height: 1.6; font-size: .9rem; }
+        .layer-tag { display:inline-block; font-family:var(--font-mono); font-size:.68rem; font-weight:700; color:var(--accent); background:var(--accent-glow); padding:1px 8px; border-radius:5px; margin-right:8px; vertical-align:middle; }
+        .principle .ptag { display:inline-block; font-family:var(--font-mono); font-size:.66rem; color:var(--accent); background:var(--accent-glow); padding:2px 8px; border-radius:5px; margin-bottom:6px; letter-spacing:.04em; }
         @media (max-width: 900px) { .grid-2, .grid-3, .flow { grid-template-columns: 1fr; } .hero { padding-top: 120px; } }
     </style>
 </head>
@@ -178,10 +180,11 @@
         <div class="container">
             <div class="section-header"><span class="section-label">原则</span><h2 class="section-title">阿拉丁 V2 规则</h2></div>
             <div class="principle-list">
-                <div class="principle"><div class="principle-num">1</div><p>先写边界，再写代码。没有边界，就不放 agent。</p></div>
-                <div class="principle"><div class="principle-num">2</div><p>现场事实高于观点；速度只存在于边界之内。</p></div>
-                <div class="principle"><div class="principle-num">3</div><p>Delta 代码是消耗品；沉淀下来的资产才是你留住的东西。</p></div>
-                <div class="principle"><div class="principle-num">4</div><p>每个 Cycle 都必须让下一个更便宜——否则它还没完成。</p></div>
+                <div class="principle"><div class="principle-num">1</div><p><span class="layer-tag">L1</span>先写边界，再写代码。没有边界，就不放 agent。</p></div>
+                <div class="principle"><div class="principle-num">2</div><p><span class="layer-tag">L1</span>现场事实高于观点；速度只存在于边界之内。</p></div>
+                <div class="principle"><div class="principle-num">3</div><p><span class="layer-tag">L2</span>Delta 代码是消耗品；沉淀下来的资产才是你留住的东西。</p></div>
+                <div class="principle"><div class="principle-num">4</div><p><span class="layer-tag">L3</span>每个 Cycle 都必须让下一个更便宜——否则它还没完成。</p></div>
+                <div class="principle"><div class="principle-num">5</div><p><span class="layer-tag">∞</span>方法论要标注自己的射程；出了射程，自己补装备。</p></div>
             </div>
         </div>
     </section>
