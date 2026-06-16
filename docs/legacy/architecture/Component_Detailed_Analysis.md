@@ -1,7 +1,7 @@
 # MRRC 组件详细分析文档
 
 ## 文档信息
-- **版本**: V5.2.0 (2026-05-20)
+- **版本**: V5.6.5 (2026-06-12)
 - **作者**: Claude Code Analysis
 - **状态**: 基于深度代码分析
 
@@ -10,7 +10,20 @@
 ### 1.1 主服务器 (`MRRC`)
 
 **文件位置**: `/Users/cheenle/UHRR/MRRC/MRRC`
-**代码行数**: 1800+ 行
+**代码行数**: ~3900 行（单文件 Tornado 应用）
+
+**WebSocket 端点路由**:
+| 路径 | 处理器 | 职责 |
+|------|--------|------|
+| `/WSaudioRX` | `WS_AudioRXHandler` | RX 音频流（Opus/Int16） |
+| `/WSaudioTX` | `WS_AudioTXHandler` | TX 音频流 |
+| `/WSCTRX` | `WS_ControlTRX` | 电台控制（频率/模式/PTT/S表） |
+| `/WSpanFFT` | `WS_panFFTHandler` | 频谱 FFT 数据 |
+| `/WSATR1000` | `WS_ATR1000Handler` | ATR-1000 天调监控 |
+| `/WSATU` | `WS_ATUAutoTunerHandler` | ATU 自动调谐 |
+| `/WSFT8` | `WS_FT8Handler` | FT8 数字模式 |
+
+**HTTP 路由**: `/CONFIG`（配置）、`/mobile`、`/api/mem_channels`（频道记忆）、`/api/recordings` + `/recordings/<file>`（录音列表/下载）、`/login` `/logout`（认证）
 
 #### 1.1.1 核心类分析
 
@@ -57,8 +70,8 @@
   - `stoppttontimeout()`: PTT 超时保护
 
 **音频处理**:
-- 支持 PyAudio 和 ALSA 两种后端
-- Int16 解码支持
+- PyAudio 跨平台后端（macOS/Linux/Windows，已弃用 ALSA 专用实现）
+- Int16 PCM 解码
 - PTT 超时保护机制（计数法：10×200ms）
 
 **WS_AudioRXHandler 类**
@@ -68,7 +81,8 @@
   - `on_message(data)`: 处理控制消息
 
 **音频采集**:
-- 支持 PyAudioCapture 和 ALSA 两种采集方式
+- `PyAudioCapture` 线程采集（跨平台）
+- RX 编码运行时可切换：默认 Int16 PCM（兼容旧客户端），或 Opus（16kHz/20ms 帧，约节省 70% 带宽）
 - 实时音频流传输
 
 #### 1.1.2 ATR-1000 集成组件
@@ -84,6 +98,23 @@
 - Unix Socket 客户端连接独立代理
 - 线程安全：`IOLoop.add_callback()` 跨线程通信
 - 批量广播：50ms 批次收集，广播最新数据
+
+**WS_ATUAutoTunerHandler 类** (`/WSATU`)
+- **职责**: ATU 自动调谐 WebSocket 端点
+- 配合 `atu_auto_tuner.py` / `atr1000_tuner.py`，根据频率召回/学习 LC 调谐参数
+
+**WS_FT8Handler 类** (`/WSFT8`)
+- **职责**: FT8 数字模式 WebSocket 端点
+- 配合 `ft8_integration.py` / `ft8_decoder.py` 提供解码与 ULTRON 自动化桥接
+- 前后端方法名于 V5.4 对齐修复
+
+**频道记忆 API** (`/api/mem_channels`, `MemChannelsHandler`)
+- 服务端 `user_memory_channels` 字典 + `memory_lock` (RLock) 线程安全
+- 持久化到 `memory_channels.json`，原子写盘
+- 前端 `MemoryChannelManager` 类（V5.6.5，服务导向）
+
+**录音 API** (`/api/recordings`, `/recordings/<file>`)
+- 录音列表与下载，格式 MP3（ffmpeg LAME VBR）
 
 ### 1.2 音频接口模块
 
@@ -537,4 +568,4 @@ MRRC 桥接 → WebSocket(/WSATR1000) → 移动端显示
 ---
 
 *本文档提供了 MRRC 项目的详细组件分析，帮助理解系统内部工作机制和优化机会。*
-*更新时间: 2026-05-20*
+*更新时间: 2026-06-12（对应 MRRC V5.6.5）*

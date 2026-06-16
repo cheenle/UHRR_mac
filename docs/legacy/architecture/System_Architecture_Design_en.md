@@ -1,7 +1,7 @@
 # Mobile Remote Radio Control (MRRC) System Architecture Design Document
 
 ## Document Information
-- **Version**: v5.2.0 (2026-05-18)
+- **Version**: V5.6.5 (2026-06-12)
 - **Author**: System Architecture Team
 - **Status**: Production Ready
 - **Classification**: Confidential/Internal
@@ -77,9 +77,9 @@ Amateur radio enthusiasts face QRM interference and space limitations in urban e
 - **S-meter Reading**: Signal strength indication
 
 #### 2.2.2 Audio Stream Functions
-- **TX Audio**: Microphone input → Int16 encoding → WebSocket transmission → Backend decoding → Radio output
-- **RX Audio**: Radio input → Backend capture → Int16 encoding → WebSocket transmission → Frontend decoding → Speaker output
-- **Audio Quality**: 16kHz sample rate, Int16 format, 50% bandwidth optimization
+- **TX Audio**: Microphone input → Web Audio API (TX EQ / RagChew chain) → Int16 encoding → WebSocket transmission → Backend decoding → Radio output
+- **RX Audio**: Radio input → Backend capture → WDSP processing → Opus/Int16 encoding (runtime-switchable) → WebSocket transmission → Frontend decoding → Speaker output
+- **Audio Quality**: RX Opus mode defaults to 16kHz/20ms frames, saving ~70% bandwidth vs. Int16 PCM; falls back to Int16 PCM for legacy clients. Recordings are encoded to MP3 (LAME VBR q:0).
 - **Real-time**: TX/RX latency <100ms
 
 #### 2.2.3 User Interface Functions
@@ -256,7 +256,7 @@ Audio TX Flow:
 Microphone → Web Audio API → TX Equalizer → Int16 Encoding → WebSocket(TX) → Server Decode → PyAudio → Radio
 
 Audio RX Flow:
-Radio → PyAudio Capture → WebSocket(RX) → Browser Decode → AudioWorklet → Speaker
+Radio → PyAudio Capture → WDSP Processing (NR2/NB/ANF/AGC) → Opus/Int16 Encoding → WebSocket(RX) → Browser Decode → AudioWorklet → Speaker
 
 Control Flow:
 User Operation → WebSocket(Control) → Server → rigctld → Radio Device
@@ -886,7 +886,14 @@ Community contributions are welcome, but please note:
 | v4.9.1 | 2026-03-15 | Multi-instance support deep optimization | Production Ready |
 | v5.0.0 | 2026-04-30 | Mobile UI modernization: glassmorphism, Unicode icons, CSS reduction | Historical Version |
 | v5.1.0 | 2026-05-10 | RagChew TX audio preset, Web Audio full-chain processing, Safari setValueAtTime fix | Historical Version |
-| v5.2.0 | 2026-05-18 | WDSP hash caching (reduced per-frame CPU overhead), RX multi-node scheduled playback (gap-free), Opus frame alignment (960 samples@48kHz) | Current Version |
+| v5.2.0 | 2026-05-18 | WDSP hash caching (reduced per-frame CPU overhead), RX multi-node scheduled playback (gap-free), Opus frame alignment (960 samples@48kHz) | Historical Version |
+| v5.3.x | 2026-05 | RX Opus encoded transport (runtime-switchable, ~70% bandwidth savings), recording format WAV→MP3 (ffmpeg LAME VBR) | Historical Version |
+| v5.4.0 | 2026-06-06 | FT8 integration fix (front/back-end method alignment), bilingual website & architecture doc updates, Ansible deploy scripts | Historical Version |
+| v5.5.0 | 2026-06-06 | ATR-1000 Tune-linked tuning (SWR>1.6 auto mode=2 full tune + param rollback), 6-channel memory grid (tap to recall / long-press to save), SDR blue glassmorphism login redesign | Historical Version |
+| v5.6.0 | 2026-06 | ATR-1000 stable-window learning buffer (LearningBuffer, prevents transient false-SWR pollution) | Historical Version |
+| v5.6.3 | 2026-06 | Learning deduplication (prevents every METER sample triggering an atomic disk write) | Historical Version |
+| v5.6.4 | 2026-06 | Tiered deduplication + SWR=1.00 validity correction | Historical Version |
+| v5.6.5 | 2026-06 | Front-end MemoryChannelManager class (service-oriented), server-side memory_channels thread safety (memory_lock), updateMemButtons batch DOM optimization | Current Version |
 
 ---
 

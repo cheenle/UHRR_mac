@@ -274,11 +274,13 @@ curl -X POST -H "Content-Type: application/json" \
 
 ## 📚 Documentation
 
-- **[System Architecture Design](docs/System_Architecture_Design.md)**: Complete system architecture
-- **[ATR-1000 Smart Tuner](docs/ATR1000_Tuner_Auto_Learning.md)**: Tuner learning and API detailed docs ⭐
-- **[PTT/Audio Stability](docs/PTT_Audio_Postmortem_and_Best_Practices.md)**: Stability analysis and best practices
-- **[Latency Optimization Guide](docs/latency_optimization_guide.md)**: TX/RX switching optimization details
-- **[Mobile Interface Documentation](docs/mobile_modern_interface.md)**: Mobile UI design specifications
+- **[Current Documentation Index](docs/README.md)**: Current and legacy documentation map
+- **[Current System Architecture](docs/current/architecture/current-system.md)**: Code-verified runtime architecture
+- **[Current Capability Map](docs/current/design/capability-map.md)**: Implemented capability inventory
+- **[Runtime & Verification](docs/current/operations/runtime-and-verification.md)**: Run, Docker, and verification notes
+- **[Legacy ATR-1000 Smart Tuner](docs/legacy/atr/ATR1000_Tuner_Auto_Learning.md)**: Tuner learning and API reference
+- **[Legacy PTT/Audio Stability](docs/legacy/audio/PTT_Audio_Postmortem_and_Best_Practices.md)**: Stability analysis and best practices
+- **[Legacy Mobile Interface Documentation](docs/legacy/mobile/mobile_modern_interface.md)**: Mobile UI design notes
 
 ## 🔧 Troubleshooting
 

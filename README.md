@@ -228,13 +228,14 @@ MRRC/
 ├── mrrc_remote_start.sh    # Remote start via SSH (V4.8.0: New)
 ├── www/                    # Frontend
 │   ├── mobile_modern.html  # Mobile UI
+│   ├── mobile_modern.js    # Mobile UI logic
 │   ├── controls.js         # Audio & control (V4.8.0: WDSP sync)
 │   ├── recordings.html     # Audio recording page (V4.8.0: New)
-│   └── atu.js              # ATU display
+│   ├── ft8_ultron.html     # FT8 remote UI
+│   └── panadapter/         # FFT/panadapter UI
 ├── certs/                  # TLS certificates
-├── docs/                   # Documentation
-├── AOD.md                  # Architecture Overview (V4.8.0: New)
-├── DSP.md                  # DSP documentation (V4.8.0: New)
+├── docs/current/           # Code-verified current documentation
+├── docs/legacy/            # Historical/reference documentation
 └── dev_tools/              # Test utilities
 ```
 
@@ -253,11 +254,12 @@ Based on [F4HTB/Universal_HamRadio_Remote_HTML5](https://github.com/F4HTB/Univer
 - [English Documentation](README_en.md)
 - [中文文档](README_CN.md)
 - [Changelog](CHANGELOG.md)
-- [Architecture Overview](AOD.md) ⭐ V4.8.0
-- [DSP Documentation](DSP.md) ⭐ V4.8.0
-- [System Architecture](docs/System_Architecture_Design.md)
-- [ATR-1000 Tuner Documentation](docs/ATR1000_Tuner_Auto_Learning.md)
-- [Multi-Instance Setup](docs/Multi_Instance_Setup.md) ⭐ New
+- [Current Documentation Index](docs/README.md)
+- [Current System Architecture](docs/current/architecture/current-system.md)
+- [Current Capability Map](docs/current/design/capability-map.md)
+- [Runtime & Verification](docs/current/operations/runtime-and-verification.md)
+- [Legacy ATR-1000 Tuner Notes](docs/legacy/atr/ATR1000_Tuner_Auto_Learning.md)
+- [Legacy Multi-Instance Setup](docs/legacy/operations/Multi_Instance_Setup.md)
 
 ---
 
@@ -303,4 +305,4 @@ vim MRRC.radio2.conf
 ./mrrc_multi.sh logs radio2       # View logs
 ```
 
-**Full Documentation**: [Multi-Instance Setup Guide](docs/Multi_Instance_Setup.md)
+**Full Documentation**: [Multi-Instance Setup Guide](docs/legacy/operations/Multi_Instance_Setup.md)

@@ -1,7 +1,7 @@
 # Mobile Remote Radio Control (MRRC) 系统架构设计文档
 
 ## 文档信息
-- **版本**: v5.2.0 (2026-05-18)
+- **版本**: V5.6.5 (2026-06-12)
 - **作者**: System Architecture Team
 - **状态**: 生产就绪
 - **分类**: 机密/内部
@@ -80,9 +80,10 @@
 - **S表读取**: 信号强度指示
 
 #### 2.2.2 音频流功能
-- **TX音频**: 麦克风输入→Int16编码→WebSocket传输→后端解码→电台输出
-- **RX音频**: 电台输入→后端采集→Int16编码→WebSocket传输→前端解码→扬声器输出
-- **音频质量**: 16kHz采样率，Int16格式，50%带宽优化
+- **TX音频**: 麦克风输入→Opus/PCM编码→WebSocket传输→后端解码→电台输出
+- **RX音频**: 电台输入→后端采集→Opus/Int16编码（运行时可切换）→WebSocket传输→前端解码→扬声器输出
+- **音频质量**: RX Opus 模式默认 16kHz/20ms 帧，相比 Int16 PCM 节省约 70% 带宽；兼容旧客户端时回退 Int16 PCM
+- **录音**: 服务端以 MP3 (LAME VBR q:0) 格式存盘，文件名含频率与时间戳
 - **实时性**: TX/RX延迟<100ms
 
 #### 2.2.3 用户界面功能
@@ -238,7 +239,7 @@
 麦克风 → Web Audio API → TX均衡器(抗混叠+三段EQ) → Int16编码 → WebSocket(TX) → 服务器解码 → PyAudio → 电台
 
 音频RX流:
-电台 → PyAudio采集 → WDSP降噪处理 → Int16编码 → WebSocket(RX) → 浏览器解码 → AudioWorklet → 扬声器
+电台 → PyAudio采集 → WDSP降噪处理 → Opus/Int16编码（运行时可切换） → WebSocket(RX) → 浏览器解码 → AudioWorklet → 扬声器
 
 控制流:
 用户操作 → WebSocket(控制) → 服务器 → rigctld → 电台设备
@@ -931,7 +932,14 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 | v4.9.3 | 2026-03-29 | 文档全面更新，功能完善 | 历史版本 |
 | v5.0.0 | 2026-04-30 | 移动端UI全面现代化：玻璃拟态效果、Unicode图标替换、CSS瘦身15%、触摸热区优化、震动反馈、TX频率变色、英文界面统一 | 历史版本 |
 | v5.1.0 | 2026-05-10 | RagChew TX 语音美化模式、Web Audio API 全链路处理（EQ+压缩+噪声门）、修复 Safari setValueAtTime 初始化错误 | 历史版本 |
-| v5.2.0 | 2026-05-18 | WDSP哈希缓存优化（减少每帧CPU开销）、RX音频多节点调度播放引擎（消除帧间间隙）、Opus帧对齐（960 samples@48kHz） | 当前版本 |
+| v5.2.0 | 2026-05-18 | WDSP哈希缓存优化（减少每帧CPU开销）、RX音频多节点调度播放引擎（消除帧间间隙）、Opus帧对齐（960 samples@48kHz） | 历史版本 |
+| v5.3.x | 2026-05 | RX Opus 编码传输（运行时可切换，约 70% 带宽节省）、录音格式 WAV→MP3（ffmpeg LAME VBR） | 历史版本 |
+| v5.4.0 | 2026-06-06 | FT8 集成修复（前后端方法对齐）、双语网站与架构文档更新、Ansible 部署脚本 | 历史版本 |
+| v5.5.0 | 2026-06-06 | ATR-1000 Tune 联动调谐（SWR>1.6 自动 mode=2 完整调谐+参数回滚）、6 频道记忆网格（点按召回/长按保存）、登录页 SDR 蓝玻璃拟态重设计 | 历史版本 |
+| v5.6.0 | 2026-06 | ATR-1000 稳定窗口学习缓冲器（LearningBuffer，防止瞬态假 SWR 污染） | 历史版本 |
+| v5.6.3 | 2026-06 | 学习去重（防止每个 METER 采样触发原子写盘） | 历史版本 |
+| v5.6.4 | 2026-06 | 分级去重 + SWR=1.00 合法性修正 | 历史版本 |
+| v5.6.5 | 2026-06 | 前端 MemoryChannelManager 类（服务导向）、服务端 memory_channels 线程安全（memory_lock）、updateMemButtons 批量 DOM 优化 | 当前版本 |
 
 ---
 

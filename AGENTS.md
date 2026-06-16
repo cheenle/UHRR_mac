@@ -34,7 +34,7 @@
 - ATR-1000 integration uses `atr1000_proxy.py` with a Unix socket defaulting to `/tmp/atr1000_proxy.sock`; multi-instance configs override this via `[INSTANCE_SETTINGS]`.
 
 ## Audio/PTT Guardrails
-- TX/PTT timing is fragile; preserve the flow documented in `docs/PTT_Audio_Postmortem_and_Best_Practices.md` and implemented in `www/tx_button_optimized.js`.
+- TX/PTT timing is fragile; preserve the flow documented in `docs/legacy/audio/PTT_Audio_Postmortem_and_Best_Practices.md` and implemented in `www/tx_button_optimized.js`.
 - `rx_worklet_processor.js` default minimum buffer must stay above 1 for normal RX. Safe desktop config is `min: 2, max: 30`.
 - TX-to-RX intentionally uses a transient `min: 1` window in `tx_button_optimized.js`, then restores `min: 2, max: 30` after 200 ms; do not remove that timer.
 - PTT release must clear all three queues: `client.Wavframes = []`, `PyAudioCapture._flush_opus_accumulator = True`, and JS `AudioWorklet.flush()` plus `AudioRX_audiobuffer = []`.
@@ -54,9 +54,9 @@
 ## Website
 - Website source lives in `website/`; deploy with root `./deploy_website.sh [user@host] [remote_path]`.
 - The executable deploy default is `cheenle@www.vlsc.net:/var/www/vlsc.net/mrrc`; `website/README.md` still mentions older `/var/www/html/mrrc` paths.
-- `CLAUDE.md` has the website nav/version/path gotchas; check it before changing many `website/*.html` pages.
+- `docs/legacy/tooling/CLAUDE.md` has the website nav/version/path gotchas; check it before changing many `website/*.html` pages.
 
 ## Existing Guidance
-- `docs/aldv2/Aladdin_V2_Methodology.md` is the top-level engineering methodology; `.opencode/skills/aladdin-v2/SKILL.md` turns it into a repo-local OpenCode skill.
-- `CLAUDE.md` has broader architecture notes; prefer this file for compact OpenCode-specific gotchas.
-- `AOD.md`, `DSP.md`, and `docs/Multi_Instance_Setup.md` are useful when changing wiring, DSP, or multi-instance behavior.
+- `docs/legacy/methodology/aldv2/Aladdin_V2_Methodology.md` is the top-level engineering methodology; `.opencode/skills/aladdin-v2/SKILL.md` turns it into a repo-local OpenCode skill.
+- `docs/legacy/tooling/CLAUDE.md` has broader architecture notes; prefer this file for compact OpenCode-specific gotchas.
+- `docs/legacy/root/AOD.md`, `docs/legacy/root/DSP.md`, and `docs/legacy/operations/Multi_Instance_Setup.md` are useful when changing wiring, DSP, or multi-instance behavior.

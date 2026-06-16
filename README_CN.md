@@ -261,9 +261,8 @@ MRRC/
 │   ├── atu.js                  # ATU 功率和驻波比显示管理
 │   └── panadapter/             # 频谱显示模块
 ├── certs/                      # TLS 证书目录
-├── docs/                       # 技术文档
-├── AOD.md                      # 架构概览文档 (V4.8.0: 新增)
-├── DSP.md                      # DSP处理文档 (V4.8.0: 新增)
+├── docs/current/               # 当前代码事实文档
+├── docs/legacy/                # 历史/参考文档
 ├── dev_tools/                  # 测试/调试脚本
 └── nanovna/                    # NanoVNA 矢量网络分析仪 Web 界面
 ```
@@ -353,14 +352,15 @@ curl -X POST -H "Content-Type: application/json" \
 
 ## 📚 文档
 
-- **[架构概览 AOD](AOD.md)**：系统架构快速参考 ⭐ V4.8.0
-- **[DSP降噪文档](DSP.md)**：WDSP数字信号处理详细说明 ⭐
-- **[系统架构设计](docs/System_Architecture_Design.md)**：完整的系统架构设计
-- **[ATR-1000 天调智能学习](docs/ATR1000_Tuner_Auto_Learning.md)**：天调学习与 API 详细文档 ⭐
-- **[PTT/音频稳定性](docs/PTT_Audio_Postmortem_and_Best_Practices.md)**：稳定性分析与最佳实践
-- **[延迟优化指南](docs/latency_optimization_guide.md)**：TX/RX切换延迟优化详解
-- **[移动端界面文档](docs/mobile_modern_interface.md)**：移动端界面设计说明
-- **[多实例配置指南](docs/Multi_Instance_Setup.md)**：多电台实例配置详解 ⭐
+- **[当前文档总入口](docs/README.md)**：当前事实与历史文档分层索引
+- **[当前系统架构](docs/current/architecture/current-system.md)**：基于代码入口和路由的架构说明
+- **[当前能力地图](docs/current/design/capability-map.md)**：按实现列出的功能能力
+- **[运行与验证](docs/current/operations/runtime-and-verification.md)**：启动、Docker、测试和已知偏差
+- **[旧版 ATR-1000 天调智能学习](docs/legacy/atr/ATR1000_Tuner_Auto_Learning.md)**：天调学习与 API 参考
+- **[旧版 PTT/音频稳定性](docs/legacy/audio/PTT_Audio_Postmortem_and_Best_Practices.md)**：稳定性分析与最佳实践
+- **[旧版延迟优化指南](docs/legacy/audio/latency_optimization_guide.md)**：TX/RX切换延迟优化详解
+- **[旧版移动端界面文档](docs/legacy/mobile/mobile_modern_interface.md)**：移动端界面设计说明
+- **[旧版多实例配置指南](docs/legacy/operations/Multi_Instance_Setup.md)**：多电台实例配置详解
 
 ---
 
@@ -406,7 +406,7 @@ vim MRRC.radio2.conf
 ./mrrc_multi.sh logs radio2       # 查看日志
 ```
 
-**详细文档**：[多实例配置指南](docs/Multi_Instance_Setup.md)
+**详细文档**：[多实例配置指南](docs/legacy/operations/Multi_Instance_Setup.md)
 
 ---
 
