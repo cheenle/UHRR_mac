@@ -14,7 +14,8 @@ docs/current/
 ├── design/
 │   └── capability-map.md
 ├── methodology/
-│   └── code-first-docs.md
+│   ├── code-first-docs.md
+│   └── vibe-coding-practice.md
 ├── operations/
 │   └── runtime-and-verification.md
 └── audit/
@@ -29,6 +30,8 @@ When documentation disagrees, use this priority order:
 2. Runtime scripts and deployment files: `mrrc_control.sh`, `mrrc_multi.sh`, `Dockerfile`, `docker-compose.yml`.
 3. `docs/current/`.
 4. `docs/legacy/`, `website/`, and feature-specific documents.
+
+The original SDD is a special case: `docs/legacy/sdd/original-sdd/` is preserved as the core Vibe Coding practice document set. Its implementation claims still need code verification, but its method, decision trail, and design narrative should be treated as primary project context.
 
 ## Current Runtime Summary
 

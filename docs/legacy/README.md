@@ -12,7 +12,7 @@ Use `docs/current/` for code-verified current behavior. Use this directory for h
 | `atr/` | ATR-1000, ATU, tuner learning, and display troubleshooting notes |
 | `audio/` | PTT, audio latency, WDSP, WebAudio, and performance notes |
 | `design/original-design/` | Former `DESIGN/` files |
-| `sdd/original-sdd/` | Former `SDD/` files |
+| `sdd/original-sdd/` | Former `SDD/` files; core Vibe Coding practice record |
 | `mobile/` | Mobile interface docs, manuals, and iPhone-specific analysis |
 | `operations/` | Multi-instance and operational guides |
 | `methodology/` | FDE and ALDV2 methodology material |
@@ -23,4 +23,6 @@ Use `docs/current/` for code-verified current behavior. Use this directory for h
 
 ## Status
 
-Files here may be useful and may still contain correct details, but they are not the default source of truth. When a file is refreshed against the current implementation, move the updated content into `docs/current/` or link it from the relevant current document.
+Most files here may be useful and may still contain correct details, but they are not the default source of truth. When a file is refreshed against the current implementation, move the updated content into `docs/current/` or link it from the relevant current document.
+
+The exception is `sdd/original-sdd/`: it is archived from the old root path, but it remains the core Vibe Coding practice document set. Use `docs/current/methodology/vibe-coding-practice.md` as the current index into that material.

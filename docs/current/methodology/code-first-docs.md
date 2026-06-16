@@ -12,6 +12,7 @@ Keep MRRC documentation aligned with the running system instead of preserving st
 | Current design | `docs/current/design/` | Implemented capabilities and design constraints |
 | Current operations | `docs/current/operations/` | How to run, verify, deploy, and diagnose |
 | Methodology | `docs/current/methodology/` | How docs are maintained |
+| Vibe Coding practice | `docs/legacy/sdd/original-sdd/` | Core practice record, project narrative, and decision trail |
 | Audit | `docs/current/audit/` | Cross-checks against legacy docs and known stale claims |
 | Historical/reference | `docs/legacy/` | Preserve until migrated, corrected, or retired |
 
@@ -22,6 +23,7 @@ Keep MRRC documentation aligned with the running system instead of preserving st
 3. Document the boundary: main process, optional separate service, static website, development tool, or historical reference.
 4. Mark stale claims explicitly in the audit document.
 5. Do not delete old docs until an equivalent current document exists and references are checked.
+6. Preserve the original SDD as core Vibe Coding practice material. Correct runtime drift in `docs/current/`, but do not flatten or discard the SDD narrative.
 
 ## Evidence Checklist
 
@@ -53,3 +55,4 @@ When code behavior changes:
 3. If a new runtime file is added and Docker needs it, check `Dockerfile`.
 4. If a new route or frontend page is added, update `architecture/current-system.md` and `design/capability-map.md`.
 5. If the change touches PTT/audio, cross-check `docs/legacy/audio/PTT_Audio_Postmortem_and_Best_Practices.md` before editing behavior.
+6. If the change affects project framing, architecture intent, or design method, cross-check `docs/legacy/sdd/original-sdd/` and update `docs/current/methodology/vibe-coding-practice.md` if the interpretation changes.

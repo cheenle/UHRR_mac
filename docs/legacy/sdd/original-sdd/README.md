@@ -3,6 +3,12 @@
 > **Mobile Remote Radio Control**
 > IBM Team Solution Design (TeamSD) v2.3.2
 
+## Vibe Coding Practice Status
+
+This SDD is the core document set for MRRC's Vibe Coding practice. It preserves the project framing, architecture intent, design narrative, and decision trail behind the implementation.
+
+For current runtime facts, cross-check `../../../current/`. For the current index into this material, see `../../../current/methodology/vibe-coding-practice.md`.
+
 ---
 
 ## Document Index

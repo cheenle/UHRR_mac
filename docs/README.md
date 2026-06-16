@@ -9,13 +9,14 @@ Start with `current/` for code-verified documentation:
 - `current/design/capability-map.md` - implemented capability inventory
 - `current/operations/runtime-and-verification.md` - run and verification notes
 - `current/methodology/code-first-docs.md` - documentation maintenance method
+- `current/methodology/vibe-coding-practice.md` - Vibe Coding practice core document map
 - `current/audit/documentation-cross-check.md` - cross-check against older docs
 
 Reference and historical documents are grouped under `legacy/`:
 
 - `legacy/architecture/` - older architecture and component analyses
 - `legacy/design/` - original `DESIGN/` documents
-- `legacy/sdd/` - original `SDD/` documents
+- `legacy/sdd/` - original `SDD/` documents; this is the core Vibe Coding practice record
 - `legacy/audio/` - audio, PTT, latency, WDSP, and WebAudio notes
 - `legacy/atr/` - ATR-1000 and ATU notes
 - `legacy/mobile/` - mobile UI and user manuals
@@ -25,3 +26,4 @@ Reference and historical documents are grouped under `legacy/`:
 - `legacy/tooling/` - former tool guidance documents
 
 Treat `docs/current/` as the first place to update when code behavior changes.
+Treat `legacy/sdd/original-sdd/` as preserved core methodology material for the project's Vibe Coding practice.
