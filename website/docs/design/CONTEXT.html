@@ -197,7 +197,7 @@
     WSHandler --&gt;|WSS| Mobile
     ATRProxy --&gt;|WebSocket| ATR1000
     WSHandler --&gt;|Unix Socket| ATRProxy
-    VoiceAI --&gt;|gRPC| WSHandler
+    VoiceAI --&gt;|in-process API| WSHandler
     CWDecoder --&gt;|推理| WSHandler
 </code></pre>
 
@@ -507,8 +507,8 @@
 <hr />
 <p><strong>文档信息</strong>
 - 版本: 1.0
-- 创建日期: 2026-03-15
-- 最后更新: 2026-03-15
+- 创建日期: 2026-06-19
+- 最后更新: 2026-06-19
 - 作者: MRRC Team</p>
             </div>
         </div>
