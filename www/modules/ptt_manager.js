@@ -55,6 +55,16 @@ function sendTRXptt(stat){
 		wsControlTRX.send(message);
 		console.log(`✅ [PTT发送] 时间戳: ${currentTime}, 命令: ${message}, 延迟: 0ms`);
 
+		// 释放方向（stat=false）启动 ACK 重发：setPTT:false 是安全关键命令，
+		// 半开连接或丢包时会静默丢失 → 电台卡发射。这里等待服务端回 getPTT:false
+		// 作为投递确认，未确认则重发，最多 PTT_RELEASE_MAX_RETRY 次，仍失败则
+		// 强制重连控制通道。键控方向(true)无此风险，不做 ACK。
+		if (stat === false) {
+			startPTTReleaseAck();
+		} else {
+			cancelPTTReleaseAck(); // 新的键控请求，取消任何残留的释放确认
+		}
+
 		// 最终重置命令发送标志
 		setTimeout(() => {
 			PTT_COMMAND_SENT = false;
@@ -63,7 +73,69 @@ function sendTRXptt(stat){
 		console.error(`❌ [PTT发送失败] WebSocket状态: ${wsControlTRX ? wsControlTRX.readyState : 'NULL'}, poweron: ${poweron}`);
 		// 如果发送失败，重置状态以便下次可以重新发送
 		lastPTTState = null;
+		// 释放命令在通道不可用时发送失败 = 最危险场景：尝试强制重连并经
+		// TX 音频通道补发 s: 收回发射。
+		if (stat === false && typeof onControlConnectionDead === 'function') {
+			onControlConnectionDead('释放命令发送时控制通道不可用');
+		}
 	}
+}
+
+// --- PTT 释放命令 ACK 重发（安全关键，防半开/丢包导致卡发射）---
+var PTT_RELEASE_ACK_TIMEOUT = 1000; // 等待 getPTT:false 确认的超时
+var PTT_RELEASE_MAX_RETRY = 3;       // 最大重发次数
+var _pttReleaseAckTimer = null;
+var _pttReleaseRetryCount = 0;
+
+function startPTTReleaseAck() {
+	cancelPTTReleaseAck();
+	_pttReleaseRetryCount = 0;
+	_pttReleaseAckTimer = setTimeout(_pttReleaseAckCheck, PTT_RELEASE_ACK_TIMEOUT);
+}
+
+function _pttReleaseAckCheck() {
+	_pttReleaseAckTimer = null;
+	// 设备已确认收回 → 成功，无需动作
+	if (PTT_DEVICE_STATE === false) {
+		return;
+	}
+	// 用户已改变意图（又按下发射）→ 放弃这次释放确认
+	if (PTT_USER_INTENT === true) {
+		return;
+	}
+	_pttReleaseRetryCount++;
+	if (_pttReleaseRetryCount <= PTT_RELEASE_MAX_RETRY) {
+		console.warn(`⚠️ [PTT释放未确认] 第 ${_pttReleaseRetryCount} 次重发 setPTT:false`);
+		if (wsControlTRX && wsControlTRX.readyState === WebSocket.OPEN && poweron) {
+			wsControlTRX.send("setPTT:false");
+			// 同时经 TX 音频通道补发 s:（独立 socket，多一条收回路径）
+			try {
+				if (typeof wsAudioTX !== 'undefined' && wsAudioTX && wsAudioTX.readyState === WebSocket.OPEN) {
+					wsAudioTX.send("s:");
+				}
+			} catch (e) { /* ignore */ }
+			_pttReleaseAckTimer = setTimeout(_pttReleaseAckCheck, PTT_RELEASE_ACK_TIMEOUT);
+		} else {
+			// 控制通道不可用 → 判定连接死亡，强制重连+补发
+			if (typeof onControlConnectionDead === 'function') {
+				onControlConnectionDead('PTT 释放重发时控制通道不可用');
+			}
+		}
+	} else {
+		// 多次重发仍未确认 → 控制通道很可能半开，强制重连兜底
+		console.error('🚨 [PTT释放] 多次重发仍未收到确认，强制重连控制通道');
+		if (typeof onControlConnectionDead === 'function') {
+			onControlConnectionDead('PTT 释放多次重发未确认');
+		}
+	}
+}
+
+function cancelPTTReleaseAck() {
+	if (_pttReleaseAckTimer) {
+		clearTimeout(_pttReleaseAckTimer);
+		_pttReleaseAckTimer = null;
+	}
+	_pttReleaseRetryCount = 0;
 }
 
 // 添加PTT状态更新函数
@@ -71,6 +143,11 @@ function updatePTTStatus(isPTTOn) {
 	// 更新设备确认状态（优先使用）
 	PTT_DEVICE_STATE = isPTTOn;
 	PTT_LAST_UPDATE_TIME = Date.now();
+
+	// 设备确认已收回（getPTT:false）→ 释放命令投递成功，关闭 ACK 重发闭环
+	if (isPTTOn === false && typeof cancelPTTReleaseAck === 'function') {
+		cancelPTTReleaseAck();
+	}
 
 	// 状态一致性检查（仅调试用，已简化）
 	// 注意：TUNE/CQ模式会同步设置PTT_USER_INTENT，正常情况下不应出现不一致

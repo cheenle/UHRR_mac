@@ -24,7 +24,10 @@ ATR1000_LOG="$LOG_DIR/atr1000_proxy.log"
 ATR1000_DEVICE="192.168.1.63"
 ATR1000_PORT="60001"
 ATR1000_INTERVAL="1.0"  # 数据请求间隔（秒）
-ATR1000_API_HOST="0.0.0.0"
+# R2 fix: bind the ATR-1000 control API to loopback by default (was 0.0.0.0,
+# an unauthenticated network surface that could key tuner relays). Override
+# only behind an authenticated reverse proxy, and set ATR1000_API_TOKEN.
+ATR1000_API_HOST="127.0.0.1"
 ATR1000_API_PORT="8080"
 
 # Colors for output

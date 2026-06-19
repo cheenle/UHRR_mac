@@ -160,6 +160,8 @@ a:hover { text-decoration:underline; }
   .site-footer .ft-grid { grid-template-columns: 1fr 1fr; }
 }
 </style>
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7442510147240155"
+     crossorigin="anonymous"></script>
 </head>
 <body class="bg-[#0a0e1a] text-gray-200 overflow-x-hidden">
 
@@ -231,7 +233,7 @@ a:hover { text-decoration:underline; }
 <!-- ========== TOC ========== -->
 <nav class="max-w-4xl mx-auto px-6 py-16" id="toc">
   <div class="card card-glow p-8 md:p-10 fade-up">
-    <p class="section-label mb-4">// 目录 — 16 章 <span class="new-badge">增补版</span></p>
+    <p class="section-label mb-4">// 目录 — 17 章 <span class="new-badge">增补版</span></p>
     <div class="grid md:grid-cols-2 gap-x-8 gap-y-2">
       <a href="#sec1" class="toc-link block py-1.5 text-gray-400 hover:text-white"><span class="mono text-xs text-gray-600 mr-2">01</span>EFHW 基本原理与阻抗特性</a>
       <a href="#sec2" class="toc-link block py-1.5 text-gray-400 hover:text-white"><span class="mono text-xs text-gray-600 mr-2">02</span>49:1 vs 64:1 变压器设计 <span class="new-badge">+3:21</span></a>
@@ -249,6 +251,7 @@ a:hover { text-decoration:underline; }
       <a href="#sec14" class="toc-link block py-1.5 text-gray-400 hover:text-white"><span class="mono text-xs text-gray-600 mr-2">14</span>L-Network 替代匹配方案</a>
       <a href="#sec15" class="toc-link block py-1.5 text-gray-400 hover:text-white"><span class="mono text-xs text-gray-600 mr-2">15</span>辐射方向图与 NEC 建模</a>
       <a href="#sec16" class="toc-link block py-1.5 text-gray-400 hover:text-white"><span class="mono text-xs text-gray-600 mr-2">16</span>便携部署 / 安全 / 核心结论</a>
+      <a href="#sec17" class="toc-link block py-1.5 text-gray-400 hover:text-white"><span class="mono text-xs text-gray-600 mr-2">17</span>系统架构图 <span class="new-badge">NEW</span></a>
     </div>
   </div>
 </nav>
@@ -952,6 +955,176 @@ a:hover { text-decoration:underline; }
       <p class="text-sm text-gray-300">AI6XG: 先测负载复阻抗，再分离 MM/LL/TL。假设理想电阻 → 效率 &gt;100% 错误。</p>
     </div>
   </div>
+</section>
+
+<!-- ========== SEC 17: SYSTEM ARCHITECTURE ========== -->
+<style>
+.efhw-arch .arch-board{position:relative;border:1px solid rgba(255,255,255,.08);border-radius:24px;background:linear-gradient(180deg,rgba(255,255,255,.045),rgba(255,255,255,.018));box-shadow:0 0 0 1px rgba(0,0,0,.5),0 32px 90px rgba(0,0,0,.46),inset 0 1px 0 rgba(255,255,255,.06);overflow:hidden}
+.efhw-arch .arch-board:before{content:"";position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.035) 1px,transparent 1px);background-size:48px 48px;-webkit-mask-image:radial-gradient(ellipse at 50% 18%,black 0%,rgba(0,0,0,.85) 35%,transparent 88%);mask-image:radial-gradient(ellipse at 50% 18%,black 0%,rgba(0,0,0,.85) 35%,transparent 88%);pointer-events:none}
+.efhw-arch .arch-board-inner{position:relative;padding:18px}
+.efhw-arch svg{display:block;width:100%;height:auto}
+.efhw-arch .node-title{font-family:Inter,system-ui,sans-serif;font-weight:590;fill:#f7f8f8;letter-spacing:-.18px}
+.efhw-arch .node-sub{font-family:Inter,system-ui,sans-serif;font-weight:400;fill:#a0a7b2}
+.efhw-arch .tiny{font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;fill:#7b828c}
+.efhw-arch .label{font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;fill:#d0d6e0}
+.efhw-arch .cap{font-family:Inter,system-ui,sans-serif;font-size:13px;font-weight:510;fill:#d0d6e0}
+.efhw-arch .section{font-family:Inter,system-ui,sans-serif;font-size:18px;font-weight:510;fill:#f7f8f8;letter-spacing:-.3px}
+.efhw-arch .path{fill:none;stroke-linecap:round;stroke-linejoin:round}
+.efhw-arch .pulse{animation:archpulse 2.8s ease-in-out infinite}
+@keyframes archpulse{0%,100%{opacity:.55}50%{opacity:1}}
+.efhw-arch .arch-cards{display:grid;grid-template-columns:repeat(4,minmax(180px,1fr));gap:14px;margin-top:18px}
+.efhw-arch .arch-card{background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:16px;box-shadow:inset 0 1px 0 rgba(255,255,255,.04)}
+.efhw-arch .arch-card h3{font-size:14px;font-weight:590;margin:0 0 8px;color:#f7f8f8;letter-spacing:-.18px}
+.efhw-arch .arch-card p{margin:0;color:#a0a7b2;font-size:12.5px;line-height:1.65}
+.efhw-arch .arch-footer{color:#7b828c;font-size:12px;text-align:center;margin-top:16px}
+@media(max-width:900px){.efhw-arch .arch-cards{grid-template-columns:1fr}}
+</style>
+<section id="sec17" class="max-w-6xl mx-auto px-6 py-16 efhw-arch">
+  <p class="section-label fade-up">17 / 系统架构 <span class="new-badge">NEW</span></p>
+  <h2 class="text-3xl md:text-4xl font-bold mt-3 mb-4 fade-up">EFHW Fuchs ATU V3.0 — 顶级架构图</h2>
+  <p class="text-gray-400 mb-8 fade-up" style="max-width:60rem;">顶级版把系统拆成两条真实链路：<strong class="text-white">RF/DC 物理链路</strong> 与 <strong class="text-white">测量/控制闭环</strong>。ATR1000 被明确放在电台后、Bias‑T 前、靠近电台的参考面；远端 ATU 只是执行器，调谐质量由近端 SWR 仪表间接观测。</p>
+  <div class="arch-board fade-up"><div class="arch-board-inner">
+  <svg viewBox="0 0 1620 1030" role="img" aria-label="Premium EFHW Fuchs ATU corrected architecture diagram">
+    <defs>
+      <linearGradient id="nodeBg" x1="0" x2="1" y1="0" y2="1"><stop stop-color="rgba(255,255,255,.075)"/><stop offset="1" stop-color="rgba(255,255,255,.025)"/></linearGradient>
+      <linearGradient id="purple" x1="0" x2="1"><stop stop-color="#7170ff"/><stop offset="1" stop-color="#22d3ee"/></linearGradient>
+      <linearGradient id="rf" x1="0" x2="1"><stop stop-color="#f59e0b"/><stop offset="1" stop-color="#f97316"/></linearGradient>
+      <filter id="glow"><feGaussianBlur stdDeviation="6" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+      <filter id="softShadow" x="-30%" y="-30%" width="160%" height="160%"><feDropShadow dx="0" dy="22" stdDeviation="24" flood-color="#000" flood-opacity=".32"/></filter>
+      <marker id="arrowRf" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto"><path d="M2 2 L10 6 L2 10" fill="none" stroke="#f59e0b" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></marker>
+      <marker id="arrowCtl" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto"><path d="M2 2 L10 6 L2 10" fill="none" stroke="#7170ff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></marker>
+      <marker id="arrowGreen" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto"><path d="M2 2 L10 6 L2 10" fill="none" stroke="#10b981" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></marker>
+      <marker id="arrowRose" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto"><path d="M2 2 L10 6 L2 10" fill="none" stroke="#fb7185" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></marker>
+    </defs>
+    <text x="42" y="48" class="section">01 · RF/DC physical path</text>
+    <text x="42" y="72" class="tiny">Series order is the architecture: Radio → ATR1000 → Bias‑T → coax → remote ATU → EFHW</text>
+    <path d="M148 214 C260 186 362 186 475 214 C585 242 676 242 784 214 C900 184 998 184 1112 214 C1240 246 1354 246 1480 214" class="path" stroke="url(#rf)" stroke-width="6" opacity=".92" marker-end="url(#arrowRf)"/>
+    <path d="M148 214 C260 186 362 186 475 214 C585 242 676 242 784 214 C900 184 998 184 1112 214 C1240 246 1354 246 1480 214" class="path pulse" stroke="#f59e0b" stroke-width="16" opacity=".08" filter="url(#glow)"/>
+    <g filter="url(#softShadow)">
+      <rect x="52" y="132" width="168" height="132" rx="18" fill="#0f1011" stroke="rgba(255,255,255,.10)"/>
+      <text x="136" y="168" class="node-title" font-size="17" text-anchor="middle">Radio</text>
+      <text x="136" y="198" class="node-sub" font-size="12" text-anchor="middle">TX source</text>
+      <text x="136" y="218" class="tiny" text-anchor="middle">100W PEP · 5W tune</text>
+      <rect x="86" y="234" width="100" height="18" rx="9" fill="rgba(245,158,11,.10)" stroke="rgba(245,158,11,.35)"/><text x="136" y="247" class="tiny" fill="#f59e0b" text-anchor="middle">50Ω output</text>
+    </g>
+    <g filter="url(#softShadow)">
+      <rect x="292" y="108" width="220" height="180" rx="22" fill="#11121a" stroke="rgba(167,139,250,.55)" stroke-width="1.4"/>
+      <rect x="307" y="123" width="190" height="150" rx="16" fill="rgba(167,139,250,.055)" stroke="rgba(255,255,255,.08)"/>
+      <text x="402" y="158" class="node-title" font-size="18" text-anchor="middle">ATR1000</text>
+      <text x="402" y="184" class="node-sub" font-size="12" text-anchor="middle">SWR / power coupler</text>
+      <text x="402" y="210" class="label" fill="#a78bfa" text-anchor="middle">SHACK-SIDE REFERENCE PLANE</text>
+      <text x="402" y="232" class="tiny" text-anchor="middle">physically near / stacked with radio</text>
+      <text x="402" y="250" class="tiny" text-anchor="middle">series element before Bias‑T</text>
+    </g>
+    <g filter="url(#softShadow)">
+      <rect x="595" y="132" width="180" height="132" rx="18" fill="#0f1011" stroke="rgba(245,158,11,.42)"/>
+      <text x="685" y="168" class="node-title" font-size="17" text-anchor="middle">Indoor Bias‑T</text>
+      <text x="685" y="198" class="node-sub" font-size="12" text-anchor="middle">DC injection box</text>
+      <text x="685" y="219" class="tiny" text-anchor="middle">C block + RF choke</text>
+      <text x="685" y="239" class="tiny" fill="#f59e0b" text-anchor="middle">13.8V rides on coax</text>
+    </g>
+    <g filter="url(#softShadow)">
+      <rect x="852" y="132" width="168" height="132" rx="18" fill="#0f1011" stroke="rgba(245,158,11,.35)"/>
+      <text x="936" y="168" class="node-title" font-size="17" text-anchor="middle">Long coax</text>
+      <text x="936" y="198" class="node-sub" font-size="12" text-anchor="middle">feedline</text>
+      <text x="936" y="219" class="tiny" text-anchor="middle">RF + DC transport</text>
+      <text x="936" y="239" class="tiny" text-anchor="middle">loss / delay matters</text>
+    </g>
+    <g filter="url(#softShadow)">
+      <rect x="1092" y="104" width="260" height="188" rx="24" fill="#0f1011" stroke="rgba(16,185,129,.55)" stroke-width="1.4"/>
+      <text x="1222" y="142" class="node-title" font-size="18" text-anchor="middle">Outdoor EFHW ATU</text>
+      <text x="1222" y="169" class="node-sub" font-size="12" text-anchor="middle">remote servo Fuchs coupler</text>
+      <text x="1222" y="194" class="label" fill="#10b981" text-anchor="middle">ACTUATOR, NOT A METER</text>
+      <text x="1222" y="219" class="tiny" text-anchor="middle">ESP32-S3 drives MG996R</text>
+      <text x="1222" y="237" class="tiny" text-anchor="middle">moves 10–500pF air capacitor</text>
+      <rect x="1130" y="254" width="184" height="20" rx="10" fill="rgba(16,185,129,.08)" stroke="rgba(16,185,129,.32)"/><text x="1222" y="268" class="tiny" fill="#10b981" text-anchor="middle">near antenna feed point</text>
+    </g>
+    <g filter="url(#softShadow)">
+      <rect x="1432" y="132" width="130" height="132" rx="18" fill="#0f1011" stroke="rgba(245,158,11,.42)"/>
+      <text x="1497" y="168" class="node-title" font-size="17" text-anchor="middle">EFHW</text>
+      <text x="1497" y="198" class="node-sub" font-size="12" text-anchor="middle">antenna wire</text>
+      <text x="1497" y="220" class="tiny" text-anchor="middle">~20m + counterpoise</text>
+    </g>
+    <path d="M402 300 L402 362" stroke="rgba(167,139,250,.38)" stroke-width="1" stroke-dasharray="4 6"/>
+    <text x="402" y="380" class="tiny" fill="#a78bfa" text-anchor="middle">measurement data leaves RF path here</text>
+    <text x="42" y="366" class="section">02 · Measurement/control loop</text>
+    <text x="42" y="390" class="tiny">The loop is remote-action / local-observation: servo changes antenna-system impedance, ATR1000 observes the result at the radio end.</text>
+    <rect x="42" y="420" width="690" height="250" rx="22" fill="rgba(255,255,255,.025)" stroke="rgba(255,255,255,.08)"/>
+    <g filter="url(#softShadow)">
+      <rect x="76" y="472" width="155" height="108" rx="16" fill="#11121a" stroke="rgba(167,139,250,.48)"/>
+      <text x="154" y="504" class="node-title" font-size="16" text-anchor="middle">ATR1000</text>
+      <text x="154" y="531" class="tiny" text-anchor="middle">SWR + forward power</text>
+      <text x="154" y="550" class="tiny" text-anchor="middle">radio-side sample</text>
+    </g>
+    <g filter="url(#softShadow)">
+      <rect x="306" y="472" width="155" height="108" rx="16" fill="#0f1011" stroke="rgba(113,112,255,.48)"/>
+      <text x="384" y="504" class="node-title" font-size="16" text-anchor="middle">MRRC</text>
+      <text x="384" y="531" class="tiny" text-anchor="middle">reads meter</text>
+      <text x="384" y="550" class="tiny" text-anchor="middle">orchestrates scan</text>
+    </g>
+    <g filter="url(#softShadow)">
+      <rect x="536" y="472" width="155" height="108" rx="16" fill="#0f1011" stroke="rgba(34,211,238,.42)"/>
+      <text x="614" y="504" class="node-title" font-size="16" text-anchor="middle">WebSocket</text>
+      <text x="614" y="531" class="tiny" text-anchor="middle">WiFi JSON control</text>
+      <text x="614" y="550" class="tiny" text-anchor="middle">tune_start / swr_update</text>
+    </g>
+    <path d="M231 526 C257 518 280 518 306 526" class="path" stroke="#a78bfa" stroke-width="3" marker-end="url(#arrowCtl)"/>
+    <path d="M461 526 C487 518 510 518 536 526" class="path" stroke="#7170ff" stroke-width="3" marker-end="url(#arrowCtl)"/>
+    <path d="M691 526 C810 520 946 488 1096 222" class="path" stroke="#7170ff" stroke-width="2.2" stroke-dasharray="6 10" opacity=".72" marker-end="url(#arrowCtl)"/>
+    <text x="815" y="505" class="tiny" fill="#7170ff">remote command path to ESP32</text>
+    <text x="790" y="366" class="section">03 · Remote ATU internals</text>
+    <text x="790" y="390" class="tiny">Low-voltage controller and high-voltage RF tank are separate physical domains.</text>
+    <rect x="790" y="420" width="788" height="250" rx="22" fill="rgba(16,185,129,.025)" stroke="rgba(16,185,129,.22)"/>
+    <rect x="806" y="436" width="756" height="218" rx="18" fill="rgba(16,185,129,.018)" stroke="rgba(16,185,129,.32)" stroke-dasharray="10 8"/>
+    <text x="1480" y="446" class="label" fill="#10b981" text-anchor="end">OUTDOOR UNIT BOUNDARY</text>
+    <g filter="url(#softShadow)"><rect x="825" y="470" width="150" height="110" rx="16" fill="#0f1011" stroke="rgba(245,158,11,.45)"/><text x="900" y="503" class="node-title" font-size="15" text-anchor="middle">Bias‑T extract</text><text x="900" y="529" class="tiny" text-anchor="middle">12V / 6V / 3V3</text><text x="900" y="548" class="tiny" text-anchor="middle">Bias‑V ADC</text></g>
+    <g filter="url(#softShadow)"><rect x="1020" y="470" width="160" height="110" rx="16" fill="#0f1011" stroke="rgba(34,211,238,.45)"/><text x="1100" y="503" class="node-title" font-size="15" text-anchor="middle">ESP32‑S3</text><text x="1100" y="529" class="tiny" text-anchor="middle">FreeRTOS tasks</text><text x="1100" y="548" class="tiny" text-anchor="middle">NVS + LEDC PWM</text></g>
+    <g filter="url(#softShadow)"><rect x="1225" y="470" width="120" height="110" rx="16" fill="#0f1011" stroke="rgba(16,185,129,.45)"/><text x="1285" y="503" class="node-title" font-size="15" text-anchor="middle">MG996R</text><text x="1285" y="529" class="tiny" text-anchor="middle">servo</text><text x="1285" y="548" class="tiny" text-anchor="middle">power cut</text></g>
+    <g filter="url(#softShadow)"><rect x="1390" y="450" width="150" height="150" rx="18" fill="#15110c" stroke="rgba(245,158,11,.55)" stroke-dasharray="7 6"/><text x="1465" y="486" class="node-title" font-size="15" text-anchor="middle">Fuchs LC</text><text x="1465" y="514" class="tiny" text-anchor="middle">T200‑6 2:14T</text><text x="1465" y="533" class="tiny" text-anchor="middle">air cap ≥5kV</text><text x="1465" y="552" class="tiny" text-anchor="middle">off‑PCB HV wiring</text><text x="1465" y="579" class="tiny" fill="#fb7185" text-anchor="middle">arc not locally sensed</text></g>
+    <path d="M975 525 C992 520 1004 520 1020 525" class="path" stroke="#22d3ee" stroke-width="3" marker-end="url(#arrowCtl)"/>
+    <path d="M1180 525 C1197 520 1209 520 1225 525" class="path" stroke="#10b981" stroke-width="3" marker-end="url(#arrowGreen)"/>
+    <path d="M1345 525 C1362 520 1374 516 1390 510" class="path" stroke="#10b981" stroke-width="3" marker-end="url(#arrowGreen)"/>
+    <text x="42" y="728" class="section">04 · Engineering semantics</text>
+    <rect x="42" y="758" width="1536" height="210" rx="22" fill="rgba(255,255,255,.025)" stroke="rgba(255,255,255,.08)"/>
+    <g>
+      <rect x="76" y="792" width="330" height="140" rx="16" fill="rgba(167,139,250,.055)" stroke="rgba(167,139,250,.32)"/>
+      <text x="100" y="825" class="node-title" font-size="16">Measurement plane</text>
+      <text x="100" y="855" class="node-sub" font-size="12">best_swr is ATR1000 / shack-plane SWR.</text>
+      <text x="100" y="879" class="tiny">Not capacitor voltage. Not ATU output SWR.</text>
+      <text x="100" y="899" class="tiny">It optimizes what the radio sees through the feedline.</text>
+    </g>
+    <g>
+      <rect x="440" y="792" width="330" height="140" rx="16" fill="rgba(113,112,255,.055)" stroke="rgba(113,112,255,.32)"/>
+      <text x="464" y="825" class="node-title" font-size="16">Control loop</text>
+      <text x="464" y="855" class="node-sub" font-size="12">Each servo step waits for a new swr_update.</text>
+      <text x="464" y="879" class="tiny">Network jitter, MRRC polling, meter latency</text>
+      <text x="464" y="899" class="tiny">directly shape sweep duration and curve quality.</text>
+    </g>
+    <g>
+      <rect x="804" y="792" width="330" height="140" rx="16" fill="rgba(16,185,129,.055)" stroke="rgba(16,185,129,.32)"/>
+      <text x="828" y="825" class="node-title" font-size="16">Tuning algorithm</text>
+      <text x="828" y="855" class="node-sub" font-size="12">NVS hit → direct position; miss → sweep.</text>
+      <text x="828" y="879" class="tiny">37 coarse samples @5° + 30 fine steps @1°</text>
+      <text x="828" y="899" class="tiny">then save freq → servo_pos ±50kHz fuzzy.</text>
+    </g>
+    <g>
+      <rect x="1168" y="792" width="374" height="140" rx="16" fill="rgba(251,113,133,.055)" stroke="rgba(251,113,133,.34)"/>
+      <text x="1192" y="825" class="node-title" font-size="16">Safety boundary</text>
+      <text x="1192" y="855" class="node-sub" font-size="12">Abort on overpower / no RF / high SWR / timeout.</text>
+      <text x="1192" y="879" class="tiny">Still not directly detectable: RF arc, tank heat,</text>
+      <text x="1192" y="899" class="tiny">servo position/current, water ingress, HV stress.</text>
+    </g>
+    <path d="M1465 600 C1460 704 1320 720 1120 710 C842 696 682 676 614 580" class="path" stroke="#7170ff" stroke-width="2.1" stroke-dasharray="6 10" opacity=".62" marker-end="url(#arrowCtl)"/>
+    <text x="1035" y="704" class="tiny" fill="#7170ff">servo move → RF impedance changes → shack-side SWR changes → next update</text>
+  </svg>
+  </div></div>
+  <div class="arch-cards fade-up">
+    <div class="arch-card"><h3>拓扑精确性</h3><p>ATR1000 作为 RF 主路径上的近端耦合器，位于电台后、Bias‑T 前；图中不再把它误画成户外 ATU 侧支传感器。</p></div>
+    <div class="arch-card"><h3>参考面清晰</h3><p>所有 SWR 优化都基于 radio-side 参考面。远端 ATU 的效果通过长同轴反射到这个参考面，被 MRRC 读取。</p></div>
+    <div class="arch-card"><h3>控制链路可审计</h3><p>RF 物理路径与 WebSocket 控制路径分层画出，能看清每一步延迟/失效点：读表、MRRC、WiFi、ESP32、舵机。</p></div>
+    <div class="arch-card"><h3>安全不夸张</h3><p>图中特别保留"不可直接检测"边界：电容打火、槽路温升、舵机真实位置、电流、进水等不能被 ATR1000 替代检测。</p></div>
+  </div>
+  <p class="arch-footer mono">Premium v2 · higher legibility · corrected ATR1000 shack-side reference plane</p>
 </section>
 
 <!-- ========== FOOTER ========== -->

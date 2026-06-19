@@ -213,9 +213,14 @@ class WSJTXProtocol:
                 'tx_mode': tx_mode.strip(),
                 'transmitting': transmitting,
                 'tx_enabled': tx_enabled,
+                'decoding': decoding,
                 'rx_df': rx_df, 'tx_df': tx_df,
                 'de_call': de_call.strip(), 'de_grid': de_grid.strip(),
                 'dx_grid': dx_grid.strip(),
+                'tx_watchdog': tx_watchdog,
+                'sub_mode': sub_mode.strip(),
+                'fast_mode': fast_mode,
+                'tx_first': tx_first,
             }
         except Exception as e:
             logger.warning(f"parse_status error: {e}")
@@ -308,43 +313,277 @@ class WSJTXProtocol:
             return None
 
     @staticmethod
+    def _pack_utf8(s: str) -> bytes:
+        """QDataStream QByteArray: 0xFFFFFFFF for null, else length-prefixed."""
+        if s is None:
+            return struct.pack('>I', 0xFFFFFFFF)
+        b = s.encode('utf-8')
+        return struct.pack('>I', len(b)) + b
+
+    @staticmethod
     def build_reply(decode_info: Dict) -> bytes:
+        """Reply (type 4). Makes JTDX act as if the decode was double-clicked.
+
+        WSJT-X schema 3 layout after the common header:
+          Id (utf8), Time (quint32 ms since midnight), snr (qint32),
+          Delta time (qreal/double), Delta frequency (quint32),
+          Mode (utf8), Message (utf8), Low confidence (bool), Modifiers (quint8)
+        The trailing bool+quint8 are REQUIRED — without them QDataStream
+        deserialization fails and JTDX silently drops the packet.
+        """
+        P = WSJTXProtocol
         pkt = bytearray()
         pkt += struct.pack('>III', MAGIC_WSJTX, 2, PKT_REPLY)
-        id_bytes = b"WSJT-X"
-        pkt += struct.pack('>I', len(id_bytes)) + id_bytes
-        pkt += struct.pack('>I', decode_info.get('time_ms', 0))
-        pkt += struct.pack('>i', decode_info.get('snr', -20))
-        pkt += struct.pack('>d', decode_info.get('delta_time', 0.0))
-        pkt += struct.pack('>I', decode_info.get('delta_freq', 0))
+        pkt += P._pack_utf8("WSJT-X")
+        pkt += struct.pack('>I', int(decode_info.get('time_ms', 0)) & 0xFFFFFFFF)
+        pkt += struct.pack('>i', int(decode_info.get('snr', -20)))
+        pkt += struct.pack('>d', float(decode_info.get('delta_time', 0.0)))
+        pkt += struct.pack('>I', int(decode_info.get('delta_freq', 0)) & 0xFFFFFFFF)
         mode = decode_info.get('mode', 'FT8')
-        mode_bytes = mode.encode('utf-8')
         if mode == 'FT8':
-            mode_bytes = b'~'
+            mode_str = '~'
         elif mode == 'JT9':
-            mode_bytes = b'@'
-        pkt += struct.pack('>I', len(mode_bytes)) + mode_bytes
-        msg = decode_info.get('message', '')
-        msg_bytes = msg.encode('utf-8')
-        pkt += struct.pack('>I', len(msg_bytes)) + msg_bytes
+            mode_str = '@'
+        else:
+            mode_str = mode
+        pkt += P._pack_utf8(mode_str)
+        pkt += P._pack_utf8(decode_info.get('message', ''))
+        pkt += struct.pack('>B', 1 if decode_info.get('low_confidence') else 0)
+        pkt += struct.pack('>B', int(decode_info.get('modifiers', 0)) & 0xFF)
         return bytes(pkt)
 
     @staticmethod
-    def build_free_text(text: str) -> bytes:
+    def build_free_text(text: str, send: bool = True) -> bytes:
+        """Free Text (type 9): Id (utf8), Text (utf8), Send (bool).
+
+        The trailing Send bool is REQUIRED: when true JTDX loads the text
+        AND transmits it; without the byte the text is set but never sent.
+        """
+        P = WSJTXProtocol
         pkt = bytearray()
         pkt += struct.pack('>III', MAGIC_WSJTX, 2, PKT_FREE_TEXT)
-        id_bytes = b"WSJT-X"
-        pkt += struct.pack('>I', len(id_bytes)) + id_bytes
-        msg_bytes = text.strip().encode('utf-8')
-        pkt += struct.pack('>I', len(msg_bytes)) + msg_bytes
+        pkt += P._pack_utf8("WSJT-X")
+        pkt += P._pack_utf8(text.strip())
+        pkt += struct.pack('>B', 1 if send else 0)
         return bytes(pkt)
 
     @staticmethod
-    def build_halt_tx() -> bytes:
+    def build_halt_tx(auto_only: bool = False) -> bytes:
+        """Halt Tx (type 8): Id (utf8), Auto Tx Only (bool).
+
+        auto_only=False stops transmission immediately; True only disables
+        further auto-sequenced transmissions but lets the current one finish.
+        """
+        P = WSJTXProtocol
         pkt = bytearray()
         pkt += struct.pack('>III', MAGIC_WSJTX, 2, PKT_HALT_TX)
-        pkt += struct.pack('>I', 0)
+        pkt += P._pack_utf8("WSJT-X")
+        pkt += struct.pack('>B', 1 if auto_only else 0)
         return bytes(pkt)
+
+
+# ── QSO Auto-Sequencer ─────────────────────────────────────
+# Drives a standard FT8 QSO end-to-end the way JTDX "Auto Seq" does, but
+# server-side so a remote browser user gets the same hands-off experience.
+#
+# Two entry paths:
+#   answer_cq(dx, snr)  — reply to someone else's CQ
+#   call_cq()           — call CQ ourselves and work the first replier
+#
+# State machine (our perspective):
+#   IDLE
+#   CQ        we are calling CQ, waiting for an answer "<MY> <DX> <grid>"
+#   CALLING   we answered a CQ, sent "<DX> <MY> <grid>", waiting for a report
+#   REPORTED  we sent "<DX> <MY> <±rpt>", waiting for "R±rpt"
+#   ROGERED   we sent "<DX> <MY> R±rpt" (or RR73), waiting for RR73/73
+#   DONE      QSO complete / logged
+REPORT_RE = re.compile(r'^R?[+-]\d{2}$')
+GRID_RE = re.compile(r'^[A-R]{2}\d{2}$', re.IGNORECASE)
+
+
+class QSOSequencer:
+    def __init__(self, integ):
+        self.integ = integ
+        self.lock = threading.Lock()
+        self.state = "IDLE"
+        self.dx_call = ""
+        self.dx_grid = ""
+        self.rx_snr = -15           # SNR we heard the DX at → report we send
+        self.pending_msg = ""       # message we want JTDX to transmit
+        self.last_decode_info = None  # for Reply-packet replies
+        self.cycles_waiting = 0
+        self.max_cycles = 6         # give up after this many idle cycles
+        self.enabled = False
+
+    # ── helpers ──
+    @staticmethod
+    def _fmt_report(snr: int) -> str:
+        snr = max(-30, min(30, int(snr)))
+        return f"{snr:+03d}"
+
+    def _emit_state(self):
+        self.integ._enqueue_broadcast({
+            'type': 'qso_state',
+            'data': {
+                'state': self.state,
+                'dx_call': self.dx_call,
+                'dx_grid': self.dx_grid,
+                'enabled': self.enabled,
+            }
+        })
+
+    def _reply_to(self, orig_message: str):
+        """Trigger TX by sending a Reply packet referencing the ORIGINAL decode.
+
+        This is the ONLY reliable way to make JTDX/WSJT-X transmit over UDP:
+        a Reply (type 4) is equivalent to double-clicking the decode. JTDX
+        matches `message` against its decode list, arms Tx, and — because its
+        own AutoSequence is enabled — drives the rest of the QSO itself.
+        A Free Text packet merely loads the message and does NOT key the radio.
+        """
+        di = dict(self.last_decode_info or {})
+        di['message'] = orig_message
+        ok = self.integ._send_udp(WSJTXProtocol.build_reply(di))
+        logger.info(f"[SEQ:{self.state}] Reply → {orig_message} ({'ok' if ok else 'FAIL'})")
+        return ok
+
+    def _send(self, msg: str, use_reply: bool = False):
+        """Free-text fallback (used only when JTDX AutoSequence is OFF)."""
+        self.pending_msg = msg
+        self.cycles_waiting = 0
+        self.integ._send_udp(WSJTXProtocol.build_free_text(msg, send=True))
+        logger.info(f"[SEQ:{self.state}] FreeText → {msg}")
+
+    def _reset(self, reason: str = ""):
+        self.state = "IDLE"
+        self.dx_call = ""
+        self.dx_grid = ""
+        self.pending_msg = ""
+        self.last_decode_info = None
+        self.cycles_waiting = 0
+        if reason:
+            logger.info(f"[SEQ] reset: {reason}")
+        self._emit_state()
+
+    # ── public control ──
+    def stop(self):
+        with self.lock:
+            self.enabled = False
+            self.integ._send_udp(WSJTXProtocol.build_halt_tx(auto_only=False))
+            self._reset("stopped by user")
+
+    def answer_cq(self, dx: str, snr: int, decode_info: dict = None,
+                  orig_message: str = ""):
+        """Answer a CQ. Fires a single Reply packet; JTDX auto-sequences the QSO.
+
+        decode_info / orig_message come straight from the decode the user
+        clicked. The Reply references that exact decode so JTDX knows which
+        station to work and keys the radio.
+        """
+        with self.lock:
+            my = self.integ.my_callsign
+            if not my:
+                logger.warning("[SEQ] answer_cq ignored: no callsign set")
+                return
+            self.enabled = True
+            self.dx_call = dx.upper()
+            self.rx_snr = int(snr)
+            self.last_decode_info = decode_info or {}
+            self.state = "CALLING"
+            self.cycles_waiting = 0
+            if not orig_message:
+                # Reconstruct a plausible CQ string if the UI didn't supply one.
+                orig_message = f"CQ {self.dx_call} {self.integ.my_grid}".strip()
+            ok = self._reply_to(orig_message)
+            if not ok:
+                # JTDX unreachable → fall back to free text (won't auto-seq).
+                grid = self.integ.my_grid or ""
+                self._send(f"{self.dx_call} {my} {grid}".strip())
+            self._emit_state()
+
+    def call_cq(self):
+        with self.lock:
+            my = self.integ.my_callsign
+            if not my:
+                logger.warning("[SEQ] call_cq ignored: no callsign set")
+                return
+            self.enabled = True
+            self.dx_call = ""
+            self.last_decode_info = None
+            grid = self.integ.my_grid or ""
+            self.state = "CQ"
+            self._send(f"CQ {my} {grid}".strip())
+            self._emit_state()
+
+    # ── decode-driven state tracking ──
+    def on_decode(self, entry: "DecodeEntry"):
+        """Track QSO progress for the UI.
+
+        After our initial Reply, JTDX (AutoSequence=true) drives the actual
+        transmissions itself: report → R-report → RR73 → 73 → logs the QSO.
+        We only OBSERVE the exchange here to update the UI state badge and to
+        capture the DX grid/report — we do NOT transmit (Free Text wouldn't key
+        the radio anyway, and a second Reply would fight JTDX's sequencer).
+        """
+        if not self.enabled or self.state in ("IDLE", "DONE"):
+            return
+        my = self.integ.my_callsign.upper()
+        if not my:
+            return
+        parts = entry.message.upper().split()
+        if len(parts) < 2 or parts[0] != my:
+            return  # not addressed to us
+
+        with self.lock:
+            sender = parts[1]
+            if self.state == "CQ":
+                self.dx_call = sender
+                self.rx_snr = entry.snr
+            elif sender != self.dx_call:
+                return  # a different station — ignore during an active QSO
+
+            self.cycles_waiting = 0  # heard from DX → reset idle timeout
+            rest = parts[2:]
+            tok = rest[0] if rest else ""
+
+            if tok in ("73", "RR73", "RRR") or "73" in rest:
+                # DX confirmed — JTDX logs it; we just finalize UI state.
+                self.state = "DONE"
+                self.enabled = False
+                self._emit_state()
+                return
+            if REPORT_RE.match(tok) and tok.startswith("R"):
+                self.state = "ROGERED"      # got R-report; JTDX will send RR73
+                self._emit_state()
+                return
+            if REPORT_RE.match(tok):
+                self.state = "REPORTED"      # got bare report; JTDX sends R-rpt
+                self._emit_state()
+                return
+            if GRID_RE.match(tok):
+                self.dx_grid = tok           # answer to our CQ; JTDX sends report
+                self.state = "REPORTED"
+                self._emit_state()
+                return
+
+    def on_cycle(self):
+        """Once per 15s cycle: give up if the DX stops answering."""
+        if not self.enabled or self.state in ("IDLE", "DONE"):
+            return
+        with self.lock:
+            self.cycles_waiting += 1
+            if self.cycles_waiting >= self.max_cycles:
+                # Stop JTDX's auto-sequence too so it doesn't keep calling.
+                self.integ._send_udp(WSJTXProtocol.build_halt_tx(auto_only=True))
+                self._reset(f"timed out after {self.max_cycles} cycles")
+                self.enabled = False
+
+    def _log_qso(self):
+        call = self.dx_call
+        if not call:
+            return
+        self.integ._log_qso_record(call, self.dx_grid,
+                                   self._fmt_report(self.rx_snr))
 
 
 # ── FT8 Integration ────────────────────────────────────────
@@ -375,7 +614,26 @@ class FT8Integration:
         self.signal_threshold: int = -20
         self.auto_reply: bool = False
         self.worked_calls: Set[str] = set()
+        self.worked_grids: Set[str] = set()      # for "new grid" highlight
+        self.worked_dxcc: Set[str] = set()        # dxcc id strings already worked
         self.excluded_calls: Set[str] = set()
+
+        # Latest radio/JTDX state (populated from Status packets)
+        self.last_status: Dict[str, Any] = {}
+
+        # Tx message slots (JTDX Tx1-Tx6). {N} placeholders expanded at send time.
+        self.tx_slots: Dict[int, str] = {
+            1: "{DxCall} {MyCall} {MyGrid}",
+            2: "{DxCall} {MyCall} {Report}",
+            3: "{DxCall} {MyCall} R{Report}",
+            4: "{DxCall} {MyCall} RR73",
+            5: "{DxCall} {MyCall} 73",
+            6: "CQ {MyCall} {MyGrid}",
+        }
+
+        # Server-side QSO auto-sequencer
+        self.auto_seq: bool = False               # MRRC drives the QSO automatically
+        self.seq = QSOSequencer(self)
 
         self.log_file = Path("ft8/wsjtx_log.adi")
         self._ensure_log()
@@ -392,9 +650,20 @@ class FT8Integration:
         try:
             content = self.log_file.read_text(encoding='utf-8')
             for qso in self.adif.parse(content):
-                if 'call' in qso:
-                    self.worked_calls.add(qso['call'].upper())
-            logger.info(f"Loaded {len(self.worked_calls)} worked calls from log")
+                call = qso.get('call', '')
+                if call:
+                    call = call.upper()
+                    self.worked_calls.add(call)
+                    grid = (qso.get('gridsquare', '') or '')[:4].upper()
+                    if grid:
+                        self.worked_grids.add(grid)
+                    info = self.dxcc.locate(call)
+                    if info.get('id'):
+                        self.worked_dxcc.add(info['id'])
+            logger.info(
+                f"Loaded {len(self.worked_calls)} calls, "
+                f"{len(self.worked_grids)} grids, {len(self.worked_dxcc)} DXCC from log"
+            )
         except Exception as e:
             logger.warning(f"Cannot load log: {e}")
 
@@ -459,6 +728,16 @@ class FT8Integration:
         )
         self.decode_history.append(entry)
 
+        # ── Classification for JTDX-style coloring ──
+        call_u = callsign.upper()
+        parts = msg_text.upper().split()
+        is_cq = bool(parts) and parts[0] in ('CQ', 'QRZ')
+        # Addressed to me: my callsign is the first token of the message.
+        to_me = bool(self.my_callsign) and bool(parts) and parts[0] == self.my_callsign
+        worked = call_u in self.worked_calls
+        new_dxcc = bool(dxcc_info['id']) and dxcc_info['id'] not in self.worked_dxcc
+        new_grid = bool(grid) and grid[:4].upper() not in self.worked_grids
+
         self._enqueue_broadcast({
             'type': 'decode',
             'data': {
@@ -472,54 +751,112 @@ class FT8Integration:
                 'time_ms': entry.time_ms,
                 'delta_time': entry.delta_time,
                 'delta_freq': entry.delta_freq,
-                'worked': entry.callsign.upper() in self.worked_calls,
-                'excluded': entry.callsign.upper() in self.excluded_calls,
+                'worked': worked,
+                'excluded': call_u in self.excluded_calls,
+                'is_cq': is_cq,
+                'to_me': to_me,
+                'new_dxcc': new_dxcc,
+                'new_grid': new_grid,
             }
         })
 
-        if entry.callsign and not entry.callsign.upper() in self.worked_calls:
-            parts = msg_text.split()
-            if len(parts) >= 2 and (parts[0] == 'CQ' or parts[0] == 'QRZ'):
-                if self.auto_reply and snr >= self.signal_threshold:
-                    self._do_response(entry)
+        # ── Feed the auto-sequencer (handles replies addressed to us) ──
+        if self.auto_seq:
+            try:
+                self.seq.on_decode(entry)
+            except Exception as e:
+                logger.error(f"Sequencer on_decode error: {e}")
+
+        # ── Legacy single-shot auto-reply (only when sequencer is off) ──
+        elif self.auto_reply and is_cq and not worked and call_u not in self.excluded_calls:
+            if snr >= self.signal_threshold:
+                self._do_response(entry)
 
     def _on_status(self, pkt: dict):
         freq = pkt.get('frequency', 0)
         band = self._freq_to_band(freq)
-        self._enqueue_broadcast({
-            'type': 'status',
-            'data': {
-                'software': pkt.get('software', ''),
-                'frequency': freq,
-                'mode': pkt.get('mode', ''),
-                'band': band,
-                'transmitting': pkt.get('transmitting', False),
-                'de_call': pkt.get('de_call', ''),
-                'dx_call': pkt.get('dx_call', ''),
-                'report': pkt.get('report', ''),
-                'tx_enabled': pkt.get('tx_enabled', False),
-            }
-        })
+        status = {
+            'software': pkt.get('software', ''),
+            'frequency': freq,
+            'mode': pkt.get('mode', ''),
+            'sub_mode': pkt.get('sub_mode', ''),
+            'band': band,
+            'transmitting': pkt.get('transmitting', False),
+            'de_call': pkt.get('de_call', ''),
+            'de_grid': pkt.get('de_grid', ''),
+            'dx_call': pkt.get('dx_call', ''),
+            'dx_grid': pkt.get('dx_grid', ''),
+            'report': pkt.get('report', ''),
+            'tx_enabled': pkt.get('tx_enabled', False),
+            'tx_first': pkt.get('tx_first', False),
+            'rx_df': pkt.get('rx_df', 0),
+            'tx_df': pkt.get('tx_df', 0),
+        }
+        # Cache latest radio state so the sequencer / slot expansion can use it.
+        # TEMP DIAG: log tx flags so we can see if JTDX ever arms/keys TX.
+        prev = self.last_status or {}
+        if (prev.get('tx_enabled') != status['tx_enabled']
+                or prev.get('transmitting') != status['transmitting']):
+            logger.info(f"[STATUS] tx_enabled={status['tx_enabled']} "
+                        f"transmitting={status['transmitting']} "
+                        f"tx_df={status['tx_df']} dx={status['dx_call']}")
+        self.last_status = status
+        # Adopt JTDX's own callsign/grid if the operator hasn't set one yet.
+        if not self.my_callsign and status['de_call']:
+            self.my_callsign = status['de_call'].upper()
+        if not self.my_grid and status['de_grid']:
+            self.my_grid = status['de_grid'].upper()
+        self._enqueue_broadcast({'type': 'status', 'data': status})
 
     def _on_qso_logged(self, pkt: dict):
-        call = pkt.get('dx_call', '')
-        grid = pkt.get('dx_grid', '')
-        if call:
-            self.worked_calls.add(call.upper())
+        # QSO logged by JTDX itself (e.g. operator clicked Log QSO there).
+        self._log_qso_record(pkt.get('dx_call', ''), pkt.get('dx_grid', ''),
+                             pkt.get('report_sent', ''), from_jtdx=True)
+
+    def _log_qso_record(self, call: str, grid: str = "",
+                         report: str = "", from_jtdx: bool = False):
+        """Append a QSO to the ADIF log and update worked sets + frontend.
+
+        Used both by JTDX's QSO-logged packets and the server-side sequencer.
+        De-duplicates so the sequencer and JTDX don't double-log the same QSO.
+        """
+        call = (call or '').strip().upper()
+        if not call:
+            return
+        grid4 = (grid or '')[:4].upper()
+        # Update in-memory worked sets for live coloring.
+        already = call in self.worked_calls
+        self.worked_calls.add(call)
+        if grid4:
+            self.worked_grids.add(grid4)
+        info = self.dxcc.locate(call)
+        if info.get('id'):
+            self.worked_dxcc.add(info['id'])
+
+        # Only write a new ADIF record once per call per session run.
+        if not already:
             qso = {
                 'call': call, 'gridsquare': grid,
                 'mode': 'FT8', 'qso_date': datetime.now(timezone.utc).strftime('%Y%m%d'),
-                'time_on': datetime.now(timezone.utc).strftime('%H%M%S'), 'eor': '',
+                'time_on': datetime.now(timezone.utc).strftime('%H%M%S'),
             }
+            if report:
+                qso['rst_sent'] = report
+            qso['eor'] = ''
             try:
                 with open(self.log_file, 'a', encoding='utf-8') as f:
                     f.write(self.adif.format(qso) + '\n')
             except Exception as e:
                 logger.error(f"Log write error: {e}")
-            self._enqueue_broadcast({
-                'type': 'qso_logged',
-                'data': {'dx_call': call, 'dx_grid': grid}
-            })
+
+        self._enqueue_broadcast({
+            'type': 'qso_logged',
+            'data': {
+                'dx_call': call, 'dx_grid': grid,
+                'report': report, 'from_jtdx': from_jtdx,
+                'new_dxcc': bool(info.get('id')) and info['id'] in self.worked_dxcc,
+            }
+        })
 
     def _do_response(self, entry: DecodeEntry):
         msg = f"{entry.callsign} {self.my_callsign}"
@@ -539,6 +876,26 @@ class FT8Integration:
             self._send_udp(WSJTXProtocol.build_free_text(msg))
         logger.info(f"Auto-reply: {msg}")
 
+    def _expand_slot(self, template: str, dx_call: str = "") -> str:
+        """Expand Tx-slot placeholders into a ready-to-send message.
+
+        Placeholders: {MyCall} {MyGrid} {DxCall} {DxGrid} {Report}
+        {Report} uses the DX's last-heard SNR if known, else our threshold.
+        """
+        dx = (dx_call or self.last_status.get('dx_call', '') or '').upper()
+        dx_grid = self.last_status.get('dx_grid', '')
+        # Report: SNR we heard the DX at, taken from the sequencer if active.
+        snr = self.seq.rx_snr if self.seq and self.seq.dx_call == dx else -15
+        report = f"{max(-30, min(30, int(snr))):+03d}"
+        out = (template
+               .replace('{MyCall}', self.my_callsign)
+               .replace('{MyGrid}', self.my_grid)
+               .replace('{DxCall}', dx)
+               .replace('{DxGrid}', dx_grid)
+               .replace('{Report}', report))
+        # Collapse whitespace from any empty substitutions.
+        return ' '.join(out.split())
+
     @staticmethod
     def _freq_to_band(f: int) -> str:
         mhz = f / 1e6
@@ -553,8 +910,15 @@ class FT8Integration:
 
     # ── UDP I/O ──
     def _send_udp(self, data: bytes) -> bool:
-        host = self.jtdx_addr[0] if self.jtdx_addr else self.jtdx_host
-        port = self.jtdx_port
+        # JTDX/WSJT-X binds its UDP socket to an EPHEMERAL source port and both
+        # sends datagrams from and listens for Reply/Halt requests on it. So we
+        # MUST reply to the exact source address:port of the packets we received
+        # (e.g. 127.0.0.1:55991), NOT the configured UDPServerPort — that port
+        # may be taken by another logger (RUMlogNG, etc.) and JTDX isn't there.
+        if self.jtdx_addr:
+            host, port = self.jtdx_addr[0], self.jtdx_addr[1]
+        else:
+            host, port = self.jtdx_host, self.jtdx_port
         try:
             s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             s.settimeout(1.0)
@@ -584,9 +948,15 @@ class FT8Integration:
                 except socket.timeout:
                     pass
                 else:
-                    if self.jtdx_addr is None or self.jtdx_addr[0] != addr[0]:
+                    # Track the FULL source address (host AND ephemeral port).
+                    # JTDX/WSJT-X listens for Reply/Halt on the same socket it
+                    # sends from — an ephemeral port (e.g. 55991), NOT the
+                    # configured 2237. Replying to a fixed port lands on the
+                    # wrong process and TX never happens. Re-latch whenever
+                    # either host or port changes (e.g. JTDX restart).
+                    if self.jtdx_addr != addr:
                         self.jtdx_addr = addr
-                        logger.info(f"JTDX source auto-detected: {addr[0]}:{addr[1]}")
+                        logger.info(f"JTDX source auto-detected: {addr[0]}:{addr[1]} (reply target)")
                     hdr = self.protocol.parse_header(data)
                     if hdr:
                         ptype = hdr['type']
@@ -612,8 +982,15 @@ class FT8Integration:
 
                 now = time.time()
                 if now - last_cycle_update >= 1.0:
+                    prev_slot = self.cycle.slot
                     self.cycle.update()
                     last_cycle_update = now
+                    # Fire the sequencer once per 15s slot boundary.
+                    if self.cycle.slot != prev_slot and self.auto_seq:
+                        try:
+                            self.seq.on_cycle()
+                        except Exception as e:
+                            logger.error(f"Sequencer on_cycle error: {e}")
                     self._enqueue_broadcast({
                         'type': 'cycle',
                         'data': {
@@ -645,27 +1022,33 @@ class FT8Integration:
             if not callsign:
                 return {'status': 'error', 'message': 'No callsign'}
 
-            # Use Reply packet type (4) when decode info is available
-            if all(k in params for k in ('time_ms', 'snr', 'delta_time', 'delta_freq')):
+            # A Reply packet's `message` MUST be the ORIGINAL decoded message
+            # (e.g. "CQ BG6UFQ OM88"). JTDX matches it against its decode list,
+            # arms Tx, and generates the actual reply itself. Putting our own
+            # outgoing text there makes JTDX drop the packet → no transmission.
+            orig = params.get('orig_message', '') or params.get('message', '')
+            if orig and all(k in params for k in ('time_ms', 'snr', 'delta_time', 'delta_freq')):
                 decode_info = {
                     'time_ms': params.get('time_ms', 0),
                     'snr': params.get('snr', -20),
                     'delta_time': params.get('delta_time', 0.0),
                     'delta_freq': params.get('delta_freq', 0),
                     'mode': params.get('mode', 'FT8'),
-                    'message': params.get('message', ''),
+                    'message': orig,
                 }
                 ok = self._send_udp(WSJTXProtocol.build_reply(decode_info))
             else:
-                msg = params.get('message', '')
+                # No decode reference → fall back to Free Text (loads only;
+                # JTDX must already have Tx armed for this to transmit).
+                msg = params.get('out_message', '')
                 if not msg:
                     g = self.my_grid or 'AA00'
                     msg = f"{callsign} {self.my_callsign} {g}"
-                ok = self._send_udp(WSJTXProtocol.build_free_text(msg))
+                ok = self._send_udp(WSJTXProtocol.build_free_text(msg, send=True))
 
             if not ok:
                 return {'status': 'error', 'message': 'UDP send failed — check JTDX host/port'}
-            logger.info(f"Reply: {callsign}")
+            logger.info(f"Reply: {callsign} (orig='{orig}')")
             return {'status': 'ok', 'command': 'reply', 'callsign': callsign}
 
         elif command == 'rr73':
@@ -719,7 +1102,77 @@ class FT8Integration:
                 self.jtdx_host = str(params['jtdx_host'])
                 self.jtdx_addr = None  # Reset auto-detected addr so new host is used
                 logger.info(f"JTDX host set to {self.jtdx_host}")
+            if 'auto_seq' in params:
+                self.auto_seq = bool(params['auto_seq'])
+                logger.info(f"Auto-sequencer {'ON' if self.auto_seq else 'OFF'}")
             return {'status': 'ok', 'command': 'settings'}
+
+        # ── QSO auto-sequencer control ──
+        elif command == 'answer_cq':
+            # Reply to a CQ and let JTDX (AutoSequence) drive the whole QSO.
+            callsign = (params.get('callsign', '') or '').upper()
+            if not callsign:
+                return {'status': 'error', 'message': 'No callsign'}
+            if not self.my_callsign:
+                return {'status': 'error', 'message': 'Set your callsign first'}
+            self.auto_seq = True
+            decode_info = {
+                'time_ms': params.get('time_ms', 0),
+                'snr': params.get('snr', -20),
+                'delta_time': params.get('delta_time', 0.0),
+                'delta_freq': params.get('delta_freq', 0),
+                'mode': params.get('mode', 'FT8'),
+            }
+            orig = params.get('orig_message', '') or params.get('message', '')
+            self.seq.answer_cq(callsign, int(params.get('snr', -15)),
+                               decode_info, orig_message=orig)
+            return {'status': 'ok', 'command': 'answer_cq', 'callsign': callsign}
+
+        elif command == 'call_cq':
+            if not self.my_callsign:
+                return {'status': 'error', 'message': 'Set your callsign first'}
+            self.auto_seq = True
+            self.seq.call_cq()
+            return {'status': 'ok', 'command': 'call_cq'}
+
+        elif command == 'stop_qso':
+            self.seq.stop()
+            return {'status': 'ok', 'command': 'stop_qso'}
+
+        elif command == 'set_auto_seq':
+            self.auto_seq = bool(params.get('enabled', False))
+            if not self.auto_seq:
+                self.seq.stop()
+            return {'status': 'ok', 'command': 'set_auto_seq', 'enabled': self.auto_seq}
+
+        # ── Tx message slots (Tx1-Tx6) ──
+        elif command == 'set_tx_msg':
+            try:
+                slot = int(params.get('slot', 0))
+            except (ValueError, TypeError):
+                slot = 0
+            if slot < 1 or slot > 6:
+                return {'status': 'error', 'message': 'slot must be 1-6'}
+            self.tx_slots[slot] = str(params.get('text', ''))
+            return {'status': 'ok', 'command': 'set_tx_msg', 'slot': slot}
+
+        elif command == 'send_tx_slot':
+            try:
+                slot = int(params.get('slot', 0))
+            except (ValueError, TypeError):
+                slot = 0
+            if slot not in self.tx_slots:
+                return {'status': 'error', 'message': 'slot must be 1-6'}
+            msg = self._expand_slot(self.tx_slots[slot], params.get('dx_call', ''))
+            if not msg:
+                return {'status': 'error', 'message': 'Empty message (missing callsign?)'}
+            if not self._send_udp(WSJTXProtocol.build_free_text(msg, send=True)):
+                return {'status': 'error', 'message': 'UDP send failed'}
+            logger.info(f"Tx{slot}: {msg}")
+            return {'status': 'ok', 'command': 'send_tx_slot', 'slot': slot, 'message': msg}
+
+        elif command == 'get_tx_slots':
+            return {'status': 'ok', 'command': 'get_tx_slots', 'slots': self.tx_slots}
 
         elif command == 'get_decodes':
             return {'status': 'ok', 'command': 'get_decodes', 'decodes': self.get_decodes(100)}
@@ -743,6 +1196,15 @@ class FT8Integration:
             'jtdx_port': self.jtdx_port,
             'jtdx_host': self.jtdx_host,
             'jtdx_detected': f"{self.jtdx_addr[0]}:{self.jtdx_addr[1]}" if self.jtdx_addr else None,
+            'auto_seq': self.auto_seq,
+            'tx_slots': self.tx_slots,
+            'qso': {
+                'state': self.seq.state,
+                'dx_call': self.seq.dx_call,
+                'dx_grid': self.seq.dx_grid,
+                'enabled': self.seq.enabled,
+            },
+            'radio': self.last_status,
             'cycle': {
                 'phase': self.cycle.phase,
                 'is_tx': self.cycle.is_tx,

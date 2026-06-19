@@ -230,6 +230,47 @@ class AuthenticatedWebSocketHandler(tornado.websocket.WebSocketHandler):
 	def get_current_user(self):
 		return self.get_secure_cookie("user")
 
+	def check_origin(self, origin):
+		# R1 fix: prior handlers returned True for every origin, enabling
+		# Cross-Site WebSocket Hijacking — any page the victim visited could
+		# open these sockets with the victim's auth cookie and key the
+		# transmitter / change frequency. We now require the WebSocket Origin
+		# to match the request Host (same-origin), which covers reverse-proxy
+		# and tunnel deployments since the browser sends the public host in
+		# both. An optional [SERVER] allowed_origins (comma-separated) whitelist
+		# permits extra trusted origins.
+		try:
+			origin_host = urllib.parse.urlparse(origin).netloc.lower()
+		except Exception:
+			return False
+		if not origin_host:
+			return False
+
+		# Same-origin: Origin host == Host header (with or without port).
+		host_header = (self.request.headers.get("Host", "") or "").lower()
+		if origin_host == host_header:
+			return True
+		# Compare host portion only (ignore port) as a fallback.
+		if origin_host.split(":")[0] == host_header.split(":")[0] and host_header:
+			return True
+
+		# Optional explicit whitelist from config.
+		try:
+			allowed = config['SERVER'].get('allowed_origins', '') or ''
+		except Exception:
+			allowed = ''
+		for entry in allowed.split(','):
+			entry = entry.strip().lower()
+			if not entry:
+				continue
+			# Accept either a bare host or a full origin in the config.
+			entry_host = urllib.parse.urlparse(entry).netloc.lower() or entry
+			if origin_host == entry_host or origin_host.split(":")[0] == entry_host.split(":")[0]:
+				return True
+
+		logger.warning(f"⚠️ WebSocket origin rejected: origin={origin!r} host={host_header!r}")
+		return False
+
 	def prepare(self):
 		if auth_enabled() and not self.current_user:
 			self.set_status(403)
@@ -619,7 +660,7 @@ class WS_AudioTXHandler(AuthenticatedWebSocketHandler):
 			# 增加容忍度以应对网络延迟和浏览器处理延迟
 			if time.time() > last_AudioTXHandler_msg_time + 0.2:
 				self.miss_count += 1
-				if self.miss_count >= 25 and self.ws_connection and CTRX.infos["PTT"]==True:
+				if self.miss_count >= 25 and self.ws_connection and CTRX.mrrc_ptt_active:
 					CTRX.setPTT("false")
 					print("stop ptt on timeout by miss_count (10x200ms)")
 			else:
@@ -652,7 +693,7 @@ class WS_AudioTXHandler(AuthenticatedWebSocketHandler):
 				# 使用PyAudio TX初始化作为可靠的PTT触发条件
 				# 当PyAudio TX初始化成功时，自动设置PTT=1
 				global CTRX
-				if CTRX and CTRX.infos.get("PTT") == False:
+				if CTRX and not CTRX.mrrc_ptt_active:
 					logger.info("🎯 PyAudio TX初始化成功，自动触发PTT=1")
 					CTRX.setPTT("true")
 					
@@ -722,7 +763,7 @@ class WS_AudioTXHandler(AuthenticatedWebSocketHandler):
 			if tx_audio_analyzer and tx_audio_analyzer.is_recording:
 				tx_audio_analyzer.stop_recording()
 			# 关键修复：立即关闭PTT
-			if CTRX and CTRX.infos.get("PTT") == True:
+			if CTRX and CTRX.mrrc_ptt_active:
 				CTRX.setPTT("false")
 				print("🔴 PTT已关闭（收到s:命令）")
 				# 广播PTT状态变化
@@ -799,7 +840,7 @@ class WS_AudioTXHandler(AuthenticatedWebSocketHandler):
 				self.inp.close()
 		if self in AudioTXHandlerClients:
 			AudioTXHandlerClients.remove(self)
-		if (not len(AudioTXHandlerClients)) and (CTRX.infos["PTT"]==True):
+		if (not len(AudioTXHandlerClients)) and CTRX.mrrc_ptt_active:
 			# 🎙️ TX 音频分析：停止录音
 			if tx_audio_analyzer and tx_audio_analyzer.is_recording:
 				tx_audio_analyzer.stop_recording()
@@ -1397,10 +1438,8 @@ class AtuWebSocketClient:
 ############ ATU监控WebSocket处理器 ##############
 class AtuWebSocketHandler(AuthenticatedWebSocketHandler):
     """ATU监控WebSocket处理器"""
-    
-    def check_origin(self, origin):
-        return True
-    
+    # R1 fix: check_origin 继承自 AuthenticatedWebSocketHandler（同源校验，防 CSWSH）
+
     def open(self):
         pass
     
@@ -1919,9 +1958,6 @@ class WS_ATR1000Handler(AuthenticatedWebSocketHandler):
     使用全局单例的 ATR1000ProxyManager 管理连接。
     """
     
-    def check_origin(self, origin):
-        return True
-    
     def open(self):
         global ATR1000HandlerClients
         if self not in ATR1000HandlerClients:
@@ -1976,10 +2012,7 @@ class WS_ATUAutoTunerHandler(AuthenticatedWebSocketHandler):
     """
     
     clients = []
-    
-    def check_origin(self, origin):
-        return True
-    
+
     def open(self):
         if self not in WS_ATUAutoTunerHandler.clients:
             WS_ATUAutoTunerHandler.clients.append(self)
@@ -2085,10 +2118,7 @@ class WS_FT8Handler(AuthenticatedWebSocketHandler):
     
     clients = []
     ft8_integration = None
-    
-    def check_origin(self, origin):
-        return True
-    
+
     def open(self):
         if self not in WS_FT8Handler.clients:
             WS_FT8Handler.clients.append(self)
@@ -2245,7 +2275,21 @@ class TRXRIG:
 		self.infos["VFO"] = 0
 		self.infos["StrgLVL"] = "0"
 		self.infos["PTT"] = False
-		
+
+		# === PTT 安全监管状态（防发射卡死，安全关键）===
+		# ptt_start_time: 本次发射起点（time.time()），用于 TOT 硬上限计算
+		# ptt_tot_seconds: 绝对最大发射时长，超过即由 PTTSafetyMonitor 强制收回
+		# _ptt_release_failed: 释放(T 0)失败标志，置位后监管线程持续后台重试
+		# mrrc_ptt_active: 只标记 MRRC 自己发起的 PTT。JTDX 等外部程序经
+		# getPTT() 反映出的真实发射状态不应触发 MRRC 的 timeout/TOT 收回。
+		self.ptt_start_time = None
+		self.mrrc_ptt_active = False
+		try:
+			self.ptt_tot_seconds = int(config['CTRL']['ptt_tot_seconds'])
+		except Exception:
+			self.ptt_tot_seconds = 120
+		self._ptt_release_failed = False
+
 		if self.rig:
 			print("Radio control initialized successfully")
 			# Get initial values from radio
@@ -2603,11 +2647,22 @@ class TRXRIG:
 		
 		# 保存旧的PTT状态
 		old_ptt_state = self.infos.get("PTT", False)
+		old_mrrc_ptt_active = self.mrrc_ptt_active
 		
-		# 关键优化：先更新状态，这样 audio_interface.py 的半双工检查可以立即生效
-		# 避免 TX→RX 切换时因为等待 rigctld 响应而延迟
-		self.infos["PTT"] = ptt_state
-		
+		# R3 fix: 方向感知的状态更新（安全关键）。
+		# - TX 方向 (ptt_state=True): 乐观预设 PTT=True，让 audio_interface 的
+		#   半双工检查立即生效、减少 TX→RX 切换延迟。即使硬件命令失败，最坏是
+		#   没真正发射，无安全风险。
+		# - RX 方向 (ptt_state=False, 释放): 绝不乐观预设。原实现先置 False 再发
+		#   命令，若 3 次重试全失败，软件以为已 RX 而电台仍在发射 → 发射机卡死
+		#   且 UI 无指示。现在只有硬件确认 RPRT 0 后才置 False。
+		if ptt_state:
+			self.mrrc_ptt_active = True
+			self.infos["PTT"] = True
+			# 记录发射起点（仅在 RX→TX 上升沿），供 PTTSafetyMonitor 计算 TOT 硬上限
+			if not old_mrrc_ptt_active:
+				self.ptt_start_time = time.time()
+
 		# 增加重试机制确保PTT命令成功执行
 		max_retries = 3
 		success = False
@@ -2656,26 +2711,63 @@ class TRXRIG:
 		
 		if not success:
 			logger.error(f"❌ Failed to set PTT after {max_retries} attempts")
-		
+			# R3 fix: 释放(RX)方向命令失败 = 发射机可能仍在发射。绝不让软件
+			# 状态降为 RX，否则半双工门重开、UI 显示 RX 而电台实际在发射。
+			# 保持 PTT=True，并向所有客户端广播告警，让操作员知道卡死。
+			if not ptt_state:
+				self.infos["PTT"] = True
+				# 置位释放失败标志：PTTSafetyMonitor 监管线程将持续后台重试 T 0，
+				# 直到成功或 TOT 触发，不再单纯依赖人工干预（安全关键）。
+				self._ptt_release_failed = True
+				logger.error("🚨 PTT 释放失败，电台可能仍在发射！保持 PTT=True 并启动后台重试")
+				def _broadcast_ptt_alarm():
+					global ControlTRXHandlerClients
+					for client in list(ControlTRXHandlerClients):
+						try:
+							if client.ws_connection and not client.close_code:
+								client.write_message("getPTT:true")
+								client.write_message("pttError:release_failed")
+						except Exception:
+							pass
+				try:
+					tornado.ioloop.IOLoop.instance().add_callback(_broadcast_ptt_alarm)
+				except Exception as e:
+					logger.error(f"Error scheduling PTT alarm broadcast: {e}")
+		else:
+			# 命令成功：若是释放方向，清除失败标志与发射计时
+			if not ptt_state:
+				self.mrrc_ptt_active = False
+				self._ptt_release_failed = False
+				self.ptt_start_time = None
+			else:
+				# 键控成功 = CAT 链路正常，清除任何残留的释放失败标志，
+				# 否则监管线程会把这次新键控误判为待重试而立即强制收回。
+				self._ptt_release_failed = False
+
 		# 如果PTT状态发生变化，广播新状态
+		# F3 fix: setPTT may run on a ThreadPoolExecutor thread (see on_message
+		# fast-path). Tornado write_message() is NOT thread-safe, so we marshal
+		# the broadcast onto the IOLoop via add_callback (the only thread-safe
+		# IOLoop method). This makes setPTT safe to call from any thread.
 		new_ptt_state = self.infos.get("PTT", False)
 		if old_ptt_state != new_ptt_state:
-			# 广播PTT状态变化
-			try:
+			def _broadcast_ptt(state=new_ptt_state):
 				global ControlTRXHandlerClients
 				clients_to_remove = []
 				for client in ControlTRXHandlerClients:
 					try:
 						if client.ws_connection and not client.close_code:
-							client.write_message(f"getPTT:{str(new_ptt_state).lower()}")
+							client.write_message(f"getPTT:{str(state).lower()}")
 					except Exception:
 						clients_to_remove.append(client)
 				for client in clients_to_remove:
 					if client in ControlTRXHandlerClients:
 						ControlTRXHandlerClients.remove(client)
+			try:
+				tornado.ioloop.IOLoop.instance().add_callback(_broadcast_ptt)
 			except Exception as e:
-				logger.error(f"Error broadcasting PTT status: {e}")
-		
+				logger.error(f"Error scheduling PTT broadcast: {e}")
+
 		return self.infos.get("PTT", False)
 		
 	def getPTT(self):
@@ -2782,6 +2874,72 @@ class TRXRIG:
 				logger.error(f"Error in PTT monitoring loop: {e}")
 				time.sleep(5)  # Back off on error
 
+class PTTSafetyMonitor(threading.Thread):
+	"""MRRC 自己发起的 PTT 安全监管线程（防发射卡死，安全关键）。
+
+	完全独立于客户端 WebSocket、音频流和浏览器事件。两条职责：
+
+	1. TOT 硬上限：MRRC PTT 持续发射超过 CTRX.ptt_tot_seconds（默认 120s）即强制
+	   收回。无论客户端是否还在发音频帧、浏览器是否崩溃、网络是否假死，这是
+	   电台侧的绝对发射时长上限，等同商用电台的 Time-Out Timer。
+
+	2. 释放失败后台重试：MRRC 的 setPTT('false') 三次重试全失败会置位
+	   _ptt_release_failed 并保持 PTT=True。本线程每 2 秒重试一次 T 0，直到
+	   硬件确认收回，不再单纯依赖人工干预。
+
+	setPTT 内部自带 IOLoop 安全的广播，本线程只需调用它即可纠正状态并通知 UI。
+	"""
+
+	def __init__(self):
+		threading.Thread.__init__(self)
+		self.daemon = True
+
+	def run(self):
+		while True:
+			try:
+				if CTRX is None:
+					time.sleep(1)
+					continue
+
+				ptt_on = CTRX.mrrc_ptt_active
+
+				# --- 职责 2：释放失败后台重试 ---
+				if CTRX._ptt_release_failed and ptt_on:
+					logger.error("🔁 PTTSafetyMonitor: 检测到释放失败标志，重试 T 0 收回发射")
+					CTRX.setPTT("false")  # setPTT 成功会自行清除标志与计时
+					time.sleep(2)
+					continue
+
+				# --- 职责 1：TOT 绝对最大发射时长 ---
+				if ptt_on and CTRX.ptt_start_time is not None:
+					elapsed = time.time() - CTRX.ptt_start_time
+					if elapsed >= CTRX.ptt_tot_seconds:
+						logger.error(
+							f"⏰ PTTSafetyMonitor: 发射已持续 {elapsed:.1f}s，"
+							f"达到 TOT 上限 {CTRX.ptt_tot_seconds}s，强制收回 PTT")
+						# 强制释放；若硬件命令失败，setPTT 会置位 _ptt_release_failed，
+						# 下一轮循环继续重试，绝不放弃。
+						CTRX.setPTT("false")
+						# 广播 TOT 告警，让操作员知道是超时强制收回
+						def _broadcast_tot():
+							global ControlTRXHandlerClients
+							for client in list(ControlTRXHandlerClients):
+								try:
+									if client.ws_connection and not client.close_code:
+										client.write_message("pttError:tot_timeout")
+								except Exception:
+									pass
+						try:
+							tornado.ioloop.IOLoop.instance().add_callback(_broadcast_tot)
+						except Exception:
+							pass
+
+			except Exception as e:
+				logger.error(f"Error in PTTSafetyMonitor loop: {e}")
+
+			time.sleep(1)  # 1s 巡检周期：TOT 精度 ±1s，CPU 开销可忽略
+
+
 class ticksTRXRIG(threading.Thread):
 
 	def __init__(self):
@@ -2867,7 +3025,8 @@ class WS_ControlTRX(AuthenticatedWebSocketHandler):
 			print(f"📨 收到WebSocket消息: {data}")
 		
 		try:
-			(action, datato) = data.split(':')
+			# 仅按第一个冒号分割：JSON 等载荷自身含冒号（如 memSaveAll:[{"freq":...}]）
+			(action, datato) = data.split(':', 1)
 			datato = datato.strip()  # 清理空白字符和换行符
 			if not is_ping and bool(config['CTRL']['debug']):
 				print(f"📨 解析消息: action={action}, datato={datato}")
@@ -2895,7 +3054,11 @@ class WS_ControlTRX(AuthenticatedWebSocketHandler):
 			# V4.5.6: PTT 日志只在 debug 模式下打印
 			if bool(config['CTRL']['debug']):
 				print(f"🔥 PTT命令: {datato}")
-			result = CTRX.setPTT(datato)
+			# F3 fix: setPTT does blocking rigctld socket I/O (up to 3×3s timeouts
+			# + sleeps). Running it inline on the @gen.coroutine stalled the entire
+			# IOLoop for up to ~9s. Offload to a thread executor; setPTT now
+			# broadcasts its result via IOLoop.add_callback (thread-safe).
+			result = yield tornado.ioloop.IOLoop.current().run_in_executor(None, CTRX.setPTT, datato)
 			
 			yield self.send_to_all_clients("getPTT:"+str(result))
 			LastPing = time.time()
@@ -3190,7 +3353,10 @@ class WS_ControlTRX(AuthenticatedWebSocketHandler):
 		# ---- 频道记忆服务端持久化 ----
 		elif(action == "memLoadAll"):
 			# 从服务端加载当前用户的频道记忆
-			user = self.get_secure_cookie("user") or "default"
+			# get_secure_cookie 返回 bytes，必须 decode 成 str 才能当 dict key
+			# （否则 json.dump 报 "keys must be str... not bytes"）
+			_uc = self.get_secure_cookie("user")
+			user = _uc.decode() if isinstance(_uc, bytes) else (_uc or "default")
 			with memory_lock:
 				channels = user_memory_channels.get(user, [None] * MEMORY_CHANNEL_COUNT)
 			# 确保长度为 MEMORY_CHANNEL_COUNT
@@ -3201,7 +3367,10 @@ class WS_ControlTRX(AuthenticatedWebSocketHandler):
 
 		elif(action == "memSaveAll"):
 			# 保存当前用户的频道记忆到服务端，并广播给所有同用户客户端
-			user = self.get_secure_cookie("user") or "default"
+			# get_secure_cookie 返回 bytes，必须 decode 否则 json.dump 报
+			# "keys must be str ... not bytes"（F1 修复后此路径才被激活，暴露此潜伏 bug）
+			user_cookie = self.get_secure_cookie("user")
+			user = user_cookie.decode("utf-8") if user_cookie else "default"
 			try:
 				channels = json.loads(datato)
 				if not isinstance(channels, list):
@@ -3217,7 +3386,8 @@ class WS_ControlTRX(AuthenticatedWebSocketHandler):
 				broadcast_count = 0
 				for client in ControlTRXHandlerClients:
 					try:
-						client_user = client.get_secure_cookie("user") or "default"
+						cu = client.get_secure_cookie("user")
+						client_user = cu.decode("utf-8") if cu else "default"
 						if client_user == user and client is not self:
 							if client.ws_connection and not client.close_code:
 								client.write_message(mem_msg)
@@ -3750,7 +3920,8 @@ class MemChannelsHandler(BaseHandler):
 			self.set_status(401)
 			self.finish(json.dumps({"error": "Authentication required"}))
 			return
-		user = self.get_secure_cookie("user") or "default"
+		_uc = self.get_secure_cookie("user")
+		user = _uc.decode("utf-8", "replace") if isinstance(_uc, bytes) else (_uc or "default")
 		with memory_lock:
 			channels = user_memory_channels.get(user, [None] * MEMORY_CHANNEL_COUNT)
 		if len(channels) < MEMORY_CHANNEL_COUNT:
@@ -3765,7 +3936,8 @@ class MemChannelsHandler(BaseHandler):
 			self.set_status(401)
 			self.finish(json.dumps({"error": "Authentication required"}))
 			return
-		user = self.get_secure_cookie("user") or "default"
+		_uc = self.get_secure_cookie("user")
+		user = _uc.decode("utf-8", "replace") if isinstance(_uc, bytes) else (_uc or "default")
 		try:
 			body = json.loads(self.request.body)
 			channels = body.get("channels", [])
@@ -3833,6 +4005,11 @@ if __name__ == "__main__":
 		
 		threadticksTRXRIG = ticksTRXRIG()
 		threadticksTRXRIG.start()
+
+		# PTT 安全监管线程：只监管 MRRC 自己发起的 PTT，避免打断 JTDX 等外部发射
+		threadPTTSafety = PTTSafetyMonitor()
+		threadPTTSafety.start()
+		logger.info(f"🛡️ MRRC PTT 安全监管线程已启动（TOT={CTRX.ptt_tot_seconds}s，释放失败自动重试）")
 		
 		if(config['HAMLIB']['trxautopower']=="True"):
 			threadsurveilTRX = threadtimeoutTRXshutdown()

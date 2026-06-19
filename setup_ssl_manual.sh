@@ -6,7 +6,6 @@ set -e
 
 DOMAIN="radio.vlsc.net"
 ACME_SH="$HOME/.acme.sh/acme.sh"
-PROXY="socks5://127.0.0.1:3328"
 
 # 颜色
 GREEN='\033[0;32m'
@@ -16,7 +15,6 @@ BLUE='\033[0;34m'
 NC='\033[0m'
 
 # 设置代理
-export HTTPS_PROXY="$PROXY"
 export ACME_USE_WGET=1
 
 # 检查 acme.sh
@@ -71,7 +69,6 @@ else
     # 使用普通方式，需要用户手动操作
     echo -e "${BLUE}请运行以下命令:${NC}"
     echo ""
-    echo "export HTTPS_PROXY=socks5://127.0.0.1:3328"
     echo "export ACME_USE_WGET=1"
     echo "~/.acme.sh/acme.sh --issue -d radio.vlsc.net --dns --yes-I-know-dns-manual-mode-enough-go-ahead-please"
     echo ""

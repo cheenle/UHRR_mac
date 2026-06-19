@@ -31,8 +31,12 @@ certs/*.crt
 # User database
 MRRC_users.db
 
-# Audio files
+# Video build (large binaries)
+video_build/
+
+# Audio files (cq.wav is explicitly tracked)
 *.wav
+!cq.wav
 venv/
 logs/
 recordings/

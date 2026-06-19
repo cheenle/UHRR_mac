@@ -177,18 +177,58 @@ class ProxyClient:
 proxy_client: Optional[ProxyClient] = None
 
 
+# R2 fix: this server drives real tuner relays and frequency over an
+# unauthenticated HTTP surface that previously bound 0.0.0.0 with CORS '*'.
+# Any host on the network could key relays (relay changes during TX → high
+# SWR into a keyed PA → equipment damage). Hardening:
+#   1. Optional bearer-token auth via env ATR1000_API_TOKEN. If set, every
+#      request except /health must carry "Authorization: Bearer <token>".
+#   2. CORS restricted to an explicit allow-list (env ATR1000_API_CORS,
+#      comma-separated). Default: no cross-origin (same-origin only).
+#   3. Default bind is 127.0.0.1 (see argparse below), not 0.0.0.0.
+API_TOKEN = os.environ.get("ATR1000_API_TOKEN", "").strip()
+_CORS_ALLOWED = [o.strip() for o in os.environ.get("ATR1000_API_CORS", "").split(",") if o.strip()]
+
+
 class BaseHandler(tornado.web.RequestHandler):
     """基础处理器"""
-    
+
+    # Subclasses that must stay public (e.g. health check) set this False.
+    require_auth = True
+
     def set_default_headers(self):
-        self.set_header("Access-Control-Allow-Origin", "*")
+        # Only echo an explicitly allow-listed Origin; never wildcard.
+        origin = self.request.headers.get("Origin", "")
+        if origin and origin in _CORS_ALLOWED:
+            self.set_header("Access-Control-Allow-Origin", origin)
+            self.set_header("Vary", "Origin")
         self.set_header("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS")
-        self.set_header("Access-Control-Allow-Headers", "Content-Type")
-    
+        self.set_header("Access-Control-Allow-Headers", "Content-Type, Authorization")
+
+    def _check_auth(self) -> bool:
+        """Return True if the request is authorized. No-op when no token set."""
+        if not API_TOKEN or not self.require_auth:
+            return True
+        header = self.request.headers.get("Authorization", "")
+        expected = "Bearer " + API_TOKEN
+        # Constant-time compare to avoid token timing leaks.
+        import hmac
+        if hmac.compare_digest(header, expected):
+            return True
+        self.write_json({"success": False, "error": "Unauthorized"}, 401)
+        return False
+
+    def prepare(self):
+        # Enforce auth before any handler body runs (OPTIONS preflight exempt).
+        if self.request.method == "OPTIONS":
+            return
+        if not self._check_auth():
+            self.finish()
+
     def options(self):
         self.set_status(204)
         self.finish()
-    
+
     def write_json(self, data: dict, status: int = 200):
         self.set_status(status)
         self.set_header("Content-Type", "application/json")
@@ -197,7 +237,9 @@ class BaseHandler(tornado.web.RequestHandler):
 
 class HealthHandler(BaseHandler):
     """健康检查"""
-    
+
+    require_auth = False  # health probe stays public
+
     def get(self):
         self.write_json({
             "status": "ok",
@@ -521,7 +563,7 @@ def main():
     global proxy_client
     
     parser = argparse.ArgumentParser(description="ATR-1000 API Server V2 - 通过 Proxy 通信")
-    parser.add_argument("--host", default="0.0.0.0", help="API 服务监听地址")
+    parser.add_argument("--host", default="127.0.0.1", help="API 服务监听地址 (R2: 默认仅本地，避免无鉴权控制面暴露到网络)")
     parser.add_argument("--port", type=int, default=8080, help="API 服务端口")
     parser.add_argument("--proxy-socket", default=PROXY_SOCKET_PATH, help="Proxy Unix Socket 路径")
     
@@ -553,7 +595,7 @@ def main():
     
     # 创建应用
     app = make_app()
-    app.listen(args.port)
+    app.listen(args.port, address=args.host)
     
     # 连接 Proxy
     async def init():

@@ -9,14 +9,29 @@ let TXState = {
     touchId: null,  // 跟踪当前触摸ID
     startTime: 0,
     isProcessing: false,  // 防止状态竞争的锁
+    processingStartTime: 0, // 加锁时间戳，用于检测锁泄漏（安全关键）
     pendingStop: false,   // 标记是否有挂起的 stop 请求（修复 Bug 1）
     pttWatchdogTimer: null // PTT看门狗超时定时器（修复 Bug 3）
 };
+
+// 锁最长持有时长。正常 start/stop 流程在数百毫秒内完成；若 isProcessing
+// 持有超过此值，说明某条未捕获的异常路径导致锁泄漏 → 后续 stop 会被永久
+// 吞掉 → 卡发射。超时即强制释放锁，让 stop 能执行。
+const PROCESSING_LOCK_TIMEOUT_MS = 3000;
 
 // 核心TX控制函数 - 优化 TX→RX 切换
 async function TXControl(action) {
     const timestamp = new Date().toISOString().substr(11, 12);
     console.log(`[${timestamp}] 🎯 TX控制: ${action}, 当前状态: ${TXState.isPressed}, 系统状态: ${poweron}, 处理中: ${TXState.isProcessing}`);
+
+    // 锁泄漏检测（安全关键）：若锁持有超过 PROCESSING_LOCK_TIMEOUT_MS，
+    // 判定为异常路径导致的锁泄漏，强制释放，避免 stop 被永久吞掉而卡发射。
+    if (TXState.isProcessing && TXState.processingStartTime &&
+        (Date.now() - TXState.processingStartTime) > PROCESSING_LOCK_TIMEOUT_MS) {
+        console.warn(`[${timestamp}] 🔓 检测到 isProcessing 锁泄漏（持有 ${Date.now() - TXState.processingStartTime}ms），强制释放`);
+        TXState.isProcessing = false;
+        TXState.processingStartTime = 0;
+    }
 
     // Bug 1 修复：stop 请求在 isProcessing 时排队而非丢弃
     if (TXState.isProcessing && action === 'stop' && TXState.isPressed) {
@@ -45,6 +60,7 @@ async function TXControl(action) {
     
     if (action === 'start' && !TXState.isPressed) {
         TXState.isProcessing = true;  // 加锁
+        TXState.processingStartTime = Date.now();  // 记录加锁时间，供泄漏检测
         TXState.pendingStop = false;  // 清除任何挂起的 stop
         console.log(`[${timestamp}] 🚀 开始TX流程`);
         
@@ -101,15 +117,26 @@ async function TXControl(action) {
             // 先检查 TX WebSocket 状态
             if (typeof isTXWebSocketReady === "function" && !isTXWebSocketReady()) {
                 console.warn("⚠️ TX WebSocket 未就绪，等待连接...");
-                // 等待最多 500ms
+                // 真正异步等待最多 500ms（每 50ms 轮询一次，期间让出事件循环）
+                // F5 修复：原实现是同步计数器忙等，从不让出，等同于不等待。
                 let waited = 0;
                 while (waited < 500) {
                     if (isTXWebSocketReady()) break;
+                    await new Promise(resolve => setTimeout(resolve, 50));
                     waited += 50;
                 }
                 if (!isTXWebSocketReady()) {
                     console.error("❌ TX WebSocket 连接超时，无法开始TX");
                     TXState.isPressed = false;
+                    TXState.isProcessing = false;  // 释放锁，避免后续 TX 被永久阻塞
+                    TXState.processingStartTime = 0;
+                    // 回滚已发送的 PTT:true，防止键控但无音频
+                    if (typeof sendTRXptt === 'function') sendTRXptt(false);
+                    if (TXState.pttWatchdogTimer) {
+                        clearTimeout(TXState.pttWatchdogTimer);
+                        TXState.pttWatchdogTimer = null;
+                    }
+                    if (typeof window.updatePTTStatus === 'function') window.updatePTTStatus(false);
                     return false;
                 }
             }
@@ -175,6 +202,7 @@ async function TXControl(action) {
             
             console.log(`[${timestamp}] ✅ TX开始成功`);
             TXState.isProcessing = false;  // 释放锁
+            TXState.processingStartTime = 0;
             // Bug 1 修复：如果在处理期间收到了 touchend，立即执行 stop
             if (TXState.pendingStop) {
                 TXState.pendingStop = false;
@@ -186,6 +214,7 @@ async function TXControl(action) {
             console.error(`[${timestamp}] ❌ TX开始失败:`, error);
             TXState.isPressed = false;
             TXState.isProcessing = false;  // 释放锁
+            TXState.processingStartTime = 0;
             // 清除看门狗
             if (TXState.pttWatchdogTimer) {
                 clearTimeout(TXState.pttWatchdogTimer);
@@ -214,6 +243,7 @@ async function TXControl(action) {
             return true;  // 返回 true 表示请求已接收
         }
         TXState.isProcessing = true;  // 加锁
+        TXState.processingStartTime = Date.now();  // 记录加锁时间，供泄漏检测
         console.log(`[${timestamp}] 🛑 停止TX流程`);
         
         // 停止TX
@@ -316,10 +346,12 @@ async function TXControl(action) {
             
             console.log(`[${timestamp}] ✅ TX停止成功 - 切换延迟最小化`);
             TXState.isProcessing = false;  // 释放锁
+            TXState.processingStartTime = 0;
             return true;
         } catch (error) {
             console.error(`[${timestamp}] ❌ TX停止失败:`, error);
             TXState.isProcessing = false;  // 释放锁
+            TXState.processingStartTime = 0;
             // 确保即使 stop 失败也恢复基本状态
             TXState.isPressed = false;
             if (typeof sendTRXptt === 'function') sendTRXptt(false);
@@ -509,6 +541,28 @@ if (document.readyState !== 'loading') {
 
 window.addEventListener('load', function() {
     ensureTXButtonReady();
+});
+
+// 安全：页面进入后台 / 失焦 / 卸载时，若 PTT 仍按下则强制释放，
+// 防止 touchend/pointerup 未投递导致发射机卡死（最多 30s 误发射）。
+function forcePTTReleaseIfActive(reason) {
+    if (TXState.isPressed) {
+        console.warn(`[${new Date().toISOString().substr(11, 12)}] 🛑 ${reason}：强制释放 PTT`);
+        // start 处理中则排队，否则直接停止
+        TXControl('stop');
+    }
+}
+
+document.addEventListener('visibilitychange', function() {
+    if (document.hidden) {
+        forcePTTReleaseIfActive('页面进入后台');
+    }
+});
+window.addEventListener('blur', function() {
+    forcePTTReleaseIfActive('窗口失焦');
+});
+window.addEventListener('pagehide', function() {
+    forcePTTReleaseIfActive('页面卸载');
 });
 
 function TXtogle(state) {

@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>T200-2 EFHW 谐振匹配系统工程指南</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;700;900&family=JetBrains+Mono:wght@300;400;600&family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --neon-green: #00ffa3;
+  --neon-blue: #00c8ff;
+  --neon-pink: #ff3d7f;
+  --neon-amber: #ffb300;
+  --neon-purple: #c77dff;
+  --bg-deep: #0a0e1a;
+  --bg-card: rgba(15,20,40,0.85);
+  --border-glow: rgba(0,200,255,0.15);
+}
+* { box-sizing: border-box; }
+body { font-family: 'Inter', sans-serif; line-height: 1.8; }
+h1,h2,h3,h4 { font-family: 'Noto Serif SC', serif; }
+code, .mono { font-family: 'JetBrains Mono', monospace; }
+.grain::before {
+  content:''; position:fixed; top:0; left:0; width:100%; height:100%;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+  pointer-events:none; z-index:9999; opacity:0.4;
+}
+.progress-bar {
+  position:fixed; top:0; left:0; height:3px; z-index:10000;
+  background: linear-gradient(90deg, var(--neon-amber), var(--neon-green), var(--neon-blue));
+  transform-origin: left; transition: transform 0.1s;
+}
+.glow-text { text-shadow: 0 0 20px rgba(255,179,0,0.3), 0 0 60px rgba(0,200,255,0.15); }
+.card {
+  background: var(--bg-card); border:1px solid var(--border-glow);
+  border-radius:12px; backdrop-filter:blur(10px);
+}
+.card-glow { box-shadow: 0 0 30px rgba(0,200,255,0.06), inset 0 1px 0 rgba(255,255,255,0.05); }
+.section-label {
+  font-family:'JetBrains Mono',monospace; font-size:0.7rem; letter-spacing:0.2em;
+  text-transform:uppercase; color:var(--neon-amber); opacity:0.7;
+}
+.divider {
+  height:1px; background:linear-gradient(90deg, transparent, var(--border-glow), transparent);
+  margin:3rem 0;
+}
+table { border-collapse:collapse; width:100%; }
+th { font-family:'JetBrains Mono',monospace; font-size:0.75rem; letter-spacing:0.1em;
+     text-transform:uppercase; color:var(--neon-blue); padding:0.75rem 1rem;
+     border-bottom:1px solid rgba(0,200,255,0.2); text-align:left; }
+td { padding:0.65rem 1rem; border-bottom:1px solid rgba(255,255,255,0.04);
+     font-size:0.9rem; }
+tr:hover td { background:rgba(0,200,255,0.03); }
+.highlight-box {
+  border-left:3px solid var(--neon-amber); padding:1rem 1.5rem;
+  background:rgba(255,179,0,0.05); border-radius:0 8px 8px 0; margin:1.5rem 0;
+}
+.warn-box {
+  border-left:3px solid var(--neon-pink); padding:1rem 1.5rem;
+  background:rgba(255,61,127,0.05); border-radius:0 8px 8px 0; margin:1.5rem 0;
+}
+.quote-box {
+  border-left:3px solid var(--neon-purple); padding:1rem 1.5rem;
+  background:rgba(199,125,255,0.05); border-radius:0 8px 8px 0;
+  font-style:italic; margin:1.5rem 0;
+}
+.success-box {
+  border-left:3px solid var(--neon-green); padding:1rem 1.5rem;
+  background:rgba(0,255,163,0.05); border-radius:0 8px 8px 0; margin:1.5rem 0;
+}
+.chart-container { width:100%; height:400px; }
+@media(max-width:768px) { .chart-container { height:300px; } }
+.toc-link { transition: all 0.2s; border-bottom:1px solid transparent; }
+.toc-link:hover { color:var(--neon-amber); border-bottom-color:var(--neon-amber); }
+.fade-up { opacity:0; transform:translateY(40px); }
+.tag {
+  display:inline-block; padding:0.15rem 0.6rem; border-radius:4px;
+  font-size:0.7rem; font-family:'JetBrains Mono',monospace;
+}
+.tag-green { background:rgba(0,255,163,0.12); color:var(--neon-green); }
+.tag-pink { background:rgba(255,61,127,0.12); color:var(--neon-pink); }
+.tag-blue { background:rgba(0,200,255,0.12); color:var(--neon-blue); }
+.tag-amber { background:rgba(255,179,0,0.12); color:var(--neon-amber); }
+a { color: var(--neon-blue); text-decoration:none; }
+a:hover { text-decoration:underline; }
+.schematic {
+  background: rgba(0,0,0,0.4); border:1px solid rgba(0,200,255,0.15);
+  border-radius:8px; padding:1.5rem; overflow-x:auto;
+  font-family:'JetBrains Mono',monospace; font-size:0.85rem;
+  color: var(--neon-green); line-height:1.6;
+}
+</style>
+</head>
+<body class="bg-[#0a0e1a] text-gray-200 overflow-x-hidden">
+<div class="grain"></div>
+<div class="progress-bar" id="progressBar"></div>
+
+<!-- HERO -->
+<header class="relative min-h-screen flex items-center justify-center overflow-hidden">
+  <div class="absolute inset-0" style="background:radial-gradient(ellipse at 30% 50%, rgba(255,179,0,0.08) 0%, transparent 60%),radial-gradient(ellipse at 70% 30%, rgba(0,255,163,0.06) 0%, transparent 50%);"></div>
+  <div class="absolute top-0 left-0 w-full h-full opacity-10">
+    <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+      <defs><pattern id="grid" width="60" height="60" patternUnits="userSpaceOnUse">
+        <path d="M 60 0 L 0 0 0 60" fill="none" stroke="rgba(255,179,0,0.12)" stroke-width="0.5"/>
+      </pattern></defs>
+      <rect width="100%" height="100%" fill="url(#grid)"/>
+    </svg>
+  </div>
+  <div class="relative z-10 text-center px-6 max-w-5xl mx-auto">
+    <p class="section-label mb-6 fade-up">Engineering Guide / 2026-06</p>
+    <h1 class="text-4xl md:text-6xl lg:text-7xl font-black leading-tight mb-6 glow-text fade-up" style="font-family:'Noto Serif SC',serif;">
+      T200-2 EFHW<br class="hidden md:block">谐振匹配系统
+    </h1>
+    <p class="text-lg md:text-xl text-gray-400 max-w-3xl mx-auto mb-4 fade-up" style="line-height:1.9;">
+      铁粉芯 LC 并联谐振 &mdash; 从单波段到多波段可调谐的终极工程指南
+    </p>
+    <p class="mono text-xs text-gray-500 mb-10 fade-up">基于 G0KYA EFHW 手册 | 空气可变电容多波段调谐 | 含完整工程落地方案</p>
+    <div class="flex flex-wrap justify-center gap-3 mb-12 fade-up">
+      <span class="tag tag-amber">T200-2 铁粉芯</span>
+      <span class="tag tag-green">LC 谐振匹配</span>
+      <span class="tag tag-blue">多波段可调谐</span>
+      <span class="tag tag-pink">高压防护设计</span>
+    </div>
+  </div>
+</header>
+
+<!-- TOC -->
+<nav class="max-w-4xl mx-auto px-6 py-16" id="toc">
+  <div class="card card-glow p-8 md:p-10 fade-up">
+    <p class="section-label mb-4">// 目录 Table of Contents</p>
+    <div class="grid md:grid-cols-2 gap-x-8 gap-y-2">
+      <a href="#sec1" class="toc-link block py-1.5 text-gray-400 hover:text-white"><span class="mono text-xs text-gray-600 mr-2">01</span>设计哲学: 谐振 vs 宽带</a>
+      <a href="#sec2" class="toc-link block py-1.5 text-gray-400 hover:text-white"><span class="mono text-xs text-gray-600 mr-2">02</span>T200-2 磁芯物理特性</a>
+      <a href="#sec3" class="toc-link block py-1.5 text-gray-400 hover:text-white"><span class="mono text-xs text-gray-600 mr-2">03</span>LC 并联谐振原理</a>
+      <a href="#sec4" class="toc-link block py-1.5 text-gray-400 hover:text-white"><span class="mono text-xs text-gray-600 mr-2">04</span>各波段效率理论计算</a>
+      <a href="#sec5" class="toc-link block py-1.5 text-gray-400 hover:text-white"><span class="mono text-xs text-gray-600 mr-2">05</span>高压分析与电容选型</a>
+      <a href="#sec6" class="toc-link block py-1.5 text-gray-400 hover:text-white"><span class="mono text-xs text-gray-600 mr-2">06</span>绕线工程与抽头设计</a>
+      <a href="#sec7" class="toc-link block py-1.5 text-gray-400 hover:text-white"><span class="mono text-xs text-gray-600 mr-2">07</span>共模电流防御体系</a>
+      <a href="#sec8" class="toc-link block py-1.5 text-gray-400 hover:text-white"><span class="mono text-xs text-gray-600 mr-2">08</span>完整电路与接线图</a>
+      <a href="#sec9" class="toc-link block py-1.5 text-gray-400 hover:text-white"><span class="mono text-xs text-gray-600 mr-2">09</span>调谐操作指南</a>
+      <a href="#sec10" class="toc-link block py-1.5 text-gray-400 hover:text-white"><span class="mono text-xs text-gray-600 mr-2">10</span>物料清单与落地检查</a>
+    </div>
+  </div>
+</nav>
+
+<!-- SEC 1: PLACEHOLDER -->
+<section id="sec1" class="max-w-4xl mx-auto px-6 py-16">
+  <p class="section-label fade-up">01 / 设计哲学</p>
+  <h2 class="text-3xl md:text-4xl font-bold mt-3 mb-8 fade-up">谐振 vs 宽带: 为什么选 T200-2?</h2>
+
+  <div class="grid md:grid-cols-2 gap-6 mb-8">
+    <div class="card card-glow p-6 fade-up" style="border-top:2px solid var(--neon-pink);">
+      <p class="mono text-sm text-[var(--neon-pink)] mb-4">// 传统: 49:1 宽带 (FT240-43)</p>
+      <ul class="space-y-2 text-gray-300 text-sm">
+        <li>&#9656; 即插即用，无需调谐</li>
+        <li>&#9656; <span class="text-[var(--neon-pink)]">高频漏感大，10m 效率仅 55%</span></li>
+        <li>&#9656; 高占空比下磁芯严重发热</li>
+        <li>&#9656; 补偿电容改善 SWR 但非效率</li>
+      </ul>
+    </div>
+    <div class="card card-glow p-6 fade-up" style="border-top:2px solid var(--neon-green);">
+      <p class="mono text-sm text-[var(--neon-green)] mb-4">// 本方案: LC 谐振 (T200-2)</p>
+      <ul class="space-y-2 text-gray-300 text-sm">
+        <li>&#9656; <strong class="text-white">每波段精准谐振，效率 90-96%</strong></li>
+        <li>&#9656; <span class="text-[var(--neon-green)]">无漏感，高频段碾压宽带方案</span></li>
+        <li>&#9656; 铁粉芯几乎不发热</li>
+        <li>&#9656; 代价: 需手动调谐旋钮</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="highlight-box fade-up">
+    <p class="text-sm text-gray-300"><strong class="text-[var(--neon-amber)]">核心:</strong> 10m 波段 T200-2 比传统方案高 <strong class="text-[var(--neon-green)]">+2.2dB</strong>，等效发射功率从 55W &rarr; 92W。</p>
+  </div>
+</section>
+
+<!-- SEC 2: PLACEHOLDER -->
+<section id="sec2" class="max-w-4xl mx-auto px-6 py-16">
+  <p class="section-label fade-up">02 / 磁芯特性</p>
+  <h2 class="text-3xl md:text-4xl font-bold mt-3 mb-8 fade-up">T200-2 铁粉芯特性</h2>
+
+  <div class="card card-glow p-6 md:p-8 mb-8 fade-up">
+    <div class="overflow-x-auto">
+      <table>
+        <thead><tr><th>参数</th><th>T200-2 (铁粉芯)</th><th>FT240-43 (铁氧体)</th></tr></thead>
+        <tbody>
+          <tr><td class="text-white">&mu;<sub>i</sub></td><td class="mono text-[var(--neon-amber)]">10</td><td class="mono">850</td></tr>
+          <tr><td class="text-white">频率范围</td><td class="text-[var(--neon-green)]">1 - 30 MHz</td><td>0.01 - 30 MHz</td></tr>
+          <tr><td class="text-white">Q 值 @7MHz</td><td class="text-[var(--neon-green)] font-bold">>200</td><td class="text-[var(--neon-amber)]">~50</td></tr>
+          <tr><td class="text-white">磁芯损耗</td><td class="text-[var(--neon-green)]">极低</td><td class="text-[var(--neon-pink)]">中-高</td></tr>
+          <tr><td class="text-white">磁饱和</td><td class="text-[var(--neon-green)]">渐变，高容忍</td><td class="text-[var(--neon-pink)]">陡峭，易烧</td></tr>
+          <tr><td class="text-white">A<sub>L</sub></td><td class="mono">12 nH/N&sup2;</td><td class="mono">~1000 nH/N&sup2;</td></tr>
+          <tr><td class="text-white">适合拓扑</td><td class="text-[var(--neon-amber)]">谐振电路</td><td>宽带变压器</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="warn-box fade-up">
+    <p class="text-sm text-gray-300">&mu;<sub>i</sub>=10 是 FT240-43 的 <strong class="text-white">1/85</strong>。不能做 49:1 宽带变压器，但磁芯损耗微乎其微，完美做高 Q 谐振电感。</p>
+  </div>
+
+  <div class="card card-glow p-6 mt-6 fade-up">
+    <p class="mono text-sm text-[var(--neon-blue)] mb-3">// T200-2 vs T200-6 选型</p>
+    <div class="overflow-x-auto">
+      <table>
+        <thead><tr><th></th><th>T200-2 (红)</th><th>T200-6 (黄)</th></tr></thead>
+        <tbody>
+          <tr><td class="text-white">&mu;<sub>i</sub></td><td>10</td><td>8</td></tr>
+          <tr><td class="text-white">40m</td><td class="text-[var(--neon-green)]">优</td><td class="text-[var(--neon-amber)]">勉强</td></tr>
+          <tr><td class="text-white">15m-10m</td><td class="text-[var(--neon-green)]">优</td><td class="text-[var(--neon-green)]">极优</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="text-xs text-gray-500 mt-3">覆盖 40m-10m 全段选 T200-2；仅高频段选 T200-6。</p>
+  </div>
+</section>
+
+<!-- SEC 3: PLACEHOLDER -->
+<section id="sec3" class="max-w-4xl mx-auto px-6 py-16">
+  <p class="section-label fade-up">03 / 谐振原理</p>
+  <h2 class="text-3xl md:text-4xl font-bold mt-3 mb-8 fade-up">LC 并联谐振原理</h2>
+
+  <div class="card card-glow p-6 md:p-8 mb-8 fade-up">
+    <div class="text-center py-3">
+      <p class="mono text-2xl text-[var(--neon-amber)]">f = 1 / (2&pi;&radic;LC)</p>
+    </div>
+  </div>
+
+  <div class="grid md:grid-cols-2 gap-6 mb-8">
+    <div class="card card-glow p-6 fade-up" style="border-left:3px solid var(--neon-blue);">
+      <p class="mono text-sm text-[var(--neon-blue)] mb-3">// 匝数比变压</p>
+      <p class="mono text-lg text-center text-[var(--neon-blue)] my-2">(13/2)&sup2; = 42.25:1</p>
+      <p class="text-gray-300 text-sm">50&Omega; &times; 42.25 = <strong class="text-white">2112&Omega;</strong> &asymp; 天线端 2500&Omega;</p>
+    </div>
+    <div class="card card-glow p-6 fade-up" style="border-left:3px solid var(--neon-green);">
+      <p class="mono text-sm text-[var(--neon-green)] mb-3">// LC 谐振增强</p>
+      <p class="text-gray-300 text-sm">谐振时阻抗飙升，补足残余差距</p>
+      <p class="text-gray-300 text-sm">同时<strong class="text-white">消除天线容抗/感抗</strong></p>
+    </div>
+  </div>
+
+  <div class="warn-box fade-up">
+    <p class="text-sm text-gray-300"><strong class="text-[var(--neon-pink)]">剃刀带宽:</strong> 高 Q 导致 -3dB 带宽仅 <strong class="text-white">50-80 kHz</strong>。<strong class="text-white">6:1 减速旋钮是刚需。</strong></p>
+  </div>
+</section>
+
+<!-- SEC 4: PLACEHOLDER -->
+<section id="sec4" class="max-w-4xl mx-auto px-6 py-16">
+  <p class="section-label fade-up">04 / 效率分析</p>
+  <h2 class="text-3xl md:text-4xl font-bold mt-3 mb-8 fade-up">各波段效率与电容分配</h2>
+
+  <div class="card card-glow p-6 md:p-8 mb-8 fade-up">
+    <div class="chart-container" id="chartEfficiency"></div>
+  </div>
+
+  <div class="card card-glow p-6 md:p-8 mb-8 fade-up">
+    <div class="overflow-x-auto">
+      <table>
+        <thead><tr><th>波段</th><th>T200-2 效率</th><th>传统 49:1</th><th>增益差</th><th>需要电容</th><th>旋钮灵敏度</th></tr></thead>
+        <tbody>
+          <tr><td class="text-white">40m</td><td class="text-[var(--neon-green)] font-bold">92-94%</td><td class="text-[var(--neon-amber)]">64%</td><td class="text-[var(--neon-green)]">+1.7dB</td><td class="mono">250-400pF</td><td class="text-[var(--neon-green)]">宽松</td></tr>
+          <tr><td class="text-white">20m</td><td class="text-[var(--neon-green)] font-bold">95-96%</td><td>75%</td><td class="text-[var(--neon-green)]">+1.1dB</td><td class="mono">80-150pF</td><td>适中</td></tr>
+          <tr><td class="text-white">15m</td><td class="text-[var(--neon-green)] font-bold">94-95%</td><td class="text-[var(--neon-amber)]">65%</td><td class="text-[var(--neon-green)]">+1.7dB</td><td class="mono">30-60pF</td><td class="text-[var(--neon-amber)]">敏感</td></tr>
+          <tr><td class="text-white">10m</td><td class="text-[var(--neon-green)] font-bold">90-92%</td><td class="text-[var(--neon-pink)]">55%</td><td class="text-[var(--neon-green)] font-bold">+2.2dB</td><td class="mono text-[var(--neon-pink)]">15-30pF</td><td class="text-[var(--neon-pink)] font-bold">极敏感</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="text-xs text-gray-500 mt-3">基于 13T 次级 (L&asymp;2.0&mu;H) + 15-470pF 可变电容。10m 波段旋转 1&deg; 可致 SWR 剧变。</p>
+  </div>
+</section>
+
+<!-- SEC 5: PLACEHOLDER -->
+<section id="sec5" class="max-w-4xl mx-auto px-6 py-16">
+  <p class="section-label fade-up">05 / 高压与电容</p>
+  <h2 class="text-3xl md:text-4xl font-bold mt-3 mb-8 fade-up">高压分析与空气可变电容选型</h2>
+
+  <div class="card card-glow p-6 md:p-8 mb-8 fade-up">
+    <p class="mono text-sm text-[var(--neon-pink)] mb-4">// 各功率等级下的电压计算 (Z<sub>load</sub> = 2500&Omega;)</p>
+    <div class="overflow-x-auto">
+      <table>
+        <thead><tr><th>发射功率</th><th>V<sub>rms</sub></th><th>V<sub>peak</sub></th><th>LC 槽路内峰值</th><th>电容耐压要求</th></tr></thead>
+        <tbody>
+          <tr><td class="text-white">QRP 5W</td><td class="mono">&asymp;112 V</td><td class="mono">&asymp;158 V</td><td class="mono">&asymp;500 V</td><td class="mono text-[var(--neon-green)]">&ge;500 V</td></tr>
+          <tr><td class="text-white">20-30W</td><td class="mono">&asymp;250 V</td><td class="mono">&asymp;353 V</td><td class="mono">&asymp;1000 V</td><td class="mono text-[var(--neon-amber)]">&ge;1000 V</td></tr>
+          <tr><td class="text-white font-bold">100W</td><td class="mono">&asymp;500 V</td><td class="mono font-bold">&asymp;707 V</td><td class="mono text-[var(--neon-pink)] font-bold">&asymp;2000-3000 V</td><td class="mono text-[var(--neon-pink)] font-bold">&ge;2000 V</td></tr>
+          <tr><td class="text-white">400W</td><td class="mono">&asymp;1000 V</td><td class="mono">&asymp;1414 V</td><td class="mono">&asymp;4000 V+</td><td class="mono text-[var(--neon-pink)]">&ge;4000 V</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="warn-box fade-up">
+    <p class="text-sm text-gray-300"><strong class="text-[var(--neon-pink)]">高压警告:</strong> 高 Q 谐振将电压放大 <strong class="text-white">3-5 倍</strong>。100W 时极板峰值达 <strong class="text-white">3000V</strong>，Polyvaricon 绝对不能用！</p>
+  </div>
+
+  <h3 class="text-xl font-bold mb-4 mt-10 fade-up">片间距选型 <span class="mono text-sm text-gray-500">(每 1mm &asymp; 1000-1500V RF峰值)</span></h3>
+  <div class="card card-glow p-6 md:p-8 fade-up">
+    <div class="overflow-x-auto">
+      <table>
+        <thead><tr><th>功率级别</th><th>片间距要求</th><th>推荐电容类型</th></tr></thead>
+        <tbody>
+          <tr><td class="text-white">QRP (&le;5W)</td><td class="mono">&ge;0.25 mm</td><td>普通接收机电容即可</td></tr>
+          <tr><td class="text-white">20-30W</td><td class="mono">&ge;0.5-0.8 mm</td><td>小功率发射电容</td></tr>
+          <tr><td class="text-white font-bold">100W</td><td class="mono text-[var(--neon-amber)] font-bold">&ge;1.5-2.0 mm</td><td class="text-[var(--neon-amber)]">高压空气可变电容</td></tr>
+          <tr><td class="text-white">400W+</td><td class="mono text-[var(--neon-pink)]">&ge;3.5-4.5 mm</td><td>大功率电台专用 / 真空电容</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- SEC 6: PLACEHOLDER -->
+<section id="sec6" class="max-w-4xl mx-auto px-6 py-16">
+  <p class="section-label fade-up">06 / 绕线工程</p>
+  <h2 class="text-3xl md:text-4xl font-bold mt-3 mb-8 fade-up">绕线工程与抽头设计</h2>
+
+  <h3 class="text-xl font-bold mb-4 fade-up">磁环绝缘</h3>
+  <div class="card card-glow p-6 mb-8 fade-up" style="border-left:3px solid var(--neon-amber);">
+    <ul class="space-y-2 text-gray-300 text-sm">
+      <li>&#9656; <strong class="text-white">PTFE 生料带</strong>包裹 1-2 层，重点覆盖内外环边缘 (击穿高发区)</li>
+      <li>&#9656; &epsilon;<sub>r</sub>&asymp;2.0，<strong class="text-[var(--neon-green)]">不影响 Q 值和 A<sub>L</sub></strong></li>
+      <li>&#9656; <span class="text-[var(--neon-pink)]">单层平整即可</span>，过厚则绕线困难</li>
+    </ul>
+  </div>
+
+  <h3 class="text-xl font-bold mb-4 fade-up">标准绕线 (G0KYA 原版)</h3>
+  <div class="card card-glow p-6 md:p-8 mb-8 fade-up">
+    <p class="mono text-sm text-[var(--neon-blue)] mb-4">// 标准配置 (适合 20m-10m 单波段)</p>
+    <div class="grid md:grid-cols-2 gap-6">
+      <div>
+        <p class="text-white font-bold mb-2">次级绕组 (Secondary)</p>
+        <ul class="space-y-1 text-gray-300 text-sm">
+          <li>&#9656; <strong class="text-white">13 匝</strong>，1.0-1.2mm 漆包线</li>
+          <li>&#9656; 均匀分布在磁环 270&deg; 圆弧上</li>
+          <li>&#9656; 匝与匝<strong class="text-[var(--neon-pink)]">不可重叠</strong>，保持间距</li>
+          <li>&#9656; 两端留出 3-5cm 引脚</li>
+        </ul>
+      </div>
+      <div>
+        <p class="text-white font-bold mb-2">初级绕组 (Primary)</p>
+        <ul class="space-y-1 text-gray-300 text-sm">
+          <li>&#9656; <strong class="text-white">2 匝</strong>，紧贴次级<strong class="text-white">冷端</strong>上方</li>
+          <li>&#9656; 直接叠绕在次级线圈上</li>
+          <li>&#9656; 阻抗比: (13/2)&sup2; = 42.25:1</li>
+          <li>&#9656; 50&Omega; &times; 42.25 = 2112.5&Omega;</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <h3 class="text-xl font-bold mb-4 fade-up">进化: 抽头设计 (多波段优化)</h3>
+
+  <div class="card card-glow p-6 md:p-8 mb-8 fade-up" style="border-top:2px solid var(--neon-green);">
+    <p class="mono text-sm text-[var(--neon-green)] mb-4">// 进化版: 18T 次级 + 抽头</p>
+    <div class="schematic mb-4">
+次级绕组: 总计 18 匝
+<br>
+&nbsp;&nbsp;[GND]--1--2--3--4--5--6--7--8--9--10--11--12--13--14--15--16--17--18--[天线]
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&#9650;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&#9650;
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;TAP-A&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;TAP-B
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(3匝处)&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(6匝处)
+<br>
+初级绕组: 叠绕在冷端 (GND) 附近
+<br>
+开关选择:
+&nbsp;&nbsp;&#8226; TAP-A (3匝) &rarr; 高频段 (15m/10m) &mdash; 阻抗比 (18/3)&sup2; = 36:1
+&nbsp;&nbsp;&#8226; TAP-B (6匝) &rarr; 低频段 (40m/20m) &mdash; 阻抗比 (18/6)&sup2; = 9:1 + LC谐振补偿
+    </div>
+    <div class="highlight-box">
+      <p class="text-sm text-gray-300"><strong class="text-[var(--neon-amber)]">抽头优势:</strong> 通过主动改变变压比，40m 波段使用 6 匝抽头获得更强磁耦合；10m 波段使用 3 匝抽头实现更佳阻抗适配。配合空气可变电容，每个波段都能达到最优谐振态。</p>
+    </div>
+  </div>
+
+  <h3 class="text-xl font-bold mb-4 fade-up">工程规范</h3>
+  <div class="card card-glow p-6 fade-up">
+    <ul class="space-y-2 text-gray-300 text-sm">
+      <li>&#9656; <strong class="text-white">线材:</strong> 1.0-1.2mm 漆包线或特氟龙镀银线</li>
+      <li>&#9656; <strong class="text-white">固定:</strong> 尼龙扎带固定磁环，<span class="text-[var(--neon-pink)]">严禁金属螺丝穿透磁芯</span>；调谐后热熔胶固化线圈</li>
+      <li>&#9656; <strong class="text-white">抽头:</strong> 针尖挑起目标匝焊接引出线，套热缩管</li>
+      <li>&#9656; <strong class="text-white">防潮:</strong> 薄喷三防漆</li>
+    </ul>
+  </div>
+</section>
+
+<!-- SEC 7: PLACEHOLDER -->
+<section id="sec7" class="max-w-4xl mx-auto px-6 py-16">
+  <p class="section-label fade-up">07 / 共模防御</p>
+  <h2 class="text-3xl md:text-4xl font-bold mt-3 mb-8 fade-up">共模电流防御</h2>
+
+  <div class="warn-box fade-up">
+    <p class="text-sm text-gray-300"><strong class="text-[var(--neon-pink)]">RF 入室危机:</strong> 多波段工作时天线系统严重不对称，共模电流通过馈线外皮灌入室内 &mdash; 电台外壳带电、USB 断联、电脑蓝屏。</p>
+  </div>
+
+  <h3 class="text-xl font-bold mb-4 mt-8 fade-up">防线 1: 1:1 电流巴伦</h3>
+  <div class="card card-glow p-6 mb-8 fade-up" style="border-left:3px solid var(--neon-green);">
+    <ul class="space-y-2 text-gray-300 text-sm">
+      <li>&#9656; <strong class="text-white">FT240-43</strong> + RG-58 绕 <strong class="text-white">7 圈</strong>，装在匹配盒下方 1-2m 处</li>
+      <li>&#9656; 21 MHz 共模阻抗 >1000&Omega;，锁死 RF 回流</li>
+    </ul>
+  </div>
+
+  <h3 class="text-xl font-bold mb-4 fade-up">防线 2: 平衡地线</h3>
+  <div class="card card-glow p-6 mb-8 fade-up" style="border-left:3px solid var(--neon-blue);">
+    <ul class="space-y-2 text-gray-300 text-sm">
+      <li>&#9656; 匹配盒 GND 端子引出 <strong class="text-white mono">4m</strong> 绝缘导线，随意抛在地上</li>
+      <li>&#9656; 为被巴伦阻挡的共模电流提供谐振释放路径</li>
+    </ul>
+  </div>
+
+  <div class="success-box fade-up">
+    <p class="text-sm text-gray-300"><strong class="text-[var(--neon-green)]">双重防御:</strong> 巴伦 + 地线 = 100W FT8 满功率零共模干扰。<strong class="text-white">必装件，非选装。</strong></p>
+  </div>
+</section>
+
+<!-- SEC 8: PLACEHOLDER -->
+<section id="sec8" class="max-w-4xl mx-auto px-6 py-16">
+  <p class="section-label fade-up">08 / 电路设计</p>
+  <h2 class="text-3xl md:text-4xl font-bold mt-3 mb-8 fade-up">完整电路与接线规范</h2>
+
+  <div class="card card-glow p-6 md:p-8 mb-8 fade-up">
+    <p class="mono text-sm text-[var(--neon-green)] mb-4">// 完整电路拓扑</p>
+    <div class="schematic">
+                    ┌────────────────────────────┐
+                    │    T200-2 匹配盒 (内部)      │
+                    │                            │
+ [电台/NanoVNA]     │   ┌──[ 初级 2T ]──┐         │     [20.1m 天线振子]
+     │              │   │               │         │          │
+  SO-239 ──────────────►│ Center        │         │          │
+     │              │   │               ▼         │          │
+     │              │   │         ┌─────────┐     │          │
+     │              │   │         │ 次级 13T │     │          │
+     │              │   │         │(或18T抽头)│    │          │
+     │              │   │         └─────────┘     │          │
+     │              │   │          │     │        │          │
+     │              │   │          │   ┌─┤ ─ ─ ─ ─── ─ ►[红柱]
+     │              │   │          │   │ │        │
+     │              │   │          │   │ │        │
+     └──────GND─────────┤          │   │ │        │
+                    │   │          │   │ │        │
+                    │   │          │ [空气可变  │   │
+                    │   │          │  电容 C]   │   │
+                    │   │          │   │        │   │
+                    │   └──────────┴───┘        │   │
+                    │          │                │   │
+                    │     ┌────┴────┐           │   │
+                    │     │ GND 汇流 │           │   │
+                    │     └────┬────┘           │   │
+                    │          │                │   │
+                    └──────────┼────────────────┘   │
+                               │                    │
+                          [绿色 GND 端子]             │
+                               │                    │
+                        [Counterpoise              │
+                         平衡地线 ~4m]              │
+    </div>
+  </div>
+
+  <h3 class="text-xl font-bold mb-4 fade-up">接线规范 (极其重要)</h3>
+  <div class="card card-glow p-6 md:p-8 mb-8 fade-up">
+    <div class="overflow-x-auto">
+      <table>
+        <thead><tr><th>连接点</th><th>连接到</th><th>注意事项</th></tr></thead>
+        <tbody>
+          <tr><td class="text-white">SO239 中心芯</td><td>初级线圈头端</td><td>50&Omega; 热端</td></tr>
+          <tr><td class="text-white">SO239 接地外壳</td><td class="text-[var(--neon-amber)]">初级尾端 + 次级尾端 (冷端) + 电容动片 (Rotor)</td><td class="text-[var(--neon-pink)]">公共接地汇流点</td></tr>
+          <tr><td class="text-white">红色天线接线柱</td><td class="text-[var(--neon-pink)]">次级头端 (热端) + 电容定片 (Stator)</td><td class="text-[var(--neon-pink)] font-bold">高压区!</td></tr>
+          <tr><td class="text-white">绿色 GND 端子</td><td>Counterpoise 平衡地线</td><td>3.5-4m 绝缘导线</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="warn-box fade-up">
+    <p class="text-sm text-gray-300"><strong class="text-[var(--neon-pink)]">关键安全:</strong> 电容<strong class="text-white">动片 (Rotor, 连轴端)</strong>必须接 GND，<strong class="text-white">定片 (Stator)</strong>接天线热端。如果接反，当你触碰绝缘旋钮时，人体感应电容会干扰谐振，且有射频灼伤风险。</p>
+  </div>
+
+  <h3 class="text-xl font-bold mb-4 mt-10 fade-up">盒体要点</h3>
+  <div class="card card-glow p-6 fade-up">
+    <ul class="space-y-2 text-gray-300 text-sm">
+      <li>&#9656; IP65 铝压铸盒 (~180&times;120&times;80mm)，天线用 <strong class="text-white">PTFE 穿墙绝缘子</strong></li>
+      <li>&#9656; 电容固定在绝缘板上，<strong class="text-white">绝缘延伸杆</strong>出轴连接 6:1 减速旋钮</li>
+      <li>&#9656; 盒内放干燥剂，所有连接用特氟龙镀银导线、路径最短</li>
+    </ul>
+  </div>
+</section>
+
+<!-- SEC 9: PLACEHOLDER -->
+<section id="sec9" class="max-w-4xl mx-auto px-6 py-16">
+  <p class="section-label fade-up">09 / 调谐操作</p>
+  <h2 class="text-3xl md:text-4xl font-bold mt-3 mb-8 fade-up">实战调谐指南</h2>
+
+  <div class="highlight-box fade-up mb-8">
+    <p class="text-sm text-gray-300"><strong class="text-[var(--neon-amber)]">前提:</strong> 必须户外架设天线后调谐。NanoVNA 接 SO239，扫频 &plusmn;2 MHz。<span class="text-[var(--neon-pink)]">绝缘旋钮必须到位！</span></p>
+  </div>
+
+  <h3 class="text-xl font-bold mb-4 fade-up">调谐三步法</h3>
+  <div class="grid gap-6 mb-8">
+    <div class="card card-glow p-6 fade-up" style="border-left:3px solid var(--neon-green);">
+      <p class="mono text-sm text-[var(--neon-green)] mb-2">// STEP 1: 寻找谐振</p>
+      <p class="text-gray-300 text-sm">慢转旋钮，观察 SWR 曲线出现深陷波 (DIP) &mdash; 即 LC 谐振点。</p>
+    </div>
+    <div class="card card-glow p-6 fade-up" style="border-left:3px solid var(--neon-amber);">
+      <p class="mono text-sm text-[var(--neon-amber)] mb-2">// STEP 2: 对齐频率</p>
+      <div class="text-gray-300 text-sm space-y-1">
+        <p><strong class="text-white">偏低</strong> &rarr; 拉开线圈间距 (减 L) 或减小电容</p>
+        <p><strong class="text-white">偏高</strong> &rarr; 挤紧线圈 (增 L) 或增大电容</p>
+      </div>
+    </div>
+    <div class="card card-glow p-6 fade-up" style="border-left:3px solid var(--neon-purple);">
+      <p class="mono text-sm text-[var(--neon-purple)] mb-2">// STEP 3: 打标固化</p>
+      <p class="text-gray-300 text-sm">SWR &le;1.2 后，油性笔在旋钮标注刻度。每波段重复，建立速查表:</p>
+      <div class="schematic mt-3" style="font-size:0.8rem;">
+刻度速查表 (示例)
+─────────────────
+7.050 MHz (40m CW):  旋钮角度 210&deg;
+7.074 MHz (40m FT8): 旋钮角度 205&deg;
+14.175 MHz (20m):    旋钮角度 120&deg;
+21.225 MHz (15m):    旋钮角度 60&deg;
+28.500 MHz (10m):    旋钮角度 30&deg;
+      </div>
+    </div>
+  </div>
+
+  <div class="highlight-box fade-up">
+    <p class="text-sm text-gray-300"><strong class="text-[var(--neon-amber)]">技巧:</strong> 为每波段的 CW/SSB/FT8 频率分别做刻度，实现"一拧到位"伪预设。</p>
+  </div>
+
+  <div class="warn-box fade-up">
+    <p class="text-sm text-gray-300"><strong class="text-[var(--neon-pink)]">禁忌:</strong> <strong class="text-white">发射时严禁转电容</strong>。切换波段: 停发射 &rarr; 转旋钮 &rarr; 低功率确认 SWR &rarr; 推功率。</p>
+  </div>
+</section>
+
+<!-- SEC 10: PLACEHOLDER -->
+<section id="sec10" class="max-w-4xl mx-auto px-6 py-16">
+  <p class="section-label fade-up">10 / 物料与检查</p>
+  <h2 class="text-3xl md:text-4xl font-bold mt-3 mb-8 fade-up">物料清单与工程落地检查表</h2>
+  <div class="grid md:grid-cols-2 gap-6 mb-8">
+    <div class="card card-glow p-6 fade-up">
+      <p class="mono text-sm text-[var(--neon-amber)] mb-3">// 核心物料</p>
+      <ul class="space-y-2 text-gray-300 text-sm">
+        <li>&#9656; <strong class="text-white">T200-2</strong> 铁粉芯磁环 (红壳)</li>
+        <li>&#9656; 空气可变电容 <strong class="text-white">15-470pF</strong>, 片间距 &ge;1.5mm</li>
+        <li>&#9656; <strong class="text-white">6:1 行星减速旋钮</strong> (Vernier Dial)</li>
+        <li>&#9656; 1.0mm 漆包线 / 特氟龙镀银线</li>
+        <li>&#9656; PTFE 生料带 (磁环绝缘)</li>
+        <li>&#9656; IP65 铝压铸盒 (~180&times;120&times;80mm)</li>
+        <li>&#9656; SO-239 馈线座 + 高压接线柱</li>
+        <li>&#9656; PTFE 穿墙绝缘子</li>
+      </ul>
+    </div>
+    <div class="card card-glow p-6 fade-up">
+      <p class="mono text-sm text-[var(--neon-green)] mb-3">// 防护物料</p>
+      <ul class="space-y-2 text-gray-300 text-sm">
+        <li>&#9656; <strong class="text-white">FT240-43</strong> 磁环 (做 1:1 巴伦用)</li>
+        <li>&#9656; RG-58 同轴电缆 (~2m, 绕巴伦)</li>
+        <li>&#9656; 平衡地线导线 ~4m</li>
+        <li>&#9656; 绝缘延伸杆 (电容出轴)</li>
+        <li>&#9656; 干燥剂包 + 三防漆</li>
+        <li>&#9656; 热缩管 / 热熔胶</li>
+        <li>&#9656; NanoVNA (调谐必备)</li>
+      </ul>
+    </div>
+  </div>
+
+  <h3 class="text-xl font-bold mb-4 fade-up">落地检查表</h3>
+  <div class="card card-glow p-6 fade-up">
+    <div class="overflow-x-auto">
+      <table>
+        <thead><tr><th>#</th><th>检查项</th><th>状态</th></tr></thead>
+        <tbody>
+          <tr><td class="mono text-[var(--neon-green)]">1</td><td>磁环已包裹 PTFE 胶带</td><td class="mono text-gray-500">&square;</td></tr>
+          <tr><td class="mono text-[var(--neon-green)]">2</td><td>次级 13T (或 18T 抽头) 均匀分布、无重叠</td><td class="mono text-gray-500">&square;</td></tr>
+          <tr><td class="mono text-[var(--neon-green)]">3</td><td>初级 2T 叠绕在冷端</td><td class="mono text-gray-500">&square;</td></tr>
+          <tr><td class="mono text-[var(--neon-green)]">4</td><td>电容动片 (Rotor) 接 GND, 定片 (Stator) 接天线热端</td><td class="mono text-gray-500">&square;</td></tr>
+          <tr><td class="mono text-[var(--neon-green)]">5</td><td>6:1 减速旋钮已安装</td><td class="mono text-gray-500">&square;</td></tr>
+          <tr><td class="mono text-[var(--neon-green)]">6</td><td>PTFE 穿墙绝缘子到位</td><td class="mono text-gray-500">&square;</td></tr>
+          <tr><td class="mono text-[var(--neon-amber)]">7</td><td>1:1 巴伦 (FT240-43 + 7T RG58) 已串联馈线</td><td class="mono text-gray-500">&square;</td></tr>
+          <tr><td class="mono text-[var(--neon-amber)]">8</td><td>4m 平衡地线已接 GND 端子</td><td class="mono text-gray-500">&square;</td></tr>
+          <tr><td class="mono text-[var(--neon-pink)]">9</td><td>100W 下电容无打火 (低功率先测!)</td><td class="mono text-gray-500">&square;</td></tr>
+          <tr><td class="mono text-[var(--neon-pink)]">10</td><td>各波段刻度已标记</td><td class="mono text-gray-500">&square;</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer class="max-w-4xl mx-auto px-6 py-16">
+  <div class="divider"></div>
+  <div class="text-center">
+    <p class="mono text-xs text-gray-600 mb-2">T200-2 EFHW Resonant Matching System Engineering Guide</p>
+    <p class="mono text-xs text-gray-600 mb-2">Based on G0KYA EFHW Manual | 2026-06</p>
+    <p class="mono text-xs text-gray-700">Design references: G0KYA, T200-2 (Amidon), N7DDC ATU-100</p>
+  </div>
+</footer>
+
+<script>
+window.addEventListener('scroll', () => {
+  const h = document.documentElement;
+  const pct = h.scrollTop / (h.scrollHeight - h.clientHeight);
+  document.getElementById('progressBar').style.transform = `scaleX(${pct})`;
+});
+gsap.registerPlugin(ScrollTrigger);
+gsap.utils.toArray('.fade-up').forEach(el => {
+  gsap.to(el, {
+    opacity: 1, y: 0, duration: 0.8, ease: 'power2.out',
+    scrollTrigger: { trigger: el, start: 'top 88%', once: true }
+  });
+});
+
+const C = {
+  green: '#00ffa3', blue: '#00c8ff', pink: '#ff3d7f',
+  amber: '#ffb300', purple: '#c77dff', bg: '#0d1225',
+  grid: 'rgba(255,255,255,0.04)', text: '#888'
+};
+const baseOpt = {
+  backgroundColor: 'transparent',
+  textStyle: { fontFamily: 'Inter, sans-serif', color: C.text },
+  grid: { left: 60, right: 30, top: 50, bottom: 40 },
+  tooltip: {
+    backgroundColor: 'rgba(10,14,30,0.95)', borderColor: C.amber, borderWidth: 1,
+    textStyle: { color: '#eee', fontFamily: 'JetBrains Mono, monospace', fontSize: 12 }
+  }
+};
+function initChart(id, opt) {
+  const el = document.getElementById(id);
+  if (!el) return null;
+  const c = echarts.init(el, null, { renderer: 'svg' });
+  c.setOption({ ...baseOpt, ...opt });
+  window.addEventListener('resize', () => c.resize());
+  return c;
+}
+/* CHARTS */
+initChart('chartEfficiency', {
+  title: { text: 'T200-2 谐振 vs 传统 49:1 宽带变压器效率对比', textStyle: { color: '#fff', fontSize: 14, fontFamily: 'Noto Serif SC' } },
+  legend: { data: ['T200-2 谐振匹配', '传统 49:1 (FT240-43)'], textStyle: { color: C.text }, top: 30 },
+  grid: { left: 60, right: 30, top: 65, bottom: 40 },
+  xAxis: { type: 'category', data: ['40m\n7MHz','30m\n10MHz','20m\n14MHz','17m\n18MHz','15m\n21MHz','12m\n25MHz','10m\n28MHz'],
+    axisLine: { lineStyle: { color: C.grid } }, axisLabel: { color: C.text, fontSize: 10 } },
+  yAxis: { type: 'value', name: '效率 %', min: 40, max: 100,
+    axisLine: { lineStyle: { color: C.grid } }, splitLine: { lineStyle: { color: C.grid } },
+    axisLabel: { color: C.text } },
+  series: [
+    { name: 'T200-2 谐振匹配', type: 'line', smooth: true, symbol: 'circle', symbolSize: 8,
+      lineStyle: { width: 3, color: C.green }, itemStyle: { color: C.green },
+      areaStyle: { color: { type:'linear', x:0, y:0, x2:0, y2:1,
+        colorStops: [{offset:0, color:'rgba(0,255,163,0.15)'},{offset:1, color:'transparent'}] } },
+      data: [93, 94, 96, 95, 95, 92, 91],
+      label: { show: true, position: 'top', color: C.green, fontSize: 10, fontFamily: 'JetBrains Mono', formatter: '{c}%' } },
+    { name: '传统 49:1 (FT240-43)', type: 'line', smooth: true, symbol: 'diamond', symbolSize: 8,
+      lineStyle: { width: 2, color: C.pink, type: 'dashed' }, itemStyle: { color: C.pink },
+      data: [64, 65, 75, 68, 65, 58, 55],
+      label: { show: true, position: 'bottom', color: C.pink, fontSize: 10, fontFamily: 'JetBrains Mono', formatter: '{c}%' } }
+  ],
+  tooltip: { formatter: p => `${p.seriesName}<br/>${p.name}: <b>${p.value}%</b>` }
+});
+</script>
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v833ccba57c9e4d2798f2e76cebdd09a11778172276447" integrity="sha512-57MDmcccJXYtNnH+ZiBwzC4jb2rvgVCEokYN+L/nLlmO8rfYT/gIpW2A569iJ/3b+0UEasghjuZH/ma3wIs/EQ==" data-cf-beacon='{"version":"2024.11.0","token":"75124c326cb447fe934cde04713ae013","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
+</body>
+</html>

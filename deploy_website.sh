@@ -8,6 +8,24 @@ REMOTE_HOST="${1:-cheenle@www.vlsc.net}"
 REMOTE_PATH="${2:-/var/www/vlsc.net/mrrc}"
 LOCAL_DIR="/Users/cheenle/UHRR/MRRC/website"
 
+# The production tree is owned by www-data. Use sudo on the remote rsync side so
+# deployments are repeatable without temporarily changing ownership to the SSH user.
+RSYNC_REMOTE_PATH="sudo rsync"
+
+# Keep server/runtime artifacts out of static website deploys. Excluded paths are
+# also protected from --delete unless --delete-excluded is used, which we do not use.
+RSYNC_EXCLUDES=(
+    '.DS_Store'
+    '*.log'
+    'README.md'
+    'deploy.sh'
+    '.claude/'
+    '.iflow_logs/'
+    'logs/'
+    'stats/'
+    'vlsc.net.conf'
+)
+
 echo "=========================================="
 echo "MRRC Website Quick Deploy"
 echo "=========================================="
@@ -38,14 +56,15 @@ echo "Deploying to remote server..."
 echo ""
 
 # Create remote directory
-ssh "$REMOTE_HOST" "sudo mkdir -p $REMOTE_PATH && sudo chown \$(whoami) $REMOTE_PATH"
+ssh "$REMOTE_HOST" "sudo mkdir -p '$REMOTE_PATH'"
 
 # Sync files using rsync
-rsync -avz --delete \
-    --exclude='.DS_Store' \
-    --exclude='*.log' \
-    --exclude='README.md' \
-    --exclude='deploy.sh' \
+RSYNC_ARGS=(-avz --delete --no-owner --no-group --rsync-path="$RSYNC_REMOTE_PATH")
+for pattern in "${RSYNC_EXCLUDES[@]}"; do
+    RSYNC_ARGS+=(--exclude="$pattern")
+done
+
+rsync "${RSYNC_ARGS[@]}" \
     "$LOCAL_DIR/" \
     "$REMOTE_HOST:$REMOTE_PATH/"
 
@@ -60,5 +79,5 @@ echo ""
 echo "Website URL: https://www.vlsc.net/mrrc/"
 echo ""
 echo "Test the deployment:"
-echo "  curl -I https://www.vlsc.net/mrrc/"
+echo "  curl -k -I https://www.vlsc.net/mrrc/"
 echo ""

@@ -19,14 +19,21 @@ Replaces the ALSA-specific implementation in the original code
 
 import pyaudio
 import threading
+import queue
 import time
 import gc
 import numpy as np
 import os
 import subprocess
+import logging
 from datetime import datetime
 from opus.decoder import Decoder as OpusDecoder
 from opus.encoder import Encoder as OpusEncoder
+
+# Module logger (F4 fix: `logger` was referenced but never defined,
+# causing a NameError inside the recording lock that silently defeated
+# the RECORDING_MAX_CHUNKS growth guard).
+logger = logging.getLogger(__name__)
 
 # RNNoise 可选导入（需要 pip install pyrnnoise）
 RNNOISE_AVAILABLE = False
@@ -755,7 +762,14 @@ class PyAudioPlayback:
         self.op_rate = op_rate
         self.op_frm_dur = op_frm_dur
         self._tx_gain_smooth = 1.0  # TX 电平平滑状态
-        
+
+        # F2 fix: bounded queue + dedicated writer thread so the blocking
+        # PyAudio stream.write() never runs on the Tornado IOLoop.
+        # ~50 frames @ 20ms = 1s of buffered TX audio before we drop oldest.
+        self._tx_queue = queue.Queue(maxsize=50)
+        self._writer_stop = threading.Event()
+        self._writer_thread = None
+
         if is_encoded:
             self.decoder = OpusDecoder(op_rate, 1)
             self.frame_size = op_frm_dur * op_rate
@@ -804,7 +818,12 @@ class PyAudioPlayback:
             except Exception as e2:
                 print(f"Failed to open default output device: {e2}")
                 raise
-    
+
+        # F2 fix: start dedicated playback writer thread now that the stream is open.
+        # All blocking stream.write() calls happen here, off the Tornado IOLoop.
+        self._writer_thread = threading.Thread(target=self._writer_loop, daemon=True)
+        self._writer_thread.start()
+
     def _get_device_index(self, device_name):
         """Convert device name to device index for PyAudio"""
         if device_name == "" or device_name is None:
@@ -825,8 +844,8 @@ class PyAudioPlayback:
         print(f"Device '{device_name}' not found, using default output device")
         return None  # Use default if not found
     
-    def write(self, data):
-        """Write audio data to output stream with TX level normalization"""
+    def _normalize(self, data):
+        """Decode (if needed) + TX level normalization. Runs on caller thread (cheap)."""
         if self.is_encoded:
             pcm = self.decoder.decode(data, self.frame_size, False)
         else:
@@ -847,14 +866,67 @@ class PyAudioPlayback:
                 self._tx_gain_smooth = self._tx_gain_smooth * (1 - alpha) + target_gain * alpha
                 tx_int16 = np.clip(tx_int16 * self._tx_gain_smooth, -32767, 32767).astype(np.int16)
             pcm = tx_int16.tobytes()
+        return pcm
 
-        self.stream.write(pcm)
-    
+    def write(self, data):
+        """Enqueue audio for the playback thread (non-blocking).
+
+        F2 fix: the blocking PyAudio stream.write() previously ran on the
+        Tornado IOLoop thread (WS_AudioTXHandler.on_message). Device backpressure
+        would stall the entire server. We now normalize on the caller (cheap,
+        numpy-only) and hand the PCM to a dedicated writer thread via a bounded
+        queue. If the queue is full (device underrun/backpressure), we drop the
+        oldest frame instead of blocking the IOLoop.
+        """
+        try:
+            pcm = self._normalize(data)
+        except Exception as e:
+            print(f"TX normalize error: {e}")
+            return
+
+        try:
+            self._tx_queue.put_nowait(pcm)
+        except queue.Full:
+            # Drop oldest frame to make room — never block the IOLoop
+            try:
+                self._tx_queue.get_nowait()
+            except queue.Empty:
+                pass
+            try:
+                self._tx_queue.put_nowait(pcm)
+            except queue.Full:
+                pass
+
+    def _writer_loop(self):
+        """Dedicated thread: drains the TX queue into the blocking PyAudio stream."""
+        while not self._writer_stop.is_set():
+            try:
+                pcm = self._tx_queue.get(timeout=0.2)
+            except queue.Empty:
+                continue
+            if pcm is None:  # sentinel to stop
+                break
+            try:
+                self.stream.write(pcm)
+            except Exception as e:
+                print(f"TX stream write error: {e}")
+
     def close(self):
         """Close the audio stream"""
-        if self.stream.is_active():
-            self.stream.stop_stream()
-        self.stream.close()
+        # Stop the writer thread first so it doesn't touch a closed stream
+        self._writer_stop.set()
+        try:
+            self._tx_queue.put_nowait(None)  # wake the writer
+        except queue.Full:
+            pass
+        if self._writer_thread is not None:
+            self._writer_thread.join(timeout=1.0)
+        try:
+            if self.stream.is_active():
+                self.stream.stop_stream()
+            self.stream.close()
+        except Exception as e:
+            print(f"TX stream close error: {e}")
         self.p.terminate()
 
 

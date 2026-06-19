@@ -3,7 +3,7 @@
 # 添加到 ~/.bashrc 或 ~/.zshrc
 
 # 代理设置 (根据你的网络环境调整)
-export HTTPS_PROXY="socks5://127.0.0.1:3328"
+#export HTTPS_PROXY="socks5://127.0.0.1:3328"
 export ACME_USE_WGET=1
 
 # acme.sh 路径
@@ -14,4 +14,4 @@ export PATH="$HOME/.acme.sh:$PATH"
 # export CF_Account_ID="your-cloudflare-account-id"
 
 echo "acme.sh 代理配置已加载"
-echo "代理: $HTTPS_PROXY"
+#echo "代理: $HTTPS_PROXY"

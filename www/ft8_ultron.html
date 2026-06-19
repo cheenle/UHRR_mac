@@ -6,14 +6,13 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#0d1117">
 <title>FT8 — MRRC</title>
-<link rel="stylesheet" href="mobile_modern.css">
 <style>
 *{box-sizing:border-box}
 body{margin:0;background:#0d1117;color:#c9d1d9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:14px}
-.ft8-app{display:flex;flex-direction:column;height:100dvh;max-width:800px;margin:0 auto}
+.ft8-app{display:flex;flex-direction:column;height:100dvh;max-width:1100px;margin:0 auto}
 
 /* Header */
-.hdr{display:flex;align-items:center;gap:8px;padding:8px 12px;background:#161b22;border-bottom:1px solid #30363d}
+.hdr{display:flex;align-items:center;gap:8px;padding:8px 12px;background:#161b22;border-bottom:1px solid #30363d;flex-shrink:0}
 .hdr .back{background:none;border:none;color:#58a6ff;font-size:18px;cursor:pointer;padding:4px 8px}
 .hdr h1{flex:1;margin:0;font-size:16px;font-weight:600}
 .hdr .dot{width:10px;height:10px;border-radius:50%;display:inline-block;margin-right:4px}
@@ -22,94 +21,143 @@ body{margin:0;background:#0d1117;color:#c9d1d9;font-family:-apple-system,BlinkMa
 .conn{display:flex;align-items:center;gap:4px;font-size:12px}
 
 /* Status bar */
-.status{display:flex;gap:4px;padding:6px 8px;background:#0d1117;border-bottom:1px solid #21262d;font-size:11px;flex-wrap:wrap}
-.status span{padding:2px 8px;background:#161b22;border-radius:4px;white-space:nowrap}
+.status{display:flex;gap:4px;padding:6px 8px;background:#0d1117;border-bottom:1px solid #21262d;font-size:11px;flex-wrap:wrap;flex-shrink:0}
+.status span.chip{padding:2px 8px;background:#161b22;border-radius:4px;white-space:nowrap}
 .status .label{color:#8b949e}
 
 /* Cycle bar */
-.cycle-wrap{height:4px;background:#21262d}
-.cycle-wrap .bar{height:100%;background:#58a6ff;transition:width 0.1s linear}
-.cycle-label{text-align:center;font-size:11px;padding:2px;color:#8b949e}
+.cycle-wrap{height:4px;background:#21262d;flex-shrink:0}
+.cycle-wrap .bar{height:100%;background:#58a6ff;transition:width 0.2s linear}
+.cycle-label{text-align:center;font-size:11px;padding:2px;color:#8b949e;flex-shrink:0}
 .cycle-label.tx{color:#f0883e}
 .cycle-label.rx{color:#58a6ff}
 
-/* Controls */
-.ctrl{display:flex;gap:4px;padding:6px 8px;background:#161b22;flex-wrap:wrap}
-.ctrl button{padding:6px 12px;border:1px solid #30363d;border-radius:6px;background:#21262d;color:#c9d1d9;font-size:12px;cursor:pointer;white-space:nowrap;flex:1;min-width:60px}
-.ctrl button:active{opacity:.7}
-.ctrl .cq{background:#1f6feb;border-color:#1f6feb;color:#fff}
-.ctrl .reply{background:#238636;border-color:#238636;color:#fff}
-.ctrl .rr73{background:#9e6a03;border-color:#9e6a03;color:#fff}
-.ctrl .seventy-three{background:#8b949e;border-color:#8b949e;color:#fff}
-.ctrl .halt{background:#da3633;border-color:#da3633;color:#fff}
+/* Waterfall */
+.wf-wrap{position:relative;flex-shrink:0;background:#000;border-bottom:1px solid #30363d}
+.wf-wrap.collapsed{display:none}
+#waterfall{display:block;width:100%;height:130px}
+.wf-scale{position:absolute;bottom:0;left:0;right:0;height:14px;pointer-events:none;font-size:9px;color:#8b949e;font-family:monospace}
+.wf-scale span{position:absolute;bottom:0;transform:translateX(-50%);text-shadow:0 0 3px #000}
+.wf-cursor{position:absolute;top:0;bottom:14px;width:2px;pointer-events:none}
+.wf-cursor.rx{background:#58a6ff;box-shadow:0 0 4px #58a6ff}
+.wf-cursor.tx{background:#f0883e;box-shadow:0 0 4px #f0883e}
+.wf-toggle{position:absolute;top:4px;right:6px;font-size:10px;background:rgba(22,27,34,.8);border:1px solid #30363d;color:#8b949e;border-radius:4px;padding:1px 6px;cursor:pointer;z-index:2}
 
-/* Decode list */
-.decode-area{flex:1;overflow-y:auto;padding:4px 8px}
-.decode-item{display:flex;gap:6px;align-items:center;padding:5px 8px;border-radius:4px;cursor:pointer;border-left:3px solid transparent;margin-bottom:2px}
-.decode-item:hover{background:#161b22}
-.decode-item.cq{border-left-color:#1f6feb}
-.decode-item.worked{opacity:.4}
-.decode-item.excluded{opacity:.3;text-decoration:line-through}
-.decode-item.has-dxcc{border-left-color:#238636}
-.decode-item .time{color:#8b949e;font-size:11px;min-width:40px;font-family:monospace}
-.decode-item .snr{min-width:36px;font-weight:600;font-size:12px;font-family:monospace}
-.decode-item .snr.weak{color:#d29922}
-.decode-item .snr:not(.weak){color:#58a6ff}
-.decode-item .freq{color:#8b949e;font-size:11px;min-width:50px;font-family:monospace}
-.decode-item .msg{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px}
-.decode-item .msg .call{color:#f0883e;font-weight:600}
-.decode-item .dxcc{color:#8b949e;font-size:11px;min-width:80px;text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.cycle-sep{height:1px;background:#30363d;margin:4px 0}
-.empty{text-align:center;padding:40px 16px;color:#8b949e;font-size:13px}
+/* Dual panes */
+.panes{flex:1;display:flex;min-height:0;border-bottom:1px solid #30363d}
+.pane{flex:1;display:flex;flex-direction:column;min-width:0}
+.pane + .pane{border-left:1px solid #30363d}
+.pane-hdr{display:flex;align-items:center;gap:6px;padding:4px 8px;background:#161b22;border-bottom:1px solid #21262d;font-size:11px;color:#8b949e;flex-shrink:0}
+.pane-hdr .title{font-weight:600;color:#c9d1d9}
+.pane-hdr .count{margin-left:auto}
+.pane-hdr button{font-size:10px;background:#21262d;border:1px solid #30363d;color:#8b949e;border-radius:4px;padding:1px 6px;cursor:pointer}
+.pane-hdr button.on{background:#1f6feb;border-color:#1f6feb;color:#fff}
+.pane-body{flex:1;overflow-y:auto;padding:2px 4px}
+
+/* Decode rows */
+.row{display:flex;gap:6px;align-items:baseline;padding:3px 6px;border-radius:3px;cursor:pointer;font-family:'SF Mono',ui-monospace,Menlo,monospace;font-size:12px;line-height:1.35;border-left:3px solid transparent}
+.row:hover{background:#161b22}
+.row .t{color:#6e7681;min-width:48px}
+.row .db{min-width:30px;text-align:right;color:#8b949e}
+.row .dt{min-width:34px;text-align:right;color:#6e7681}
+.row .df{min-width:42px;text-align:right;color:#6e7681}
+.row .m{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#c9d1d9}
+.row .fl{min-width:70px;text-align:right;color:#6e7681;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* coloring (JTDX-like) */
+.row.cq{background:rgba(31,111,235,.10)}
+.row.cq .m{color:#79c0ff}
+.row.tome{background:rgba(248,81,73,.16);border-left-color:#f85149}
+.row.tome .m{color:#ff7b72;font-weight:600}
+.row.newdxcc{border-left-color:#3fb950}
+.row.newdxcc .m{color:#56d364}
+.row.newgrid:not(.newdxcc){border-left-color:#d29922}
+.row.worked{opacity:.45}
+.row.excluded{opacity:.3;text-decoration:line-through}
+.row.sel{outline:1px solid #58a6ff;background:#1c2128}
+.cycle-sep{height:0;border-top:1px dashed #30363d;margin:3px 4px}
+.empty{text-align:center;padding:30px 12px;color:#6e7681;font-size:12px}
 .empty small{display:block;margin-top:8px;font-size:11px;color:#484f58}
 
-/* Target panel */
-.target{display:none;align-items:center;gap:8px;padding:8px 12px;background:#1c2128;border-top:1px solid #30363d}
-.target .call{font-size:20px;font-weight:700;color:#f0883e;font-family:monospace;flex:1}
-.target .msg{font-size:11px;color:#8b949e;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.target button{padding:6px 10px;border:1px solid #30363d;border-radius:4px;background:#21262d;color:#c9d1d9;font-size:11px;cursor:pointer}
+/* QSO panel */
+.qso{display:flex;align-items:center;gap:8px;padding:6px 12px;background:#1c2128;border-bottom:1px solid #30363d;flex-shrink:0;font-size:12px}
+.qso .badge{padding:2px 8px;border-radius:10px;font-weight:600;font-size:11px;background:#30363d;color:#8b949e}
+.qso .badge.active{background:#1f6feb;color:#fff}
+.qso .badge.done{background:#238636;color:#fff}
+.qso .dx{font-family:monospace;font-weight:700;color:#f0883e;font-size:15px}
+.qso .info{color:#8b949e;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.qso button{font-size:11px;padding:4px 10px;border:1px solid #30363d;border-radius:4px;background:#21262d;color:#c9d1d9;cursor:pointer}
+.qso button.stop{background:#da3633;border-color:#da3633;color:#fff}
 
-/* Custom text input */
-.custom-row{display:flex;gap:4px;padding:4px 8px;background:#161b22}
+/* Tx control panel */
+.tx{background:#161b22;border-bottom:1px solid #30363d;flex-shrink:0;padding:6px 8px}
+.tx-freqs{display:flex;gap:10px;align-items:center;font-size:11px;color:#8b949e;margin-bottom:6px;flex-wrap:wrap}
+.tx-freqs b{color:#c9d1d9;font-family:monospace}
+.tx-freqs .seg{display:flex;align-items:center;gap:4px}
+.tx-freqs .tgl{display:flex;align-items:center;gap:4px;cursor:pointer}
+.tx-slots{display:grid;grid-template-columns:repeat(6,1fr);gap:4px;margin-bottom:6px}
+.tx-slots button{padding:6px 2px;border:1px solid #30363d;border-radius:5px;background:#21262d;color:#c9d1d9;font-size:11px;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tx-slots button .n{display:block;font-size:9px;color:#8b949e}
+.tx-slots button:active{opacity:.7}
+.tx-actions{display:flex;gap:4px;flex-wrap:wrap}
+.tx-actions button{flex:1;min-width:64px;padding:7px 8px;border:1px solid #30363d;border-radius:6px;background:#21262d;color:#c9d1d9;font-size:12px;cursor:pointer;white-space:nowrap}
+.tx-actions .cq{background:#1f6feb;border-color:#1f6feb;color:#fff}
+.tx-actions .reply{background:#238636;border-color:#238636;color:#fff}
+.tx-actions .halt{background:#da3633;border-color:#da3633;color:#fff}
+.tx-actions .seq.on{background:#8957e5;border-color:#8957e5;color:#fff}
+
+/* Custom text */
+.custom-row{display:flex;gap:4px;padding:4px 8px;background:#161b22;flex-shrink:0}
 .custom-row input{flex:1;padding:6px 8px;background:#0d1117;border:1px solid #30363d;border-radius:4px;color:#c9d1d9;font-size:13px}
 .custom-row input::placeholder{color:#484f58}
 .custom-row button{padding:6px 12px;border:1px solid #30363d;border-radius:4px;background:#21262d;color:#c9d1d9;cursor:pointer}
 
-/* Stats bar */
-.stats{display:flex;gap:0;background:#161b22;border-top:1px solid #30363d}
-.stats div{flex:1;text-align:center;padding:6px 4px}
-.stats .num{font-size:16px;font-weight:700;color:#58a6ff;font-family:monospace}
+/* Stats */
+.stats{display:flex;background:#161b22;border-top:1px solid #30363d;flex-shrink:0}
+.stats div{flex:1;text-align:center;padding:5px 4px}
+.stats .num{font-size:15px;font-weight:700;color:#58a6ff;font-family:monospace}
 .stats .lbl{font-size:9px;color:#8b949e;text-transform:uppercase}
 
 /* Log */
-.log{height:80px;overflow-y:auto;background:#0d1117;border-top:1px solid #21262d;padding:4px 8px;font-family:monospace;font-size:10px}
+.log{height:70px;overflow-y:auto;background:#0d1117;border-top:1px solid #21262d;padding:4px 8px;font-family:monospace;font-size:10px;flex-shrink:0}
 .log-line{color:#484f58}
 .log-line.ok{color:#3fb950}
 .log-line.err{color:#f85149}
 .log-line.tx{color:#f0883e}
 
+/* Notices */
+.notice{display:flex;align-items:center;gap:8px;padding:6px 12px;font-size:12px;flex-shrink:0}
+.notice.setup{background:#3b1a1a;border-bottom:1px solid #da3633;color:#f85149}
+.notice.jtdx{background:#1c2128;border-bottom:1px solid #d29922;color:#d29922;font-size:11px}
+.notice b{color:#e6edf3}
+.notice a{color:#58a6ff;text-decoration:none;white-space:nowrap;margin-left:auto}
+
 /* Settings overlay */
 .settings{display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:100;align-items:center;justify-content:center;padding:20px}
 .settings.active{display:flex}
-.settings .box{background:#161b22;border:1px solid #30363d;border-radius:12px;padding:24px;width:100%;max-width:360px;max-height:80vh;overflow-y:auto}
+.settings .box{background:#161b22;border:1px solid #30363d;border-radius:12px;padding:24px;width:100%;max-width:380px;max-height:84vh;overflow-y:auto}
 .settings h2{margin:0 0 16px;font-size:16px}
-.settings .row{margin-bottom:12px}
+.settings .row2{margin-bottom:12px}
 .settings label{display:block;font-size:11px;color:#8b949e;margin-bottom:4px}
 .settings input[type="text"],.settings input[type="number"]{width:100%;padding:8px 10px;background:#0d1117;border:1px solid #30363d;border-radius:6px;color:#c9d1d9;font-size:14px}
 .settings .toggle-row{display:flex;justify-content:space-between;align-items:center}
-.settings .toggle-row input[type="checkbox"]{accent-color:#58a6ff}
+.settings .toggle-row input[type="checkbox"]{accent-color:#8957e5;width:18px;height:18px}
 .settings .actions{display:flex;gap:8px;margin-top:16px}
 .settings .actions button{flex:1;padding:8px;border-radius:6px;border:1px solid #30363d;cursor:pointer;font-size:13px}
 .settings .actions .save{background:#238636;border-color:#238636;color:#fff}
 .settings .actions .cancel{background:#21262d;color:#c9d1d9}
+.settings .sub{font-size:11px;color:#6e7681;margin:-6px 0 12px}
 
-/* Setup notice */
-.setup-notice{display:none;align-items:center;gap:8px;padding:8px 12px;background:#3b1a1a;border-bottom:1px solid #da3633;font-size:12px;color:#f85149}
-.setup-notice a{color:#58a6ff;text-decoration:none;white-space:nowrap;margin-left:auto}
-.setup-notice a:hover{text-decoration:underline}
-.setup-notice .dismiss{background:none;border:none;color:#8b949e;cursor:pointer;font-size:16px;padding:0 4px}
-.jtdx-notice{display:flex;align-items:center;gap:8px;padding:6px 12px;background:#1c2128;border-bottom:1px solid #d29922;font-size:11px;color:#d29922}
-.jtdx-notice b{color:#e6edf3}
+/* Mobile: stack panes into tabs */
+@media (max-width:640px){
+  .panes{flex-direction:column}
+  .pane + .pane{border-left:none;border-top:1px solid #30363d}
+  .pane.hidden-mobile{display:none}
+  .pane-tabs{display:flex;flex-shrink:0;background:#161b22;border-bottom:1px solid #21262d}
+  .pane-tabs button{flex:1;padding:7px;background:none;border:none;color:#8b949e;font-size:12px;cursor:pointer;border-bottom:2px solid transparent}
+  .pane-tabs button.on{color:#58a6ff;border-bottom-color:#58a6ff}
+  .tx-slots{grid-template-columns:repeat(3,1fr)}
+}
+@media (min-width:641px){ .pane-tabs{display:none} }
 </style>
 </head>
 <body>
@@ -121,54 +169,99 @@ body{margin:0;background:#0d1117;color:#c9d1d9;font-family:-apple-system,BlinkMa
     <div class="conn"><span class="dot offline" id="conn-dot"></span><span id="conn-text">Offline</span></div>
   </div>
 
-  <!-- Setup prompt -->
-  <div class="setup-notice" id="setup-notice" style="display:none">
+  <!-- Notices -->
+  <div class="notice setup" id="setup-notice" style="display:none">
     <span>&#9888; Set your callsign in Settings to transmit</span>
     <a href="#" onclick="toggleSettings();return false">Open Settings &rarr;</a>
   </div>
-  <div class="jtdx-notice" id="jtdx-notice" style="display:flex">
-    <span>&#9888; JTDX must check <b>Settings → Reporting → Accept UDP requests</b></span>
+  <div class="notice jtdx" id="jtdx-notice">
+    <span>&#9888; JTDX/WSJT-X &rarr; Settings &rarr; Reporting &rarr; <b>Accept UDP requests</b> + secondary port <b>2238</b></span>
   </div>
 
   <!-- Status -->
   <div class="status">
-    <span><span class="label">SW</span> <span id="sw-name">-</span></span>
-    <span><span class="label">Freq</span> <span id="sw-freq">-</span></span>
-    <span><span class="label">Mode</span> <span id="sw-mode">-</span></span>
-    <span><span class="label">Band</span> <span id="sw-band">-</span></span>
-    <span><span class="label">DE</span> <span id="sw-callsign">-</span></span>
+    <span class="chip"><span class="label">SW</span> <span id="sw-name">-</span></span>
+    <span class="chip"><span class="label">Freq</span> <span id="sw-freq">-</span></span>
+    <span class="chip"><span class="label">Mode</span> <span id="sw-mode">-</span></span>
+    <span class="chip"><span class="label">Band</span> <span id="sw-band">-</span></span>
+    <span class="chip"><span class="label">DE</span> <span id="sw-callsign">-</span></span>
   </div>
 
   <!-- Cycle -->
   <div class="cycle-wrap"><div class="bar" id="cycle-bar" style="width:0%"></div></div>
   <div class="cycle-label rx" id="cycle-label">RX  0s / 15s</div>
 
-  <!-- Controls -->
-  <div class="ctrl">
-    <button class="cq" onclick="sendCQ()">CQ</button>
-    <button class="reply" onclick="sendReply()">Reply</button>
-    <button class="rr73" onclick="sendRR73()">RR73</button>
-    <button class="seventy-three" onclick="send73()">73</button>
-    <button class="halt" onclick="haltTX()">Halt TX</button>
-    <button onclick="toggleSettings()">&#9881;</button>
+  <!-- Waterfall -->
+  <div class="wf-wrap" id="wf-wrap">
+    <button class="wf-toggle" onclick="toggleWaterfall()">Waterfall &#9650;</button>
+    <canvas id="waterfall" width="1024" height="130"></canvas>
+    <div class="wf-cursor rx" id="wf-rx" style="left:0;display:none"></div>
+    <div class="wf-cursor tx" id="wf-tx" style="left:0;display:none"></div>
+    <div class="wf-scale" id="wf-scale"></div>
+  </div>
+
+  <!-- Mobile pane tabs -->
+  <div class="pane-tabs" id="pane-tabs">
+    <button class="on" data-pane="band" onclick="switchPane('band')">Band Activity</button>
+    <button data-pane="rx" onclick="switchPane('rx')">Rx Frequency</button>
+  </div>
+
+  <!-- Dual panes -->
+  <div class="panes">
+    <div class="pane" id="pane-band">
+      <div class="pane-hdr">
+        <span class="title">Band Activity</span>
+        <button id="flt-cq" onclick="toggleFilter('cq')">CQ only</button>
+        <button id="flt-worked" onclick="toggleFilter('worked')">Hide worked</button>
+        <span class="count" id="band-count">0</span>
+      </div>
+      <div class="pane-body" id="band-list">
+        <div class="empty">Waiting for decodes&hellip;<br><small>Start JTDX/WSJT-X &amp; forward UDP to this host : <b>2238</b></small></div>
+      </div>
+    </div>
+    <div class="pane hidden-mobile" id="pane-rx">
+      <div class="pane-hdr">
+        <span class="title">Rx Frequency</span>
+        <span class="count" id="rx-count">0</span>
+      </div>
+      <div class="pane-body" id="rx-list">
+        <div class="empty">Traffic on your Rx frequency<br><small>and messages addressed to you</small></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- QSO state -->
+  <div class="qso" id="qso-panel" style="display:none">
+    <span class="badge" id="qso-badge">IDLE</span>
+    <span class="dx" id="qso-dx">-</span>
+    <span class="info" id="qso-info"></span>
+    <button class="stop" onclick="stopQSO()">Stop</button>
+  </div>
+
+  <!-- Tx control panel -->
+  <div class="tx">
+    <div class="tx-freqs">
+      <span class="seg">Rx <b id="rx-df">0</b> Hz</span>
+      <span class="seg">Tx <b id="tx-df">0</b> Hz</span>
+      <label class="tgl"><input type="checkbox" id="tx-first" onchange="onTxFirst()"> Tx 1st (even)</label>
+      <span class="seg" id="tx-enabled-ind">Tx: <b>off</b></span>
+    </div>
+    <div class="tx-slots" id="tx-slots"><!-- filled by JS --></div>
+    <div class="tx-actions">
+      <button class="cq" onclick="sendCQ()">CQ</button>
+      <button class="reply" onclick="replySelected()">Reply</button>
+      <button onclick="sendRR73()">RR73</button>
+      <button onclick="send73()">73</button>
+      <button class="seq" id="seq-btn" onclick="toggleAutoSeq()">Auto&nbsp;Seq</button>
+      <button class="halt" onclick="haltTX()">Halt</button>
+      <button onclick="toggleSettings()">&#9881;</button>
+    </div>
   </div>
 
   <!-- Custom -->
   <div class="custom-row">
-    <input type="text" id="custom-text" placeholder="Custom message (max 13 chars)" maxlength="13">
+    <input type="text" id="custom-text" placeholder="Free text (max 13 chars)" maxlength="13">
     <button onclick="sendCustom()">Send</button>
-  </div>
-
-  <!-- Decode list -->
-  <div class="decode-area" id="decode-list">
-    <div class="empty">Waiting for decodes&hellip;<br><small>Configure JTDX &#8594; Reporting &#8594; UDP secondary port &#8594; <b>2238</b></small></div>
-  </div>
-
-  <!-- Target panel -->
-  <div class="target" id="target-panel">
-    <span class="call" id="target-call">-</span>
-    <span class="msg" id="target-msg"></span>
-    <button onclick="exclude()" title="Exclude">&#10007;</button>
   </div>
 
   <!-- Stats -->
@@ -180,22 +273,22 @@ body{margin:0;background:#0d1117;color:#c9d1d9;font-family:-apple-system,BlinkMa
   </div>
 
   <!-- Log -->
-  <div class="log" id="log-panel">
-    <div class="log-line">Ready&hellip;</div>
-  </div>
+  <div class="log" id="log-panel"><div class="log-line">Ready&hellip;</div></div>
 </div>
 
 <!-- Settings -->
 <div class="settings" id="settings-panel">
   <div class="box">
     <h2>Settings</h2>
-    <div class="row"><label>My Callsign</label><input type="text" id="set-call" placeholder="VE3KBR"></div>
-    <div class="row"><label>Grid Square</label><input type="text" id="set-grid" placeholder="FN15"></div>
-    <div class="row"><label>Signal Threshold (dB)</label><input type="number" id="set-threshold" min="-30" max="0"></div>
-    <div class="row toggle-row"><label>Auto Reply</label><input type="checkbox" id="set-autoreply"></div>
-    <div class="row"><label>JTDX Host</label><input type="text" id="set-jtdx-host" placeholder="127.0.0.1"></div>
-    <div class="row"><label>JTDX UDP Port</label><input type="number" id="set-jtdx-port" placeholder="2237" min="1" max="65535"></div>
-    <div class="row" style="font-size:11px;color:#8b949e" id="set-jtdx-detected"></div>
+    <div class="row2"><label>My Callsign</label><input type="text" id="set-call" placeholder="VE3KBR"></div>
+    <div class="row2"><label>Grid Square</label><input type="text" id="set-grid" placeholder="FN15"></div>
+    <div class="row2"><label>Signal Threshold (dB)</label><input type="number" id="set-threshold" min="-30" max="0"></div>
+    <div class="row2 toggle-row"><label>Auto Seq (server drives the QSO)</label><input type="checkbox" id="set-autoseq"></div>
+    <div class="sub">When ON, MRRC sequences reply&rarr;report&rarr;RR73&rarr;73 and logs automatically.</div>
+    <div class="row2 toggle-row"><label>Enable Waterfall</label><input type="checkbox" id="set-waterfall" checked></div>
+    <div class="row2"><label>JTDX Host</label><input type="text" id="set-jtdx-host" placeholder="127.0.0.1"></div>
+    <div class="row2"><label>JTDX UDP Port</label><input type="number" id="set-jtdx-port" placeholder="2237" min="1" max="65535"></div>
+    <div class="row2" style="font-size:11px;color:#8b949e" id="set-jtdx-detected"></div>
     <div class="actions">
       <button class="save" onclick="saveSettings()">Save</button>
       <button class="cancel" onclick="toggleSettings()">Cancel</button>
@@ -203,6 +296,9 @@ body{margin:0;background:#0d1117;color:#c9d1d9;font-family:-apple-system,BlinkMa
   </div>
 </div>
 
+<!-- Opus decoder for waterfall (reused from main UI) -->
+<script src="modules/opus_wasm.js"></script>
+<script src="modules/opus_codec.js"></script>
 <script src="ft8_ultron.js"></script>
 </body>
 </html>

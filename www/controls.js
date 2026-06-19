@@ -873,11 +873,31 @@ function wsControlTRXcrtol( msg ){
 	var action = colonIndex > 0 ? data.substring(0, colonIndex) : data;
 	var param = colonIndex > 0 ? data.substring(colonIndex + 1) : '';
 	
-	if(action == "PONG"){showlatency();}
+	if(action == "PONG"){
+		// 半开连接检测：收到 PONG 说明控制通道往返正常，清除等待超时
+		if (window._pongTimer) {
+			clearTimeout(window._pongTimer);
+			window._pongTimer = null;
+		}
+		showlatency();
+	}
 	else if(action == "getFreq"){showTRXfreq(param);TRXfrequency=parseInt(param);if (typeof panfft !== 'undefined') {panfft.setcenterfrequency(param);}}
 	else if(action == "getMode"){showTRXmode(param);}
 	else if(action == "getSignalLevel"){SignalLevel=param;drawRXSmeter();}
 	else if(action == "getPTT"){updatePTTStatus(param === "true");}
+	else if(action == "pttError"){
+		console.error('🚨 PTT 错误:', param);
+		if(param === "tot_timeout"){
+			// TOT 超时：服务端已强制把电台收回 RX，不要把 UI 点亮成发射态。
+			// 后续的 getPTT:false 广播会同步真实状态，这里只提示操作员。
+			alert("⏰ 发射超时保护已触发，已自动停止发射（达到最大发射时长）。");
+		} else {
+			// release_failed: 服务端释放失败，电台可能仍在发射，后台正在自动重试。
+			// 强制 UI 显示发射态并告警，状态恢复后会有 getPTT:false 同步回来。
+			updatePTTStatus(true);
+			alert("⚠️ PTT 释放失败，电台可能仍在发射！\n服务端正在自动重试收回，请检查电台/CAT 连接。");
+		}
+	}
 	else if(action == "panfft"){document.getElementById("div-panfft").style.display = "block";}
 	else if(action == "cq"){
 		console.log('📻 收到CQ消息:', param);
@@ -1059,6 +1079,36 @@ function wsControlTRXerror(err){
 }
 
 var startTime;
+// 半开连接检测：每次 PING 发出后启动超时计时器，PONG_TIMEOUT 内未收到 PONG
+// 判定为 TCP 半开死连接（readyState 仍是 OPEN 但数据进黑洞），强制重连。
+// 这是"按了释放后还在发射"的根因防护：半开时 setPTT:false 会静默丢失。
+var PONG_TIMEOUT_MS = 6000;
+window._pongTimer = null;
+
+// 半开连接确诊后的安全处理：强制关闭控制通道触发重连，并尽力通过 TX
+// 音频通道（独立 socket，可能仍通）补发 s: 命令收回发射。
+function onControlConnectionDead(reason) {
+	console.error('🚨 控制连接判定为半开/死亡:', reason, '— 强制重连并尝试收回发射');
+	// 1) 若本地认为正在发射，立即尝试通过 TX 音频通道补发 s:（关 PTT 的独立路径）
+	try {
+		if (typeof TXState !== 'undefined' && TXState && TXState.isPressed) {
+			if (typeof wsAudioTX !== 'undefined' && wsAudioTX && wsAudioTX.readyState === WebSocket.OPEN) {
+				wsAudioTX.send("s:");
+				console.warn('🛑 已通过 TX 音频通道补发 s: 收回发射');
+			}
+			// 强制重置本地 TX 状态，避免 UI 残留发射态
+			if (typeof TXControl === 'function') { TXControl('stop'); }
+		}
+	} catch (e) { console.warn('补发 s: 失败:', e); }
+	// 2) 强制关闭控制通道，触发 onclose → 自动重连
+	try {
+		if (wsControlTRX && wsControlTRX.readyState !== WebSocket.CLOSED) {
+			wsControlTRX.close();
+		}
+	} catch (e) { /* ignore */ }
+	setWSStatus('status-ctrl', 'error');
+}
+
 function checklatency() {
 	setTimeout(function () {
 		// 检查 WebSocket 状态，断开时自动重连
@@ -1067,6 +1117,15 @@ function checklatency() {
 				if (wsControlTRX.readyState === WebSocket.OPEN) {
 					startTime = Date.now();
 					wsControlTRX.send("PING");
+					// 启动 PONG 超时计时器：到点仍未收到 PONG → 半开死连接
+					if (window._pongTimer) { clearTimeout(window._pongTimer); }
+					window._pongTimer = setTimeout(function () {
+						window._pongTimer = null;
+						// 二次确认：若期间连接已被关闭/重连则忽略
+						if (poweron && wsControlTRX && wsControlTRX.readyState === WebSocket.OPEN) {
+							onControlConnectionDead('PONG 超时 ' + PONG_TIMEOUT_MS + 'ms');
+						}
+					}, PONG_TIMEOUT_MS);
 				} else if (wsControlTRX.readyState === WebSocket.CLOSED) {
 					// WebSocket 已关闭但电源仍开启，尝试重连
 					console.log('🔄 心跳检测：WebSocket已关闭，尝试重连...');
