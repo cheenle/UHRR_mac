@@ -61,7 +61,7 @@
         <div class="hero-content">
             <div class="hero-badge">
                 <i class="fas fa-satellite-dish"></i>
-                <span>V5.4 · Production Ready</span>
+                <span>V5.6.5 · Production Ready</span>
             </div>            
             <h1 class="hero-title">
                 Amateur Radio<br>
@@ -70,7 +70,7 @@
             
             <p class="hero-subtitle">
                 MRRC - Modern Web-based remote transceiver control system. Control your HF radio from phone, tablet, or computer.
-                Opus-optimized audio streaming, WDSP professional noise reduction, AI voice assistant, CW/FT8 digital modes, and studio-grade TX audio processing.
+                Opus-optimized audio streaming, WDSP professional noise reduction, AI voice assistant, CW/FT8 digital modes, studio-grade TX audio processing, and 3-layer PTT safety system.
             </p>
             
             <div class="hero-actions">
@@ -93,7 +93,7 @@
             </div>
 
             <div class="hero-preview">
-                <p style="text-align:center; color: var(--text-secondary); margin-bottom: 12px; font-size: 0.95rem; font-weight: 500;">MRRC V5.4 System Architecture — 4-Layer Design</p>
+                <p style="text-align:center; color: var(--text-secondary); margin-bottom: 12px; font-size: 0.95rem; font-weight: 500;">MRRC V5.6.5 System Architecture — 4-Layer Design</p>
                 <img src="images/architecture52.jpg" alt="MRRC V5.4 System Architecture Diagram" onclick="document.getElementById('lightbox-arch').style.display='flex'" style="cursor:zoom-in" />
             </div>
             <div id="lightbox-arch" class="lightbox" onclick="this.style.display='none'">
@@ -115,8 +115,8 @@
                     <span class="stat-label">WDSP NR</span>
                 </div>
                 <div class="stat-item">
-                    <span class="stat-value">V5.4</span>
-                    <span class="stat-label">240+ Commits</span>
+                    <span class="stat-value">V5.6.5</span>
+                    <span class="stat-label">280+ Commits</span>
                 </div>
             </div>
         </div>
@@ -193,11 +193,11 @@
                 
                 <article class="card">
                     <div class="card-icon">
-                        <i class="fas fa-server"></i>
+                        <i class="fas fa-shield-alt"></i>
                     </div>
-                    <h3 class="card-title">Multi-Instance Support</h3>
+                    <h3 class="card-title">PTT Safety System</h3>
                     <p class="card-text">
-                        Single server, multiple independent radio instances — each with dedicated config, audio device, ATR-1000 proxy, and tuner learning.
+                        3-layer TX protection: release ACK protocol with 3x retry + redundant audio-path fallback, 120s TOT hard limit, touch-move auto-release, visibility-change forced stop — prevents stuck transmissions.
                     </p>
                 </article>
                 
@@ -205,9 +205,9 @@
                     <div class="card-icon">
                         <i class="fas fa-broadcast-tower"></i>
                     </div>
-                    <h3 class="card-title">FT8 Digital Mode</h3>
+                    <h3 class="card-title">FT8 ULTRON Console</h3>
                     <p class="card-text">
-                        JTDX/WSJT-X/MSHV integration, ULTRON auto-CQ + smart reply, DXCC entity/band tracking, built-in WebSocket bridge to MRRC.
+                        JTDX/WSJT-X/MSHV integration with full remote UI: live waterfall spectrogram, 6 customizable TX message slots, server-side QSO auto-sequencer, DXCC entity/new-grid tracking, desktop notifications, and CQ-only filtering.
                     </p>
                 </article>
 

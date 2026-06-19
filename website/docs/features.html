@@ -418,30 +418,30 @@ Response Example: ff050701031b1e000e01
 
             <!-- FT8/ULTRON -->
             <div class="doc-section" id="ft8">
-                <h2><span class="feature-icon">📻</span> FT8/ULTRON Automation Tool</h2>
-                <p>ULTRON Enhanced is MRRC's FT8 digital mode automation tool (introduced V4.9, stabilized V5.4), supporting JTDX, WSJT-X, MSHV software integration via WebSocket bridge.</p>
+                <h2><span class="feature-icon">📻</span> FT8/ULTRON Remote Console (V5.6+)</h2>
+                <p>ULTRON is MRRC's FT8 digital mode remote console (introduced V4.9, overhauled V5.6), providing a full-featured browser-based interface to JTDX/WSJT-X/MSHV via WebSocket bridge. No local software needed — operate FT8 entirely from your phone or tablet.</p>
                 
-                <h3>Core Features</h3>
+                <h3>Remote Console Features</h3>
                 <div class="feature-grid">
                     <div class="feature-card">
-                        <div class="feature-icon-large">📢</div>
-                        <h4>Auto CQ</h4>
-                        <p>Automatically call CQ when idle, smart wait for response, recall after timeout</p>
-                    </div>
-                    <div class="feature-card">
-                        <div class="feature-icon-large">🎯</div>
-                        <h4>DXCC Target Tracking</h4>
-                        <p>Entity whitelist, band strategy, log analysis, auto-recommend unworked entities</p>
-                    </div>
-                    <div class="feature-card">
-                        <div class="feature-icon-large">🤝</div>
-                        <h4>Smart Response</h4>
-                        <p>Auto-recognize incoming calls, smart reply, identify 73/RRR/RR73 completion</p>
+                        <div class="feature-icon-large">🌊</div>
+                        <h4>Live Waterfall</h4>
+                        <p>Client-side waterfall spectrogram from Opus/PCM audio stream, 1024px canvas with frequency scale and Rx/Tx cursor lines</p>
                     </div>
                     <div class="feature-card">
                         <div class="feature-icon-large">📋</div>
-                        <h4>Waitlist Management</h4>
-                        <p>30-minute exclusion mechanism, avoid repeatedly calling unresponsive stations</p>
+                        <h4>6 Customizable TX Slots</h4>
+                        <p>Macro message templates with {DxCall}, {MyCall}, {Report} placeholders — auto-populated and sent with one tap</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon-large">🔄</div>
+                        <h4>Server-Side Auto-Sequencer</h4>
+                        <p>Full QSO state machine: IDLE → CALLING → REPORTED → ROGERED → DONE, with 6-cycle timeout. Uses Reply packets for reliable TX keying</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon-large">🌍</div>
+                        <h4>DXCC & Grid Tracking</h4>
+                        <p>Per-decode DXCC entity lookup + flag, new DXCC/new grid highlighting, worked-before dimming, CQ-only filter, desktop notifications for unworked stations</p>
                     </div>
                 </div>
 
@@ -454,31 +454,20 @@ Response Example: ff050701031b1e000e01
                     </tr>
                     <tr>
                         <td>JTDX</td>
-                        <td>UDP 2237</td>
+                        <td>UDP 2237 → WS Bridge 2238</td>
                         <td class="highlight">✓ Fully Supported</td>
                     </tr>
                     <tr>
                         <td>WSJT-X</td>
-                        <td>UDP 2237</td>
+                        <td>UDP 2237 → WS Bridge 2238</td>
                         <td class="highlight">✓ Fully Supported</td>
                     </tr>
                     <tr>
                         <td>MSHV</td>
-                        <td>UDP 2237</td>
+                        <td>UDP 2237 → WS Bridge 2238</td>
                         <td class="highlight">✓ Fully Supported</td>
                     </tr>
                 </table>
-
-                <h3>How to Run</h3>
-                <pre class="code-block"><code># Python version (recommended)
-cd ft8
-python run_ultron.py
-
-# DXCC enhanced mode
-python ultron_dxcc.py
-
-# Analyze worked entities
-python dxcc_analyzer.py</code></pre>
 
                 <h3>Try It Live</h3>
                 <div class="demo-links">
@@ -486,6 +475,52 @@ python dxcc_analyzer.py</code></pre>
                         <i class="fas fa-broadcast-tower"></i> FT8 Console
                     </a>
                 </div>
+            </div>
+
+            <!-- PTT Safety System -->
+            <div class="doc-section" id="ptt-safety">
+                <h2><span class="feature-icon">🛡️</span> PTT Safety System (V5.6+)</h2>
+                <p>Three-layer TX protection architecture designed to prevent the most dangerous failure mode in remote radio operation: a stuck transmitter. Each layer provides independent protection with redundant fallback paths.</p>
+
+                <h3>Layer 1: Client-Side Guard (Browser)</h3>
+                <div class="feature-grid">
+                    <div class="feature-card">
+                        <div class="feature-icon-large">👆</div>
+                        <h4>Touch-Move Auto-Release</h4>
+                        <p>Finger slides off TX button → immediate PTT release via touchmove/touchcancel handlers</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon-large">🪟</div>
+                        <h4>Visibility-Change Forced Stop</h4>
+                        <p>Page goes to background or window loses focus while TX is active → forces PTT release. Prevents up to 30s of unintended transmission</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon-large">⏱️</div>
+                        <h4>30s Watchdog Timer</h4>
+                        <p>Hardware watchdog: if TX state stays active >30s without confirmation, forces release</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon-large">🔒</div>
+                        <h4>Lock Leak Detection</h4>
+                        <p>Processing lock held >3s → auto-released to prevent silent stop-failure leaving TX stuck</p>
+                    </div>
+                </div>
+
+                <h3>Layer 2: Release ACK Protocol</h3>
+                <table class="comparison-table">
+                    <tr><th>Mechanism</th><th>Description</th></tr>
+                    <tr><td>ACK Retry</td><td>After sending setPTT:false, waits up to 1s for server confirmation. If unconfirmed, retransmits up to 3 times</td></tr>
+                    <tr><td>Redundant Audio-Path Fallback</td><td>On each retry, also sends s: via TX audio WebSocket as a redundant release path — works even if control WebSocket is half-open</td></tr>
+                    <tr><td>Connection Death Trigger</td><td>After 3 failed ACK retries, forces full control-channel reconnect via onControlConnectionDead()</td></tr>
+                </table>
+
+                <h3>Layer 3: Server-Side Protection</h3>
+                <table class="comparison-table">
+                    <tr><th>Mechanism</th><th>Description</th></tr>
+                    <tr><td>120s TOT Hard Limit</td><td>Time-Out Timer: PTTSafetyMonitor thread enforces absolute 120s maximum TX duration</td></tr>
+                    <tr><td>Persistent Retry</td><td>PTT release retried every 2s until hardware confirms state change</td></tr>
+                    <tr><td>Broadcast on Failure</td><td>pttError:release_failed or pttError:tot_timeout broadcast to all connected clients</td></tr>
+                </table>
             </div>
         </div>
     </section>

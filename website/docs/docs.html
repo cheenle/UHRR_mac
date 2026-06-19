@@ -458,43 +458,32 @@ python dxcc_analyzer.py</code></pre>
             <div class="doc-section" id="protocols">
                 <h2><span class="feature-icon">📝</span> Communication Protocols</h2>
                 
-                <h3>WebSocket Commands</h3>
+                <h3>WebSocket Commands (WSCTRX)</h3>
                 <table class="comparison-table">
                     <tr>
                         <th>Command</th>
                         <th>Format</th>
                         <th>Description</th>
                     </tr>
-                    <tr>
-                        <td>Set Frequency</td>
-                        <td><code>setFreq:14074000</code></td>
-                        <td>In Hz</td>
-                    </tr>
-                    <tr>
-                        <td>Set Mode</td>
-                        <td><code>setMode:USB</code></td>
-                        <td>USB/LSB/CW/FM</td>
-                    </tr>
-                    <tr>
-                        <td>PTT Control</td>
-                        <td><code>setPTT:1</code></td>
-                        <td>1=TX, 0=RX</td>
-                    </tr>
-                    <tr>
-                        <td>Volume</td>
-                        <td><code>setRXA:50</code></td>
-                        <td>0-100</td>
-                    </tr>
-                    <tr>
-                        <td>Filter</td>
-                        <td><code>setFilter:2400</code></td>
-                        <td>In Hz</td>
-                    </tr>
-                    <tr>
-                        <td>WDSP Control</td>
-                        <td><code>setWDSP:NR2:1</code></td>
-                        <td>Module:on/off</td>
-                    </tr>
+                    <tr><td>Set Frequency</td><td><code>setFreq:14074000</code></td><td>In Hz, syncs to ATR-1000</td></tr>
+                    <tr><td>Get Frequency</td><td><code>getFreq</code></td><td>Read from rig, broadcast response</td></tr>
+                    <tr><td>Set Mode</td><td><code>setMode:USB</code></td><td>USB/LSB/CW/FM/AM</td></tr>
+                    <tr><td>Get Mode</td><td><code>getMode</code></td><td>Read mode from rig</td></tr>
+                    <tr><td>PTT TX</td><td><code>setPTT:true</code></td><td>Key transmitter (with retry)</td></tr>
+                    <tr><td>PTT RX</td><td><code>setPTT:false</code></td><td>Release (with ACK protocol, 3x retry)</td></tr>
+                    <tr><td>Get PTT</td><td><code>getPTT</code></td><td>Read actual PTT state from hardware</td></tr>
+                    <tr><td>Tune</td><td><code>tune:true</code> / <code>tune:false</code></td><td>Start/stop tune tone (5% volume)</td></tr>
+                    <tr><td>CQ</td><td><code>cq:true</code> / <code>cq:false</code></td><td>Start/stop CQ playback (cq.wav)</td></tr>
+                    <tr><td>WDSP Toggle</td><td><code>setWDSPEnabled:true</code></td><td>Enable/disable WDSP processing</td></tr>
+                    <tr><td>NR2 Level</td><td><code>setWDSPNR2Level:2</code></td><td>0=OFF, 1=LOW, 2=MED, 3=HIGH, 4=MAX</td></tr>
+                    <tr><td>Noise Blanker</td><td><code>setWDSPNB:true</code></td><td>Toggle NB (pulse interference)</td></tr>
+                    <tr><td>Auto Notch</td><td><code>setWDSPANF:true</code></td><td>Toggle ANF automatic notch filter</td></tr>
+                    <tr><td>Add Notch</td><td><code>addWDSPNotch:1500,200</code></td><td>Manual notch (center_hz, width_hz)</td></tr>
+                    <tr><td>AGC Mode</td><td><code>setWDSPAGC:3</code></td><td>0=OFF, 1=LONG, 2=SLOW, 3=MED, 4=FAST</td></tr>
+                    <tr><td>Bandpass</td><td><code>setWDSPBandpass:300,2700</code></td><td>Low Hz, High Hz</td></tr>
+                    <tr><td>Recording</td><td><code>startRecording</code> / <code>stopRecording</code></td><td>Stereo WAV → MP3 recording</td></tr>
+                    <tr><td>Memory</td><td><code>memLoadAll</code> / <code>memSaveAll:{json}</code></td><td>Per-user memory channels (6 slots)</td></tr>
+                    <tr><td>Ping</td><td><code>PING</code></td><td>Latency check, responds PONG</td></tr>
                 </table>
             </div>
 

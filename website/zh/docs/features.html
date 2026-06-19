@@ -428,30 +428,30 @@
 
             <!-- FT8/ULTRON -->
             <div class="doc-section" id="ft8">
-                <h2><span class="feature-icon">📻</span> FT8/ULTRON 自动化工具</h2>
-                <p>ULTRON Enhanced 是 MRRC 的 FT8 数字模式自动化工具 (V4.9 引入，V5.4 稳定)，支持 JTDX、WSJT-X、MSHV 软件联动，通过 WebSocket 桥接集成。</p>
+                <h2><span class="feature-icon">📻</span> FT8/ULTRON 远程控制台 (V5.6+)</h2>
+                <p>ULTRON 是 MRRC 的 FT8 数字模式远程控制台 (V4.9 引入，V5.6 全面升级)，通过 WebSocket 桥接为 JTDX/WSJT-X/MSHV 提供全功能浏览器界面。无需本地安装任何软件 — 手机、平板即可操作 FT8。</p>
                 
-                <h3>核心功能</h3>
+                <h3>远程控制台功能</h3>
                 <div class="feature-grid">
                     <div class="feature-card">
-                        <div class="feature-icon-large">📢</div>
-                        <h4>自动 CQ</h4>
-                        <p>空闲时自动呼叫 CQ，智能等待响应，超时后重新呼叫</p>
-                    </div>
-                    <div class="feature-card">
-                        <div class="feature-icon-large">🎯</div>
-                        <h4>DXCC 目标追踪</h4>
-                        <p>实体白名单、波段策略、日志分析、自动推荐未通联实体</p>
-                    </div>
-                    <div class="feature-card">
-                        <div class="feature-icon-large">🤝</div>
-                        <h4>智能响应</h4>
-                        <p>自动识别来电呼叫，智能应答，识别 73/RRR/RR73 结束</p>
+                        <div class="feature-icon-large">🌊</div>
+                        <h4>实时瀑布图</h4>
+                        <p>基于 Opus/PCM 音频流的客户端瀑布图，1024px Canvas 渲染，含频率刻度与 Rx/Tx 光标线</p>
                     </div>
                     <div class="feature-card">
                         <div class="feature-icon-large">📋</div>
-                        <h4>Waitlist 管理</h4>
-                        <p>30分钟排除机制，避免重复呼叫无响应台站</p>
+                        <h4>6 个可定制 TX 消息槽</h4>
+                        <p>宏消息模板支持 {DxCall}、{MyCall}、{Report} 占位符 — 一键自动填充并发送</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon-large">🔄</div>
+                        <h4>服务端自动序列器</h4>
+                        <p>完整 QSO 状态机：IDLE → CALLING → REPORTED → ROGERED → DONE，6 周期超时。使用 Reply 数据包确保可靠 TX 触发</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon-large">🌍</div>
+                        <h4>DXCC 与网格追踪</h4>
+                        <p>每条解码 DXCC 实体查询 + 旗帜，新 DXCC/新网格高亮，已通联灰显，CQ 专属过滤，未通联台站桌面通知</p>
                     </div>
                 </div>
 
@@ -464,31 +464,20 @@
                     </tr>
                     <tr>
                         <td>JTDX</td>
-                        <td>UDP 2237</td>
+                        <td>UDP 2237 → WS 桥接 2238</td>
                         <td class="highlight">✓ 完全支持</td>
                     </tr>
                     <tr>
                         <td>WSJT-X</td>
-                        <td>UDP 2237</td>
+                        <td>UDP 2237 → WS 桥接 2238</td>
                         <td class="highlight">✓ 完全支持</td>
                     </tr>
                     <tr>
                         <td>MSHV</td>
-                        <td>UDP 2237</td>
+                        <td>UDP 2237 → WS 桥接 2238</td>
                         <td class="highlight">✓ 完全支持</td>
                     </tr>
                 </table>
-
-                <h3>运行方式</h3>
-                <pre class="code-block"><code># Python 版本 (推荐)
-cd ft8
-python run_ultron.py
-
-# DXCC 增强模式
-python ultron_dxcc.py
-
-# 分析已通联实体
-python dxcc_analyzer.py</code></pre>
 
                 <h3>在线体验</h3>
                 <div class="demo-links">
@@ -496,6 +485,52 @@ python dxcc_analyzer.py</code></pre>
                         <i class="fas fa-broadcast-tower"></i> FT8 控制台
                     </a>
                 </div>
+            </div>
+
+            <!-- PTT 安全防护系统 -->
+            <div class="doc-section" id="ptt-safety">
+                <h2><span class="feature-icon">🛡️</span> PTT 安全防护系统 (V5.6+)</h2>
+                <p>三层 TX 保护架构，专门防止远程电台操控中最危险的故障模式：电台卡在发射状态。每层提供独立保护，并具有冗余回退路径。</p>
+
+                <h3>第一层：客户端守护 (浏览器)</h3>
+                <div class="feature-grid">
+                    <div class="feature-card">
+                        <div class="feature-icon-large">👆</div>
+                        <h4>触屏滑动自动释放</h4>
+                        <p>手指滑出发射按钮 → 通过 touchmove/touchcancel 立即停止 PTT</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon-large">🪟</div>
+                        <h4>页面隐藏强制停发</h4>
+                        <p>页面进入后台或窗口失焦且 TX 激活中 → 强制释放 PTT，最多防止 30 秒意外发射</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon-large">⏱️</div>
+                        <h4>30 秒看门狗定时器</h4>
+                        <p>硬件看门狗：TX 状态激活超过 30 秒且无确认 → 强制释放</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon-large">🔒</div>
+                        <h4>处理锁泄漏检测</h4>
+                        <p>处理锁持有超过 3 秒 → 自动释放，防止静默停发失败导致 TX 卡死</p>
+                    </div>
+                </div>
+
+                <h3>第二层：释放 ACK 协议</h3>
+                <table class="comparison-table">
+                    <tr><th>机制</th><th>描述</th></tr>
+                    <tr><td>ACK 重试</td><td>发送 setPTT:false 后，等待最多 1 秒服务端确认。若未确认，最多重传 3 次</td></tr>
+                    <tr><td>冗余音频通路回退</td><td>每次重试时，同时通过 TX 音频 WebSocket 发送 s: 作为冗余释放路径 — 即使控制 WebSocket 半开也能工作</td></tr>
+                    <tr><td>连接断开触发</td><td>3 次 ACK 重试失败后，强制通过 onControlConnectionDead() 重建控制通道</td></tr>
+                </table>
+
+                <h3>第三层：服务端保护</h3>
+                <table class="comparison-table">
+                    <tr><th>机制</th><th>描述</th></tr>
+                    <tr><td>120 秒 TOT 硬限制</td><td>超时定时器：PTTSafetyMonitor 线程强制执行绝对 120 秒最大发射时长</td></tr>
+                    <tr><td>持续重试</td><td>PTT 释放每 2 秒重试一次，直到硬件确认状态变化</td></tr>
+                    <tr><td>故障广播</td><td>pttError:release_failed 或 pttError:tot_timeout 广播给所有连接的客户端</td></tr>
+                </table>
             </div>
         </div>
     </section>

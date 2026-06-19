@@ -454,43 +454,28 @@ python dxcc_analyzer.py</code></pre>
             <div class="doc-section" id="protocols">
                 <h2><span class="feature-icon">📝</span> 通信协议</h2>
                 
-                <h3>WebSocket 命令</h3>
+                <h3>WebSocket 命令 (WSCTRX)</h3>
                 <table class="comparison-table">
-                    <tr>
-                        <th>命令</th>
-                        <th>格式</th>
-                        <th>说明</th>
-                    </tr>
-                    <tr>
-                        <td>设置频率</td>
-                        <td><code>setFreq:14074000</code></td>
-                        <td>Hz为单位</td>
-                    </tr>
-                    <tr>
-                        <td>设置模式</td>
-                        <td><code>setMode:USB</code></td>
-                        <td>USB/LSB/CW/FM</td>
-                    </tr>
-                    <tr>
-                        <td>PTT控制</td>
-                        <td><code>setPTT:1</code></td>
-                        <td>1=发射, 0=接收</td>
-                    </tr>
-                    <tr>
-                        <td>音量</td>
-                        <td><code>setRXA:50</code></td>
-                        <td>0-100</td>
-                    </tr>
-                    <tr>
-                        <td>滤波器</td>
-                        <td><code>setFilter:2400</code></td>
-                        <td>Hz为单位</td>
-                    </tr>
-                    <tr>
-                        <td>WDSP控制</td>
-                        <td><code>setWDSP:NR2:1</code></td>
-                        <td>模块:开关</td>
-                    </tr>
+                    <tr><th>命令</th><th>格式</th><th>说明</th></tr>
+                    <tr><td>设置频率</td><td><code>setFreq:14074000</code></td><td>Hz 为单位，同步至 ATR-1000</td></tr>
+                    <tr><td>读取频率</td><td><code>getFreq</code></td><td>从电台读取，广播响应</td></tr>
+                    <tr><td>设置模式</td><td><code>setMode:USB</code></td><td>USB/LSB/CW/FM/AM</td></tr>
+                    <tr><td>读取模式</td><td><code>getMode</code></td><td>从电台读取当前模式</td></tr>
+                    <tr><td>PTT 发射</td><td><code>setPTT:true</code></td><td>按下发射键（含重试）</td></tr>
+                    <tr><td>PTT 接收</td><td><code>setPTT:false</code></td><td>释放发射键（含 ACK 协议，3 次重试）</td></tr>
+                    <tr><td>读取 PTT</td><td><code>getPTT</code></td><td>从硬件读取实际 PTT 状态</td></tr>
+                    <tr><td>调谐音</td><td><code>tune:true</code> / <code>tune:false</code></td><td>启动/停止调谐音 (5% 音量)</td></tr>
+                    <tr><td>CQ 播放</td><td><code>cq:true</code> / <code>cq:false</code></td><td>启动/停止 CQ 音频 (cq.wav)</td></tr>
+                    <tr><td>WDSP 开关</td><td><code>setWDSPEnabled:true</code></td><td>启用/禁用 WDSP 处理</td></tr>
+                    <tr><td>NR2 级别</td><td><code>setWDSPNR2Level:2</code></td><td>0=关, 1=低, 2=中, 3=高, 4=最高</td></tr>
+                    <tr><td>噪声消除</td><td><code>setWDSPNB:true</code></td><td>开关 NB (脉冲干扰)</td></tr>
+                    <tr><td>自动陷波</td><td><code>setWDSPANF:true</code></td><td>开关 ANF 自动陷波滤波器</td></tr>
+                    <tr><td>添加陷波</td><td><code>addWDSPNotch:1500,200</code></td><td>手动陷波 (中心频率Hz, 宽度Hz)</td></tr>
+                    <tr><td>AGC 模式</td><td><code>setWDSPAGC:3</code></td><td>0=关, 1=长, 2=慢, 3=中, 4=快</td></tr>
+                    <tr><td>带通滤波</td><td><code>setWDSPBandpass:300,2700</code></td><td>低截止 Hz, 高截止 Hz</td></tr>
+                    <tr><td>录音</td><td><code>startRecording</code> / <code>stopRecording</code></td><td>立体声 WAV → MP3 录音</td></tr>
+                    <tr><td>频道存储</td><td><code>memLoadAll</code> / <code>memSaveAll:{json}</code></td><td>每用户记忆频道 (6 个槽位)</td></tr>
+                    <tr><td>心跳</td><td><code>PING</code></td><td>延迟检测，响应 PONG</td></tr>
                 </table>
             </div>
 
