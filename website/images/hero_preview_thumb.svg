@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 400" role="img" aria-labelledby="title desc">
+  <title id="title">BG1SB HAM Radio workstation thumbnail</title>
+  <desc id="desc">Compact SVG thumbnail of the BG1SB HAM radio workstation hero.</desc>
+  <defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#070b12"/><stop offset="1" stop-color="#17100a"/></linearGradient><linearGradient id="gold" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#ffd58a"/><stop offset="1" stop-color="#f0a030"/></linearGradient></defs>
+  <rect width="600" height="400" fill="url(#bg)"/>
+  <circle cx="455" cy="85" r="155" fill="#f0a030" opacity=".08"/>
+  <text x="16" y="54" fill="url(#gold)" font-family="Inter,Arial,sans-serif" font-size="45" font-weight="800">BG1SB</text>
+  <text x="132" y="38" fill="#f8fafc" font-family="Inter,Arial,sans-serif" font-size="24" font-weight="800">HAM RADIO 工作台</text>
+  <text x="132" y="66" fill="#e5e7eb" font-family="Inter,Arial,sans-serif" font-size="13" font-weight="700" letter-spacing="4">专业 · 稳定 · 高效</text>
+  <g transform="translate(140 85)"><rect width="245" height="160" rx="8" fill="#050811" stroke="#274764" stroke-width="2"/><rect x="12" y="14" width="221" height="132" rx="4" fill="#102033"/><path d="M25 78 C70 48 91 105 126 72 S190 58 224 70" fill="none" stroke="#e5e7eb" stroke-width="1.5"/><rect x="80" y="82" width="120" height="52" rx="4" fill="#f8fafc" opacity=".75"/></g>
+  <g transform="translate(410 80)" font-family="JetBrains Mono,monospace"><rect width="155" height="52" rx="6" fill="#161512" stroke="#514532"/><text x="12" y="31" fill="#54f08a" font-size="10">ATR-1000</text><rect y="66" width="155" height="68" rx="6" fill="#1a1610" stroke="#5d4d30"/><rect x="62" y="78" width="60" height="25" rx="3" fill="#f5c46b"/><text x="69" y="96" fill="#111827" font-size="11">14.195</text><rect y="150" width="155" height="86" rx="6" fill="#12100e" stroke="#5d4d30"/><text x="32" y="202" fill="#ffd58a" font-family="Georgia,serif" font-size="22">FL-2000B</text></g>
+  <g transform="translate(220 165)"><rect x="48" y="0" width="42" height="100" rx="20" fill="url(#gold)" stroke="#fff4cf"/><line x1="69" y1="100" x2="69" y2="176" stroke="#d6b26b" stroke-width="5"/><ellipse cx="69" cy="102" rx="45" ry="14" fill="none" stroke="#d6b26b" stroke-width="4"/></g>
+  <g transform="translate(16 92)" fill="#ffd58a" font-family="Inter,Arial,sans-serif" font-size="12" font-weight="700"><text y="0">专业设备</text><text y="42">高效工作流</text><text y="84">优质音频</text><text y="126">全面覆盖</text><text y="168">精心搭建</text></g>
+  <rect y="374" width="600" height="26" fill="#080808" opacity=".86"/>
+  <text x="16" y="393" fill="url(#gold)" font-family="Inter,Arial,sans-serif" font-size="16" font-weight="800">BG1SB 台站</text>
+  <text x="462" y="394" fill="url(#gold)" font-family="Georgia,serif" font-size="20" font-weight="700" font-style="italic">73! Best DX!</text>
+</svg>

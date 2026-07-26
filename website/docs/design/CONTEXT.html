@@ -6,7 +6,8 @@
     <title>CONTEXT 系统上下文 - MRRC 工程设计文档</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="../../css/octen.css">
+    <link rel="stylesheet" href="../../css/octen.css?v=2">
+    <link rel="stylesheet" href="../../css/sunsdrmobile.css?v=1">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         .hero { min-height: auto; padding: 140px 24px 60px; }
@@ -108,7 +109,7 @@
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7442510147240155"
      crossorigin="anonymous"></script>
 </head>
-<body>
+<body data-site="mrrc">
     <nav class="navbar">
         <div class="container navbar-content">
             <a href="../../index.html" class="logo">
@@ -156,50 +157,152 @@
 </blockquote>
 <hr />
 <h2>1. 系统上下文图</h2>
-<pre class="codehilite"><code class="language-mermaid">graph TB
-    subgraph 用户层
-        HAM[业余无线电爱好者]
-        Browser[Web浏览器]
-        Mobile[移动设备]
-    end
+<div class="svg-diagram" style="overflow-x:auto;margin:1em 0;">
+<svg viewBox="0 0 1080 720" style="width:100%;max-width:1080px;height:auto;" xmlns="http://www.w3.org/2000/svg">
+<defs>
+<marker id="a1c" viewBox="0 0 10 7" refX="9" refY="3.5" markerWidth="7" markerHeight="5" orient="auto"><polygon points="0 0,10 3.5,0 7" fill="#22d3ee"/></marker>
+<marker id="a1g" viewBox="0 0 10 7" refX="9" refY="3.5" markerWidth="7" markerHeight="5" orient="auto"><polygon points="0 0,10 3.5,0 7" fill="#22d3ee"/></marker>
+<marker id="a1a" viewBox="0 0 10 7" refX="9" refY="3.5" markerWidth="7" markerHeight="5" orient="auto"><polygon points="0 0,10 3.5,0 7" fill="#22d3ee"/></marker>
+<marker id="a1p" viewBox="0 0 10 7" refX="9" refY="3.5" markerWidth="7" markerHeight="5" orient="auto"><polygon points="0 0,10 3.5,0 7" fill="#22d3ee"/></marker>
+</defs>
 
-    subgraph MRRC系统
-        WebServer[Tornado Web服务器]
-        WSHandler[WebSocket处理器]
-        AudioTX[TX音频处理]
-        AudioRX[RX音频处理]
-        DSP[WDSP降噪]
-        ATRProxy[ATR-1000代理]
-        VoiceAI[语音助手服务]
-        CWDecoder[CW解码器]
-    end
+<!-- === 用户层 === -->
+<rect x="10" y="10" width="1060" height="148" rx="8" fill="#0d1117" fill-opacity="0.4" stroke="rgba(255,255,255,0.06)" stroke-width="1" stroke-dasharray="6,4"/>
+<text x="22" y="31" fill="#22d3ee" font-family="Inter, sans-serif" font-size="13" font-weight="600">用户层</text>
 
-    subgraph 外部系统
-        Rigctld[Hamlib rigctld]
-        Radio[电台设备 IC-7100/IC-9000]
-        ATR1000[ATR-1000天调]
-        Internet[互联网]
-    end
+<rect x="80" y="58" width="185" height="48" rx="6" fill="#0d1117" stroke="#22d3ee" stroke-width="1.5"/>
+<text x="172" y="78" fill="#ffffff" font-family="Inter, sans-serif" font-size="12" font-weight="500" text-anchor="middle">HAM</text>
+<text x="172" y="95" fill="#8899aa" font-family="Inter, sans-serif" font-size="10" text-anchor="middle">业余无线电爱好者</text>
 
-    HAM --&gt;|HTTPS/WSS| Internet
-    Mobile --&gt;|HTTPS/WSS| Internet
-    Internet --&gt; WebServer
-    WebServer --&gt; WSHandler
-    WSHandler --&gt;|频率/模式/PTT| Rigctld
-    Rigctld --&gt;|Cat控制| Radio
-    WSHandler --&gt; AudioTX
-    AudioTX --&gt; DSP
-    DSP --&gt;|音频流| Radio
-    Radio --&gt;|音频流| AudioRX
-    AudioRX --&gt; DSP
-    DSP --&gt; WSHandler
-    WSHandler --&gt;|WSS| Browser
-    WSHandler --&gt;|WSS| Mobile
-    ATRProxy --&gt;|WebSocket| ATR1000
-    WSHandler --&gt;|Unix Socket| ATRProxy
-    VoiceAI --&gt;|in-process API| WSHandler
-    CWDecoder --&gt;|推理| WSHandler
-</code></pre>
+<rect x="435" y="58" width="185" height="48" rx="6" fill="#0d1117" stroke="#22d3ee" stroke-width="1.5"/>
+<text x="527" y="78" fill="#ffffff" font-family="Inter, sans-serif" font-size="12" font-weight="500" text-anchor="middle">Web浏览器</text>
+<text x="527" y="95" fill="#8899aa" font-family="Inter, sans-serif" font-size="10" text-anchor="middle">Browser</text>
+
+<rect x="790" y="58" width="185" height="48" rx="6" fill="#0d1117" stroke="#22d3ee" stroke-width="1.5"/>
+<text x="882" y="78" fill="#ffffff" font-family="Inter, sans-serif" font-size="12" font-weight="500" text-anchor="middle">移动设备</text>
+<text x="882" y="95" fill="#8899aa" font-family="Inter, sans-serif" font-size="10" text-anchor="middle">Mobile</text>
+
+<!-- === MRRC系统 === -->
+<rect x="10" y="173" width="1060" height="295" rx="8" fill="#0d1117" fill-opacity="0.4" stroke="rgba(255,255,255,0.06)" stroke-width="1" stroke-dasharray="6,4"/>
+<text x="22" y="194" fill="#22d3ee" font-family="Inter, sans-serif" font-size="13" font-weight="600">MRRC系统</text>
+
+<!-- Row 1: y=218 h=44 w=175 -->
+<rect x="52" y="218" width="175" height="44" rx="6" fill="#0d1117" stroke="#22d3ee" stroke-width="1.5"/>
+<text x="139" y="237" fill="#ffffff" font-family="Inter, sans-serif" font-size="11" font-weight="500" text-anchor="middle">Tornado</text>
+<text x="139" y="253" fill="#8899aa" font-family="Inter, sans-serif" font-size="10" text-anchor="middle">Web服务器</text>
+
+<rect x="282" y="218" width="175" height="44" rx="6" fill="#0d1117" stroke="#22d3ee" stroke-width="1.5"/>
+<text x="369" y="237" fill="#ffffff" font-family="Inter, sans-serif" font-size="11" font-weight="500" text-anchor="middle">WebSocket</text>
+<text x="369" y="253" fill="#8899aa" font-family="Inter, sans-serif" font-size="10" text-anchor="middle">处理器</text>
+
+<rect x="512" y="218" width="175" height="44" rx="6" fill="#0d1117" stroke="rgba(255,255,255,0.08)" stroke-width="1.5"/>
+<text x="599" y="240" fill="#ffffff" font-family="Inter, sans-serif" font-size="12" font-weight="500" text-anchor="middle">TX音频处理</text>
+
+<rect x="742" y="218" width="175" height="44" rx="6" fill="#0d1117" stroke="rgba(255,255,255,0.08)" stroke-width="1.5"/>
+<text x="829" y="240" fill="#ffffff" font-family="Inter, sans-serif" font-size="12" font-weight="500" text-anchor="middle">RX音频处理</text>
+
+<!-- Row 2: y=310 h=44 w=175 -->
+<rect x="52" y="310" width="175" height="44" rx="6" fill="#0d1117" stroke="rgba(255,255,255,0.08)" stroke-width="1.5"/>
+<text x="139" y="332" fill="#ffffff" font-family="Inter, sans-serif" font-size="12" font-weight="500" text-anchor="middle">WDSP降噪</text>
+
+<rect x="282" y="310" width="175" height="44" rx="6" fill="#0d1117" stroke="rgba(255,255,255,0.08)" stroke-width="1.5"/>
+<text x="369" y="332" fill="#ffffff" font-family="Inter, sans-serif" font-size="12" font-weight="500" text-anchor="middle">ATR-1000代理</text>
+
+<rect x="512" y="310" width="175" height="44" rx="6" fill="#0d1117" stroke="rgba(255,255,255,0.08)" stroke-width="1.5"/>
+<text x="599" y="332" fill="#ffffff" font-family="Inter, sans-serif" font-size="12" font-weight="500" text-anchor="middle">语音助手服务</text>
+
+<rect x="742" y="310" width="175" height="44" rx="6" fill="#0d1117" stroke="rgba(255,255,255,0.08)" stroke-width="1.5"/>
+<text x="829" y="332" fill="#ffffff" font-family="Inter, sans-serif" font-size="12" font-weight="500" text-anchor="middle">CW解码器</text>
+
+<!-- === 外部系统 === -->
+<rect x="10" y="483" width="1060" height="198" rx="8" fill="#0d1117" fill-opacity="0.4" stroke="rgba(255,255,255,0.06)" stroke-width="1" stroke-dasharray="6,4"/>
+<text x="22" y="504" fill="#22d3ee" font-family="Inter, sans-serif" font-size="13" font-weight="600">外部系统</text>
+
+<rect x="50" y="535" width="185" height="48" rx="6" fill="#0d1117" stroke="rgba(255,255,255,0.08)" stroke-width="1.5"/>
+<text x="142" y="555" fill="#ffffff" font-family="Inter, sans-serif" font-size="12" font-weight="500" text-anchor="middle">Hamlib rigctld</text>
+<text x="142" y="572" fill="#8899aa" font-family="Inter, sans-serif" font-size="10" text-anchor="middle">TCP:4532</text>
+
+<rect x="295" y="535" width="185" height="48" rx="6" fill="#0d1117" stroke="rgba(255,255,255,0.08)" stroke-width="1.5"/>
+<text x="387" y="555" fill="#ffffff" font-family="Inter, sans-serif" font-size="12" font-weight="500" text-anchor="middle">电台设备</text>
+<text x="387" y="572" fill="#8899aa" font-family="Inter, sans-serif" font-size="10" text-anchor="middle">IC-7100 / IC-9000</text>
+
+<rect x="540" y="535" width="185" height="48" rx="6" fill="#0d1117" stroke="rgba(255,255,255,0.08)" stroke-width="1.5"/>
+<text x="632" y="555" fill="#ffffff" font-family="Inter, sans-serif" font-size="12" font-weight="500" text-anchor="middle">ATR-1000</text>
+<text x="632" y="572" fill="#8899aa" font-family="Inter, sans-serif" font-size="10" text-anchor="middle">天调</text>
+
+<rect x="785" y="535" width="185" height="48" rx="6" fill="#0d1117" stroke="rgba(255,255,255,0.08)" stroke-width="1.5"/>
+<text x="877" y="555" fill="#ffffff" font-family="Inter, sans-serif" font-size="12" font-weight="500" text-anchor="middle">互联网</text>
+<text x="877" y="572" fill="#8899aa" font-family="Inter, sans-serif" font-size="10" text-anchor="middle">Internet</text>
+
+<!-- === ARROWS === -->
+
+<!-- HAM -> Internet (HTTPS/WSS) -->
+<path d="M 172 106 C 172 320, 877 380, 877 532" fill="none" stroke="#22d3ee" stroke-width="1.2" marker-end="url(#a1c)"/>
+<text x="600" y="315" fill="#22d3ee" font-family="JetBrains Mono, monospace" font-size="9">HTTPS/WSS</text>
+
+<!-- Mobile -> Internet (HTTPS/WSS) -->
+<path d="M 882 106 L 882 532" fill="none" stroke="#22d3ee" stroke-width="1.2" marker-end="url(#a1c)"/>
+<text x="895" y="320" fill="#22d3ee" font-family="JetBrains Mono, monospace" font-size="9">HTTPS/WSS</text>
+
+<!-- Internet -> WebServer -->
+<path d="M 877 535 C 877 420, 139 380, 139 262" fill="none" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#a1c)"/>
+
+<!-- WebServer -> WSHandler -->
+<path d="M 227 240 L 279 240" fill="none" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#a1c)"/>
+
+<!-- WSHandler -> Rigctld (频率/模式/PTT) -->
+<path d="M 369 262 C 369 410, 142 450, 142 532" fill="none" stroke="#22d3ee" stroke-width="1.2" marker-end="url(#a1c)"/>
+<text x="210" y="415" fill="#22d3ee" font-family="Inter, sans-serif" font-size="9">频率/模式/PTT</text>
+
+<!-- Rigctld -> Radio (Cat控制) -->
+<path d="M 235 559 L 292 559" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="1.2" marker-end="url(#a1a)"/>
+<text x="247" y="550" fill="#8899aa" font-family="Inter, sans-serif" font-size="9">Cat控制</text>
+
+<!-- WSHandler -> AudioTX -->
+<path d="M 457 240 L 509 240" fill="none" stroke="#22d3ee" stroke-width="1.2" marker-end="url(#a1c)"/>
+
+<!-- AudioTX -> DSP -->
+<path d="M 599 262 C 599 290, 227 290, 227 310" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="1.2" marker-end="url(#a1g)"/>
+
+<!-- DSP -> Radio (音频流) -->
+<path d="M 139 354 C 139 450, 387 480, 387 532" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="1.2" marker-end="url(#a1g)"/>
+<text x="250" y="460" fill="#8899aa" font-family="Inter, sans-serif" font-size="9">音频流</text>
+
+<!-- Radio -> AudioRX (音频流) -->
+<path d="M 387 535 C 387 400, 829 340, 829 262" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="1.2" marker-end="url(#a1g)"/>
+<text x="640" y="400" fill="#8899aa" font-family="Inter, sans-serif" font-size="9">音频流</text>
+
+<!-- AudioRX -> DSP -->
+<path d="M 829 262 C 829 290, 227 290, 227 310" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="1.2" marker-end="url(#a1g)"/>
+
+<!-- DSP -> WSHandler -->
+<path d="M 227 332 L 282 262" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="1.2" marker-end="url(#a1c)"/>
+
+<!-- WSHandler -> Browser (WSS) -->
+<path d="M 369 218 C 369 170, 527 150, 527 106" fill="none" stroke="#22d3ee" stroke-width="1.2" marker-end="url(#a1c)"/>
+<text x="410" y="168" fill="#22d3ee" font-family="JetBrains Mono, monospace" font-size="9">WSS</text>
+
+<!-- WSHandler -> Mobile (WSS) -->
+<path d="M 457 218 C 510 170, 882 150, 882 106" fill="none" stroke="#22d3ee" stroke-width="1.2" marker-end="url(#a1c)"/>
+<text x="700" y="168" fill="#22d3ee" font-family="JetBrains Mono, monospace" font-size="9">WSS</text>
+
+<!-- ATRProxy -> ATR1000 (WebSocket) -->
+<path d="M 369 354 C 369 450, 632 480, 632 532" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="1.2" marker-end="url(#a1a)"/>
+<text x="480" y="460" fill="#8899aa" font-family="JetBrains Mono, monospace" font-size="9">WebSocket</text>
+
+<!-- WSHandler -> ATRProxy (Unix Socket) -->
+<path d="M 369 262 L 369 307" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="1.5" marker-end="url(#a1a)"/>
+<text x="380" y="289" fill="#8899aa" font-family="JetBrains Mono, monospace" font-size="8">Unix Socket</text>
+
+<!-- VoiceAI -> WSHandler (in-process API) -->
+<path d="M 512 332 C 450 332, 450 290, 457 262" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="1.2" marker-end="url(#a1p)"/>
+<text x="450" y="310" fill="#8899aa" font-family="JetBrains Mono, monospace" font-size="8">in-process API</text>
+
+<!-- CWDecoder -> WSHandler (推理) -->
+<path d="M 742 332 C 550 332, 500 300, 457 262" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="1.2" marker-end="url(#a1p)"/>
+<text x="585" y="303" fill="#8899aa" font-family="Inter, sans-serif" font-size="9">推理</text>
+</svg>
+</div>
 
 <hr />
 <h2>2. 外部实体说明</h2>
@@ -308,67 +411,202 @@
 <hr />
 <h2>3. 数据流设计</h2>
 <h3>3.1 控制数据流</h3>
-<pre class="codehilite"><code class="language-mermaid">sequenceDiagram
-    participant U as 用户
-    participant W as Web服务器
-    participant R as rigctld
-    participant Radio
-
-    U-&gt;&gt;W: setFreq: 7074000
-    W-&gt;&gt;R: F 7074000\n
-    R-&gt;&gt;Radio: Cat命令
-    Radio--&gt;&gt;R: 确认
-    R--&gt;&gt;W: OK
-    W--&gt;&gt;U: getFreq:7074000
-</code></pre>
+<div class="svg-diagram" style="overflow-x:auto;margin:1em 0;">
+<svg viewBox="0 0 860 420" style="width:100%;max-width:860px;height:auto;" xmlns="http://www.w3.org/2000/svg">
+<defs>
+<marker id="a2c" viewBox="0 0 10 7" refX="9" refY="3.5" markerWidth="7" markerHeight="5" orient="auto"><polygon points="0 0,10 3.5,0 7" fill="#22d3ee"/></marker>
+<marker id="a2g" viewBox="0 0 10 7" refX="9" refY="3.5" markerWidth="7" markerHeight="5" orient="auto"><polygon points="0 0,10 3.5,0 7" fill="#22d3ee"/></marker>
+</defs>
+<text x="430" y="22" fill="#8899aa" font-family="Inter, sans-serif" font-size="11" text-anchor="middle">3.1 控制数据流</text>
+<rect x="55" y="38" width="135" height="38" rx="6" fill="#0d1117" stroke="#22d3ee" stroke-width="1.5"/>
+<text x="122" y="62" fill="#ffffff" font-family="Inter, sans-serif" font-size="12" font-weight="500" text-anchor="middle">用户</text>
+<rect x="260" y="38" width="135" height="38" rx="6" fill="#0d1117" stroke="#22d3ee" stroke-width="1.5"/>
+<text x="327" y="62" fill="#ffffff" font-family="Inter, sans-serif" font-size="12" font-weight="500" text-anchor="middle">Web服务器</text>
+<rect x="465" y="38" width="135" height="38" rx="6" fill="#0d1117" stroke="rgba(255,255,255,0.08)" stroke-width="1.5"/>
+<text x="532" y="62" fill="#ffffff" font-family="Inter, sans-serif" font-size="12" font-weight="500" text-anchor="middle">rigctld</text>
+<rect x="670" y="38" width="135" height="38" rx="6" fill="#0d1117" stroke="rgba(255,255,255,0.08)" stroke-width="1.5"/>
+<text x="737" y="62" fill="#ffffff" font-family="Inter, sans-serif" font-size="12" font-weight="500" text-anchor="middle">Radio</text>
+<line x1="122" y1="76" x2="122" y2="400" stroke="rgba(255,255,255,0.1)" stroke-width="0.8" stroke-dasharray="4,4" opacity="0.4"/>
+<line x1="327" y1="76" x2="327" y2="400" stroke="rgba(255,255,255,0.1)" stroke-width="0.8" stroke-dasharray="4,4" opacity="0.4"/>
+<line x1="532" y1="76" x2="532" y2="400" stroke="rgba(255,255,255,0.1)" stroke-width="0.8" stroke-dasharray="4,4" opacity="0.4"/>
+<line x1="737" y1="76" x2="737" y2="400" stroke="rgba(255,255,255,0.1)" stroke-width="0.8" stroke-dasharray="4,4" opacity="0.4"/>
+<path d="M 127 105 L 320 105" fill="none" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#a2c)"/>
+<text x="225" y="98" fill="#22d3ee" font-family="JetBrains Mono, monospace" font-size="10" text-anchor="middle">setFreq: 7074000</text>
+<path d="M 332 152 L 525 152" fill="none" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#a2c)"/>
+<text x="430" y="145" fill="#22d3ee" font-family="JetBrains Mono, monospace" font-size="10" text-anchor="middle">F 7074000</text>
+<path d="M 537 199 L 730 199" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="1.5" marker-end="url(#a2g)"/>
+<text x="635" y="192" fill="#8899aa" font-family="Inter, sans-serif" font-size="10" text-anchor="middle">Cat命令</text>
+<path d="M 730 246 L 537 246" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="1.2" stroke-dasharray="5,3" marker-end="url(#a2g)"/>
+<text x="635" y="239" fill="#8899aa" font-family="Inter, sans-serif" font-size="10" text-anchor="middle">确认</text>
+<path d="M 525 293 L 332 293" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="1.2" stroke-dasharray="5,3" marker-end="url(#a2c)"/>
+<text x="430" y="286" fill="#8899aa" font-family="Inter, sans-serif" font-size="10" text-anchor="middle">OK</text>
+<path d="M 320 340 L 127 340" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="1.2" stroke-dasharray="5,3" marker-end="url(#a2c)"/>
+<text x="225" y="333" fill="#8899aa" font-family="JetBrains Mono, monospace" font-size="10" text-anchor="middle">getFreq:7074000</text>
+</svg>
+</div>
 
 <h3>3.2 TX音频数据流</h3>
-<pre class="codehilite"><code class="language-mermaid">sequenceDiagram
-    participant M as 麦克风
-    participant B as 浏览器
-    participant W as Web服务器
-    participant D as WDSP
-    participant R as 电台
+<div class="svg-diagram" style="overflow-x:auto;margin:1em 0;">
+<svg viewBox="0 0 860 380" style="width:100%;max-width:860px;height:auto;" xmlns="http://www.w3.org/2000/svg">
+<defs>
+<marker id="a3c" viewBox="0 0 10 7" refX="9" refY="3.5" markerWidth="7" markerHeight="5" orient="auto"><polygon points="0 0,10 3.5,0 7" fill="#22d3ee"/></marker>
+<marker id="a3g" viewBox="0 0 10 7" refX="9" refY="3.5" markerWidth="7" markerHeight="5" orient="auto"><polygon points="0 0,10 3.5,0 7" fill="#22d3ee"/></marker>
+</defs>
+<text x="430" y="22" fill="#8899aa" font-family="Inter, sans-serif" font-size="11" text-anchor="middle">3.2 TX音频数据流</text>
 
-    M-&gt;&gt;B: 48kHz PCM
-    B-&gt;&gt;B: 降采样16kHz
-    B-&gt;&gt;B: Int16编码
-    B-&gt;&gt;W: WebSocket帧
-    W-&gt;&gt;D: NR2降噪
-    D-&gt;&gt;R: 音频输出
-</code></pre>
+<!-- Participant boxes -->
+<rect x="30" y="36" width="120" height="36" rx="6" fill="#0d1117" stroke="#22d3ee" stroke-width="1.5"/>
+<text x="90" y="59" fill="#ffffff" font-family="Inter, sans-serif" font-size="11" font-weight="500" text-anchor="middle">麦克风</text>
+<rect x="200" y="36" width="120" height="36" rx="6" fill="#0d1117" stroke="#22d3ee" stroke-width="1.5"/>
+<text x="260" y="59" fill="#ffffff" font-family="Inter, sans-serif" font-size="11" font-weight="500" text-anchor="middle">浏览器</text>
+<rect x="370" y="36" width="120" height="36" rx="6" fill="#0d1117" stroke="#22d3ee" stroke-width="1.5"/>
+<text x="430" y="59" fill="#ffffff" font-family="Inter, sans-serif" font-size="11" font-weight="500" text-anchor="middle">Web服务器</text>
+<rect x="540" y="36" width="120" height="36" rx="6" fill="#0d1117" stroke="rgba(255,255,255,0.08)" stroke-width="1.5"/>
+<text x="600" y="59" fill="#ffffff" font-family="Inter, sans-serif" font-size="11" font-weight="500" text-anchor="middle">WDSP</text>
+<rect x="710" y="36" width="120" height="36" rx="6" fill="#0d1117" stroke="rgba(255,255,255,0.08)" stroke-width="1.5"/>
+<text x="770" y="59" fill="#ffffff" font-family="Inter, sans-serif" font-size="11" font-weight="500" text-anchor="middle">电台</text>
+
+<!-- Lifelines -->
+<line x1="90" y1="72" x2="90" y2="360" stroke="rgba(255,255,255,0.1)" stroke-width="0.8" stroke-dasharray="4,4" opacity="0.4"/>
+<line x1="260" y1="72" x2="260" y2="360" stroke="rgba(255,255,255,0.1)" stroke-width="0.8" stroke-dasharray="4,4" opacity="0.4"/>
+<line x1="430" y1="72" x2="430" y2="360" stroke="rgba(255,255,255,0.1)" stroke-width="0.8" stroke-dasharray="4,4" opacity="0.4"/>
+<line x1="600" y1="72" x2="600" y2="360" stroke="rgba(255,255,255,0.1)" stroke-width="0.8" stroke-dasharray="4,4" opacity="0.4"/>
+<line x1="770" y1="72" x2="770" y2="360" stroke="rgba(255,255,255,0.1)" stroke-width="0.8" stroke-dasharray="4,4" opacity="0.4"/>
+
+<!-- Step 1: M->>B: 48kHz PCM -->
+<path d="M 95 100 L 253 100" fill="none" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#a3c)"/>
+<text x="175" y="93" fill="#22d3ee" font-family="Inter, sans-serif" font-size="10" text-anchor="middle">48kHz PCM</text>
+
+<!-- Step 2: B->>B: 降采样16kHz (self-loop) -->
+<path d="M 260 128 C 290 128, 290 148, 260 148" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="1.2" marker-end="url(#a3c)"/>
+<text x="298" y="142" fill="#8899aa" font-family="Inter, sans-serif" font-size="9">降采样16kHz</text>
+
+<!-- Step 3: B->>B: Int16编码 (self-loop) -->
+<path d="M 260 170 C 290 170, 290 190, 260 190" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="1.2" marker-end="url(#a3c)"/>
+<text x="298" y="184" fill="#8899aa" font-family="Inter, sans-serif" font-size="9">Int16编码</text>
+
+<!-- Step 4: B->>W: WebSocket帧 -->
+<path d="M 265 218 L 423 218" fill="none" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#a3c)"/>
+<text x="345" y="211" fill="#22d3ee" font-family="JetBrains Mono, monospace" font-size="10" text-anchor="middle">WebSocket帧</text>
+
+<!-- Step 5: W->>D: NR2降噪 -->
+<path d="M 435 260 L 593 260" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="1.5" marker-end="url(#a3g)"/>
+<text x="515" y="253" fill="#8899aa" font-family="Inter, sans-serif" font-size="10" text-anchor="middle">NR2降噪</text>
+
+<!-- Step 6: D->>R: 音频输出 -->
+<path d="M 605 302 L 763 302" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="1.5" marker-end="url(#a3g)"/>
+<text x="685" y="295" fill="#8899aa" font-family="Inter, sans-serif" font-size="10" text-anchor="middle">音频输出</text>
+</svg>
+</div>
 
 <h3>3.3 RX音频数据流</h3>
-<pre class="codehilite"><code class="language-mermaid">sequenceDiagram
-    participant R as 电台
-    participant W as Web服务器
-    participant D as WDSP
-    participant B as 浏览器
-    participant S as 扬声器
+<div class="svg-diagram" style="overflow-x:auto;margin:1em 0;">
+<svg viewBox="0 0 860 420" style="width:100%;max-width:860px;height:auto;" xmlns="http://www.w3.org/2000/svg">
+<defs>
+<marker id="a4c" viewBox="0 0 10 7" refX="9" refY="3.5" markerWidth="7" markerHeight="5" orient="auto"><polygon points="0 0,10 3.5,0 7" fill="#22d3ee"/></marker>
+<marker id="a4g" viewBox="0 0 10 7" refX="9" refY="3.5" markerWidth="7" markerHeight="5" orient="auto"><polygon points="0 0,10 3.5,0 7" fill="#22d3ee"/></marker>
+</defs>
+<text x="430" y="22" fill="#8899aa" font-family="Inter, sans-serif" font-size="11" text-anchor="middle">3.3 RX音频数据流</text>
 
-    R-&gt;&gt;W: 48kHz PCM
-    W-&gt;&gt;D: NR2降噪
-    D-&gt;&gt;W: 48kHz处理后
-    W-&gt;&gt;B: WebSocket帧
-    B-&gt;&gt;B: 解码
-    B-&gt;&gt;B: 升采样48kHz
-    B-&gt;&gt;S: 播放
-</code></pre>
+<!-- Participant boxes -->
+<rect x="30" y="36" width="120" height="36" rx="6" fill="#0d1117" stroke="rgba(255,255,255,0.08)" stroke-width="1.5"/>
+<text x="90" y="59" fill="#ffffff" font-family="Inter, sans-serif" font-size="11" font-weight="500" text-anchor="middle">电台</text>
+<rect x="200" y="36" width="120" height="36" rx="6" fill="#0d1117" stroke="#22d3ee" stroke-width="1.5"/>
+<text x="260" y="59" fill="#ffffff" font-family="Inter, sans-serif" font-size="11" font-weight="500" text-anchor="middle">Web服务器</text>
+<rect x="370" y="36" width="120" height="36" rx="6" fill="#0d1117" stroke="rgba(255,255,255,0.08)" stroke-width="1.5"/>
+<text x="430" y="59" fill="#ffffff" font-family="Inter, sans-serif" font-size="11" font-weight="500" text-anchor="middle">WDSP</text>
+<rect x="540" y="36" width="120" height="36" rx="6" fill="#0d1117" stroke="#22d3ee" stroke-width="1.5"/>
+<text x="600" y="59" fill="#ffffff" font-family="Inter, sans-serif" font-size="11" font-weight="500" text-anchor="middle">浏览器</text>
+<rect x="710" y="36" width="120" height="36" rx="6" fill="#0d1117" stroke="#22d3ee" stroke-width="1.5"/>
+<text x="770" y="59" fill="#ffffff" font-family="Inter, sans-serif" font-size="11" font-weight="500" text-anchor="middle">扬声器</text>
+
+<!-- Lifelines -->
+<line x1="90" y1="72" x2="90" y2="400" stroke="rgba(255,255,255,0.1)" stroke-width="0.8" stroke-dasharray="4,4" opacity="0.4"/>
+<line x1="260" y1="72" x2="260" y2="400" stroke="rgba(255,255,255,0.1)" stroke-width="0.8" stroke-dasharray="4,4" opacity="0.4"/>
+<line x1="430" y1="72" x2="430" y2="400" stroke="rgba(255,255,255,0.1)" stroke-width="0.8" stroke-dasharray="4,4" opacity="0.4"/>
+<line x1="600" y1="72" x2="600" y2="400" stroke="rgba(255,255,255,0.1)" stroke-width="0.8" stroke-dasharray="4,4" opacity="0.4"/>
+<line x1="770" y1="72" x2="770" y2="400" stroke="rgba(255,255,255,0.1)" stroke-width="0.8" stroke-dasharray="4,4" opacity="0.4"/>
+
+<!-- Step 1: R->>W -->
+<path d="M 95 100 L 253 100" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="1.5" marker-end="url(#a4c)"/>
+<text x="175" y="93" fill="#8899aa" font-family="Inter, sans-serif" font-size="10" text-anchor="middle">48kHz PCM</text>
+
+<!-- Step 2: W->>D -->
+<path d="M 265 142 L 423 142" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="1.5" marker-end="url(#a4g)"/>
+<text x="345" y="135" fill="#8899aa" font-family="Inter, sans-serif" font-size="10" text-anchor="middle">NR2降噪</text>
+
+<!-- Step 3: D->>W (return) -->
+<path d="M 423 184 L 265 184" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="1.2" stroke-dasharray="5,3" marker-end="url(#a4c)"/>
+<text x="345" y="177" fill="#8899aa" font-family="Inter, sans-serif" font-size="10" text-anchor="middle">48kHz处理后</text>
+
+<!-- Step 4: W->>B -->
+<path d="M 265 226 L 593 226" fill="none" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#a4c)"/>
+<text x="430" y="219" fill="#22d3ee" font-family="JetBrains Mono, monospace" font-size="10" text-anchor="middle">WebSocket帧</text>
+
+<!-- Step 5: B->>B (解码 self-loop) -->
+<path d="M 600 254 C 630 254, 630 274, 600 274" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="1.2" marker-end="url(#a4c)"/>
+<text x="638" y="268" fill="#8899aa" font-family="Inter, sans-serif" font-size="9">解码</text>
+
+<!-- Step 6: B->>B (升采样 self-loop) -->
+<path d="M 600 300 C 630 300, 630 320, 600 320" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="1.2" marker-end="url(#a4c)"/>
+<text x="638" y="314" fill="#8899aa" font-family="Inter, sans-serif" font-size="9">升采样48kHz</text>
+
+<!-- Step 7: B->>S -->
+<path d="M 605 348 L 763 348" fill="none" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#a4c)"/>
+<text x="685" y="341" fill="#22d3ee" font-family="Inter, sans-serif" font-size="10" text-anchor="middle">播放</text>
+</svg>
+</div>
 
 <h3>3.4 ATR-1000数据流</h3>
-<pre class="codehilite"><code class="language-mermaid">sequenceDiagram
-    participant B as 浏览器
-    participant W as Web服务器
-    participant A as ATR代理
-    participant ATR as ATR-1000
+<div class="svg-diagram" style="overflow-x:auto;margin:1em 0;">
+<svg viewBox="0 0 860 380" style="width:100%;max-width:860px;height:auto;" xmlns="http://www.w3.org/2000/svg">
+<defs>
+<marker id="a5c" viewBox="0 0 10 7" refX="9" refY="3.5" markerWidth="7" markerHeight="5" orient="auto"><polygon points="0 0,10 3.5,0 7" fill="#22d3ee"/></marker>
+<marker id="a5a" viewBox="0 0 10 7" refX="9" refY="3.5" markerWidth="7" markerHeight="5" orient="auto"><polygon points="0 0,10 3.5,0 7" fill="#22d3ee"/></marker>
+</defs>
+<text x="430" y="22" fill="#8899aa" font-family="Inter, sans-serif" font-size="11" text-anchor="middle">3.4 ATR-1000数据流</text>
 
-    B-&gt;&gt;W: sync
-    W-&gt;&gt;A: forward
-    A-&gt;&gt;ATR: SYNC命令
-    ATR--&gt;&gt;A: 功率/SWR数据
-    A--&gt;&gt;W: JSON数据
-    W--&gt;&gt;B: 功率/SWR显示
-</code></pre>
+<!-- Participant boxes -->
+<rect x="40" y="36" width="130" height="36" rx="6" fill="#0d1117" stroke="#22d3ee" stroke-width="1.5"/>
+<text x="105" y="59" fill="#ffffff" font-family="Inter, sans-serif" font-size="11" font-weight="500" text-anchor="middle">浏览器</text>
+<rect x="240" y="36" width="130" height="36" rx="6" fill="#0d1117" stroke="#22d3ee" stroke-width="1.5"/>
+<text x="305" y="59" fill="#ffffff" font-family="Inter, sans-serif" font-size="11" font-weight="500" text-anchor="middle">Web服务器</text>
+<rect x="440" y="36" width="130" height="36" rx="6" fill="#0d1117" stroke="rgba(255,255,255,0.08)" stroke-width="1.5"/>
+<text x="505" y="59" fill="#ffffff" font-family="Inter, sans-serif" font-size="11" font-weight="500" text-anchor="middle">ATR代理</text>
+<rect x="640" y="36" width="130" height="36" rx="6" fill="#0d1117" stroke="rgba(255,255,255,0.08)" stroke-width="1.5"/>
+<text x="705" y="59" fill="#ffffff" font-family="Inter, sans-serif" font-size="11" font-weight="500" text-anchor="middle">ATR-1000</text>
+
+<!-- Lifelines -->
+<line x1="105" y1="72" x2="105" y2="360" stroke="rgba(255,255,255,0.1)" stroke-width="0.8" stroke-dasharray="4,4" opacity="0.4"/>
+<line x1="305" y1="72" x2="305" y2="360" stroke="rgba(255,255,255,0.1)" stroke-width="0.8" stroke-dasharray="4,4" opacity="0.4"/>
+<line x1="505" y1="72" x2="505" y2="360" stroke="rgba(255,255,255,0.1)" stroke-width="0.8" stroke-dasharray="4,4" opacity="0.4"/>
+<line x1="705" y1="72" x2="705" y2="360" stroke="rgba(255,255,255,0.1)" stroke-width="0.8" stroke-dasharray="4,4" opacity="0.4"/>
+
+<!-- Step 1: B->>W: sync -->
+<path d="M 110 100 L 298 100" fill="none" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#a5c)"/>
+<text x="205" y="93" fill="#22d3ee" font-family="JetBrains Mono, monospace" font-size="10" text-anchor="middle">sync</text>
+
+<!-- Step 2: W->>A: forward -->
+<path d="M 310 142 L 498 142" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="1.5" marker-end="url(#a5a)"/>
+<text x="405" y="135" fill="#8899aa" font-family="JetBrains Mono, monospace" font-size="10" text-anchor="middle">forward</text>
+
+<!-- Step 3: A->>ATR: SYNC命令 -->
+<path d="M 510 184 L 698 184" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="1.5" marker-end="url(#a5a)"/>
+<text x="605" y="177" fill="#8899aa" font-family="Inter, sans-serif" font-size="10" text-anchor="middle">SYNC命令</text>
+
+<!-- Step 4: ATR-->>A: 功率/SWR数据 (return, dashed) -->
+<path d="M 698 226 L 510 226" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="1.2" stroke-dasharray="5,3" marker-end="url(#a5a)"/>
+<text x="605" y="219" fill="#8899aa" font-family="Inter, sans-serif" font-size="10" text-anchor="middle">功率/SWR数据</text>
+
+<!-- Step 5: A-->>W: JSON数据 (return, dashed) -->
+<path d="M 498 268 L 310 268" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="1.2" stroke-dasharray="5,3" marker-end="url(#a5c)"/>
+<text x="405" y="261" fill="#8899aa" font-family="JetBrains Mono, monospace" font-size="10" text-anchor="middle">JSON数据</text>
+
+<!-- Step 6: W-->>B: 功率/SWR显示 (return, dashed) -->
+<path d="M 298 310 L 110 310" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="1.2" stroke-dasharray="5,3" marker-end="url(#a5c)"/>
+<text x="205" y="303" fill="#8899aa" font-family="Inter, sans-serif" font-size="10" text-anchor="middle">功率/SWR显示</text>
+</svg>
+</div>
 
 <hr />
 <h2>4. 边界接口定义</h2>
@@ -466,38 +704,76 @@
 </table>
 <hr />
 <h2>5. 安全性边界</h2>
-<pre class="codehilite"><code class="language-mermaid">graph TB
-    subgraph 外部网络
-        User[用户设备]
-    end
+<div class="svg-diagram" style="overflow-x:auto;margin:1em 0;">
+<svg viewBox="0 0 860 620" style="width:100%;max-width:860px;height:auto;" xmlns="http://www.w3.org/2000/svg">
+<defs>
+<marker id="a6c" viewBox="0 0 10 7" refX="9" refY="3.5" markerWidth="7" markerHeight="5" orient="auto"><polygon points="0 0,10 3.5,0 7" fill="#22d3ee"/></marker>
+<marker id="a6a" viewBox="0 0 10 7" refX="9" refY="3.5" markerWidth="7" markerHeight="5" orient="auto"><polygon points="0 0,10 3.5,0 7" fill="#22d3ee"/></marker>
+<marker id="a6g" viewBox="0 0 10 7" refX="9" refY="3.5" markerWidth="7" markerHeight="5" orient="auto"><polygon points="0 0,10 3.5,0 7" fill="#22d3ee"/></marker>
+</defs>
 
-    subgraph 边界防火墙
-        TLS[TLS终止]
-    end
+<!-- === Band 1: 外部网络 === -->
+<rect x="10" y="10" width="840" height="100" rx="8" fill="#0d1117" fill-opacity="0.4" stroke="rgba(255,255,255,0.06)" stroke-width="1" stroke-dasharray="6,4"/>
+<text x="22" y="31" fill="#22d3ee" font-family="Inter, sans-serif" font-size="13" font-weight="600">外部网络</text>
+<rect x="350" y="48" width="160" height="44" rx="6" fill="#0d1117" stroke="#22d3ee" stroke-width="1.5"/>
+<text x="430" y="75" fill="#ffffff" font-family="Inter, sans-serif" font-size="12" font-weight="500" text-anchor="middle">用户设备</text>
 
-    subgraph DMZ
-        Web[Tornado服务器]
-    end
+<!-- === Band 2: 边界防火墙 === -->
+<rect x="10" y="125" width="840" height="100" rx="8" fill="#0d1117" fill-opacity="0.4" stroke="rgba(255,255,255,0.06)" stroke-width="1" stroke-dasharray="6,4"/>
+<text x="22" y="146" fill="#8899aa" font-family="Inter, sans-serif" font-size="13" font-weight="600">边界防火墙</text>
+<rect x="350" y="163" width="160" height="44" rx="6" fill="#0d1117" stroke="rgba(255,255,255,0.08)" stroke-width="1.5"/>
+<text x="430" y="190" fill="#ffffff" font-family="Inter, sans-serif" font-size="12" font-weight="500" text-anchor="middle">TLS终止</text>
 
-    subgraph 内部网络
-        Audio[音频处理]
-        DSP[WDSP处理]
-        Hamlib[rigctld]
-    end
+<!-- === Band 3: DMZ === -->
+<rect x="10" y="240" width="840" height="100" rx="8" fill="#0d1117" fill-opacity="0.4" stroke="rgba(255,255,255,0.06)" stroke-width="1" stroke-dasharray="6,4"/>
+<text x="22" y="261" fill="#22d3ee" font-family="Inter, sans-serif" font-size="13" font-weight="600">DMZ</text>
+<rect x="350" y="278" width="160" height="44" rx="6" fill="#0d1117" stroke="#22d3ee" stroke-width="1.5"/>
+<text x="430" y="305" fill="#ffffff" font-family="Inter, sans-serif" font-size="12" font-weight="500" text-anchor="middle">Tornado服务器</text>
 
-    subgraph 硬件层
-        Radio[电台]
-        ATR[ATR-1000]
-    end
+<!-- === Band 4: 内部网络 === -->
+<rect x="10" y="355" width="840" height="105" rx="8" fill="#0d1117" fill-opacity="0.4" stroke="rgba(255,255,255,0.06)" stroke-width="1" stroke-dasharray="6,4"/>
+<text x="22" y="376" fill="#8899aa" font-family="Inter, sans-serif" font-size="13" font-weight="600">内部网络</text>
+<rect x="50" y="395" width="160" height="44" rx="6" fill="#0d1117" stroke="rgba(255,255,255,0.08)" stroke-width="1.5"/>
+<text x="130" y="422" fill="#ffffff" font-family="Inter, sans-serif" font-size="12" font-weight="500" text-anchor="middle">音频处理</text>
+<rect x="350" y="395" width="160" height="44" rx="6" fill="#0d1117" stroke="rgba(255,255,255,0.08)" stroke-width="1.5"/>
+<text x="430" y="422" fill="#ffffff" font-family="Inter, sans-serif" font-size="12" font-weight="500" text-anchor="middle">WDSP处理</text>
+<rect x="650" y="395" width="160" height="44" rx="6" fill="#0d1117" stroke="rgba(255,255,255,0.08)" stroke-width="1.5"/>
+<text x="730" y="422" fill="#ffffff" font-family="Inter, sans-serif" font-size="12" font-weight="500" text-anchor="middle">rigctld</text>
 
-    User --&gt;|HTTPS/WSS| TLS
-    TLS --&gt; Web
-    Web --&gt; Audio
-    Audio --&gt; DSP
-    DSP --&gt; Hamlib
-    Hamlib --&gt; Radio
-    Web --&gt;|Unix Socket| ATR
-</code></pre>
+<!-- === Band 5: 硬件层 === -->
+<rect x="10" y="475" width="840" height="100" rx="8" fill="#0d1117" fill-opacity="0.4" stroke="rgba(255,255,255,0.06)" stroke-width="1" stroke-dasharray="6,4"/>
+<text x="22" y="496" fill="#8899aa" font-family="Inter, sans-serif" font-size="13" font-weight="600">硬件层</text>
+<rect x="220" y="513" width="160" height="44" rx="6" fill="#0d1117" stroke="rgba(255,255,255,0.08)" stroke-width="1.5"/>
+<text x="300" y="540" fill="#ffffff" font-family="Inter, sans-serif" font-size="12" font-weight="500" text-anchor="middle">电台</text>
+<rect x="480" y="513" width="160" height="44" rx="6" fill="#0d1117" stroke="rgba(255,255,255,0.08)" stroke-width="1.5"/>
+<text x="560" y="540" fill="#ffffff" font-family="Inter, sans-serif" font-size="12" font-weight="500" text-anchor="middle">ATR-1000</text>
+
+<!-- === ARROWS === -->
+
+<!-- User -> TLS (HTTPS/WSS) -->
+<path d="M 430 92 L 430 160" fill="none" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#a6c)"/>
+<text x="445" y="130" fill="#22d3ee" font-family="JetBrains Mono, monospace" font-size="9">HTTPS/WSS</text>
+
+<!-- TLS -> Web -->
+<path d="M 430 207 L 430 275" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="1.5" marker-end="url(#a6c)"/>
+
+<!-- Web -> Audio -->
+<path d="M 430 322 C 430 360, 130 370, 130 392" fill="none" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#a6c)"/>
+
+<!-- Audio -> DSP -->
+<path d="M 210 417 L 347 417" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="1.5" marker-end="url(#a6g)"/>
+
+<!-- DSP -> Hamlib -->
+<path d="M 510 417 L 647 417" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="1.5" marker-end="url(#a6g)"/>
+
+<!-- Hamlib -> Radio -->
+<path d="M 730 439 C 730 475, 300 490, 300 510" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="1.5" marker-end="url(#a6a)"/>
+
+<!-- Web -> ATR (Unix Socket) -->
+<path d="M 480 322 C 510 350, 560 490, 560 510" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="1.2" stroke-dasharray="5,3" marker-end="url(#a6a)"/>
+<text x="580" y="430" fill="#8899aa" font-family="JetBrains Mono, monospace" font-size="9">Unix Socket</text>
+</svg>
+</div>
 
 <p><strong>安全措施</strong>:
 - TLS 1.2+ 加密传输
@@ -549,5 +825,6 @@
     </footer>
 
     <script src="../../js/main.js"></script>
+    <script src="../../js/global-nav.js?v=4" defer data-gn="1"></script>
 </body>
 </html>

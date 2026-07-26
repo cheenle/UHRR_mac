@@ -1,39 +1,43 @@
-/* Modern Mobile Interface CSS - 蓝色系风格 */
-/* 采用统一蓝色专业配色方案 */
+/* Modern Mobile Interface CSS - FT-710 风格主题 */
+/* 琥珀色 accent (#f59e0b) + 中灰黑底，设计 token 对齐 mrrc_ft710 */
 
-/* CSS 变量 - SDR 现代风格 */
+/* CSS 变量 - FT-710 风格（保留原变量名以便下游规则继续工作） */
 :root {
     /* 主背景色 */
-    --bg-primary: #0a0a0f;
-    --bg-secondary: #12121a;
-    --bg-tertiary: #1a1a25;
-    --bg-card: #1e1e2a;
-    --bg-button: #252535;
-    --bg-button-hover: #2d2d42;
-    --bg-active: #3a3a55;
+    --bg-primary: #1a1a1a;
+    --bg-secondary: #242424;
+    --bg-tertiary: #2a2a2a;
+    --bg-card: #333333;
+    --bg-button: #333333;
+    --bg-button-hover: #3a3a3a;
+    --bg-active: #404040;
 
-    /* 强调色 - 统一使用频率显示青色 */
-    --accent-primary: #00d4ff;
-    --accent-secondary: #00d4ff;
-    --accent-warning: #f59e0b;
+    /* 强调色 - FT-710 琥珀色 */
+    --accent-primary: #f59e0b;
+    --accent-secondary: #f59e0b;
+    --accent-dim: rgba(245, 158, 11, 0.2);
+    --accent-glow: rgba(245, 158, 11, 0.4);
+    --accent-warning: #eab308;
     --accent-danger: #ef4444;
     --accent-tx: #ef4444;
-    --accent-rx: #00d4ff;
+    --accent-rx: #f59e0b;
+    --danger-glow: rgba(239, 68, 68, 0.4);
+    --success: #22c55e;
 
     /* 文字颜色 */
-    --text-primary: #ffffff;
-    --text-secondary: #a0a0b0;
-    --text-muted: #606070;
-    --text-inactive: #404050;
+    --text-primary: #eeeeee;
+    --text-secondary: #999999;
+    --text-muted: #666666;
+    --text-inactive: #555555;
 
     /* 边框和分隔 */
-    --border-color: #2a2a3a;
-    --divider: #1f1f2f;
+    --border-color: #444444;
+    --divider: #333333;
 
-    /* 仪表颜色 - 青色 */
-    --meter-bg: #1a1a28;
-    --meter-fill: linear-gradient(90deg, #00d4ff, #00d4ff);
-    --meter-fill-warning: linear-gradient(90deg, #f59e0b, #ef4444);
+    /* 仪表颜色 - 琥珀色 */
+    --meter-bg: #333333;
+    --meter-fill: linear-gradient(90deg, #f59e0b, #f59e0b);
+    --meter-fill-warning: linear-gradient(90deg, #eab308, #ef4444);
     --meter-fill-danger: linear-gradient(90deg, #ef4444, #dc2626);
 
     /* 阴影 */
@@ -41,10 +45,10 @@
     --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
     --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.5);
 
-    /* 圆角 */
-    --radius-sm: 4px;
-    --radius-md: 8px;
-    --radius-lg: 12px;
+    /* 圆角 - FT-710: 6/10/14px */
+    --radius-sm: 6px;
+    --radius-md: 10px;
+    --radius-lg: 14px;
     --radius-xl: 16px;
     --radius-full: 9999px;
 
@@ -125,19 +129,18 @@ body {
 }
 
 .header-btn {
-    background: var(--bg-button);
+    background: none;
     border: none;
     color: var(--text-primary);
-    font-size: 22px;
+    font-size: 18px;
     cursor: pointer;
-    width: 44px;
-    height: 44px;
-    min-width: 44px;
-    min-height: 44px;
+    padding: 6px;
+    min-width: 32px;
+    min-height: 32px;
     display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: var(--radius-md);
+    border-radius: var(--radius-sm);
     transition: all var(--transition-fast);
     touch-action: manipulation;
     -webkit-tap-highlight-color: transparent;
@@ -148,22 +151,39 @@ body {
     transform: scale(0.95);
 }
 
-/* 电源按钮 */
-.power-btn {
-    background: linear-gradient(135deg, var(--bg-button), var(--bg-tertiary));
-    font-size: 24px;
-    border: 1px solid var(--border-color);
+/* 头部右侧图标按钮组 */
+.header-right {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
 }
 
-.power-btn:active {
-    background: linear-gradient(135deg, rgba(0, 212, 255, 0.2), rgba(0, 212, 255, 0.2));
-    border-color: var(--accent-primary);
+/* 电源按钮 */
+.power-btn {
+    font-size: 20px;
+    padding: 4px 8px;
+    border-radius: var(--radius-sm);
 }
 
 .power-btn.active {
-    background: linear-gradient(135deg, rgba(0, 212, 255, 0.3), rgba(0, 212, 255, 0.3));
-    border-color: var(--accent-secondary);
-    box-shadow: 0 0 12px rgba(0, 212, 255, 0.3);
+    color: var(--accent-primary);
+    background: var(--accent-dim);
+    box-shadow: 0 0 12px rgba(245, 158, 11, 0.3);
+}
+
+/* wakelock / fullscreen 图标按钮 */
+.wakelock-btn,
+.fullscreen-btn {
+    font-size: 18px;
+    padding: 4px 7px;
+    border-radius: var(--radius-sm);
+}
+
+.wakelock-btn.active,
+.fullscreen-btn.active {
+    color: var(--accent-primary);
+    background: var(--accent-dim);
 }
 
 .menu-btn {
@@ -207,22 +227,18 @@ body {
 
 .freq-main {
     display: flex;
-    align-items: center;
+    align-items: baseline;
     justify-content: center;
-    font-size: clamp(56px, 14vw, 84px);
-    font-weight: 700;
-    letter-spacing: 3px;
-    font-variant-numeric: tabular-nums;
+    gap: 1px;
     font-family: var(--font-mono);
-    /* SDR 青色荧光效果 */
-    color: #00d4ff;
-    text-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
-    background: linear-gradient(135deg, var(--bg-secondary), var(--bg-tertiary));
-    padding: clamp(6px, 1.5vh, 12px) clamp(12px, 3vw, 24px);
-    border-radius: var(--radius-md);
-    border: 1px solid var(--border-color);
-    box-shadow: var(--shadow-sm);
-    transition: color 0.4s ease, text-shadow 0.4s ease, border-color 0.4s ease;
+    font-weight: 700;
+    font-size: 56px;
+    letter-spacing: 1px;
+    font-variant-numeric: tabular-nums;
+    color: var(--accent-primary);
+    padding: 2px 6px;
+    border-radius: var(--radius-sm);
+    transition: color 0.4s ease, text-shadow 0.4s ease;
 }
 
 /* TX 状态 - 频率显示变红色 */
@@ -252,17 +268,17 @@ body {
     text-align: center;
     font-family: var(--font-mono);
     background: var(--bg-secondary);
-    color: #00d4ff;
-    border: 2px solid #00d4ff;
+    color: #f59e0b;
+    border: 2px solid #f59e0b;
     border-radius: var(--radius-md);
     outline: none;
     z-index: 100;
-    box-shadow: 0 0 15px rgba(0, 212, 255, 0.3);
+    box-shadow: 0 0 15px rgba(245, 158, 11, 0.3);
 }
 
 .freq-input-hidden:focus {
-    border-color: #00d4ff;
-    box-shadow: 0 0 20px rgba(0, 212, 255, 0.5);
+    border-color: #f59e0b;
+    box-shadow: 0 0 20px rgba(245, 158, 11, 0.5);
 }
 
 .freq-input-hidden::placeholder {
@@ -281,20 +297,19 @@ body {
 
 .freq-digit {
     display: inline-block;
-    min-width: 20px;
 }
 
-/* 小数点样式 */
+/* 小数点样式 - FT-710: 分隔符 #999 */
 .freq-decimal {
-    color: #00d4ff;
-    margin: 0 2px;
+    color: var(--text-secondary);
+    margin: 0 1px;
 }
 
-/* Hz位（100Hz精度）- 较小字体 */
+/* Hz位（100Hz精度）- FT-710: 18px 弱色 #666 */
 .freq-digit.freq-hz {
-    font-size: 0.75em;
-    opacity: 0.8;
-    min-width: 15px;
+    font-size: 36px;
+    color: var(--text-muted);
+    opacity: 1;
 }
 
 .freq-separator {
@@ -303,7 +318,7 @@ body {
 }
 
 .freq-unit {
-    font-size: 16px;
+    font-size: 32px;
     color: var(--text-secondary);
     margin-left: 4px;
 }
@@ -380,9 +395,9 @@ body {
 
 /* 连接状态 - 绿点 + 蓝色风格 */
 .status-item.connected {
-    color: #00d4ff;
-    border-color: rgba(0, 212, 255, 0.5);
-    background: rgba(0, 212, 255, 0.1);
+    color: #f59e0b;
+    border-color: rgba(245, 158, 11, 0.5);
+    background: rgba(245, 158, 11, 0.1);
 }
 
 .status-item.connected .status-dot {
@@ -403,13 +418,12 @@ body {
     box-shadow: 0 0 4px rgba(255, 68, 68, 0.6);
 }
 
-/* 模式指示器 - 高亮显示 */
+/* 模式指示器 - FT-710 琥珀徽章 */
 .status-item.mode-indicator {
-    font-weight: bold;
-    color: #00ffff;
-    border-color: rgba(0, 255, 255, 0.6);
-    background: rgba(0, 255, 255, 0.2);
-    text-shadow: 0 0 4px rgba(0, 255, 255, 0.5);
+    font-weight: 700;
+    color: var(--accent-primary);
+    border-color: var(--accent-primary);
+    background: var(--accent-dim);
 }
 
 /* 网络状态指示器 */
@@ -443,10 +457,10 @@ body {
     box-shadow: 0 0 4px rgba(255, 68, 68, 0.6);
 }
 #status-bitrates {
-    color: #00ffcc;
+    color: var(--text-secondary);
     font-weight: 700;
-    font-size: 13px;
-    text-shadow: 0 0 5px rgba(0,255,204,0.35);
+    font-size: 11px;
+    font-family: var(--font-mono);
 }
 
 @keyframes pulse {
@@ -507,7 +521,7 @@ body {
 
 /* 显示区域外框 - 玻璃拟态效果 */
 .meter-display-frame {
-    background: rgba(30, 30, 42, 0.7);
+    background: rgba(36, 36, 36, 0.75);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
     border-radius: var(--radius-md);
@@ -560,9 +574,9 @@ body {
 
 .atr-under-bar {
     width: 50px;
-    height: 4px;
-    background: rgba(255,255,255,0.1);
-    border-radius: 2px;
+    height: 6px;
+    background: var(--bg-card);
+    border-radius: 3px;
     overflow: hidden;
 }
 
@@ -582,41 +596,41 @@ body {
 
 .quick-btn {
     flex: 1;
-    background: linear-gradient(135deg, var(--bg-button), var(--bg-tertiary));
+    background: var(--bg-secondary);
     border: 1px solid var(--border-color);
-    border-radius: var(--radius-md);
+    border-radius: var(--radius-sm);
     color: var(--text-primary);
     padding: clamp(6px, 1.2vh, 12px) 4px;
     font-size: 14px;
-    font-weight: 500;
+    font-weight: 600;
     cursor: pointer;
-    transition: all var(--transition-fast);
+    transition: background var(--transition-fast), border-color var(--transition-fast);
     min-height: clamp(36px, 6vh, 44px);
     touch-action: manipulation;
 }
 
 .quick-btn:active {
     transform: scale(0.97);
-    background: var(--bg-button-hover);
+    background: var(--accent-dim);
     border-color: var(--accent-primary);
 }
 
 .quick-btn.active {
-    background: rgba(0, 212, 255, 0.15);
-    border-color: rgba(0, 212, 255, 0.3);
+    background: var(--accent-dim);
+    border-color: var(--accent-primary);
     color: var(--accent-primary);
 }
 
 /* CW按钮样式 - 统一蓝色风格 */
 .quick-btn.cw-btn {
-    background: linear-gradient(135deg, rgba(0, 212, 255, 0.2), rgba(0, 212, 255, 0.1));
-    border-color: rgba(0, 212, 255, 0.4);
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.2), rgba(245, 158, 11, 0.1));
+    border-color: rgba(245, 158, 11, 0.4);
     color: var(--accent-secondary);
     font-weight: 600;
 }
 
 .quick-btn.cw-btn:active {
-    background: linear-gradient(135deg, rgba(0, 212, 255, 0.3), rgba(0, 212, 255, 0.2));
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.3), rgba(245, 158, 11, 0.2));
     border-color: var(--accent-secondary);
 }
 
@@ -741,7 +755,7 @@ body {
     left: 0;
     width: 100%;
     height: 100%;
-    background: rgba(10, 10, 15, 0.8);
+    background: rgba(0, 0, 0, 0.8);
     z-index: 1000;
     opacity: 0;
     visibility: hidden;
@@ -762,7 +776,7 @@ body {
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(10, 10, 15, 0.9);
+    background: rgba(0, 0, 0, 0.9);
     z-index: 1000;
     justify-content: center;
     align-items: center;
@@ -771,7 +785,7 @@ body {
 }
 
 .modal-panel {
-    background: rgba(30, 30, 42, 0.8);
+    background: var(--bg-secondary);
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
     border-radius: var(--radius-lg);
@@ -831,14 +845,14 @@ body {
 .band-select-btn:active,
 .mode-select-btn:active,
 .filter-select-btn:active {
-    background: rgba(0, 212, 255, 0.15);
-    border-color: rgba(0, 212, 255, 0.3);
+    background: rgba(245, 158, 11, 0.15);
+    border-color: rgba(245, 158, 11, 0.3);
     color: var(--accent-primary);
 }
 
 .mode-select-btn.active {
-    background: rgba(0, 212, 255, 0.15);
-    border-color: rgba(0, 212, 255, 0.3);
+    background: rgba(245, 158, 11, 0.15);
+    border-color: rgba(245, 158, 11, 0.3);
     color: var(--accent-primary);
 }
 
@@ -865,16 +879,16 @@ body {
 }
 
 .txeq-select-btn:active {
-    background: rgba(0, 212, 255, 0.2);
+    background: rgba(245, 158, 11, 0.2);
     border-color: var(--accent-primary);
     color: var(--accent-primary);
 }
 
 .txeq-btn-active {
-    background: rgba(0, 212, 255, 0.2);
+    background: rgba(245, 158, 11, 0.2);
     border-color: var(--accent-primary);
     color: var(--accent-primary);
-    box-shadow: 0 0 10px rgba(0, 212, 255, 0.2);
+    box-shadow: 0 0 10px rgba(245, 158, 11, 0.2);
 }
 
 .close-panel-btn {
@@ -1105,7 +1119,7 @@ body {
     background: var(--accent-primary);
     border-radius: 50%;
     cursor: pointer;
-    box-shadow: 0 2px 6px rgba(0, 212, 255, 0.3);
+    box-shadow: 0 2px 6px rgba(245, 158, 11, 0.3);
 }
 
 /* 较大屏幕适配 */
@@ -1140,8 +1154,7 @@ body {
 /* 小屏幕纵向适配 - 确保一屏显示 */
 @media (max-height: 700px) {
     .freq-main {
-        font-size: clamp(48px, 12vw, 64px);
-        padding: clamp(4px, 1vh, 6px) clamp(8px, 2vw, 12px);
+        font-size: 44px;
     }
 
     .s-meter-labels {
@@ -1205,8 +1218,7 @@ body {
     }
     
     .freq-main {
-        font-size: 64px;
-        margin-bottom: 2px;
+        font-size: 48px;
     }
     
     .freq-sub {
@@ -1301,7 +1313,7 @@ body {
 
 /* DSP 控制区域 - SDR 风格重构 */
 .dsp-controls-section {
-    background: rgba(30, 30, 42, 0.7);
+    background: rgba(36, 36, 36, 0.75);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
     border-radius: var(--radius-md);
@@ -1369,7 +1381,7 @@ body {
 }
 
 .dsp-switch input:checked + .dsp-slider {
-    background: rgba(0, 212, 255, 0.3);
+    background: rgba(245, 158, 11, 0.3);
     border-color: var(--accent-primary);
 }
 
@@ -1410,9 +1422,9 @@ body {
 
 /* 开启状态 - 柔和蓝色 */
 .dsp-btn.active {
-    background: rgba(0, 212, 255, 0.15);
+    background: rgba(245, 158, 11, 0.15);
     color: var(--accent-primary);
-    border-color: rgba(0, 212, 255, 0.3);
+    border-color: rgba(245, 158, 11, 0.3);
 }
 
 /* 禁用状态 */
@@ -1482,7 +1494,7 @@ body {
 
 /* 开启状态文字 */
 .dsp-btn.active .dsp-btn-status {
-    background: rgba(0, 212, 255, 0.3);
+    background: rgba(245, 158, 11, 0.3);
     color: var(--accent-primary);
 }
 
@@ -1609,16 +1621,16 @@ body {
 
 .atr-power-bar-compact {
     height: 100%;
-    background: linear-gradient(90deg, var(--accent-primary), #00d4ff, #FF9800, #f44336);
-    border-radius: 2px;
+    background: var(--accent-primary);
+    border-radius: 3px;
     width: 0%;
     transition: width 0.2s ease;
 }
 
 .atr-swr-bar-compact {
     height: 100%;
-    background: var(--accent-primary);
-    border-radius: 2px;
+    background: var(--accent-warning);
+    border-radius: 3px;
     width: 0%;
     transition: width 0.2s ease, background 0.2s ease;
 }
@@ -1738,18 +1750,18 @@ body {
     align-items: center;
 }
 
-/* 步进显示按钮样式 - 统一蓝色风格 */
+/* 步进显示按钮样式 - FT-710 琥珀描边强调（调谐排中心） */
 .tune-step-display {
     min-width: 70px;
-    padding: clamp(6px, 1.2vh, 10px) 8px;
+    padding: clamp(6px, 1.2vh, 10px) 16px;
     text-align: center;
-    background: linear-gradient(135deg, var(--bg-button), var(--bg-tertiary));
+    background: var(--accent-dim);
     color: var(--accent-primary);
     font-size: 14px;
     font-weight: 600;
     font-family: inherit;
-    border-radius: var(--radius-md);
-    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--accent-primary);
     cursor: pointer;
     user-select: none;
     -webkit-user-select: none;
@@ -1896,16 +1908,16 @@ body {
     color: var(--text-secondary);
 }
 
-/* 底部 TUNE 按钮 - 蓝色 */
+/* 底部 TUNE 按钮 - FT-710 警示黄底黑字 */
 .tune-button-footer {
     flex: 0.6;
     height: clamp(36px, 6vh, 47px);
     border: none;
     border-radius: var(--radius-md);
-    background: linear-gradient(180deg, rgba(0, 212, 255, 0.3), rgba(0, 212, 255, 0.2));
-    color: var(--accent-secondary);
+    background: var(--accent-warning);
+    color: #000000;
     font-size: clamp(12px, 2.5vw, 14px);
-    font-weight: bold;
+    font-weight: 700;
     cursor: pointer;
     transition: all var(--transition-fast);
     display: flex;
@@ -1913,29 +1925,29 @@ body {
     align-items: center;
     justify-content: center;
     box-shadow: var(--shadow-sm);
-    border: 1px solid rgba(0, 212, 255, 0.3);
+    border: 1px solid var(--accent-warning);
 }
 
 .tune-button-footer:active {
-    background: linear-gradient(180deg, rgba(0, 212, 255, 0.4), rgba(0, 212, 255, 0.3));
+    background: #fbbf24;
     transform: scale(0.95);
-    border-color: var(--accent-secondary);
+    border-color: #fbbf24;
 }
 
 .tune-label {
     font-size: 12px;
 }
 
-/* 底部 CQCQCQ 宽按钮 - 蓝色 */
+/* 底部 CQCQCQ 宽按钮 - FT-710 琥珀柔光 */
 .cq-button-wide {
     width: 100%;
     height: clamp(36px, 6vh, 44px);
     border: none;
     border-radius: var(--radius-md);
-    background: linear-gradient(180deg, rgba(0, 212, 255, 0.2), rgba(0, 212, 255, 0.2));
+    background: var(--accent-dim);
     color: var(--accent-primary);
     font-size: clamp(14px, 3vw, 16px);
-    font-weight: bold;
+    font-weight: 700;
     cursor: pointer;
     transition: all var(--transition-fast);
     display: flex;
@@ -1943,11 +1955,11 @@ body {
     align-items: center;
     justify-content: center;
     box-shadow: var(--shadow-sm);
-    border: 1px solid rgba(0, 212, 255, 0.3);
+    border: 1px solid rgba(245, 158, 11, 0.3);
 }
 
 .cq-button-wide:active {
-    background: linear-gradient(180deg, rgba(0, 212, 255, 0.3), rgba(0, 212, 255, 0.3));
+    background: rgba(245, 158, 11, 0.3);
     transform: scale(0.98);
     border-color: var(--accent-primary);
 }
@@ -2040,34 +2052,38 @@ body {
     height: clamp(36px, 6vh, 47px);
 }
 
-/* PTT 按钮调整 - SDR 红色渐变 */
+/* PTT 按钮 - FT-710 大红按钮，TX 发光 */
 .ptt-button {
     flex: 1.4;
     height: clamp(60px, 12vh, 94px);
-    min-height: clamp(50px, 10vh, 75px);
+    min-height: 72px;
     border: none;
     border-radius: var(--radius-lg);
-    background: linear-gradient(180deg, var(--accent-danger), #b91c1c);
-    color: var(--text-primary);
+    background: var(--accent-danger);
+    color: #ffffff;
     font-size: clamp(14px, 3vw, 18px);
-    font-weight: bold;
+    font-weight: 800;
+    letter-spacing: 2px;
     cursor: pointer;
-    transition: all var(--transition-fast);
+    transition: transform 0.1s, box-shadow 0.1s;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 3px 10px rgba(255, 71, 87, 0.4);
+    box-shadow: 0 3px 10px rgba(239, 68, 68, 0.3);
 }
 
 .ptt-button:active {
-    transform: scale(0.98);
-    box-shadow: 0 2px 6px rgba(255, 71, 87, 0.3);
+    transform: scale(0.97);
+    box-shadow: 0 0 20px var(--danger-glow);
 }
 
-.ptt-button.active {
-    background: linear-gradient(180deg, var(--accent-secondary), #00a8cc);
-    box-shadow: 0 3px 10px rgba(0, 212, 255, 0.4);
+/* TX 激活态 - 红色发光 */
+.ptt-button.active,
+.ptt-button.button_pressed {
+    background: var(--accent-danger);
+    transform: scale(0.97);
+    box-shadow: 0 0 20px var(--danger-glow);
 }
 
 .ptt-label {
@@ -2151,8 +2167,8 @@ body {
 }
 
 .wdsp-settings input[type="checkbox"]:checked + .switch-slider {
-    background: rgba(0, 212, 255, 0.2);
-    border-color: rgba(0, 212, 255, 0.4);
+    background: rgba(245, 158, 11, 0.2);
+    border-color: rgba(245, 158, 11, 0.4);
 }
 
 .wdsp-settings input[type="checkbox"]:checked + .switch-slider::before {
@@ -2186,4 +2202,107 @@ body {
     background: #222;
     color: #666;
     border-color: #333;
+}
+
+
+////////////////////////////////////////////////////////////
+// FT-710 风格增补 (v5.6.0)
+////////////////////////////////////////////////////////////
+
+/* 状态栏：波段指示 */
+#status-band {
+    font-family: var(--font-mono);
+    font-weight: 700;
+    color: var(--text-secondary);
+}
+
+/* 状态栏：RX/TX 指示（TX 红色） */
+#status-tx {
+    font-weight: 700;
+}
+
+#status-tx.tx {
+    color: var(--accent-danger);
+    border-color: rgba(239, 68, 68, 0.5);
+    background: rgba(239, 68, 68, 0.15);
+}
+
+/* VFO 控制排 - 占位（后端暂不支持，disabled） */
+.vfo-controls {
+    padding: 0 clamp(8px, 2vw, 10px);
+    margin: 0;
+    flex-shrink: 0;
+}
+
+.vfo-row {
+    display: flex;
+    gap: 6px;
+}
+
+.vfo-btn {
+    flex: 1;
+    padding: 7px 4px;
+    font-size: 11px;
+    font-weight: 600;
+    background: var(--bg-secondary);
+    color: var(--text-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    touch-action: manipulation;
+}
+
+.vfo-btn:active {
+    background: var(--accent-dim);
+}
+
+.vfo-btn.active {
+    background: var(--accent-dim);
+    border-color: var(--accent-primary);
+    color: var(--accent-primary);
+}
+
+.vfo-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    color: var(--text-muted);
+}
+
+/* 简易 toast 提示（VFO 占位按钮等使用） */
+#mrrc-toast {
+    position: fixed;
+    top: calc(env(safe-area-inset-top, 0px) + 8px);
+    left: 50%;
+    transform: translate(-50%, -70px);
+    z-index: 2000;
+    background: var(--bg-card);
+    color: var(--text-primary);
+    font-size: 13px;
+    font-weight: 600;
+    padding: 10px 16px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-lg);
+    opacity: 0;
+    transition: transform 0.25s, opacity 0.25s;
+    pointer-events: none;
+    max-width: 90%;
+    text-align: center;
+}
+
+#mrrc-toast.show {
+    transform: translate(-50%, 0);
+    opacity: 1;
+}
+
+/* 大屏频率字号 - FT-710 桌面 38px */
+@media (min-width: 768px) {
+    .freq-main {
+        font-size: 76px;
+    }
+
+    .freq-digit.freq-hz {
+        font-size: 48px;
+    }
 }

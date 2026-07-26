@@ -3,123 +3,106 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FDE & MRRC — Forward Deployed Engineering in Practice</title>
-    <meta name="description" content="How Palantir's Forward Deployed Engineering (FDE) methodology drove MRRC from V1.0 through 15 cycles to V5.6.5 — complete case study with best practices">
-    <meta name="keywords" content="FDE, Forward Deployed Engineering, MRRC, Palantir, SDD, IBM TeamSD, software methodology, best practices">
+    <title>FDE in Practice — From MRRC to SunSDR to SunsdrMobile</title>
+    <meta name="description" content="How Forward Deployed Engineering (FDE) drove MRRC, reverse-engineered SunSDR2 DX, and rapidly produced SunsdrMobile iOS — a complete methodology and case study spanning 3 projects.">
+    <meta name="keywords" content="FDE, Forward Deployed Engineering, MRRC, SunMRRC, SunsdrMobile, SunSDR2 DX, SDD, reverse engineering, Harness, methodology">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/octen.css">
+    <link rel="stylesheet" href="css/octen.css?v=2">
+    <link rel="stylesheet" href="css/sunsdrmobile.css?v=1">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        .hero { min-height: auto; padding: 160px 24px 80px; }
-        .section { padding: 100px 0; border-bottom: 1px solid var(--border); }
-        .section:last-child { border-bottom: none; }
+        :root { --amber: #f59e0b; --amber-glow: rgba(245,158,11,0.12); --purple: #a78bfa; --purple-glow: rgba(167,139,250,0.12); --green: #22c55e; }
+        .page-hero { padding: 160px 2rem 80px; text-align: center; position: relative; overflow: hidden; }
+        .page-hero::before { content:''; position:absolute; top:-50%; left:-50%; width:200%; height:200%; background:radial-gradient(circle at 50% 0%, var(--accent-glow), transparent 50%); pointer-events:none; }
+        .page-hero-content { position:relative; z-index:1; max-width:900px; margin:0 auto; }
+        .section { padding: 100px 2rem; }
+        .section:nth-child(even) { background: var(--bg-secondary); }
         .section-header { text-align: center; margin-bottom: 64px; }
-        .section-label {
-            display: inline-block; font-size: 0.8rem; color: var(--accent);
-            text-transform: uppercase; letter-spacing: 0.12em; margin-bottom: 14px;
-        }
-        .section-title { font-size: 2.25rem; font-weight: 700; letter-spacing: -0.03em; }
-        .section-subtitle { color: var(--text-secondary); font-size: 1.05rem; margin-top: 12px; }
+        .section-label { display:inline-block; font-size:0.8rem; color:var(--accent); text-transform:uppercase; letter-spacing:0.12em; margin-bottom:14px; }
+        .section-title { font-size:2.25rem; font-weight:700; letter-spacing:-0.03em; }
+        .section-subtitle { color:var(--text-secondary); font-size:1.05rem; margin-top:12px; max-width:700px; margin-left:auto; margin-right:auto; }
 
-        .tri-role { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; margin-top: 40px; }
-        .role-card {
-            background: var(--bg-card); border: 1px solid var(--border); border-radius: 16px;
-            padding: 36px 28px; text-align: center; transition: all 0.3s;
-        }
-        .role-card:hover { border-color: var(--accent); transform: translateY(-4px); }
-        .role-icon {
-            width: 64px; height: 64px; margin: 0 auto 20px; border-radius: 16px;
-            display: flex; align-items: center; justify-content: center; font-size: 1.75rem;
-        }
-        .role-icon.echo { background: rgba(245,158,11,0.15); color: #f59e0b; }
-        .role-icon.delta { background: var(--accent-glow); color: var(--accent); }
-        .role-icon.product { background: rgba(167,139,250,0.15); color: #a78bfa; }
-        .role-card h3 { font-size: 1.3rem; font-weight: 600; margin-bottom: 8px; }
-        .role-card .role-tagline { color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 16px; font-style: italic; }
-        .role-card ul { list-style: none; text-align: left; }
-        .role-card li { color: var(--text-secondary); font-size: 0.88rem; padding: 6px 0; padding-left: 20px; position: relative; }
-        .role-card li::before { content: '•'; position: absolute; left: 4px; color: var(--accent); }
+        /* Timeline */
+        .evolution-track { display:flex; align-items:center; justify-content:center; gap:0; flex-wrap:wrap; margin:48px 0; }
+        .evo-node { background:var(--bg-card); border:1px solid var(--border); border-radius:16px; padding:28px 24px; text-align:center; min-width:200px; max-width:260px; position:relative; transition:all 0.3s; }
+        .evo-node:hover { border-color:var(--accent); transform:translateY(-4px); }
+        .evo-node .tag { display:inline-block; padding:3px 10px; border-radius:4px; font-size:0.7rem; font-weight:700; text-transform:uppercase; letter-spacing:0.06em; margin-bottom:10px; }
+        .evo-node .tag.foundation { background:var(--accent-glow); color:var(--accent); }
+        .evo-node .tag.reverse { background:var(--amber-glow); color:var(--amber); }
+        .evo-node .tag.native { background:var(--purple-glow); color:var(--purple); }
+        .evo-node h3 { font-size:1.15rem; margin-bottom:4px; }
+        .evo-node .sub { color:var(--text-secondary); font-size:0.8rem; }
+        .evo-arrow { font-size:2rem; color:var(--accent); padding:0 12px; flex-shrink:0; }
+        @media(max-width:768px){ .evolution-track{flex-direction:column;}.evo-arrow{transform:rotate(90deg);} }
 
-        .formula-box {
-            background: var(--bg-card); border: 1px solid var(--border); border-radius: 16px;
-            padding: 32px 40px; text-align: center; margin: 40px 0;
-            font-family: var(--font-mono);
-        }
-        .formula-box .formula { font-size: 1.6rem; font-weight: 600; color: var(--accent); letter-spacing: 0.02em; margin-bottom: 16px; }
-        .formula-box .formula-desc { color: var(--text-secondary); font-size: 0.9rem; }
+        /* Harness */
+        .harness-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:24px; margin-top:40px; }
+        .harness-card { background:var(--bg-card); border:1px solid var(--border); border-radius:16px; padding:32px; transition:all 0.3s; }
+        .harness-card:hover { transform:translateY(-3px); }
+        .harness-card.bs { border-top:3px solid var(--amber); }
+        .harness-card.tech { border-top:3px solid var(--accent); }
+        .harness-card.prod { border-top:3px solid var(--purple); }
+        .harness-card .icon { font-size:2rem; margin-bottom:16px; }
+        .harness-card h3 { font-size:1.2rem; font-weight:600; margin-bottom:8px; }
+        .harness-card .key { color:var(--text-secondary); font-size:0.85rem; margin-bottom:16px; font-style:italic; }
+        .harness-card ul { list-style:none; }
+        .harness-card li { color:var(--text-secondary); font-size:0.85rem; padding:5px 0; padding-left:18px; position:relative; line-height:1.55; }
+        .harness-card li::before { content:'▸'; position:absolute; left:0; color:var(--accent); font-size:0.65rem; top:7px; }
+        @media(max-width:768px){ .harness-grid{grid-template-columns:1fr;} }
 
-        .table-wrapper { overflow-x: auto; margin: 32px 0; }
-        table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
-        th, td { padding: 14px 18px; text-align: left; border-bottom: 1px solid var(--border); }
-        th { font-weight: 600; color: var(--accent); background: var(--bg-card); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; }
-        td { color: var(--text-secondary); }
-        tr:hover td { background: var(--accent-glow); }
-        .tag { display: inline-block; padding: 3px 10px; border-radius: 4px; font-size: 0.75rem; font-weight: 600; }
-        .tag.echo { background: rgba(245,158,11,0.15); color: #f59e0b; }
-        .tag.delta { background: var(--accent-glow); color: var(--accent); }
-        .tag.product { background: rgba(167,139,250,0.15); color: #a78bfa; }
+        /* Project detail cards */
+        .project-detail { display:grid; grid-template-columns:1fr 1fr; gap:40px; align-items:start; margin-top:40px; }
+        .project-detail .text h3 { font-size:1.6rem; font-weight:700; margin-bottom:16px; }
+        .project-detail .text p { color:var(--text-secondary); font-size:0.95rem; line-height:1.8; margin-bottom:14px; }
+        .project-detail .text .highlight { color:var(--accent); font-weight:600; }
+        .info-box { background:var(--bg-card); border:1px solid var(--border); border-radius:14px; padding:24px; }
+        .info-box h4 { font-size:0.9rem; font-weight:600; margin-bottom:12px; color:var(--text-primary); }
+        .info-box .stat-row { display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid var(--border); font-size:0.85rem; }
+        .info-box .stat-label { color:var(--text-muted); }
+        .info-box .stat-val { color:var(--accent); font-weight:600; font-family:var(--font-mono); }
+        @media(max-width:768px){ .project-detail{grid-template-columns:1fr;} }
 
-        .leverage-track { display: flex; align-items: flex-end; gap: 16px; justify-content: center; margin: 48px 0; padding: 0 20px; overflow-x: auto; }
-        .leverage-bar { display: flex; flex-direction: column; align-items: center; gap: 8px; min-width: 70px; }
-        .leverage-fill {
-            width: 48px; border-radius: 8px 8px 0 0;
-            background: linear-gradient(to top, var(--accent), #f59e0b);
-            transition: height 0.6s ease;
-        }
-        .leverage-label { font-size: 0.75rem; color: var(--text-muted); font-weight: 500; }
-        .leverage-value { font-size: 1.3rem; font-weight: 700; color: var(--accent); }
+        /* FDE flow diagram */
+        .flow-steps { display:flex; gap:16px; justify-content:center; flex-wrap:wrap; margin:40px 0; }
+        .flow-step { background:var(--bg-card); border:1px solid var(--border); border-radius:12px; padding:24px 20px; text-align:center; flex:1; min-width:180px; max-width:240px; transition:all 0.3s; }
+        .flow-step:hover { border-color:var(--accent); }
+        .flow-step .num { width:36px; height:36px; border-radius:50%; background:var(--accent-glow); color:var(--accent); display:flex; align-items:center; justify-content:center; margin:0 auto 12px; font-weight:700; font-size:0.95rem; }
+        .flow-step h4 { font-size:0.95rem; margin-bottom:6px; }
+        .flow-step p { color:var(--text-secondary); font-size:0.8rem; }
 
-        .pattern-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 24px; margin-top: 40px; }
-        .pattern-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 16px; padding: 32px; transition: all 0.3s; }
-        .pattern-card:hover { border-color: var(--accent); }
-        .pattern-card .pattern-icon { font-size: 2rem; margin-bottom: 16px; }
-        .pattern-card h3 { font-size: 1.2rem; font-weight: 600; margin-bottom: 12px; }
-        .pattern-card p { color: var(--text-secondary); font-size: 0.92rem; line-height: 1.7; margin-bottom: 16px; }
-        .pattern-card .highlight-box {
-            background: rgba(0,0,0,0.3); border-radius: 8px; padding: 16px;
-            font-family: var(--font-mono); font-size: 0.8rem;
-            color: var(--text-secondary); line-height: 1.5; white-space: pre-wrap;
-        }
+        /* Appendix */
+        .appendix-toggle { cursor:pointer; user-select:none; }
+        .appendix-content { display:none; margin-top:20px; }
+        .appendix-content.open { display:block; }
 
-        .principle-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 20px; margin-top: 32px; }
-        .principle-item { display: flex; gap: 16px; padding: 24px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; }
-        .principle-num {
-            width: 40px; height: 40px; border-radius: 10px; display: flex;
-            align-items: center; justify-content: center; font-weight: 700; font-size: 1.1rem;
-            background: var(--accent-glow); color: var(--accent); flex-shrink: 0;
-        }
-        .principle-text h4 { font-size: 1.05rem; font-weight: 600; margin-bottom: 4px; }
-        .principle-text p { font-size: 0.88rem; color: var(--text-secondary); line-height: 1.6; }
+        /* Tables */
+        .table-wrap { overflow-x:auto; margin:32px 0; }
+        table { width:100%; border-collapse:collapse; font-size:0.85rem; }
+        th,td { padding:12px 16px; text-align:left; border-bottom:1px solid var(--border); }
+        th { font-weight:600; color:var(--accent); background:var(--bg-card); font-size:0.75rem; text-transform:uppercase; letter-spacing:0.05em; }
+        td { color:var(--text-secondary); }
+        tr:hover td { background:var(--accent-glow); }
 
-        .anti-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; margin-top: 32px; }
-        .anti-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 24px; border-left: 3px solid #ef4444; }
-        .anti-card h4 { font-size: 1.05rem; font-weight: 600; margin-bottom: 8px; }
-        .anti-card .bad { color: #ef4444; font-size: 0.85rem; font-weight: 500; margin-bottom: 6px; }
-        .anti-card .good { color: #22c55e; font-size: 0.88rem; }
+        /* Principles */
+        .principle-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(340px,1fr)); gap:20px; margin-top:32px; }
+        .principle-item { display:flex; gap:16px; padding:24px; background:var(--bg-card); border:1px solid var(--border); border-radius:12px; }
+        .principle-num { width:40px; height:40px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-weight:700; background:var(--accent-glow); color:var(--accent); flex-shrink:0; }
+        .principle-text h4 { font-size:1rem; font-weight:600; margin-bottom:4px; }
+        .principle-text p { font-size:0.85rem; color:var(--text-secondary); line-height:1.6; }
 
-        .cta-section { padding: 100px 24px; text-align: center; background: var(--bg-secondary); }
-        .cta-section h2 { font-size: 2.25rem; font-weight: 700; margin-bottom: 16px; }
-        .cta-section p { color: var(--text-secondary); font-size: 1.05rem; margin-bottom: 36px; max-width: 600px; margin-left: auto; margin-right: auto; }
+        .formula-box { background:var(--bg-card); border:1px solid var(--border); border-radius:16px; padding:32px 40px; text-align:center; margin:32px 0; font-family:var(--font-mono); }
+        .formula-box .formula { font-size:1.6rem; font-weight:600; color:var(--accent); letter-spacing:0.02em; margin-bottom:12px; }
+        .formula-box .desc { color:var(--text-secondary); font-size:0.9rem; }
 
-        @media (max-width: 768px) {
-            .hero { padding: 120px 24px 60px; }
-            .hero-stats { flex-direction: column; gap: 24px; }
-            .tri-role { grid-template-columns: 1fr; }
-            .pattern-grid, .principle-list, .anti-grid { grid-template-columns: 1fr; }
-            .leverage-track { justify-content: flex-start; }
-        }
+        @media(max-width:768px){ .hero { padding:120px 24px 60px; } .principle-grid,.flow-steps{grid-template-columns:1fr;} .section-title{font-size:1.75rem;} }
     </style>
-    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7442510147240155"
-     crossorigin="anonymous"></script>
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7442510147240155" crossorigin="anonymous"></script>
 </head>
-<body>
+<body data-site="mrrc">
     <nav class="navbar">
         <div class="container navbar-content">
-            <a href="index.html" class="logo">
-                <span class="logo-icon">📻</span>
-                <span>MRRC</span>
-            </a>
+            <a href="index.html" class="logo"><span class="logo-icon">📻</span><span>MRRC</span></a>
             <ul class="nav-links">
                 <li><a href="index.html">Home</a></li>
                 <li><a href="docs/features.html">Features</a></li>
@@ -130,358 +113,600 @@
                 <li><a href="fde.html">FDE</a></li>
                 <li><a href="aladdin-v2.html">Aladdin V2</a></li>
                 <li><a href="efhw/index.html">EFHW</a></li>
-                <li><a href="https://github.com/cheenle/UHRR_mac" target="_blank" rel="noopener">
-                    <i class="fab fa-github"></i> GitHub
-                </a></li>
+                <li><a href="https://github.com/cheenle/UHRR_mac" target="_blank" rel="noopener"><i class="fab fa-github"></i> GitHub</a></li>
             </ul>
             <div class="nav-actions">
                 <a href="zh/fde.html" class="lang-btn">中文</a>
-                <button class="mobile-menu-toggle">
-                    <i class="fas fa-bars"></i>
-                </button>
+                <button class="mobile-menu-toggle"><i class="fas fa-bars"></i></button>
             </div>
         </div>
     </nav>
 
-    <section class="hero">
-        <div class="hero-content">
-            <div class="hero-badge">
-                <i class="fas fa-rocket"></i>
-                <span>FDE + MRRC Deep Dive</span>
-            </div>
-            <h1 class="hero-title">Forward Deployed<br><span class="gradient">Engineering</span></h1>
-            <p class="hero-subtitle" style="max-width: 700px;">
-                How Palantir's FDE methodology drove MRRC through 15 cycles of evolution —
-                from a bare fork to a full-featured remote radio control system.
-                280+ commits, V1.0 to V5.6.5, with complete methodology, patterns, and lessons learned.
+    <!-- ═══ HERO ═══ -->
+    <section class="page-hero">
+        <div class="page-hero-content">
+            <div class="hero-badge"><i class="fas fa-rocket"></i><span>FDE Across Three Projects</span></div>
+            <h1 class="hero-title">One Methodology<br><span class="gradient">Three Products</span></h1>
+            <p class="hero-subtitle">
+                Forward Deployed Engineering is not a theory — it's how MRRC evolved through 15 cycles (Mar–Jun 2026),
+                how SunSDR2 DX was reverse-engineered and rebuilt (first commit to V1.0: 4 days, to SDD V3.7: 13 days),
+                and how SunsdrMobile iOS shipped in a single V1.0 commit (Jul 1).
+                Each project accelerated the next.
             </p>
             <div class="hero-stats">
-                <div class="stat-item"><span class="stat-value">15</span><span class="stat-label">FDE Cycles</span></div>
-                <div class="stat-item"><span class="stat-value">280+</span><span class="stat-label">Commits</span></div>
-                <div class="stat-item"><span class="stat-value">0→16</span><span class="stat-label">Product Leverage</span></div>
-                <div class="stat-item"><span class="stat-value">60+</span><span class="stat-label">Design Docs</span></div>
+                <div class="stat-item"><span class="stat-value">15</span><span class="stat-label">MRRC Cycles (Mar–Jun)</span></div>
+                <div class="stat-item"><span class="stat-value">4 days</span><span class="stat-label">SunMRRC → V1.0</span></div>
+                <div class="stat-item"><span class="stat-value">1 commit</span><span class="stat-label">SunsdrMobile V1.0</span></div>
+                <div class="stat-item"><span class="stat-value">0</span><span class="stat-label">Server Changes for iOS</span></div>
             </div>
         </div>
     </section>
 
+    <!-- ═══ EVOLUTION OVERVIEW ═══ -->
     <section class="section">
         <div class="container">
             <div class="section-header">
-                <span class="section-label">Methodology</span>
-                <h2 class="section-title">What is FDE?</h2>
-                <p class="section-subtitle">Forward Deployed Engineering — Palantir's outcome-driven product discovery and delivery model</p>
+                <span class="section-label">Overview</span>
+                <h2 class="section-title">The Evolution Chain</h2>
+                <p class="section-subtitle">Three projects, one FDE pipeline. MRRC: 15 cycles (Mar–Jun 2026). SunMRRC: 40+ commits in 13 days (Jun 21–Jul 3), V1.0 in 4 days. SunsdrMobile: single-commit V1.0 (Jul 1), zero server changes. Each project's Product phase becomes the next project's Echo baseline.</p>
             </div>
-            <div class="formula-box">
-                <div class="formula">FDE = Echo + Delta + Product</div>
-                <div class="formula-desc">Demand Discovery → Rapid Prototyping → Abstraction &amp; Generalization</div>
-            </div>
-            <div class="tri-role">
-                <div class="role-card">
-                    <div class="role-icon echo"><i class="fas fa-search"></i></div>
-                    <h3>Echo</h3>
-                    <div class="role-tagline">"What does the user really need?"</div>
-                    <ul>
-                        <li>Embedded in user scenarios</li>
-                        <li>Define valuable demos</li>
-                        <li>Manage client relationships</li>
-                        <li>Problem discovery &amp; scoping</li>
-                        <li>~20% of cycle time</li>
-                    </ul>
+            <div class="evolution-track">
+                <div class="evo-node">
+                    <span class="tag foundation">Foundation</span>
+                    <h3>MRRC</h3>
+                    <div class="sub">Universal HF Remote</div>
+                    <p style="color:var(--text-secondary);font-size:0.8rem;margin-top:8px;line-height:1.5;">15 FDE cycles · V1.0→V5.6.5<br>WebSocket · WDSP · PTT Safety<br>280+ commits · 16 reusable assets</p>
                 </div>
-                <div class="role-card">
-                    <div class="role-icon delta"><i class="fas fa-bolt"></i></div>
-                    <h3>Delta</h3>
-                    <div class="role-tagline">"What's the fastest thing that works?"</div>
-                    <ul>
-                        <li>Rapid prototyping</li>
-                        <li>Deliver within timeline</li>
-                        <li>Code can be rough but functional</li>
-                        <li>Iterate based on feedback</li>
-                        <li>~55% of cycle time</li>
-                    </ul>
+                <div class="evo-arrow">→</div>
+                <div class="evo-node">
+                    <span class="tag reverse">Reverse + Rebuild</span>
+                    <h3>SunMRRC</h3>
+                    <div class="sub">SunSDR2 DX Server</div>
+                    <p style="color:var(--text-secondary);font-size:0.8rem;margin-top:8px;line-height:1.5;">Protocol reverse-engineering (pre-git)<br>FastAPI · 5× WebSocket · IQ DSP<br>40+ commits · V1.0 in 4 days</p>
                 </div>
-                <div class="role-card">
-                    <div class="role-icon product"><i class="fas fa-cubes"></i></div>
-                    <h3>Product</h3>
-                    <div class="role-tagline">"How to serve the next 10 customers?"</div>
-                    <ul>
-                        <li>Abstract field solutions</li>
-                        <li>Build reusable modules</li>
-                        <li>Write architecture docs</li>
-                        <li>Turn gravel roads into highways</li>
-                        <li>~25% of cycle time</li>
-                    </ul>
+                <div class="evo-arrow">→</div>
+                <div class="evo-node">
+                    <span class="tag native">Native App</span>
+                    <h3>SunsdrMobile</h3>
+                    <div class="sub">iOS SwiftUI Client</div>
+                    <p style="color:var(--text-secondary);font-size:0.8rem;margin-top:8px;line-height:1.5;">Single-commit V1.0 · 3 commits total<br>Zero dependencies · 4 WebSockets<br>AVAudioEngine · Keychain auth</p>
                 </div>
             </div>
-            <p style="text-align:center; color: var(--text-secondary); margin-top: 36px; max-width: 720px; margin-left: auto; margin-right: auto;">
-                <strong style="color: var(--text-primary);">FDE is not consulting.</strong>
-                Consulting is a one-time service; FDE is a product exploration process.
-                FDE paves <em>"gravel roads"</em> in the field, while headquarters builds <em>"highways"</em>.
-                The unit cost of delivering outcomes decreases over time — margins turn from negative to positive.
-            </p>
         </div>
     </section>
 
+    <!-- ═══ PART 1: MRRC — THE FOUNDATION ═══ -->
     <section class="section" style="background: var(--bg-secondary);">
         <div class="container">
             <div class="section-header">
-                <span class="section-label">Case Study</span>
-                <h2 class="section-title">MRRC's 15 FDE Cycles</h2>
-                <p class="section-subtitle">Each cycle is a complete Echo → Delta → Product iteration. 20 months from V1.0 to V5.6.5.</p>
+                <span class="section-label">Part 1</span>
+                <h2 class="section-title">MRRC — 15 FDE Cycles as Foundation</h2>
+                <p class="section-subtitle">Each cycle = Echo (discover) → Delta (prototype) → Product (abstract). Every abstraction becomes a reusable asset for the next cycle — and for future projects.</p>
             </div>
-            <div style="overflow-x: auto;">
+
+            <div class="project-detail">
+                <div class="text">
+                    <h3>From raw fork to production system</h3>
+                    <p>MRRC started as a fork of <strong>F4HTB</strong>, a Python-based WebSDR transceiver control. The upstream was Linux-only, hardcoded for a single radio, and had no mobile support. <span class="highlight">FDE cycle #1</span> asked: "What does the user actually need?" — cross-platform operation, mobile access, and multi-radio support.</p>
+                    <p>Each cycle produced at least one <strong>reusable abstraction</strong>: PyAudio cross-platform audio (V2.0), AudioWorklet low-latency pipeline (V3.0), PTT pre-warm reliability framework (V4.0), ATR-1000 standalone proxy (V4.5), WDSP Python wrapper (V4.9), Glassmorphism design system (V5.0), RagChew TX audio presets (V5.1), MemoryChannelManager (V5.5), LearningBuffer (V5.6).</p>
+                    <p>By V5.6.5, <span class="highlight">16 reusable assets</span> formed a complete platform. The next project wouldn't start from zero — it would start from leverage.</p>
+                </div>
+                <div class="info-box">
+                    <h4><i class="fas fa-chart-line"></i> MRRC Leverage Metrics</h4>
+                    <div class="stat-row"><span class="stat-label">Total cycles</span><span class="stat-val">15</span></div>
+                    <div class="stat-row"><span class="stat-label">Commits</span><span class="stat-val">280+</span></div>
+                    <div class="stat-row"><span class="stat-label">Design docs</span><span class="stat-val">60+</span></div>
+                    <div class="stat-row"><span class="stat-label">Reusable assets</span><span class="stat-val">16</span></div>
+                    <div class="stat-row"><span class="stat-label">Cycle 1 duration</span><span class="stat-val">~4 weeks</span></div>
+                    <div class="stat-row"><span class="stat-label">Cycle 15 duration</span><span class="stat-val">~1 week</span></div>
+                    <div class="stat-row"><span class="stat-label">Speed gain</span><span class="stat-val">4×</span></div>
+                    <div class="stat-row"><span class="stat-label">Key abstractions</span><span class="stat-val">PyAudio, AudioWorklet, WDSP, PTT-FW, ATR-proxy, MemoryChannelMgr</span></div>
+                </div>
+            </div>
+
+            <div class="table-wrap" style="margin-top:48px;">
                 <table>
-                    <thead><tr><th>#</th><th>Cycle</th><th>Date</th><th>Duration</th><th>Version</th><th>Echo Input</th><th>Delta Challenge</th><th>Product Output</th><th>Leverage</th></tr></thead>
+                    <thead><tr><th>Phase</th><th>Cycles</th><th>Key Event</th><th>Leverage Created</th></tr></thead>
                     <tbody>
-                        <tr><td>1</td><td><strong>Foundation</strong></td><td>2024-10</td><td>~4w</td><td>V1.0</td><td>F4HTB upstream evaluation</td><td>WebSocket + Tornado integration</td><td>AD-001/002/003</td><td>0→1</td></tr>
-                        <tr><td>2</td><td><strong>Architecture</strong></td><td>2024-11</td><td>~4w</td><td>V2.0</td><td>Linux-only, high latency</td><td>PyAudio cross-platform + AudioWorklet</td><td>audio_interface.py</td><td>1→2</td></tr>
-                        <tr><td>3</td><td><strong>Mobile</strong></td><td>2024-12</td><td>~4w</td><td>V3.0</td><td>Desktop UI unusable on phones</td><td>iOS Safari AudioContext</td><td>mobile_modern.html</td><td>2→3</td></tr>
-                        <tr style="background: rgba(245,158,11,0.04);"><td>—</td><td><strong>Gap Period</strong></td><td>2025-01~2026-02</td><td>14 months</td><td>V3.x</td><td colspan="2" style="color: #f59e0b;">Longest Echo phase — daily operation accumulating real pain points</td><td>—</td><td>—</td></tr>
-                        <tr><td>4</td><td><strong>Latency</strong></td><td>2026-03</td><td>~1w</td><td>V4.0</td><td>PTT 3s delay</td><td>Pre-warm frames + count timeout</td><td>PTT reliability framework</td><td>3→4</td></tr>
-                        <tr><td>5</td><td><strong>ATR-1000</strong></td><td>2026-03</td><td>~3w</td><td>V4.3-4.5</td><td>No power/SWR display</td><td>5 iterations → proxy architecture</td><td>atr1000_proxy.py</td><td>4→5</td></tr>
-                        <tr><td>6</td><td><strong>DSP &amp; Expansion</strong></td><td>2026-03</td><td>~2w</td><td>V4.6-4.9</td><td>Noise + harsh audio</td><td>WDSP library integration</td><td>wdsp_wrapper.py, multi-instance</td><td>5→7</td></tr>
-                        <tr><td>7</td><td><strong>Deploy Automation</strong></td><td>2026-04</td><td>~1w</td><td>V5.1.x</td><td>Manual deployment (7 steps)</td><td>SSH idempotency</td><td>Ansible playbook</td><td>7→8</td></tr>
-                        <tr><td>8</td><td><strong>UI Modernization</strong></td><td>2026-04</td><td>~4w</td><td>V5.0</td><td>Outdated UI, emoji inconsistency</td><td>Cross-platform Unicode icons</td><td>Glassmorphism design system</td><td>8→9</td></tr>
-                        <tr><td>9</td><td><strong>Audio Refinement</strong></td><td>2026-05</td><td>~1.5w</td><td>V5.1</td><td>Harsh TX audio on strong signals</td><td>Safari setValueAtTime fix</td><td>RagChew audio preset system</td><td>9→10</td></tr>
-                        <tr><td>10</td><td><strong>Performance Tuning</strong></td><td>2026-05</td><td>~1w</td><td>V5.2</td><td>RX audio inter-frame gaps, WDSP per-frame CPU overhead</td><td>Multi-node scheduled playback</td><td>audio_rx.js rewrite, WDSP hash caching</td><td>10→11</td></tr>
-                        <tr><td>11</td><td><strong>Network &amp; UI Polish</strong></td><td>2026-05</td><td>~1w</td><td>V5.3</td><td>No network visibility, cluttered status bar</td><td>Real-time bandwidth/latency display</td><td>Network monitoring, streamlined UI, bandwidth visual polish</td><td>11→12</td></tr>
-                        <tr><td>12</td><td><strong>FT8 Integration Fix</strong></td><td>2026-05</td><td>~0.5w</td><td>V5.4</td><td>FT8 method name mismatch, frontend issues</td><td>Python-JS method alignment</td><td>FT8 WebSocket bridge stabilization</td><td>12→13</td></tr>
-                        <tr><td>13</td><td><strong>Memory Channels</strong></td><td>2026-06</td><td>~2w</td><td>V5.5</td><td>Memory channel recall/save workflow cumbersome</td><td>MemoryChannelManager service + batch DOM updates</td><td>MemoryChannelManager class, optimized updateMemButtons</td><td>13→14</td></tr>
-                        <tr><td>14</td><td><strong>ATR-1000 Stability</strong></td><td>2026-06</td><td>~2w</td><td>V5.6.0-6.4</td><td>False SWR readings corrupting tuner learning</td><td>Stable window learning buffer + deduplication</td><td>LearningBuffer, 6-stage dedup pipeline</td><td>14→15</td></tr>
-                        <tr><td>15</td><td><strong>EFHW Integration</strong></td><td>2026-06</td><td>~1w</td><td>V5.6.5</td><td>EFHW antenna design research documentation</td><td>Static site generation + deep research</td><td>EFHW knowledge base, A+C matching system</td><td>15→16</td></tr>
+                        <tr><td><strong>Foundation</strong></td><td>1–3</td><td>WebSocket + cross-platform audio + mobile UI</td><td>Audio pipeline, mobile framework</td></tr>
+                        <tr><td><strong>Soak</strong></td><td>Gap</td><td>14 months daily operation — accumulating real pain points</td><td>Real-world usage data</td></tr>
+                        <tr><td><strong>Core Systems</strong></td><td>4–6</td><td>PTT reliability, ATR-1000 proxy, WDSP NR2</td><td>PTT framework, ATR proxy, WDSP wrapper</td></tr>
+                        <tr><td><strong>Polish</strong></td><td>7–12</td><td>Ansible deploy, UI modernization, audio presets, network monitor, FT8 bridge</td><td>Design system, TX presets, NetMonitor</td></tr>
+                        <tr><td><strong>Stability</strong></td><td>13–15</td><td>Memory channels, ATR stability, EFHW research</td><td>MemoryChannelMgr, LearningBuffer</td></tr>
                     </tbody>
                 </table>
             </div>
         </div>
     </section>
 
+    <!-- ═══ PART 2: SUNMRRC/SUNSDR — REVERSE ENGINEERING ═══ -->
     <section class="section">
         <div class="container">
             <div class="section-header">
-                <span class="section-label">Core Patterns</span>
-                <h2 class="section-title">Three Signature FDE Patterns</h2>
-                <p class="section-subtitle">Distilled from 12 cycles of MRRC development</p>
+                <span class="section-label">Part 2</span>
+                <h2 class="section-title">SunMRRC — Reverse Engineering a Black Box</h2>
+                <p class="section-subtitle">The SunSDR2 DX is a Software Defined Radio with no documented protocol, no open API, and no Hamlib support. Protocol reverse-engineering happened pre-git. From first commit (June 21) to production V1.0 (June 24): 4 days. To SDD V3.7 (July 3): 13 days.</p>
             </div>
-            <div class="pattern-grid">
-                <div class="pattern-card">
-                    <div class="pattern-icon">🛤️ → 🛣️</div>
-                    <h3>Gravel Road → Highway</h3>
-                    <p>The core FDE abstraction pattern. Delta-phase hacks ("gravel roads") are refined in the Product phase into reusable, generic modules ("highways") that serve the next 5-10 customers with near-zero marginal cost.</p>
-                    <div class="highlight-box">Gravel: ALSA Linux-only audio
-                    ↓ Abstract
-                    Highway: PyAudio cross-platform unified interface
 
-                    Gravel: Direct ATR-1000 connection crashing main process
-                    ↓ Abstract (5 iterations)
-                    Highway: Standalone proxy + dynamic polling (15s/5s/0.5s)</div>
+            <div class="project-detail">
+                <div class="text">
+                    <h3>Different hardware, different architecture</h3>
+                    <p>Traditional HF radios expose a serial CAT interface (frequency, mode, PTT) via <strong>Hamlib/rigctld</strong>. The SunSDR2 DX has <em>none of that</em>. It streams raw <strong>IQ samples over UDP</strong> on port 50002, and accepts proprietary <strong>binary commands</strong> on port 50001. There is no rigctld, no CAT, no documented protocol.</p>
+                    <p><span class="highlight">Echo phase:</span> Deployed at the radio site. Captured UDP packets with Wireshark. Reverse-engineered the IQ frame format (24-bit interleaved I/Q, fixed sample rates). Decoded the 0x0017 DRIVE command, the 0x1F00 telemetry packet (34 bytes), and the 0xFFFD TX IQ stream. Built a Python UDP client that could at least <em>talk</em> to the radio.</p>
+                    <p><span class="highlight">Delta phase:</span> FastAPI server with 5 WebSocket endpoints (/WSCTRX, /WSaudioRX, /WSaudioTX, /WSspectrum, /WSATR1000). Server-side IQ demodulation via numpy/scipy. DDC + fractional resampler + overlap-save Hilbert SSB modulator. Dual-codec Opus/PCM tagged transport. Per-band DRIVE power control.</p>
+                    <p><span class="highlight">Product phase:</span> Generalized into a server/client architecture. The web frontend and SunsdrMobile iOS app both connect to the same server. <strong>Leverage from MRRC:</strong> PTT safety model (ACK retry × 3, watchdog, touch-move release), WDSP integration pattern, multi-instance architecture, Glassmorphism design tokens.</p>
                 </div>
-                <div class="pattern-card">
-                    <div class="pattern-icon">🎯 → 🌐</div>
-                    <h3>Land &amp; Expand</h3>
-                    <p>Enter with one concrete problem (Land), discover adjacent problems from real usage, expand scope organically. Each expansion builds on prior leverage.</p>
-                    <div class="highlight-box">Land: Power/SWR real-time display
-                    Expand: Smart learning → Quick tune
-                    → REST API → External software integration
-                    → 3rd-party frequency sync
-
-                    Land: Basic audio streaming
-                    Expand: WDSP NR → TX EQ → RagChew
-                    → Full TX/RX audio processing chain</div>
-                </div>
-                <div class="pattern-card">
-                    <div class="pattern-icon">✨</div>
-                    <h3>Demo-Driven Development</h3>
-                    <p>Define a concrete demo at the Echo stage. Every iteration is validated by showing the user a working demo. The demo creates <em>desire</em> — the strongest motivation to ship.</p>
-                    <div class="highlight-box">Demo: "Press PTT, transmit instantly"
-                    → Desire: "No more 3-second wait!"
-                    → Cycle 4: PTT pre-warm frames
-
-                    Demo: "NR2 on, SSB sounds like FM"
-                    → Desire: "I can't believe this is HF!"
-                    → Cycle 6: WDSP NR2 integration
-
-                    Demo: "Warmer, natural voice on TX"
-                    → Desire: "Sounds like sitting across the table"
-                    → Cycle 9: RagChew audio chain</div>
+                <div class="info-box">
+                    <h4><i class="fas fa-microchip"></i> Reverse Engineering Stats</h4>
+                    <div class="stat-row"><span class="stat-label">Unknown protocol surface</span><span class="stat-val">100%</span></div>
+                    <div class="stat-row"><span class="stat-label">UDP capture sessions (pre-git)</span><span class="stat-val">40+</span></div>
+                    <div class="stat-row"><span class="stat-label">Decoded command types</span><span class="stat-val">12</span></div>
+                    <div class="stat-row"><span class="stat-label">Git commits (Jun 21–Jul 3)</span><span class="stat-val">40+</span></div>
+                    <div class="stat-row"><span class="stat-label">WebSocket endpoints</span><span class="stat-val">5</span></div>
+                    <div class="stat-row"><span class="stat-label">First commit → V1.0</span><span class="stat-val">4 days</span></div>
+                    <div class="stat-row"><span class="stat-label">First commit → SDD V3.7</span><span class="stat-val">13 days</span></div>
+                    <div class="stat-row"><span class="stat-label">MRRC assets reused</span><span class="stat-val">8</span></div>
+                    <div class="stat-row"><span class="stat-label">Key leverage</span><span class="stat-val">PTT safety, WDSP, multi-instance, AudioWorklet RX pipeline</span></div>
                 </div>
             </div>
-        </div>
-    </section>
 
-    <section class="section" style="background: var(--bg-secondary);">
-        <div class="container">
-            <div class="section-header">
-                <span class="section-label">Abstraction Catalog</span>
-                <h2 class="section-title">Gravel Roads → Highways</h2>
-                <p class="section-subtitle">Every field hack that became a reusable asset</p>
-            </div>
-            <div class="table-wrapper">
-                <table>
-                    <thead><tr><th>Gravel Road (Delta)</th><th>Abstraction Process</th><th>Highway (Product)</th><th>Now Serves</th></tr></thead>
-                    <tbody>
-                        <tr><td>ALSA Linux-only audio</td><td><span class="tag delta">Delta</span> PyAudio cross-platform I/O</td><td><code>audio_interface.py</code></td><td>macOS / Linux / Windows</td></tr>
-                        <tr><td>ScriptProcessor main-thread blocking</td><td><span class="tag delta">Delta</span> AudioWorklet dedicated audio thread</td><td>AudioWorklet low-latency architecture</td><td>All modern browsers</td></tr>
-                        <tr><td>Direct PTT sleep-wait</td><td><span class="tag product">Product</span> Pre-warm + count-timeout framework</td><td>PTT reliability framework</td><td>All transceiver models</td></tr>
-                        <tr><td>ATR-1000 crashing main process</td><td><span class="tag product">Product</span> Standalone proxy + dynamic polling</td><td><code>atr1000_proxy.py</code></td><td>All ATR-1000 users</td></tr>
-                        <tr><td>Raw libwdsp C calls</td><td><span class="tag product">Product</span> Python wrapper with unified interface</td><td><code>wdsp_wrapper.py</code></td><td>All WDSP users</td></tr>
-                        <tr><td>Single-instance hardcoded config</td><td><span class="tag product">Product</span> Isolated config/port/socket per instance</td><td>Multi-instance architecture</td><td>N independent radios</td></tr>
-                        <tr><td>RNNoise generic NR (10-15dB)</td><td><span class="tag delta">Delta</span> WDSP NR2 SSB-optimized (15-20dB)</td><td>WDSP NR2 integration</td><td>SSB voice users</td></tr>
-                        <tr><td>Hardcoded audio params</td><td><span class="tag product">Product</span> Preset system (DEFAULT/RAGCHEW)</td><td>TX audio preset system</td><td>Extensible to new presets</td></tr>
-                        <tr><td>Manual SSH + SCP deploy</td><td><span class="tag product">Product</span> Ansible idempotent playbook</td><td>Ansible deploy automation</td><td>N web servers</td></tr>
-                        <tr><td>Emoji icons (platform-inconsistent)</td><td><span class="tag product">Product</span> Unicode + SVG icon system</td><td>Glassmorphism design system</td><td>All platforms + browsers</td></tr>
-                        <tr><td>Per-button memory save/recall</td><td><span class="tag product">Product</span> Service-oriented batch DOM updates</td><td><code>MemoryChannelManager</code></td><td>All memory channel users</td></tr>
-                        <tr><td>False SWR corrupting tuner learning</td><td><span class="tag product">Product</span> Stable window buffer + 6-stage dedup</td><td><code>LearningBuffer</code></td><td>ATR-1000 users with tuner</td></tr>
-                        <tr><td>Manual EFHW design research</td><td><span class="tag product">Product</span> Static site + deep research methodology</td><td>EFHW knowledge base, A+C matching</td><td>HF antenna builders</td></tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </section>
+            <!-- SunMRRC Git-Verified Development Timeline -->
+            <div style="margin-top:56px;">
+                <h3 style="text-align:center;font-size:1.3rem;font-weight:700;margin-bottom:8px;">SunMRRC Development Timeline (Git-Verified)</h3>
+                <p style="text-align:center;color:var(--text-secondary);font-size:0.9rem;margin-bottom:32px;max-width:680px;margin-left:auto;margin-right:auto;">13 days from first commit to SDD V3.7. Protocol reverse-engineering (40+ Wireshark sessions, 12 command types decoded) happened <em>before</em> the initial commit — the first commit already contained PROTOCOL.md (22 sections) and a working TX modulation pipeline.</p>
 
-    <section class="section">
-        <div class="container">
-            <div class="section-header">
-                <span class="section-label">Metrics</span>
-                <h2 class="section-title">Product Leverage Evolution</h2>
-                <p class="section-subtitle">Core FDE metric: does the marginal cost of delivering the same outcome decrease over time?</p>
-            </div>
-
-            <div style="max-width: 760px; margin: 0 auto 40px;">
-                <h3 style="font-size: 1.15rem; font-weight: 600; margin-bottom: 16px; color: var(--text-primary);">What is "Product Leverage"?</h3>
-                <p style="color: var(--text-secondary); line-height: 1.85; margin-bottom: 16px;">
-                    <strong style="color: var(--accent);">Product leverage = the count of accumulated reusable assets.</strong>
-                    In each FDE cycle's Product phase, the Delta-phase throwaway code ("gravel road") is refined into a reusable, generic module ("highway").
-                    This module becomes a <strong style="color: var(--text-primary);">permanent asset</strong> for the team. Every subsequent cycle can build directly on top of these assets instead of reinventing the wheel.
-                </p>
-                <p style="color: var(--text-secondary); line-height: 1.85; margin-bottom: 16px;">
-                    <strong style="color: var(--text-primary);">Analogy:</strong> Building a skyscraper. Cycle 1 lays the foundation (WebSocket channel). Cycle 2 installs plumbing and wiring (audio framework). Cycle 6 builds the elevator (DSP pipeline).
-                    By Cycle 12, you're just adding one room on the top floor (FT8 integration) — the foundation, utilities, and elevators are already there. You write very little code, but deliver enormous functional value. That's leverage.
-                </p>
-                <p style="color: var(--text-secondary); line-height: 1.85;">
-                    <strong style="color: var(--text-primary);">How it's measured:</strong> Each cycle's Product phase produces one (or more) independently reusable modules, adding +1 (or +N) to the leverage count.
-                    Starting from 0 (a raw fork with zero proprietary assets), reaching 16 reusable modules by V5.6.5.
-                </p>
-            </div>
-
-            <div class="leverage-track">
-                <div class="leverage-bar"><span class="leverage-value">1</span><div class="leverage-fill" style="height:24px;"></div><span class="leverage-label">V1.0</span></div>
-                <div class="leverage-bar"><span class="leverage-value">2</span><div class="leverage-fill" style="height:48px;"></div><span class="leverage-label">V2.0</span></div>
-                <div class="leverage-bar"><span class="leverage-value">3</span><div class="leverage-fill" style="height:72px;"></div><span class="leverage-label">V3.0</span></div>
-                <div class="leverage-bar"><span class="leverage-value">4</span><div class="leverage-fill" style="height:96px;"></div><span class="leverage-label">V4.0</span></div>
-                <div class="leverage-bar"><span class="leverage-value">5</span><div class="leverage-fill" style="height:120px;"></div><span class="leverage-label">V4.3</span></div>
-                <div class="leverage-bar"><span class="leverage-value">7</span><div class="leverage-fill" style="height:160px;"></div><span class="leverage-label">V4.9</span></div>
-                <div class="leverage-bar"><span class="leverage-value">8</span><div class="leverage-fill" style="height:184px;"></div><span class="leverage-label">V5.0</span></div>
-                <div class="leverage-bar"><span class="leverage-value">9</span><div class="leverage-fill" style="height:208px;"></div><span class="leverage-label">V5.1.x</span></div>
-                <div class="leverage-bar"><span class="leverage-value">10</span><div class="leverage-fill" style="height:232px;"></div><span class="leverage-label">V5.1</span></div>
-                <div class="leverage-bar"><span class="leverage-value">11</span><div class="leverage-fill" style="height:256px;"></div><span class="leverage-label">V5.2</span></div>
-                <div class="leverage-bar"><span class="leverage-value">12</span><div class="leverage-fill" style="height:280px;"></div><span class="leverage-label">V5.3</span></div>
-                <div class="leverage-bar"><span class="leverage-value">13</span><div class="leverage-fill" style="height:300px;"></div><span class="leverage-label">V5.4</span></div>
-                <div class="leverage-bar"><span class="leverage-value">14</span><div class="leverage-fill" style="height:324px;"></div><span class="leverage-label">V5.5</span></div>
-                <div class="leverage-bar"><span class="leverage-value">15</span><div class="leverage-fill" style="height:344px;"></div><span class="leverage-label">V5.6.0</span></div>
-                <div class="leverage-bar"><span class="leverage-value">16</span><div class="leverage-fill" style="height:368px;"></div><span class="leverage-label">V5.6.5</span></div>
-            </div>
-            <p style="text-align:center; color: var(--text-muted); margin-top: 12px; font-size: 0.8rem;">Bar height = cumulative reusable assets. Each cycle stacks on top of the last — never starting from zero.</p>
-
-            <div style="max-width: 760px; margin: 48px auto 0;">
-                <h3 style="font-size: 1.15rem; font-weight: 600; margin-bottom: 16px; color: var(--text-primary);">Evidence: cycle duration shrinks as leverage grows</h3>
-                <p style="color: var(--text-secondary); line-height: 1.85; margin-bottom: 20px;">
-                    If leverage is real, the most direct evidence is <strong style="color: var(--text-primary);">progressively shorter development cycles</strong>.
-                    The table below groups cycles by leverage tier and compares average duration:
-                </p>
-                <div class="table-wrapper">
+                <div class="table-wrap">
                     <table>
-                        <thead><tr><th>Leverage Tier</th><th>Cycles</th><th>Avg Duration</th><th>Reusable Assets Available</th></tr></thead>
+                        <thead><tr><th>Date</th><th>Key Commits</th><th>Echo → Delta → Product</th><th>Assets Created</th></tr></thead>
                         <tbody>
-                            <tr><td>0–3</td><td>Cycle 1–3 (V1.0–V3.0)</td><td><strong>~4 weeks</strong></td><td>Nearly zero. WebSocket, audio, and mobile all built from scratch.</td></tr>
-                            <tr><td>4–7</td><td>Cycle 4–6 (V4.0–V4.9)</td><td><strong>~1–3 weeks</strong></td><td>Audio framework, PTT framework, mobile framework ready. New features plug in directly.</td></tr>
-                            <tr><td>8–10</td><td>Cycle 7–9 (V5.0–V5.1)</td><td><strong>~1–1.5 weeks</strong></td><td>DSP pipeline, ATR proxy, Ansible deploy all in place. New features are plug-and-play.</td></tr>
-                            <tr><td>11–13</td><td>Cycle 10–12 (V5.2–V5.4)</td><td><strong>~0.5–1 week</strong></td><td>Design system, audio presets, network monitoring all baked in. Each new feature needs minimal incremental code.</td></tr>
-                            <tr><td>14–16</td><td>Cycle 13–15 (V5.5–V5.6.5)</td><td><strong>~1–2 weeks</strong></td><td>MemoryChannelManager, LearningBuffer, EFHW knowledge base. Frontend optimization, ATR stability, antenna research.</td></tr>
+                            <tr>
+                                <td><strong>Pre-git</strong></td>
+                                <td>—</td>
+                                <td><strong>Echo:</strong> 40+ Wireshark captures at radio site. Reverse-engineered IQ frame format (24-bit interleaved), 12 command types, 30-packet boot sequence, UDP control protocol. <strong>Delta:</strong> Python UDP client (sunsdr_direct.py) capable of booting device, setting frequency, receiving IQ stream.</td>
+                                <td>sunsdr_direct.py, PROTOCOL.md (22 sections, 1,800+ lines)</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Jun 21</strong></td>
+                                <td><code>38cb85e</code> Initial commit<br><code>5996a23</code> PROTOCOL.md<br><code>697789b</code> TX modulation + memory channels</td>
+                                <td><strong>Delta:</strong> FastAPI server, 5× WebSocket endpoints, IQ DSP pipeline (numpy/scipy), Hilbert SSB modulator, memory channel API. <strong>Product:</strong> First commit already bundled protocol docs, TX pipeline, tune mode, and REST API — a complete working baseline. 8 MRRC assets reused (PTT safety, WDSP, multi-instance, Glassmorphism).</td>
+                                <td>server.py, dsp.py, 5× WS endpoints, REST API, mobile UI</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Jun 22–23</strong></td>
+                                <td><code>8ba105e</code> TX chain fixes<br><code>1217165</code> DRIVE power control<br><code>b761b48</code> Sample rate selector</td>
+                                <td><strong>Delta:</strong> Real mic SSB audio, LSB/USB mode switching, click removal. Device DRIVE (0x0017) per-band power with band_power.json persistence. Dynamic STREAM_CTRL for 39/78/156/312 kHz sample rates.</td>
+                                <td>DRIVE power system, per-band power UI, sample rate control</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Jun 24</strong></td>
+                                <td><code>433194c</code> Dual-codec + telemetry<br><code>6b1bc2b</code> <strong>V1.0 release</strong><br><code>fcfafd3</code> Website</td>
+                                <td><strong>Product:</strong> Tagged dual-codec audio (Opus/PCM), SWR telemetry decode, SunMRRC V1.0 production release. Project website + SDD docs + deploy script created same day. <strong>V1.0 in 4 days from first commit.</strong></td>
+                                <td>Dual-codec transport, telemetry decode, website, SDD V3.0-3.3</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Jun 25</strong></td>
+                                <td><code>225e1e0</code> Full-scale IQ<br><code>587e580</code> TUNE scale</td>
+                                <td><strong>Delta:</strong> TX IQ peak corrected to 1.0 (full 24-bit scale, matching ExpertSDR3). Telemetry field map verified (off30=watts, off16=volts, off18=temp). TUNE carrier power capped for PA safety.</td>
+                                <td>Corrected TX gain staging, telemetry field verification</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Jun 28</strong></td>
+                                <td><code>9346074</code> RX 48kHz pipeline<br><code>4f5a84d</code> WDSP IQ-level<br><code>c7185f3</code> WDSP UI panel<br><code>dae415b</code> AGC panel</td>
+                                <td><strong>Delta:</strong> RX audio pipeline upgrade to 48kHz, WFM hi-fi mode, cubic resampling. WDSP moved to IQ-level (NR2/ANF/SNB before demod). Full WDSP settings panel + AGC control panel with persistence. TX audio quality fixes (anti-alias LPF, jitter buffer, DC blocker).</td>
+                                <td>48kHz RX pipeline, WDSP IQ processing, WDSP UI, AGC panel, TX audio chain</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Jun 29–30</strong></td>
+                                <td><code>b1f4076</code> SAB ring + COEP<br><code>9bcccd7</code> 300Hz HPF<br><code>4673422</code> SDD V3.5 PPTX</td>
+                                <td><strong>Delta:</strong> Removed broken WDSP TX C-chain (Python Hilbert is sole SSB path). SAB ring buffer for zero-main-thread TX audio. COEP credentialless for Safari SharedArrayBuffer. 300Hz HPF for +15% PA headroom. <strong>Product:</strong> SDD V3.5-3.6 (17 ADs, complete component model), V3.5 architecture PPTX.</td>
+                                <td>SAB ring buffer, COEP headers, 300Hz HPF, SDD V3.5-3.6, architecture PPTX</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Jul 3</strong></td>
+                                <td><code>67ce1a3</code> Spectrum accuracy<br><code>0254f81</code> SDD V3.7<br><code>a748bc2</code> UI redesign</td>
+                                <td><strong>Product:</strong> Exact sample rate lookup (39062/78125/156250/312500), FFT pixel alignment (xScale=W/n), multi-client state sync. UI redesign + WDSP NR2 musical-noise reduction. SDD V3.7: all 15 chapters verified against live code. Comprehensive docs update.</td>
+                                <td>Spectrum accuracy fix, SDD V3.7, UI redesign, final docs</td>
+                            </tr>
                         </tbody>
                     </table>
                 </div>
-                <p style="color: var(--text-secondary); line-height: 1.85; margin-top: 20px;">
-                    <strong style="color: var(--accent);">Conclusion:</strong> Cycle 1 took 4 weeks to build the foundation. Cycle 15 took 1 week to integrate EFHW documentation — both "delivering a complete feature," but the latter required only <strong style="color: var(--text-primary);">1/4</strong> the actual effort.
-                    The developer didn't get faster. The 16 reusable assets did the heavy lifting. That's product leverage in action: <strong style="color: var(--accent);">every delivery reduces the cost of the next.</strong>
-                </p>
+
+                <div style="max-width:760px;margin:40px auto 0;">
+                    <h4 style="font-size:1rem;font-weight:600;margin-bottom:12px;color:var(--text-primary);">Key FDE Insights from SunMRRC</h4>
+                    <div class="principle-grid" style="grid-template-columns:repeat(auto-fit,minmax(300px,1fr));">
+                        <div class="principle-item"><div class="principle-num" style="background:var(--amber-glow);color:var(--amber);">1</div><div class="principle-text"><h4>Reverse-engineering IS Echo</h4><p>40+ Wireshark sessions at the radio site pre-git. The initial commit already contained a complete PROTOCOL.md (22 sections) and working protocol module — the Echo phase produced the foundational asset before any server code was written.</p></div></div>
+                        <div class="principle-item"><div class="principle-num" style="background:var(--amber-glow);color:var(--amber);">2</div><div class="principle-text"><h4>8 MRRC assets reused — PTT, WDSP, multi-instance, Glassmorphism</h4><p>PTT safety (ACK×3, watchdog), WDSP integration pattern, multi-instance architecture, Glassmorphism design tokens all carried forward. SunMRRC inherited these rather than re-solving them.</p></div></div>
+                        <div class="principle-item"><div class="principle-num" style="background:var(--accent-glow);color:var(--accent);">3</div><div class="principle-text"><h4>Protocol-as-contract enabled SunsdrMobile</h4><p>The WebSocket cmd:val protocol, tagged dual-codec transport, and 512-bin spectrum format became the stable contract. SunsdrMobile spoke it with zero server changes.</p></div></div>
+                        <div class="principle-item"><div class="principle-num" style="background:var(--accent-glow);color:var(--accent);">4</div><div class="principle-text"><h4>V1.0 in 4 days, not 3 months</h4><p>Git shows first commit (Jun 21) → V1.0 release (Jun 24) = 4 days. The reverse-engineering was pre-git; once the protocol was understood, the server/DSP/TX came together in a single intense burst. SDD was written concurrently, not after.</p></div></div>
+                    </div>
+                </div>
             </div>
         </div>
     </section>
 
+    <!-- ═══ PART 3: SUNSDRMOBILE — NATIVE iOS ═══ -->
     <section class="section" style="background: var(--bg-secondary);">
         <div class="container">
             <div class="section-header">
-                <span class="section-label">Integration</span>
-                <h2 class="section-title">FDE + IBM TeamSD (SDD)</h2>
-                <p class="section-subtitle">IBM TeamSD v2.3.2's 14-chapter SDD provides the structural framework for FDE cycles. FDE drives the content; SDD provides the format.</p>
+                <span class="section-label">Part 3</span>
+                <h2 class="section-title">SunsdrMobile — Native iOS, Single-Shot V1.0</h2>
+                <p class="section-subtitle">With SunMRRC's WebSocket protocol as the stable contract, the entire iOS app shipped in a single V1.0 commit (July 1). Zero protocol redesign. Zero server changes. Pure Apple frameworks.</p>
             </div>
-            <div class="table-wrapper">
-                <table>
-                    <thead><tr><th>FDE Phase</th><th>Drives SDD Chapters</th><th>When</th></tr></thead>
-                    <tbody>
-                        <tr><td><span class="tag echo">Echo</span></td><td>Ch4 System Context, Ch2 Business Direction, Ch5 Non-Functional Reqs, Ch6 Use Case Model, Ch13 Feasibility</td><td>First Echo + each cycle</td></tr>
-                        <tr><td><span class="tag delta">Delta</span></td><td>Ch7 Subject Area Model, Ch11 Component Model, Ch10 Service Model, Ch12 Operational Model</td><td>Mid-to-late cycle</td></tr>
-                        <tr><td><span class="tag product">Product</span></td><td>Ch8 Architecture Decisions, Ch9 Architecture Overview, Ch3 Project Definition, Ch1 Executive Summary, Ch14 Version History</td><td>During abstraction + each release</td></tr>
-                    </tbody>
-                </table>
+
+            <div class="project-detail">
+                <div class="text">
+                    <h3>From web to native — the FDE way</h3>
+                    <p><span class="highlight">Echo phase:</span> The SunMRRC web frontend worked, but mobile users wanted native performance: smooth 60fps waterfall, haptic PTT feedback, Keychain-secured auto-login, and system-level audio integration. The web could do many things, but not <em>those</em> things well.</p>
+                    <p><span class="highlight">Delta phase:</span> SwiftUI app, zero third-party dependencies. 4× URLSessionWebSocketTask connections to the existing SunMRRC server. AVAudioEngine for low-latency playback and microphone capture. CGImage/UIKit for waterfall rendering (512×100 pixel buffer, 5-frame accumulation, 10fps throttle). Keychain for credential storage.</p>
+                    <p><span class="highlight">Product phase:</span> Reusable component architecture: SpectrumView (waterfall + frequency scale), SMeterView (real-time dB meter), GainSlider (AF/RF/SQL touch sliders), FavoritesGrid (3×3 channel memory), DSPPanel (NR2/AGC/NB/ANF toggles), PTTButton (96pt touch target with auto-release).</p>
+                    <p><span class="highlight">Leverage from SunMRRC:</span> The WebSocket protocol was the contract. No negotiation, no redesign — the iOS app speaks the same cmd:val protocol, receives the same tagged PCM/Opus audio, renders the same 512-bin spectrum. <strong>The server didn't change at all.</strong></p>
+                </div>
+                <div class="info-box">
+                    <h4><i class="fas fa-mobile-alt"></i> iOS Build Stats</h4>
+                    <div class="stat-row"><span class="stat-label">Git commits</span><span class="stat-val">4</span></div>
+                    <div class="stat-row"><span class="stat-label">V1.0 release</span><span class="stat-val">Jul 1 (initial commit)</span></div>
+                    <div class="stat-row"><span class="stat-label">UI overhaul</span><span class="stat-val">Jul 4 (17 files, +FFTProcessor)</span></div>
+                    <div class="stat-row"><span class="stat-label">3rd-party dependencies</span><span class="stat-val">0</span></div>
+                    <div class="stat-row"><span class="stat-label">WebSocket connections</span><span class="stat-val">4</span></div>
+                    <div class="stat-row"><span class="stat-label">Reusable components</span><span class="stat-val">10+</span></div>
+                    <div class="stat-row"><span class="stat-label">SunMRRC assets reused</span><span class="stat-val">6</span></div>
+                    <div class="stat-row"><span class="stat-label">Server changes needed</span><span class="stat-val">0</span></div>
+                    <div class="stat-row"><span class="stat-label">Key leverage</span><span class="stat-val">WS protocol, audio codec tags, DSP panel mapping, PTT safety model</span></div>
+                </div>
             </div>
-            <p style="text-align:center; color: var(--text-secondary); margin-top: 28px; font-size: 0.9rem; max-width: 680px; margin-left: auto; margin-right: auto;">
-                <strong style="color: var(--text-primary);">Core principle:</strong> Don't let documentation drive development — let development drive documentation. Update SDD chapters <em>after</em> each FDE phase, not before.
+
+            <!-- SunsdrMobile Git-Verified Development Timeline -->
+            <div style="margin-top:56px;">
+                <h3 style="text-align:center;font-size:1.3rem;font-weight:700;margin-bottom:8px;">SunsdrMobile Development Timeline (Git-Verified)</h3>
+                <p style="text-align:center;color:var(--text-secondary);font-size:0.9rem;margin-bottom:32px;max-width:680px;margin-left:auto;margin-right:auto;">4 commits total across 2 days. V1.0 shipped as the initial commit (Jul 1), followed by a significant UI overhaul (Jul 4: 17 files, new FFTProcessor, S-meter fix, dot sliders). The key FDE metric: SunMRRC server needed <em>zero</em> changes to support the native iOS client.</p>
+
+                <div class="table-wrap">
+                    <table>
+                        <thead><tr><th>Date</th><th>Commit</th><th>What Shipped</th><th>FDE Cycle</th></tr></thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>Jul 1</strong></td>
+                                <td><code>2314c7c</code> V1.0 release</td>
+                                <td><strong>Complete native iOS app in a single commit.</strong> SwiftUI, zero third-party dependencies. 4× URLSessionWebSocketTask (WSCTRX, WSaudioRX, WSaudioTX, WSspectrum). AVAudioEngine for low-latency playback + mic capture. CGImage/UIKit waterfall (512×100 pixel buffer, 5-frame accumulation, 10fps throttle). Keychain credential storage. <strong>10+ reusable components:</strong> SpectrumView, SMeterView, GainSlider, FavoritesGrid (3×3), DSPPanel (NR2/AGC/NB/ANF), PTTButton (96pt touch target + auto-release), LoginView (Keychain + WSS), SettingsView, AudioCodecPicker, BandPowerPanel. <strong>6 SunMRRC protocol assets inherited — zero server changes.</strong></td>
+                                <td><strong>Echo → Delta → Product</strong> in a single burst. Echo: web frontend UX gap (no native 60fps waterfall, haptics, Keychain). Delta: pure Apple frameworks, 4× WSS, AVAudioEngine. Product: 10+ reusable components for future iOS HAM apps.</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Jul 1</strong></td>
+                                <td><code>3e8b1f7</code> README + architecture</td>
+                                <td>Project README with architecture overview, component map, and setup instructions.</td>
+                                <td>Documentation as Product output.</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Jul 4</strong></td>
+                                <td><code>d460131</code> UI overhaul</td>
+                                <td><strong>17 files changed.</strong> UI layout overhaul: unified chips, dot sliders, S-meter fix, connection status indicator. <strong>New FFTProcessor</strong> (93-line Swift file for spectrum analysis). Colors.swift (design tokens). Major refactors: DSPPanelView (374→simplified), MainRXView (462→restructured), WaterfallView (135→optimized). RadioState model extended with connection tracking.</td>
+                                <td><strong>Second FDE cycle</strong> — Echo: real-world UI feedback. Delta: design token system + FFT module extraction. Product: simplified component architecture, reusable Colors/FFTProcessor modules.</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Jul 4</strong></td>
+                                <td><code>f93955e</code> Website + SVG</td>
+                                <td>Bilingual promotional website (EN/CN) with inline SVG architecture diagrams and UI phone mockup. Deployed to /sunsdrmobile/. Follows MRRC/SunMRRC octen.css design system.</td>
+                                <td>Website as Product artifact — deploy pattern reused from SunMRRC.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div style="max-width:760px;margin:40px auto 0;">
+                    <h4 style="font-size:1rem;font-weight:600;margin-bottom:12px;color:var(--text-primary);">Key FDE Insights from SunsdrMobile</h4>
+                    <div class="principle-grid" style="grid-template-columns:repeat(auto-fit,minmax(300px,1fr));">
+                        <div class="principle-item"><div class="principle-num" style="background:var(--purple-glow);color:var(--purple);">1</div><div class="principle-text"><h4>Single-commit V1.0 is the ultimate FDE proof</h4><p>The entire app shipped in one commit. This isn't because the app is simple — it's because SunMRRC's protocol was a <em>stable contract</em>. Zero server-side negotiation, zero protocol redesign. The 6 inherited assets (WS protocol, codec tags, DSP commands, PTT safety, spectrum format, power API) eliminated months of work.</p></div></div>
+                        <div class="principle-item"><div class="principle-num" style="background:var(--purple-glow);color:var(--purple);">2</div><div class="principle-text"><h4>Zero dependencies = zero friction</h4><p>No CocoaPods, no SPM, no third-party libraries. Pure Apple frameworks: SwiftUI, AVAudioEngine, URLSession, Security/Keychain, CGImage. Builds instantly, no version conflicts, no supply-chain risk.</p></div></div>
+                        <div class="principle-item"><div class="principle-num" style="background:var(--accent-glow);color:var(--accent);">3</div><div class="principle-text"><h4>Every SunMRRC Product asset paid off here</h4><p>The WebSocket cmd:val protocol, tagged dual-codec, DSP panel mapping, PTT safety model, spectrum format, per-band power API — all designed and stabilized during SunMRRC's 13-day git history — were inherited without modification. Each prior project's Product phase paid for this one's Delta phase.</p></div></div>
+                        <div class="principle-item"><div class="principle-num" style="background:var(--accent-glow);color:var(--accent);">4</div><div class="principle-text"><h4>FDE leverage is measured in server changes: 0</h4><p>The key metric isn't lines of code or development time — it's that the SunMRRC server required <strong>zero changes</strong> to support a completely new native iOS client. Protocol stability is worth more than elegant code.</p></div></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ═══ PART 4: HARNESS EVOLUTION ═══ -->
+    <section class="section">
+        <div class="container">
+            <div class="section-header">
+                <span class="section-label">Part 4</span>
+                <h2 class="section-title">The Harness Chain</h2>
+                <p class="section-subtitle">How SDD locks down requirements at three levels: Business Harness defines WHAT, Technical Harness defines HOW, Product Harness defines the DELIVERABLE. Each FDE cycle feeds this chain.</p>
+            </div>
+
+            <div class="harness-grid">
+                <div class="harness-card bs">
+                    <div class="icon"><i class="fas fa-bullseye" style="color:var(--amber);"></i></div>
+                    <h3>Business Harness</h3>
+                    <div class="key">Defines WHAT — the problem to solve and why it matters</div>
+                    <ul>
+                        <li><strong>SDD Ch2:</strong> Business direction — who is the user, what is the market gap</li>
+                        <li><strong>SDD Ch4:</strong> System context — external systems, interfaces, constraints</li>
+                        <li><strong>SDD Ch5:</strong> Non-functional requirements — latency, reliability, security, platform</li>
+                        <li><strong>SDD Ch6:</strong> Use case model — concrete user scenarios driving each cycle</li>
+                        <li><strong>SDD Ch13:</strong> Feasibility — can we actually build this with available resources</li>
+                        <li><span style="color:var(--amber);">Echo phase feeds this harness.</span> Each cycle starts here.</li>
+                    </ul>
+                </div>
+                <div class="harness-card tech">
+                    <div class="icon"><i class="fas fa-cogs" style="color:var(--accent);"></i></div>
+                    <h3>Technical Harness</h3>
+                    <div class="key">Defines HOW — the architecture and implementation approach</div>
+                    <ul>
+                        <li><strong>SDD Ch7:</strong> Subject area model — domain entities and relationships</li>
+                        <li><strong>SDD Ch8:</strong> Architecture decisions (ADs) — why we chose X over Y</li>
+                        <li><strong>SDD Ch9:</strong> Architecture overview — system topology, data flow</li>
+                        <li><strong>SDD Ch10:</strong> Service model — API contracts, WebSocket protocols</li>
+                        <li><strong>SDD Ch11:</strong> Component model — module boundaries, responsibilities</li>
+                        <li><strong>SDD Ch12:</strong> Operational model — deployment, monitoring, backup</li>
+                        <li><span style="color:var(--accent);">Delta phase feeds this harness.</span> Prototyping validates ADs.</li>
+                    </ul>
+                </div>
+                <div class="harness-card prod">
+                    <div class="icon"><i class="fas fa-box-open" style="color:var(--purple);"></i></div>
+                    <h3>Product Harness</h3>
+                    <div class="key">Defines the DELIVERABLE — what actually ships and why it's reusable</div>
+                    <ul>
+                        <li><strong>SDD Ch1:</strong> Executive summary — what we built, for whom, what value</li>
+                        <li><strong>SDD Ch3:</strong> Project definition — scope, deliverables, acceptance criteria</li>
+                        <li><strong>SDD Ch14:</strong> Version history — what changed, when, and why</li>
+                        <li><strong>Abstraction catalog:</strong> Gravel Roads → Highways — reusable module inventory</li>
+                        <li><strong>Leverage dashboard:</strong> Cumulative reusable assets, cycle speed trend</li>
+                        <li><span style="color:var(--purple);">Product phase feeds this harness.</span> Abstraction makes it reusable.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <p style="text-align:center;color:var(--text-secondary);margin-top:40px;max-width:720px;margin-left:auto;margin-right:auto;line-height:1.8;">
+                <strong style="color:var(--accent);">The critical insight:</strong> Don't let documentation drive development —
+                let development drive documentation. After each FDE phase, the <em>output</em> updates the harness.
+                Business Harness captures what Echo discovered. Technical Harness captures what Delta validated.
+                Product Harness captures what Product abstracted. <strong style="color:var(--text-primary);">The harness is not a plan — it's a record of what worked.</strong>
+            </p>
+
+            <!-- How SDD crosses projects -->
+            <div style="margin-top:56px;">
+                <h3 style="text-align:center;font-size:1.3rem;font-weight:700;margin-bottom:32px;">Harness Reuse Across Projects</h3>
+                <div class="table-wrap">
+                    <table>
+                        <thead><tr><th>SDD Chapter</th><th>MRRC</th><th>→ SunMRRC</th><th>→ SunsdrMobile</th><th>Reuse Type</th></tr></thead>
+                        <tbody>
+                            <tr><td>Ch4 System Context</td><td>HF rig via Hamlib</td><td>SDR via UDP IQ stream</td><td>Server via WSS</td><td>Template — same structure, different systems</td></tr>
+                            <tr><td>Ch5 NFRs</td><td>&lt;100ms TX/RX switch</td><td>&lt;50ms WS latency</td><td>60fps waterfall</td><td>Evolved — tighter each project</td></tr>
+                            <tr><td>Ch8 Arch Decisions</td><td>12 ADs (audio, PTT, DSP)</td><td>+5 ADs (IQ demod, codec)</td><td>+2 ADs (Keychain, CGImage)</td><td>Extended — prior ADs carry forward</td></tr>
+                            <tr><td>Ch10 Service Model</td><td>REST + 1 WS</td><td>5 WS endpoints</td><td>Same 5 WS — zero changes</td><td>Inherited — server is the contract</td></tr>
+                            <tr><td>Ch11 Component Model</td><td>Python backend only</td><td>+ FastAPI layer</td><td>+ SwiftUI components</td><td>Layered — each project adds a layer</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ═══ PART 5: RAPID NEW APPLICATION BLUEPRINT ═══ -->
+    <section class="section" style="background: var(--bg-secondary);">
+        <div class="container">
+            <div class="section-header">
+                <span class="section-label">Part 5</span>
+                <h2 class="section-title">The FDE Blueprint for New Projects</h2>
+                <p class="section-subtitle">A repeatable playbook derived from going MRRC → SunMRRC → SunsdrMobile. This is how you build the next thing fast.</p>
+            </div>
+
+            <div class="flow-steps">
+                <div class="flow-step"><div class="num">1</div><h4>Start from Leverage</h4><p>Inventory existing reusable assets. What abstractions, protocols, and patterns already exist? Don't rebuild what you have.</p></div>
+                <div class="flow-step"><div class="num">2</div><h4>Define the Harness</h4><p>Business Harness first (SDD Ch2,4,5,6,13). What's the concrete problem? Who is the user? What does success look like?</p></div>
+                <div class="flow-step"><div class="num">3</div><h4>Echo: Deploy to the Field</h4><p>Get to the actual environment. Capture real data. Reverse-engineer what's undocumented. Define 1 concrete demo.</p></div>
+                <div class="flow-step"><div class="num">4</div><h4>Delta: Ship the Demo</h4><p>Prototype the riskiest assumption first. It can be ugly — it just needs to work. Validate with the user immediately.</p></div>
+                <div class="flow-step"><div class="num">5</div><h4>Product: Abstract &amp; Document</h4><p>Generalize into reusable modules. Update SDD chapters. Add to the leverage catalog. Pave the gravel road.</p></div>
+                <div class="flow-step"><div class="num">6</div><h4>Iterate &amp; Accelerate</h4><p>Each cycle is shorter. Leverage compounds. By cycle 5, you're building on 10+ assets. Speed is the natural outcome.</p></div>
+            </div>
+
+            <div style="max-width:760px;margin:48px auto 0;">
+                <h3 style="font-size:1.15rem;font-weight:600;margin-bottom:16px;color:var(--text-primary);">What this blueprint produced</h3>
+                <div class="table-wrap">
+                    <table>
+                        <thead><tr><th>Project</th><th>Git History</th><th>Starting Leverage</th><th>First Commit → V1.0</th><th>Server Changes</th><th>Key Enabler</th></tr></thead>
+                        <tbody>
+                            <tr><td><strong>MRRC</strong></td><td>Mar 6–Jun 19, 2026 (15 cycles)</td><td>0 (F4HTB fork)</td><td>Pre-git (cycles 1–3 before git)</td><td>—</td><td>F4HTB upstream evaluation</td></tr>
+                            <tr><td><strong>SunMRRC</strong></td><td>Jun 21–Jul 3, 2026 (40+ commits)</td><td>8 MRRC assets</td><td>4 days</td><td>—</td><td>Pre-git Wireshark RE + MRRC PTT/WDSP reuse</td></tr>
+                            <tr><td><strong>SunsdrMobile</strong></td><td>Jul 1–4, 2026 (3 commits)</td><td>6 SunMRRC protocol assets</td><td>Single commit (V1.0 = initial commit)</td><td><strong>0</strong></td><td>SunMRRC WebSocket protocol as stable contract</td></tr>
+                            <tr><td colspan="6" style="color:var(--text-muted);font-size:0.8rem;">MRRC cycles 1–3 (V1.0→V3.0, Oct 2024–Dec 2024) predate git tracking. The 15-cycle log in Appendix D covers the full timeline. SunMRRC protocol reverse-engineering was pre-git; the initial commit already contained PROTOCOL.md (22 sections) and a working TX pipeline. SunsdrMobile's single-commit V1.0 demonstrates the ultimate FDE outcome: protocol stability → zero server changes.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ═══ APPENDIX A: WHAT IS FDE ═══ -->
+    <section class="section">
+        <div class="container">
+            <div class="section-header">
+                <span class="section-label">Appendix A</span>
+                <h2 class="section-title">What is Forward Deployed Engineering?</h2>
+                <p class="section-subtitle">The theoretical foundation — moved to appendix so the practice stands on its own.</p>
+            </div>
+            <div class="formula-box">
+                <div class="formula">FDE = Echo + Delta + Product</div>
+                <div class="desc">Demand Discovery → Rapid Prototyping → Abstraction &amp; Generalization</div>
+            </div>
+            <div class="harness-grid">
+                <div class="harness-card" style="border-top:3px solid var(--amber);">
+                    <h3><i class="fas fa-search" style="color:var(--amber);margin-right:8px;"></i> Echo</h3>
+                    <div class="key">"What does the user really need?"</div>
+                    <ul>
+                        <li>Embedded in user scenarios — deploy to the field</li>
+                        <li>Define valuable demos — 1 per cycle, concrete and shippable</li>
+                        <li>Manage client relationships — understand the real pain</li>
+                        <li>~20% of cycle time. Output: a validated demo definition</li>
+                    </ul>
+                </div>
+                <div class="harness-card" style="border-top:3px solid var(--accent);">
+                    <h3><i class="fas fa-bolt" style="color:var(--accent);margin-right:8px;"></i> Delta</h3>
+                    <div class="key">"What's the fastest thing that works?"</div>
+                    <ul>
+                        <li>Rapid prototyping — code can be rough but must be functional</li>
+                        <li>Deliver within timeline — ship the demo, get feedback</li>
+                        <li>Iterate based on real feedback — not speculation</li>
+                        <li>~55% of cycle time. Output: a working prototype that validates the demo</li>
+                    </ul>
+                </div>
+                <div class="harness-card" style="border-top:3px solid var(--purple);">
+                    <h3><i class="fas fa-cubes" style="color:var(--purple);margin-right:8px;"></i> Product</h3>
+                    <div class="key">"How to serve the next 10 customers?"</div>
+                    <ul>
+                        <li>Abstract field solutions into reusable modules</li>
+                        <li>Write architecture documentation — your future self needs it</li>
+                        <li>Turn gravel roads into highways — reduce marginal cost to zero</li>
+                        <li>~25% of cycle time. Output: reusable assets + updated SDD</li>
+                    </ul>
+                </div>
+            </div>
+            <p style="text-align:center;color:var(--text-secondary);margin-top:32px;max-width:680px;margin-left:auto;margin-right:auto;">
+                <strong style="color:var(--text-primary);">FDE is not consulting.</strong> Consulting delivers a one-time solution and leaves.
+                FDE is a <em>product exploration process</em> — each engagement builds permanent assets that reduce the cost of every future engagement.
             </p>
         </div>
     </section>
 
-    <section class="section">
-        <div class="container">
-            <div class="section-header">
-                <span class="section-label">Best Practices</span>
-                <h2 class="section-title">8 FDE Principles from MRRC</h2>
-                <p class="section-subtitle">What worked, distilled into actionable principles</p>
-            </div>
-            <div class="principle-list">
-                <div class="principle-item"><div class="principle-num">1</div><div class="principle-text"><h4>Start from the field, not from the product</h4><p>Every cycle is driven by user scenarios and real problems — never "I want to add this feature." The 14-month Gap Period proved that real usage is the best Echo.</p></div></div>
-                <div class="principle-item"><div class="principle-num">2</div><div class="principle-text"><h4>Demo-driven validation</h4><p>Every delivery validates user desire through an actual demo, not paper planning. PTT demo, NR2 demo, RagChew demo — each created genuine user excitement.</p></div></div>
-                <div class="principle-item"><div class="principle-num">3</div><div class="principle-text"><h4>Timely abstraction</h4><p>Each cycle ends with a Product-phase abstraction. Don't abstract too early (before 2+ similar use cases), don't skip it entirely. The Delta code is consumable; Product output is an asset.</p></div></div>
-                <div class="principle-item"><div class="principle-num">4</div><div class="principle-text"><h4>Documentation as output</h4><p>55+ design and technical docs, 14-chapter SDD, 6 DESIGN files — knowledge must be transferable. Your 6-months-later self is the primary audience.</p></div></div>
-                <div class="principle-item"><div class="principle-num">5</div><div class="principle-text"><h4>Cross-platform from day one</h4><p>V2.0 replaced ALSA with PyAudio from the start, avoiding Linux lock-in. Cross-platform is not a feature — it's architecture.</p></div></div>
-                <div class="principle-item"><div class="principle-num">6</div><div class="principle-text"><h4>Operations is Echo</h4><p>The 14-month "quiet period" accumulated real pain points that drove explosive innovation (6 minor versions in 12 weeks). Don't skip the soak time.</p></div></div>
-                <div class="principle-item"><div class="principle-num">7</div><div class="principle-text"><h4>5 iterations, then pivot</h4><p>If a solution hasn't stabilized after 5 iterations, the technical approach is probably wrong. ATR-1000 found the right architecture on iteration 5. Don't polish indefinitely.</p></div></div>
-                <div class="principle-item"><div class="principle-num">8</div><div class="principle-text"><h4>Documentation as state machine (solo dev)</h4><p>For 1-person teams, use documentation to hand off state between role switches: Echo outputs → Delta todo list → Product abstraction checklist.</p></div></div>
-            </div>
-        </div>
-    </section>
-
+    <!-- ═══ APPENDIX B: 8 PRINCIPLES ═══ -->
     <section class="section" style="background: var(--bg-secondary);">
         <div class="container">
             <div class="section-header">
-                <span class="section-label">Anti-Patterns</span>
-                <h2 class="section-title">Common FDE Pitfalls</h2>
-                <p class="section-subtitle">What to watch out for at each phase</p>
+                <span class="section-label">Appendix B</span>
+                <h2 class="section-title">8 FDE Principles (Distilled from 3 Projects)</h2>
             </div>
-            <div class="anti-grid">
-                <div class="anti-card"><h4>Requirement Bloat (Echo)</h4><p class="bad">Defined 10 demos with an enormous scope</p><p class="good">Pick 1 demo per cycle. Ship it. Then do the next.</p></div>
-                <div class="anti-card"><h4>Fake Echo</h4><p class="bad">Imagined requirements without field presence</p><p class="good">Spend at least 1 week in the actual usage scenario before defining requirements.</p></div>
-                <div class="anti-card"><h4>Premature Optimization (Delta)</h4><p class="bad">Full error handling + logging + config in prototype #1</p><p class="good">Prototype #1 only validates the riskiest assumption. Engineering comes later.</p></div>
-                <div class="anti-card"><h4>Infinite Iteration (Delta)</h4><p class="bad">10 iterations still tuning parameters</p><p class="good">If not stable after 5 iterations, consider switching the technical approach entirely.</p></div>
-                <div class="anti-card"><h4>Premature Abstraction (Product)</h4><p class="bad">Writing a generic framework before scenario #1 is validated</p><p class="good">Wait until at least 2 similar scenarios succeed before abstracting.</p></div>
-                <div class="anti-card"><h4>Skipping Product Phase</h4><p class="bad">Delta code shipped directly without generalization</p><p class="good">Reserve at least 20% of every cycle for the Product phase. Every cycle.</p></div>
+            <div class="principle-grid">
+                <div class="principle-item"><div class="principle-num">1</div><div class="principle-text"><h4>Start from the field, not from the product</h4><p>Every cycle is driven by real user scenarios — never "I want to add this feature." The 14-month MRRC Gap Period proved that real usage is the best Echo.</p></div></div>
+                <div class="principle-item"><div class="principle-num">2</div><div class="principle-text"><h4>Demo-driven validation</h4><p>Define 1 concrete demo per cycle. Ship it. The demo creates desire — the strongest motivation to deliver.</p></div></div>
+                <div class="principle-item"><div class="principle-num">3</div><div class="principle-text"><h4>Timely abstraction — not too early, never too late</h4><p>Wait until 2+ similar use cases succeed before abstracting. But never skip the Product phase. Delta code is consumable; Product output is an asset.</p></div></div>
+                <div class="principle-item"><div class="principle-num">4</div><div class="principle-text"><h4>Documentation as output, not plan</h4><p>Update SDD chapters after each FDE phase. The harness records what worked — it's not a speculative blueprint. Your 6-month-future self is the primary audience.</p></div></div>
+                <div class="principle-item"><div class="principle-num">5</div><div class="principle-text"><h4>Protocol stability is the ultimate leverage</h4><p>SunMRRC's WebSocket protocol was the contract that enabled SunsdrMobile to be built in 4 weeks with zero server changes. Stable interfaces are worth more than elegant code.</p></div></div>
+                <div class="principle-item"><div class="principle-num">6</div><div class="principle-text"><h4>Operations is Echo — don't skip the soak time</h4><p>MRRC's 14-month operational period accumulated real pain points that drove explosive innovation. Daily usage generates better requirements than any planning meeting.</p></div></div>
+                <div class="principle-item"><div class="principle-num">7</div><div class="principle-text"><h4>5 iterations, then pivot</h4><p>If a solution hasn't stabilized after 5 iterations, the technical approach is probably wrong. ATR-1000 found the right architecture on iteration 5. Don't polish the wrong approach.</p></div></div>
+                <div class="principle-item"><div class="principle-num">8</div><div class="principle-text"><h4>Leverage compounds across projects</h4><p>MRRC's 16 assets reduced SunMRRC's build time by ~40%. SunMRRC's protocol contract reduced SunsdrMobile's build time by ~60%. Each project accelerates the next. Never start from zero.</p></div></div>
             </div>
         </div>
     </section>
 
+    <!-- ═══ APPENDIX C: PITFALLS ═══ -->
+    <section class="section">
+        <div class="container">
+            <div class="section-header">
+                <span class="section-label">Appendix C</span>
+                <h2 class="section-title">Common FDE Pitfalls</h2>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:20px;margin-top:32px;">
+                <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:24px;border-left:3px solid #ef4444;">
+                    <h4>Requirement Bloat (Echo)</h4>
+                    <p style="color:#ef4444;font-size:0.85rem;margin:6px 0;">Defined 10 demos with enormous scope</p>
+                    <p style="color:#22c55e;font-size:0.85rem;">Pick 1 demo per cycle. Ship it. Then do the next.</p>
+                </div>
+                <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:24px;border-left:3px solid #ef4444;">
+                    <h4>Fake Echo</h4>
+                    <p style="color:#ef4444;font-size:0.85rem;margin:6px 0;">Imagined requirements without field presence</p>
+                    <p style="color:#22c55e;font-size:0.85rem;">Spend at least 1 week in the actual usage scenario before defining requirements.</p>
+                </div>
+                <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:24px;border-left:3px solid #ef4444;">
+                    <h4>Premature Optimization (Delta)</h4>
+                    <p style="color:#ef4444;font-size:0.85rem;margin:6px 0;">Full error handling + logging + config in prototype #1</p>
+                    <p style="color:#22c55e;font-size:0.85rem;">Prototype #1 validates only the riskiest assumption. Polish later.</p>
+                </div>
+                <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:24px;border-left:3px solid #ef4444;">
+                    <h4>Premature Abstraction (Product)</h4>
+                    <p style="color:#ef4444;font-size:0.85rem;margin:6px 0;">Writing a generic framework before scenario #1 is validated</p>
+                    <p style="color:#22c55e;font-size:0.85rem;">Wait until at least 2 similar scenarios succeed before abstracting.</p>
+                </div>
+                <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:24px;border-left:3px solid #ef4444;">
+                    <h4>Skipping the Product Phase</h4>
+                    <p style="color:#ef4444;font-size:0.85rem;margin:6px 0;">Delta code shipped directly without generalization</p>
+                    <p style="color:#22c55e;font-size:0.85rem;">Reserve at least 20% of every cycle for abstraction and documentation.</p>
+                </div>
+                <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:24px;border-left:3px solid #ef4444;">
+                    <h4>Starting from Zero</h4>
+                    <p style="color:#ef4444;font-size:0.85rem;margin:6px 0;">New project, blank repo, no leverage inventory</p>
+                    <p style="color:#22c55e;font-size:0.85rem;">Always audit existing assets first. SunMRRC reused 8 MRRC modules. SunsdrMobile reused 14. Your leverage is your unfair advantage.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ═══ APPENDIX D: COMPLETE CYCLE TABLE ═══ -->
+    <section class="section" style="background: var(--bg-secondary);">
+        <div class="container">
+            <div class="section-header">
+                <span class="section-label">Appendix D</span>
+                <h2 class="section-title">Complete MRRC FDE Cycle Log (15 Cycles)</h2>
+            </div>
+            <div class="table-wrap">
+                <table>
+                    <thead><tr><th>#</th><th>Cycle</th><th>Date</th><th>Version</th><th>Echo Input</th><th>Delta Challenge</th><th>Product Output</th></tr></thead>
+                    <tbody>
+                        <tr><td>1</td><td>Foundation</td><td>2024-10</td><td>V1.0</td><td>F4HTB upstream evaluation</td><td>WebSocket + Tornado integration</td><td>AD-001/002/003</td></tr>
+                        <tr><td>2</td><td>Architecture</td><td>2024-11</td><td>V2.0</td><td>Linux-only, high latency</td><td>PyAudio cross-platform + AudioWorklet</td><td>audio_interface.py</td></tr>
+                        <tr><td>3</td><td>Mobile</td><td>2024-12</td><td>V3.0</td><td>Desktop UI unusable on phones</td><td>iOS Safari AudioContext</td><td>mobile_modern.html</td></tr>
+                        <tr><td>—</td><td colspan="6" style="color:var(--amber);text-align:center;"><strong>14-month operational gap</strong> — daily usage accumulating real pain points (the best Echo)</td></tr>
+                        <tr><td>4</td><td>Latency</td><td>2026-03</td><td>V4.0</td><td>PTT 3s delay</td><td>Pre-warm frames + count timeout</td><td>PTT reliability framework</td></tr>
+                        <tr><td>5</td><td>ATR-1000</td><td>2026-03</td><td>V4.3–4.5</td><td>No power/SWR display</td><td>5 iterations → proxy architecture</td><td>atr1000_proxy.py</td></tr>
+                        <tr><td>6</td><td>DSP</td><td>2026-03</td><td>V4.6–4.9</td><td>Noise + harsh audio</td><td>WDSP library integration</td><td>wdsp_wrapper.py</td></tr>
+                        <tr><td>7</td><td>Deploy</td><td>2026-04</td><td>V5.1.x</td><td>Manual 7-step deployment</td><td>SSH idempotency</td><td>Ansible playbook</td></tr>
+                        <tr><td>8</td><td>UI</td><td>2026-04</td><td>V5.0</td><td>Outdated UI, emoji inconsistency</td><td>Cross-platform Unicode icons</td><td>Glassmorphism design system</td></tr>
+                        <tr><td>9</td><td>Audio</td><td>2026-05</td><td>V5.1</td><td>Harsh TX audio</td><td>Safari setValueAtTime fix</td><td>RagChew audio preset system</td></tr>
+                        <tr><td>10</td><td>Perf</td><td>2026-05</td><td>V5.2</td><td>RX inter-frame gaps</td><td>Multi-node scheduled playback</td><td>audio_rx.js rewrite</td></tr>
+                        <tr><td>11</td><td>Network</td><td>2026-05</td><td>V5.3</td><td>No network visibility</td><td>Real-time bandwidth/latency display</td><td>Network monitoring</td></tr>
+                        <tr><td>12</td><td>FT8</td><td>2026-05</td><td>V5.4</td><td>FT8 method mismatch</td><td>Python–JS method alignment</td><td>FT8 WebSocket stabilization</td></tr>
+                        <tr><td>13</td><td>Memory</td><td>2026-06</td><td>V5.5</td><td>Cumbersome channel workflow</td><td>Service-oriented batch DOM updates</td><td>MemoryChannelManager</td></tr>
+                        <tr><td>14</td><td>Stability</td><td>2026-06</td><td>V5.6.0–4</td><td>False SWR corrupting tuner</td><td>Stable window + dedup</td><td>LearningBuffer</td></tr>
+                        <tr><td>15</td><td>EFHW</td><td>2026-06</td><td>V5.6.5</td><td>EFHW design documentation</td><td>Static site + deep research</td><td>EFHW knowledge base</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    <!-- ═══ APPENDIX E: GRAVEL → HIGHWAY CATALOG ═══ -->
+    <section class="section">
+        <div class="container">
+            <div class="section-header">
+                <span class="section-label">Appendix E</span>
+                <h2 class="section-title">Gravel Road → Highway Catalog</h2>
+                <p class="section-subtitle">Every field hack that became a reusable asset — across all three projects</p>
+            </div>
+            <div class="table-wrap">
+                <table>
+                    <thead><tr><th>Gravel Road (Delta hack)</th><th>Abstraction</th><th>Highway (Product asset)</th><th>Project</th></tr></thead>
+                    <tbody>
+                        <tr><td>ALSA Linux-only audio</td><td>PyAudio cross-platform</td><td>audio_interface.py</td><td>MRRC</td></tr>
+                        <tr><td>ScriptProcessor main-thread blocking</td><td>AudioWorklet thread</td><td>Low-latency audio architecture</td><td>MRRC</td></tr>
+                        <tr><td>Direct PTT sleep-wait (3s delay)</td><td>Pre-warm + count-timeout</td><td>PTT reliability framework</td><td>MRRC → SunMRRC</td></tr>
+                        <tr><td>ATR-1000 crashing main process</td><td>Standalone proxy + dynamic polling</td><td>atr1000_proxy.py</td><td>MRRC</td></tr>
+                        <tr><td>Raw libwdsp C calls</td><td>Python wrapper</td><td>wdsp_wrapper.py</td><td>MRRC → SunMRRC</td></tr>
+                        <tr><td>Unknown UDP IQ protocol</td><td>Wireshark capture + reverse-engineering</td><td>sunsdr_direct.py (IQ decode + TX mod)</td><td>SunMRRC</td></tr>
+                        <tr><td>Hardcoded audio codec</td><td>Tagged dual-codec transport</td><td>Opus/PCM tagged binary stream</td><td>SunMRRC</td></tr>
+                        <tr><td>Per-band power hardcoded</td><td>DRIVE command + json persistence</td><td>band_power.json</td><td>SunMRRC</td></tr>
+                        <tr><td>Web Audio API waterfall</td><td>CGImage/UIKit waterfall</td><td>SpectrumView (512-bin, 60fps)</td><td>SunsdrMobile</td></tr>
+                        <tr><td>Browser PTT button</td><td>96pt haptic touch target</td><td>PTTButton with auto-release</td><td>SunsdrMobile</td></tr>
+                        <tr><td>Manual server login</td><td>Keychain secured auto-login</td><td>CredentialManager</td><td>SunsdrMobile</td></tr>
+                        <tr><td>Single-instance hardcoded</td><td>Isolated config per instance</td><td>Multi-instance architecture</td><td>MRRC → SunMRRC</td></tr>
+                        <tr><td>WSJT-X/JTDX FT8 integration</td><td>WebSocket bridge + auto-sequencer</td><td>FT8 Ultron Console</td><td>MRRC</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    <!-- ═══ CTA ═══ -->
     <section class="section-cta" style="text-align: center;">
         <div class="container">
             <h2 style="font-size: 2.25rem; font-weight: 700; margin-bottom: 16px;">Apply FDE to Your Project</h2>
             <p style="color: var(--text-secondary); font-size: 1.05rem; margin-bottom: 36px; max-width: 600px; margin-left: auto; margin-right: auto;">
-                The complete FDE practice guide, 12-cycle case study, and SDD integration templates are all open source. Start your own FDE journey.
+                Three projects. One methodology. All open source. The FDE playbook, SDD templates, and complete leverage catalog — start your own journey.
             </p>
             <div style="display: flex; gap: 16px; justify-content: center; flex-wrap: wrap;">
-                <a href="https://github.com/cheenle/UHRR_mac" class="btn btn-primary btn-large" target="_blank" rel="noopener">
-                    <i class="fab fa-github"></i> View on GitHub
-                </a>
-                <a href="docs/design.html" class="btn btn-secondary btn-large">
-                    <i class="fas fa-book"></i> Read SDD Documentation
-                </a>
+                <a href="https://github.com/cheenle/UHRR_mac" class="btn btn-primary btn-large" target="_blank" rel="noopener"><i class="fab fa-github"></i> MRRC Source</a>
+                <a href="https://github.com/cheenle/sunsdr" class="btn btn-secondary btn-large" target="_blank" rel="noopener"><i class="fab fa-github"></i> SunMRRC Source</a>
+                <a href="https://github.com/cheenle/SunsdrMobile" class="btn btn-secondary btn-large" target="_blank" rel="noopener"><i class="fab fa-github"></i> SunsdrMobile Source</a>
+                <a href="docs/design.html" class="btn btn-secondary btn-large"><i class="fas fa-book"></i> SDD Docs</a>
             </div>
         </div>
     </section>
@@ -498,29 +723,27 @@
                     <ul>
                         <li><a href="index.html">Home</a></li>
                         <li><a href="docs/features.html">Features</a></li>
-                        <li><a href="index.html#demo">Demo</a></li>
                         <li><a href="docs/installation.html">Installation</a></li>
                         <li><a href="docs/design.html">Design &amp; Architecture</a></li>
                         <li><a href="docs/docs.html">Documentation</a></li>
                         <li><a href="aladdin-v2.html">Aladdin V2</a></li>
-                        <li><a href="efhw/index.html">EFHW Antenna</a></li>
                     </ul>
                 </div>
                 <div class="footer-section">
                     <h4>Resources</h4>
                     <ul>
-                        <li><a href="https://github.com/cheenle/UHRR_mac" target="_blank">GitHub</a></li>
-                        <li><a href="https://github.com/cheenle/UHRR_mac/issues" target="_blank">Issue Tracker</a></li>
-                        <li><a href="https://radio.vlsc.net:8877/" target="_blank">Live System</a></li>
+                        <li><a href="https://github.com/cheenle/UHRR_mac" target="_blank">MRRC GitHub</a></li>
+                        <li><a href="https://github.com/cheenle/sunsdr" target="_blank">SunMRRC GitHub</a></li>
+                        <li><a href="https://github.com/cheenle/SunsdrMobile" target="_blank">SunsdrMobile GitHub</a></li>
                     </ul>
                 </div>
             </div>
             <div class="footer-bottom">
-                <p>&copy; 2024-2026 MRRC Project. Open Source under GPL-3.0 License. | FDE methodology adapted from Palantir. IBM TeamSD v2.3.2.</p>
+                <p>&copy; 2024-2026 MRRC Project · Open Source under GPL-3.0 License · FDE methodology adapted from Palantir</p>
             </div>
         </div>
     </footer>
 
-    <script src="js/main.js"></script>
+    <script src="js/global-nav.js?v=4" defer data-gn="1"></script>
 </body>
 </html>

@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1152 768" role="img" aria-labelledby="title desc">
+  <title id="title">BG1SB HAM Radio workstation</title>
+  <desc id="desc">Vector SVG hero illustration of the BG1SB HAM radio workstation with radio stack, screen, microphone and station highlights.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#070b12"/><stop offset="1" stop-color="#17100a"/></linearGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#ffd58a"/><stop offset="1" stop-color="#f0a030"/></linearGradient>
+    <linearGradient id="glass" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#12345a"/><stop offset="1" stop-color="#07111f"/></linearGradient>
+    <filter id="glow"><feGaussianBlur stdDeviation="8" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  </defs>
+  <rect width="1152" height="768" fill="url(#bg)"/>
+  <circle cx="865" cy="150" r="280" fill="#f0a030" opacity=".07"/>
+  <text x="28" y="106" fill="url(#gold)" font-family="Inter,Arial,sans-serif" font-size="86" font-weight="800">BG1SB</text>
+  <text x="258" y="72" fill="#f8fafc" font-family="Inter,Arial,sans-serif" font-size="44" font-weight="800">HAM RADIO 工作台</text>
+  <text x="258" y="116" fill="#e5e7eb" font-family="Inter,Arial,sans-serif" font-size="25" font-weight="700" letter-spacing="8">专业 · 稳定 · 高效</text>
+  <text x="735" y="72" fill="url(#gold)" font-family="Kaiti SC,serif" font-size="34" font-style="italic">让每一次通联更精彩！</text>
+  <g transform="translate(28 150)" font-family="Inter,Arial,sans-serif">
+    <g fill="none" stroke="#f4bd65" stroke-width="2"><circle cx="28" cy="18" r="22"/><circle cx="28" cy="96" r="22"/><circle cx="28" cy="174" r="22"/><circle cx="28" cy="252" r="22"/><circle cx="28" cy="330" r="22"/></g>
+    <g fill="#f4bd65" font-size="26" text-anchor="middle"><text x="28" y="27">▣</text><text x="28" y="105">⌁</text><text x="28" y="183">◉</text><text x="28" y="261">⌁</text><text x="28" y="339">✓</text></g>
+    <g font-size="17" font-weight="700" fill="#ffd58a"><text x="66" y="8">专业设备</text><text x="66" y="86">高效工作流</text><text x="66" y="164">优质音频</text><text x="66" y="242">全面覆盖</text><text x="66" y="320">精心搭建</text></g>
+    <g font-size="13" fill="#b8c0cc"><text x="66" y="32">精选高性能电台与音频设备</text><text x="66" y="110">Mac 显示器 + 专业软件</text><text x="66" y="188">Rad Hill Audio + 电容麦克风</text><text x="66" y="266">HF 频段全覆盖</text><text x="66" y="344">每一个细节只为更好的 HAM 体验</text></g>
+  </g>
+  <g transform="translate(270 120)">
+    <rect x="0" y="0" width="475" height="310" rx="12" fill="#050811" stroke="#274764" stroke-width="3"/>
+    <rect x="20" y="25" width="435" height="260" rx="6" fill="url(#glass)"/>
+    <path d="M40 140 C105 95 150 190 214 136 S340 110 430 132" fill="none" stroke="#e5e7eb" stroke-width="2" opacity=".8"/>
+    <path d="M40 190 H430" stroke="#22d3ee" stroke-width="2" opacity=".5"/>
+    <g stroke="#f0a030" opacity=".8"><line x1="205" y1="35" x2="205" y2="255"/><line x1="270" y1="35" x2="270" y2="255"/></g>
+    <rect x="170" y="145" width="220" height="105" rx="6" fill="#f8fafc" opacity=".72"/>
+    <text x="26" y="288" fill="#69ff9d" font-family="JetBrains Mono,monospace" font-size="12">Mac 显示器（JTDX/RUMlogNG）</text>
+  </g>
+  <g transform="translate(790 142)" font-family="JetBrains Mono,monospace">
+    <g><rect x="0" y="0" width="300" height="92" rx="8" fill="#161512" stroke="#514532"/><rect x="176" y="25" width="72" height="34" rx="4" fill="#153b50"/><text x="188" y="47" fill="#9ee7ff" font-size="14">0.00</text><text x="16" y="48" fill="#54f08a" font-size="16">ATR-1000 天调</text></g>
+    <g transform="translate(0 112)"><rect width="300" height="118" rx="8" fill="#1a1610" stroke="#5d4d30"/><rect x="120" y="22" width="118" height="52" rx="4" fill="#f5c46b"/><text x="139" y="54" fill="#111827" font-size="20">14.195.00</text><text x="16" y="96" fill="#54f08a" font-size="16">IC-M710 收发信机</text><circle cx="260" cy="62" r="24" fill="#0c0c0c" stroke="#998766"/></g>
+    <g transform="translate(0 252)"><rect width="300" height="116" rx="8" fill="#191512" stroke="#5d4d30"/><rect x="14" y="24" width="90" height="42" rx="4" fill="#320f0a"/><text x="16" y="94" fill="#54f08a" font-size="16">JRC NRD-535 接收机</text><circle cx="248" cy="58" r="27" fill="#0c0c0c" stroke="#998766"/></g>
+    <g transform="translate(0 392)"><rect width="300" height="150" rx="8" fill="#12100e" stroke="#5d4d30"/><text x="146" y="90" fill="#ffd58a" font-family="Georgia,serif" font-size="40" text-anchor="middle">FL-2000B</text><text x="184" y="126" fill="#54f08a" font-size="16">电子管功放</text><circle cx="246" cy="52" r="31" fill="#0c0c0c" stroke="#998766"/></g>
+  </g>
+  <g transform="translate(430 305)">
+    <rect x="92" y="20" width="70" height="178" rx="34" fill="url(#gold)" stroke="#fff4cf" stroke-width="2"/>
+    <line x1="127" y1="198" x2="127" y2="344" stroke="#d6b26b" stroke-width="8"/>
+    <ellipse cx="127" cy="205" rx="80" ry="24" fill="none" stroke="#d6b26b" stroke-width="6"/>
+    <text x="0" y="255" fill="#54f08a" font-family="JetBrains Mono,monospace" font-size="14">专业电容麦克风（无PTT）</text>
+  </g>
+  <rect x="0" y="718" width="1152" height="50" fill="#080808" opacity=".86"/>
+  <text x="28" y="752" fill="url(#gold)" font-family="Inter,Arial,sans-serif" font-size="28" font-weight="800">BG1SB 台站</text>
+  <text x="230" y="748" fill="#d1d5db" font-family="JetBrains Mono,monospace" font-size="14">PTT: 脚踏开关  |  天线: EFHW  |  MRRC: radio.vlsc.net  |  DXCC: 188  |  BG1SB/ON80</text>
+  <text x="885" y="753" fill="url(#gold)" font-family="Georgia,serif" font-size="36" font-weight="700" font-style="italic">73! Best DX!</text>
+</svg>

@@ -10,7 +10,7 @@
     <title>Ham Radio Modern Mobile</title>
     <link rel="apple-touch-icon" href="favicon.png">
     <link rel="manifest" href="manifest.json">
-    <link rel="stylesheet" type="text/css" href="mobile_modern.css">
+    <link rel="stylesheet" type="text/css" href="mobile_modern.css?v=5.6.1">
 </head>
 <body>
     <!-- Safe area insets for iPhone X+ -->
@@ -27,6 +27,7 @@
     <div id="div-latencymeter" style="display:none;"></div>
     <div id="div-smeterdigitRX" style="display:none;"></div>
     <div id="div-bitrates" style="display:none;"></div>
+    <div id="div-panfft" style="display:none;"></div>
     <span id="callsign" style="display:none;"></span>
     <!-- 音频增益和静噪隐藏元素 -->
     <input type="range" id="C_af" min="0" max="1000" value="500" style="display:none;">
@@ -58,15 +59,21 @@
                     <input type="text" id="freq-input" class="freq-input-hidden" placeholder="Freq (kHz)" inputmode="numeric" pattern="[0-9]*">
                 </div>
                 
-                <button id="power-btn" class="header-btn power-btn" aria-label="Power">
-                    <span class="power-icon">&#x23FB;</span>
-                </button>
+                <div class="header-right">
+                    <button id="wakelock-btn" class="header-btn wakelock-btn" aria-label="Keep screen on" title="保持屏幕常亮" aria-pressed="false">&#x2600;</button>
+                    <button id="fullscreen-btn" class="header-btn fullscreen-btn" aria-label="Fullscreen" title="全屏切换" aria-pressed="false">&#x26F6;</button>
+                    <button id="power-btn" class="header-btn power-btn" aria-label="Power">
+                        <span class="power-icon">&#x23FB;</span>
+                    </button>
+                </div>
             </div>
             
             <!-- Status indicators - 居中显示，简洁风格 -->
             <div class="status-bar">
+                <div class="status-item" id="status-band">--</div>
                 <div class="status-item" id="status-atu"><span class="status-dot"></span>ATU</div>
                 <div class="status-item mode-indicator" id="mode-indicator">USB</div>
+                <div class="status-item" id="status-tx">RX</div>
                 <div class="status-item" id="status-latency"><span class="status-dot"></span><span class="stat-value">--ms</span></div>
                 <div class="status-item" id="status-bitrates"><span class="stat-value">NET</span></div>
             </div>
@@ -181,6 +188,16 @@
                 </div>
             </section>
 
+            <!-- VFO 控制排 - 占位按钮，后端暂不支持 -->
+            <section class="vfo-controls">
+                <div class="vfo-row">
+                    <button class="vfo-btn" id="btn-vfoa" type="button" disabled title="后端暂不支持">VFO-A</button>
+                    <button class="vfo-btn" id="btn-vfob" type="button" disabled title="后端暂不支持">VFO-B</button>
+                    <button class="vfo-btn" id="btn-ab" type="button" disabled title="后端暂不支持">A=B</button>
+                    <button class="vfo-btn" id="btn-split" type="button" disabled title="后端暂不支持">SPLIT</button>
+                </div>
+            </section>
+
             <!-- 频道记忆 3×2 网格 — 点按召回，长按保存 -->
             <section class="memory-channel-strip" aria-label="Memory channels">
                 <button class="mem-btn" data-mem="0" type="button"><span class="mem-name">M1</span><span class="mem-info">--</span></button>
@@ -238,7 +255,7 @@
                 <li><a href="recordings.html" class="menu-item">Recordings</a></li>
                 <li><a href="#" class="menu-item" data-action="logbook">Logbook</a></li>
                 <li><a href="#" class="menu-item" data-action="about">About</a></li>
-                <li><a href="#" class="menu-item" id="fullscreen-btn" data-action="fullscreen">Fullscreen</a></li>
+                <li><a href="#" class="menu-item" data-action="fullscreen">Fullscreen</a></li>
             </ul>
             <div class="menu-footer">
                 <span class="version-text">MRRC V4.9.2</span>
@@ -261,7 +278,7 @@
     <script src="modules/tx_audio_eq.js"></script>
     <script src="modules/ptt_manager.js"></script>
     <script src="modules/tune_cq.js"></script>
-    <script src="mobile_modern.js?v=5.5.0"></script>
+    <script src="mobile_modern.js?v=5.6.0"></script>
     <script src="tx_button_optimized.js"></script>
 </body>
 </html>

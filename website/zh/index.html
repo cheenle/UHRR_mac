@@ -3,397 +3,309 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="MRRC - Mobile Remote Radio Control. 业余无线电，随时随地。超低延迟远程电台控制解决方案">
+    <meta name="description" content="MRRC — VLSC 生态中的通用 HF 远程控制方案。通过 Hamlib/rigctld 实现网页远程操作，具备低延迟音频、WDSP 与 PTT 安全机制。">
     <meta name="keywords" content="HAM Radio, 业余无线电, 远程控制, WebSDR, 短波">
     <meta name="author" content="BG1SB">
     <meta name="theme-color" content="#000000">
-    
-    <title>MRRC | 业余无线电，随时随地</title>
-    
-    <!-- Fonts -->
+
+    <title>MRRC — 通用 HF 远程控制 | VLSC 生态</title>
+
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-    
-    <!-- Styles -->
-    <link rel="stylesheet" href="../css/octen.css">
+
+    <link rel="stylesheet" href="../css/octen.css?v=5">
+    <link rel="stylesheet" href="../css/sunsdrmobile.css?v=1">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
-    <!-- Favicon -->
+
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect fill='%2322d3ee' width='100' height='100' rx='20'/><text y='.9em' x='50%' text-anchor='middle' font-size='60'>📻</text></svg>">
-    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7442510147240155"
-     crossorigin="anonymous"></script>
 </head>
-<body>
-    <!-- Navigation -->
-    <nav class="navbar">
-        <div class="container navbar-content">
-            <a href="../index.html" class="logo">
-                <span class="logo-icon">📻</span>
-                <span>MRRC</span>
+<body data-site="mrrc">
+
+<nav class="navbar">
+    <div class="container navbar-content">
+        <a href="../index.html" class="logo">
+            <span class="logo-icon">📻</span>
+            <span>MRRC</span>
+        </a>
+        <ul class="nav-links">
+            <li><a href="#ecosystem">生态定位</a></li>
+            <li><a href="#features">功能</a></li>
+            <li><a href="#demo">演示</a></li>
+            <li><a href="../docs/installation.html">安装</a></li>
+            <li><a href="../docs/design.html">架构</a></li>
+            <li><a href="../docs/docs.html">文档</a></li>
+            <li><a href="../aladdin-v2.html">阿拉丁 V2</a></li>
+            <li><a href="../efhw/index.html">EFHW</a></li>
+            <li><a href="https://github.com/cheenle/UHRR_mac" target="_blank" rel="noopener">
+                <i class="fab fa-github"></i> GitHub
+            </a></li>
+        </ul>
+        <div class="nav-actions">
+            <a href="../index.html" class="lang-btn">English</a>
+            <button class="mobile-menu-toggle" onclick="toggleMobileMenu()"><i class="fas fa-bars"></i></button>
+        </div>
+    </div>
+</nav>
+
+<section class="hero">
+    <div class="hero-content">
+        <div class="hero-badge">
+            <i class="fas fa-satellite-dish"></i>
+            <span>V5.6.5 · 生产就绪</span>
+        </div>
+        <h1 class="hero-title">
+            业余无线电<br>
+            <span class="gradient">随时随地</span>
+        </h1>
+        <p class="hero-subtitle">
+            MRRC 是 VLSC 远程无线电生态中的通用 HF 路线。手机、平板、电脑随时操控您的短波电台。
+            Opus 优化音频传输、WDSP 专业降噪、AI 语音助手、CW/FT8 数字模式、录音室级 TX 音频处理、三层 PTT 安全防护体系。
+        </p>
+        <div class="hero-actions">
+            <a href="/zh/index.html#selector" class="btn btn-secondary btn-large">
+                <i class="fas fa-compass"></i> 项目选择器
             </a>
-            
-            <ul class="nav-links">
-                <li><a href="#features">功能</a></li>
-                <li><a href="#demo">演示</a></li>
-                <li><a href="docs/installation.html">安装</a></li>
-                <li><a href="docs/design.html">设计 & 架构</a></li>
-                <li><a href="docs/docs.html">文档</a></li>
-                <li><a href="fde.html">FDE</a></li>
-                <li><a href="aladdin-v2.html">阿拉丁 V2</a></li>
-                <li><a href="efhw/index.html">EFHW</a></li>
-                <li><a href="https://github.com/cheenle/UHRR_mac" target="_blank" rel="noopener">
-                    <i class="fab fa-github"></i> GitHub
-                </a></li>
-            </ul>
-            
-            <div class="nav-actions">
-                <a href="../index.html" class="lang-btn">English</a>
-                <button class="mobile-menu-toggle">
-                    <i class="fas fa-bars"></i>
-                </button>
+            <a href="https://radio.vlsc.net:8877/mobile_modern.html" class="btn btn-primary btn-large" target="_blank">
+                <i class="fas fa-play"></i> 立即体验
+            </a>
+            <a href="https://github.com/cheenle/UHRR_mac" class="btn btn-secondary btn-large" target="_blank" rel="noopener">
+                <i class="fab fa-github"></i> 源码
+            </a>
+        </div>
+        <div class="hero-stats">
+            <div class="stat-item"><span class="stat-value">&lt;100ms</span><span class="stat-label">TX/RX 切换</span></div>
+            <div class="stat-item"><span class="stat-value">99%+</span><span class="stat-label">PTT 可靠性</span></div>
+            <div class="stat-item"><span class="stat-value">15-20dB</span><span class="stat-label">WDSP 降噪</span></div>
+            <div class="stat-item"><span class="stat-value">V5.6.5</span><span class="stat-label">280+ 提交</span></div>
+        </div>
+    </div>
+</section>
+
+<section class="section" id="ecosystem" style="background: var(--bg-primary); padding-top: 4rem; padding-bottom: 4rem;">
+    <div class="container">
+        <div class="section-header" style="margin-bottom: 2rem;">
+            <span class="section-label">生态定位</span>
+            <h2 class="section-title">MRRC 在生态中的位置</h2>
+            <p class="section-subtitle">若你是通用 CAT HF 电台，优先使用 MRRC。其他硬件类别对应其他 VLSC 项目。</p>
+        </div>
+        <div class="perf-grid">
+            <a href="/mrrc/" class="perf-card" style="text-decoration:none;">
+                <div class="metric">MRRC</div>
+                <div class="metric-label">任意 CAT HF 电台<br><small>Hamlib 通用路径</small></div>
+            </a>
+            <a href="/mrrc_ft710/" class="perf-card" style="text-decoration:none;">
+                <div class="metric">FT-710</div>
+                <div class="metric-label">Yaesu FT-710<br><small>USB 直连 + FT4222 SPI</small></div>
+            </a>
+            <a href="/sunmrrc/" class="perf-card" style="text-decoration:none;">
+                <div class="metric">SunMRRC</div>
+                <div class="metric-label">SunSDR2 DX 服务器<br><small>UDP IQ 解调路径</small></div>
+            </a>
+            <a href="/sunsdrmobile/" class="perf-card" style="text-decoration:none;">
+                <div class="metric">iOS</div>
+                <div class="metric-label">SunsdrMobile 客户端<br><small>iPhone 原生控制</small></div>
+            </a>
+        </div>
+    </div>
+</section>
+
+<section class="section" id="features" style="background: var(--bg-secondary);">
+    <div class="container">
+        <div class="section-header">
+            <span class="section-label">核心功能</span>
+            <h2 class="section-title">为现代 HAM Radio 打造</h2>
+        </div>
+
+        <div class="features-grid">
+            <div class="feature-card animate">
+                <div class="icon"><i class="fas fa-bolt"></i></div>
+                <h3>超低延迟</h3>
+                <p>TX ~65ms / RX ~51ms，&lt;100ms TX↔RX 切换。Opus 28kbps 编码，AudioWorklet 播放，Int16 传输 — 专业级实时体验。</p>
+                <ul>
+                    <li>Opus 编码 · AudioWorklet 管线</li>
+                    <li>TX↔RX 切换低于 100ms</li>
+                    <li>Int16 无损传输选项</li>
+                </ul>
+            </div>
+
+            <div class="feature-card animate">
+                <div class="icon"><i class="fas fa-brain"></i></div>
+                <h3>WDSP 专业降噪</h3>
+                <p>OpenHPSDR WDSP 库：NR2 频谱降噪 15-20dB，AGC（4 种模式），ANF 自动陷波，NB 脉冲抑制 — SSB 专项优化。</p>
+                <ul>
+                    <li>NR2 频谱降噪 15-20dB</li>
+                    <li>AGC 4 模式 · ANF · NB</li>
+                    <li>SSB 专项 DSP 管线</li>
+                </ul>
+            </div>
+
+            <div class="feature-card animate">
+                <div class="icon"><i class="fas fa-microphone-alt"></i></div>
+                <h3>AI 语音助手</h3>
+                <p>Whisper ASR + Qwen3-TTS：语音接收转文字、文字合成语音发射，呼号自动字母解释法转换。</p>
+                <ul>
+                    <li>Whisper ASR 接收 → 文字</li>
+                    <li>Qwen3 TTS 文字 → 发射语音</li>
+                    <li>自动字母解释法转换</li>
+                </ul>
+            </div>
+
+            <div class="feature-card animate">
+                <div class="icon"><i class="fas fa-wave-square"></i></div>
+                <h3>CW + FT8 数字模式</h3>
+                <p>浏览器端 AI CW 解码（&lt;2MB ONNX，&lt;50ms）。FT8 ULTRON 控制台：JTDX/WSJT-X/MSHV 全兼容，实时瀑布图，自动序列器，DXCC 追踪。</p>
+                <ul>
+                    <li>ONNX AI CW 解码 · QSO 状态机</li>
+                    <li>FT8 ULTRON: JTDX/WSJT-X/MSHV 桥接</li>
+                    <li>自动序列器 · DXCC 追踪</li>
+                </ul>
+            </div>
+
+            <div class="feature-card animate">
+                <div class="icon"><i class="fas fa-shield-alt"></i></div>
+                <h3>三层 PTT 安全防护</h3>
+                <p>释放 ACK 协议含 3 次重试 + 冗余音频通路回退，120s TOT 硬限制，触屏滑动自动释放，页面隐藏强制停发 — 杜绝电台卡发射。</p>
+                <ul>
+                    <li>ACK × 3 次重试 + 音频回退</li>
+                    <li>120s TOT 硬限制</li>
+                    <li>滑动/隐藏强制停止</li>
+                </ul>
+            </div>
+
+            <div class="feature-card animate">
+                <div class="icon"><i class="fas fa-chart-line"></i></div>
+                <h3>ATR-1000 + RagChew 音频</h3>
+                <p>ATR-1000：0-200W 实时功率显示，SWR 1.0-9.99，频率→天调参数智能学习。RagChew TX 链路：低切 150Hz，临场 +3dB@2.4kHz，3:1 压缩器，-50dB 噪声门。</p>
+                <ul>
+                    <li>ATR-1000：功率/SWR/天调学习</li>
+                    <li>RagChew：EQ + 压缩器 + 噪声门</li>
+                    <li>MemoryChannelManager · LearningBuffer</li>
+                </ul>
             </div>
         </div>
-    </nav>
+    </div>
+</section>
 
-    <!-- Hero Section -->
-    <section class="hero">
-        <div class="hero-content">
-            <div class="hero-badge">
-                <i class="fas fa-satellite-dish"></i>
-                <span>V5.6.5 · 生产就绪</span>
-            </div>            
-            <h1 class="hero-title">
-                业余无线电<br>
-                <span class="gradient">随时随地</span>
-            </h1>
-            
-            <p class="hero-subtitle">
-                MRRC - 现代 Web 远程电台控制系统。手机、平板、电脑随时操控您的短波电台。
-                Opus 优化音频传输、WDSP 专业降噪、AI 语音助手、CW/FT8 数字模式、录音室级 TX 音频处理、三层 PTT 安全防护体系。
-            </p>
-            
-            <div class="hero-actions">
-                <a href="https://radio.vlsc.net:8877/mobile_modern.html" class="btn btn-primary btn-large" target="_blank">
-                    <i class="fas fa-play"></i>
-                    立即体验
-                </a>
-                <a href="https://github.com/cheenle/UHRR_mac" class="btn btn-secondary btn-large" target="_blank" rel="noopener">
-                    <i class="fab fa-github"></i>
-                    源码
-                </a>
-            </div>
-            
-            <div class="hero-preview">
-                <img src="../images/hero_preview_thumb.jpg" alt="MRRC 远程电台控制界面 - 桌面端与移动端" onclick="document.getElementById('lightbox-hero').style.display='flex'" style="cursor:zoom-in" />
-            </div>
-            <div id="lightbox-hero" class="lightbox" onclick="this.style.display='none'">
-                <span class="lightbox-close">&times;</span>
-                <img src="../images/hero_preview.jpg" alt="MRRC 远程电台控制界面" />
-            </div>
+<section class="section" id="demo" style="background: var(--bg-primary);">
+    <div class="container">
+        <div class="section-header">
+            <span class="section-label">在线演示</span>
+            <h2 class="section-title">亲身体验</h2>
+            <p class="section-subtitle">所有演示连接到实际运行的 FT-710 电台。尝试每种界面——移动端、语音、CW、SDR、FT8、录音。</p>
+        </div>
 
-            <div class="hero-preview">
-                <p style="text-align:center; color: var(--text-secondary); margin-bottom: 12px; font-size: 0.95rem; font-weight: 500;">MRRC V5.6.5 系统架构 — 四层设计</p>
-                <img src="../images/architecture52.jpg" alt="MRRC V5.6.5 系统架构图" onclick="document.getElementById('lightbox-arch').style.display='flex'" style="cursor:zoom-in" />
-            </div>
-            <div id="lightbox-arch" class="lightbox" onclick="this.style.display='none'">
-                <span class="lightbox-close">&times;</span>
-                <img src="../images/architecture52.jpg" alt="MRRC V5.2 系统架构图" />
-            </div>
+        <div class="perf-grid">
+            <a href="https://radio.vlsc.net:8877/mobile_modern.html" target="_blank" class="perf-card" style="text-decoration:none;">
+                <div class="metric"><i class="fas fa-mobile-alt"></i></div>
+                <div class="metric-label">移动端<br><small>触摸优化的现代界面</small></div>
+            </a>
+            <a href="https://radio.vlsc.net:8877/mobile_voice_text.html" target="_blank" class="perf-card" style="text-decoration:none;">
+                <div class="metric"><i class="fas fa-microphone"></i></div>
+                <div class="metric-label">语音助手<br><small>AI 语音识别与合成</small></div>
+            </a>
+            <a href="https://radio.vlsc.net:8877/cw_live.html" target="_blank" class="perf-card" style="text-decoration:none;">
+                <div class="metric"><i class="fas fa-wave-square"></i></div>
+                <div class="metric-label">CW 解码<br><small>实时摩尔斯电码 AI</small></div>
+            </a>
+            <a href="https://radio.vlsc.net:8877/ft8_ultron.html" target="_blank" class="perf-card" style="text-decoration:none;">
+                <div class="metric"><i class="fas fa-broadcast-tower"></i></div>
+                <div class="metric-label">FT8 控制台<br><small>ULTRON 自动化工具</small></div>
+            </a>
+            <a href="https://radio.vlsc.net:8877/sdr_modern.html" target="_blank" class="perf-card" style="text-decoration:none;">
+                <div class="metric"><i class="fas fa-signal"></i></div>
+                <div class="metric-label">SDR 界面<br><small>现代 SDR 控制界面</small></div>
+            </a>
+            <a href="https://radio.vlsc.net:8877/recordings.html" target="_blank" class="perf-card" style="text-decoration:none;">
+                <div class="metric"><i class="fas fa-record-vinyl"></i></div>
+                <div class="metric-label">录音回放<br><small>通联录音与分享</small></div>
+            </a>
+        </div>
+    </div>
+</section>
 
-            <div class="hero-stats">
-                <div class="stat-item">
-                    <span class="stat-value">&lt;100ms</span>
-                    <span class="stat-label">TX/RX 切换</span>
-                </div>
-                <div class="stat-item">
-                    <span class="stat-value">99%+</span>
-                    <span class="stat-label">PTT 可靠性</span>
-                </div>
-                <div class="stat-item">
-                    <span class="stat-value">15-20dB</span>
-                    <span class="stat-label">WDSP 降噪</span>
-                </div>
-                <div class="stat-item">
-                    <span class="stat-value">V5.6.5</span>
-                    <span class="stat-label">280+ 次提交</span>
-                </div>
+<section class="section" id="start" style="background: var(--bg-secondary);">
+    <div class="container">
+        <div class="section-header">
+            <span class="section-label">开始使用</span>
+            <h2 class="section-title">5 分钟搭建</h2>
+        </div>
+
+        <div class="steps">
+            <div class="step">
+                <h4>连接电台</h4>
+                <p>CAT 串口 + 音频线连接到电脑。MRRC 通过 Hamlib 自动检测</p>
+                <code>rigctld -m 2 -r /dev/ttyUSB0 -s 38400</code>
+            </div>
+            <div class="step">
+                <h4>安装 MRRC</h4>
+                <p>克隆仓库并运行安装脚本</p>
+                <code>git clone https://github.com/cheenle/UHRR_mac && cd UHRR_mac && ./install.sh</code>
+            </div>
+            <div class="step">
+                <h4>启动服务器</h4>
+                <p>启动 Python 后端 — TLS、WebSocket 和音频管线集成在单进程中</p>
+                <code>python3 server.py --port 8877</code>
+            </div>
+            <div class="step">
+                <h4>打开浏览器</h4>
+                <p>同一网络内的任意设备 — 手机、平板或电脑</p>
+                <code>https://电台主机:8877/mobile_modern.html</code>
             </div>
         </div>
-    </section>
 
-    <!-- Features Section -->
-    <section class="section" id="features">
-        <div class="container">
-            <div class="section-header">
-                <span class="section-label">核心功能</span>
-                <h2 class="section-title">为现代 HAM Radio 打造</h2>
+        <div style="text-align:center;margin-top:3rem">
+            <a href="../docs/installation.html" class="btn btn-primary btn-large">
+                <i class="fas fa-download"></i> 安装指南
+            </a>
+        </div>
+    </div>
+</section>
+
+<footer class="footer">
+    <div class="container">
+        <div class="footer-grid">
+            <div class="footer-section">
+                <h4>MRRC</h4>
+                <p>
+                    Mobile Remote Radio Control<br>
+                    业余无线电，随时随地<br>
+                    V5.6.5 · GPLv3 协议
+                </p>
             </div>
-            
-            <div class="features-grid">
-                <article class="card">
-                    <div class="card-icon">
-                        <i class="fas fa-mobile-alt"></i>
-                    </div>
-                    <h3 class="card-title">移动优先</h3>
-                    <p class="card-text">
-                        触屏优化的玻璃态 UI，PWA 添加到主屏幕，触觉反馈，安全区域适配 — 全系手机完美运行。
-                    </p>
-                </article>
-                
-                <article class="card">
-                    <div class="card-icon">
-                        <i class="fas fa-bolt"></i>
-                    </div>
-                    <h3 class="card-title">超低延迟</h3>
-                    <p class="card-text">
-                        TX ~65ms / RX ~51ms，&lt;100ms TX↔RX 切换。Opus 28kbps 编码，AudioWorklet 播放，Int16 传输 — 专业实时体验。
-                    </p>
-                </article>
-                
-                <article class="card">
-                    <div class="card-icon">
-                        <i class="fas fa-brain"></i>
-                    </div>
-                    <h3 class="card-title">WDSP 专业降噪</h3>
-                    <p class="card-text">
-                        OpenHPSDR WDSP 库：NR2 频谱降噪 15-20dB，AGC（4 种模式），ANF 自动陷波，NB 脉冲抑制 — SSB 专项优化。
-                    </p>
-                </article>
-                
-                <article class="card">
-                    <div class="card-icon">
-                        <i class="fas fa-microphone-alt"></i>
-                    </div>
-                    <h3 class="card-title">AI 语音助手</h3>
-                    <p class="card-text">
-                        Whisper ASR + Qwen3-TTS：语音接收转文字、文字合成语音发射，呼号自动字母解释法转换。
-                    </p>
-                </article>
-                
-                <article class="card">
-                    <div class="card-icon">
-                        <i class="fas fa-wave-square"></i>
-                    </div>
-                    <h3 class="card-title">CW 实时解码</h3>
-                    <p class="card-text">
-                        浏览器端 AI：&lt;2MB ONNX 模型，&lt;50ms 推理，QSO 状态机自动识别呼号/RST/QTH 并生成回复建议。
-                    </p>
-                </article>
-                
-                <article class="card">
-                    <div class="card-icon">
-                        <i class="fas fa-chart-line"></i>
-                    </div>
-                    <h3 class="card-title">ATR-1000 集成</h3>
-                    <p class="card-text">
-                        0-200W 实时功率显示，SWR 1.0-9.99，频率→天调参数智能学习，±10kHz 容差召回，JSON 持久化。
-                    </p>
-                </article>
-                
-                <article class="card">
-                    <div class="card-icon">
-                        <i class="fas fa-shield-alt"></i>
-                    </div>
-                    <h3 class="card-title">PTT 安全防护</h3>
-                    <p class="card-text">
-                        三层 TX 保护：释放 ACK 协议含 3 次重试 + 冗余音频通路回退，120s TOT 硬限制，触屏滑动自动释放，页面隐藏强制停发 — 杜绝电台卡发射。
-                    </p>
-                </article>
-                
-                <article class="card">
-                    <div class="card-icon">
-                        <i class="fas fa-broadcast-tower"></i>
-                    </div>
-                    <h3 class="card-title">FT8 ULTRON 控制台</h3>
-                    <p class="card-text">
-                        JTDX/WSJT-X/MSHV 全兼容，远程全功能界面：实时瀑布图、6 个可定制 TX 消息槽、服务端 QSO 自动序列器、DXCC 实体与新网格追踪、桌面通知、CQ 专属过滤。
-                    </p>
-                </article>
-
-                <article class="card">
-                    <div class="card-icon">
-                        <i class="fas fa-sliders-h"></i>
-                    </div>
-                    <h3 class="card-title">RagChew TX 音频</h3>
-                    <p class="card-text">
-                        Web Audio API TX 链：低切 150Hz、中切 -2dB@500Hz、临场 +3dB@2.4kHz、高切 3kHz、3:1 压缩器、-50dB 噪声门。
-                    </p>
-                </article>
-
-                <article class="card">
-                    <div class="card-icon">
-                        <i class="fas fa-wand-magic-sparkles"></i>
-                    </div>
-                    <h3 class="card-title">阿拉丁 V2 方法论</h3>
-                    <p class="card-text">
-                        从 MRRC 实践中提炼的工程研究方法：IT 老兵判断力被 vibe coding 唤醒，并由 FDE、SDD、harness 和 agentic engineering 约束落地。
-                    </p>
-                    <p style="margin-top: 12px;"><a href="aladdin-v2.html" class="btn btn-secondary" style="padding: 8px 14px; font-size: 0.85rem;">阅读方法论</a></p>
-                </article>
+            <div class="footer-section">
+                <h4>链接</h4>
+                <ul>
+                    <li><a href="#">首页</a></li>
+                    <li><a href="#features">功能特性</a></li>
+                    <li><a href="#demo">演示</a></li>
+                    <li><a href="../docs/installation.html">安装指南</a></li>
+                    <li><a href="../docs/design.html">设计 & 架构</a></li>
+                    <li><a href="../docs/docs.html">技术文档</a></li>
+                    <li><a href="../aladdin-v2.html">阿拉丁 V2</a></li>
+                    <li><a href="../efhw/index.html">EFHW 天线</a></li>
+                </ul>
+            </div>
+            <div class="footer-section">
+                <h4>资源</h4>
+                <ul>
+                    <li><a href="https://github.com/cheenle/UHRR_mac" target="_blank" rel="noopener">GitHub</a></li>
+                    <li><a href="https://github.com/cheenle/UHRR_mac/issues" target="_blank" rel="noopener">问题反馈</a></li>
+                    <li><a href="https://radio.vlsc.net:8877/" target="_blank" rel="noopener">在线系统</a></li>
+                </ul>
             </div>
         </div>
-    </section>
-
-    <!-- Demo Section -->
-    <section class="section" id="demo" style="background: var(--bg-secondary);">
-        <div class="container">
-            <div class="section-header">
-                <span class="section-label">在线演示</span>
-                <h2 class="section-title">亲身体验</h2>
-            </div>
-            
-            <div class="demo-grid">
-                <a href="https://radio.vlsc.net:8877/mobile_modern.html" target="_blank" class="demo-link">
-                    <div class="card-icon">
-                        <i class="fas fa-mobile-alt"></i>
-                    </div>
-                    <h3 class="card-title">移动端</h3>
-                    <p class="card-text">触摸优化的现代界面</p>
-                    <span class="arrow">
-                        体验 <i class="fas fa-arrow-right"></i>
-                    </span>
-                </a>
-                
-                <a href="https://radio.vlsc.net:8877/mobile_voice_text.html" target="_blank" class="demo-link">
-                    <div class="card-icon">
-                        <i class="fas fa-microphone"></i>
-                    </div>
-                    <h3 class="card-title">语音助手</h3>
-                    <p class="card-text">AI 语音识别与合成</p>
-                    <span class="arrow">
-                        体验 <i class="fas fa-arrow-right"></i>
-                    </span>
-                </a>
-                
-                <a href="https://radio.vlsc.net:8877/cw_live.html" target="_blank" class="demo-link">
-                    <div class="card-icon">
-                        <i class="fas fa-wave-square"></i>
-                    </div>
-                    <h3 class="card-title">CW 解码</h3>
-                    <p class="card-text">实时摩尔斯电码 AI 解码</p>
-                    <span class="arrow">
-                        体验 <i class="fas fa-arrow-right"></i>
-                    </span>
-                </a>
-                
-                <a href="https://radio.vlsc.net:8877/recordings.html" target="_blank" class="demo-link">
-                    <div class="card-icon">
-                        <i class="fas fa-record-vinyl"></i>
-                    </div>
-                    <h3 class="card-title">录音回放</h3>
-                    <p class="card-text">通联录音与分享</p>
-                    <span class="arrow">
-                        体验 <i class="fas fa-arrow-right"></i>
-                    </span>
-                </a>
-                
-                <a href="https://radio.vlsc.net:8877/ft8_ultron.html" target="_blank" class="demo-link">
-                    <div class="card-icon">
-                        <i class="fas fa-broadcast-tower"></i>
-                    </div>
-                    <h3 class="card-title">FT8 控制台</h3>
-                    <p class="card-text">ULTRON 自动化工具</p>
-                    <span class="arrow">
-                        体验 <i class="fas fa-arrow-right"></i>
-                    </span>
-                </a>
-                
-                <a href="https://radio.vlsc.net:8877/sdr_modern.html" target="_blank" class="demo-link">
-                    <div class="card-icon">
-                        <i class="fas fa-signal"></i>
-                    </div>
-                    <h3 class="card-title">SDR 界面</h3>
-                    <p class="card-text">现代 SDR 控制界面</p>
-                    <span class="arrow">
-                        体验 <i class="fas fa-arrow-right"></i>
-                    </span>
-                </a>
-            </div>
+        <div class="footer-bottom">
+            <p>&copy; 2024-2026 MRRC Project. 开源 GPL-3.0 协议.</p>
         </div>
-    </section>
+    </div>
+</footer>
 
-    <!-- CTA Section -->
-    <section class="section section-cta">
-        <div class="container" style="text-align: center;">
-            <h2 class="section-title" style="margin-bottom: 1rem;">开始使用</h2>
-            <p class="section-subtitle" style="margin-bottom: 3rem;">
-                5 分钟内搭建完整的远程电台控制系统
-            </p>
-            <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
-                <a href="docs/installation.html" class="btn btn-primary btn-large">
-                    <i class="fas fa-download"></i>
-                    安装指南
-                </a>
-                <a href="https://github.com/cheenle/UHRR_mac/blob/main/README.md" class="btn btn-secondary btn-large" target="_blank">
-                    <i class="fas fa-book"></i>
-                    文档
-                </a>
-            </div>
-        </div>
-    </section>
-
-    <!-- Footer -->
-    <footer class="footer">
-        <div class="container">
-            <div class="footer-grid">
-                <div class="footer-section">
-                    <h4>MRRC</h4>
-                    <p>
-                        Mobile Remote Radio Control<br>
-                        业余无线电，随时随地
-                    </p>
-                </div>
-                <div class="footer-section">
-                    <h4>快速链接</h4>
-                    <ul>
-                        <li><a href="#">首页</a></li>
-                        <li><a href="#features">功能特性</a></li>
-                        <li><a href="#demo">演示</a></li>
-                        <li><a href="docs/installation.html">安装指南</a></li>
-                        <li><a href="docs/design.html">设计 &amp; 架构</a></li>
-                        <li><a href="docs/docs.html">技术文档</a></li>
-                        <li><a href="fde.html">FDE</a></li>
-                        <li><a href="aladdin-v2.html">阿拉丁 V2</a></li>
-                        <li><a href="efhw/index.html">EFHW 天线</a></li>
-                    </ul>
-                </div>
-                <div class="footer-section">
-                    <h4>资源</h4>
-                    <ul>
-                        <li><a href="https://github.com/cheenle/UHRR_mac" target="_blank">GitHub</a></li>
-                        <li><a href="https://github.com/cheenle/UHRR_mac/issues" target="_blank">问题反馈</a></li>
-                        <li><a href="https://radio.vlsc.net:8877/" target="_blank">在线系统</a></li>
-                    </ul>
-                </div>
-            </div>
-            <div class="footer-bottom">
-                <p>&copy; 2024-2026 MRRC Project. Open Source under GPL-3.0 License.</p>
-            </div>
-        </div>
-    </footer>
-
-    <script>
-        // Smooth scroll for anchor links
-        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-            anchor.addEventListener('click', function (e) {
-                e.preventDefault();
-                const target = document.querySelector(this.getAttribute('href'));
-                if (target) {
-                    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                }
-            });
-        });
-
-        // Navbar scroll effect
-        const navbar = document.querySelector('.navbar');
-        window.addEventListener('scroll', () => {
-            if (window.scrollY > 50) {
-                navbar.style.background = 'rgba(0, 0, 0, 0.95)';
-            } else {
-                navbar.style.background = 'rgba(0, 0, 0, 0.8)';
-            }
-        });
-    </script>
+<script>
+function toggleMobileMenu() { document.querySelector('.nav-links').classList.toggle('active'); }
+document.querySelectorAll('a[href^="#"]').forEach(a => { a.addEventListener('click', function(e) { e.preventDefault(); const t = document.querySelector(this.getAttribute('href')); if (t) t.scrollIntoView({ behavior: 'smooth', block: 'start' }); }); });
+const nav = document.querySelector('.navbar'); window.addEventListener('scroll', () => { nav.style.background = window.scrollY > 50 ? 'rgba(0,0,0,0.98)' : 'rgba(0,0,0,0.92)'; });
+</script>
+    <script src="../js/global-nav.js?v=4" defer data-gn="1"></script>
 </body>
 </html>

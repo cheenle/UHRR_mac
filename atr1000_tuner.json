@@ -1,29 +1,29 @@
 {
   "version": "2.0",
-  "updated": "2026-06-19T21:47:52.414301",
+  "updated": "2026-07-26T10:25:11.133162",
   "records": [
     {
       "freq": 7050000,
       "sw": 0,
       "ind": 0,
       "cap": 24,
-      "swr_avg": 1.1081616161616172,
+      "swr_avg": 1.1034095238095247,
       "swr_min": 1.0,
       "swr_max": 1.74,
-      "sample_count": 495,
-      "last_update": 1781876872.414281,
+      "sample_count": 525,
+      "last_update": 1785032711.1331542,
       "needs_verify": false
     },
     {
       "freq": 7060000,
       "sw": 0,
-      "ind": 0,
-      "cap": 16,
-      "swr_avg": 1.2317647058823533,
+      "ind": 3,
+      "cap": 32,
+      "swr_avg": 1.2171538461538467,
       "swr_min": 1.0,
       "swr_max": 1.6749999999999998,
-      "sample_count": 51,
-      "last_update": 1781404124.310507,
+      "sample_count": 65,
+      "last_update": 1785032668.031991,
       "needs_verify": false
     },
     {
@@ -42,12 +42,12 @@
       "freq": 14270000,
       "sw": 0,
       "ind": 0,
-      "cap": 4,
-      "swr_avg": 1.1931958762886592,
+      "cap": 8,
+      "swr_avg": 1.186116504854368,
       "swr_min": 1.0,
       "swr_max": 1.75,
-      "sample_count": 97,
-      "last_update": 1781863027.910034,
+      "sample_count": 103,
+      "last_update": 1782638806.3426318,
       "needs_verify": false
     },
     {
@@ -55,11 +55,11 @@
       "sw": 0,
       "ind": 3,
       "cap": 32,
-      "swr_avg": 1.0143312101910824,
+      "swr_avg": 1.0178124999999996,
       "swr_min": 1.0,
       "swr_max": 1.37,
-      "sample_count": 157,
-      "last_update": 1781357790.1071072,
+      "sample_count": 160,
+      "last_update": 1781953247.371625,
       "needs_verify": false
     },
     {
@@ -76,14 +76,14 @@
     },
     {
       "freq": 7068000,
-      "sw": 1,
-      "ind": 3,
-      "cap": 25,
-      "swr_avg": 1.1918181818181817,
+      "sw": 0,
+      "ind": 0,
+      "cap": 22,
+      "swr_avg": 1.1889830508474577,
       "swr_min": 1.0,
       "swr_max": 1.8,
-      "sample_count": 55,
-      "last_update": 1781830558.7521951,
+      "sample_count": 59,
+      "last_update": 1785032674.5691788,
       "needs_verify": false
     },
     {
@@ -163,11 +163,11 @@
       "sw": 0,
       "ind": 32,
       "cap": 111,
-      "swr_avg": 1.3026054852320685,
+      "swr_avg": 1.3025157894736852,
       "swr_min": 1.0,
       "swr_max": 1.61,
-      "sample_count": 474,
-      "last_update": 1781868348.203024,
+      "sample_count": 475,
+      "last_update": 1781958355.2994208,
       "needs_verify": false
     },
     {

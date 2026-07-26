@@ -6,42 +6,45 @@
     <title>Technical Documentation - MRRC Mobile Remote Radio Control</title>
     <meta name="description" content="MRRC complete technical documentation: system architecture, DSP processing, CW decoding, ATR-1000 integration">
     <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="../css/octen.css?v=2">
+    <link rel="stylesheet" href="../css/sunsdrmobile.css?v=1">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="../css/docs.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7442510147240155"
      crossorigin="anonymous"></script>
 </head>
-<body>
-    <!-- Header -->
-    <header class="header">
-        <div class="container header-content">
+<body data-site="mrrc">
+        <!-- Navigation -->
+    <nav class="navbar">
+        <div class="container navbar-content">
             <a href="../index.html" class="logo">
-                <span class="logo-icon">📻</span>
+                <span class="logo-icon">&#x1f4fb;</span>
                 <span>MRRC</span>
             </a>
-            <nav class="nav">
-                <a href="../index.html">Home</a>
-                <a href="features.html">Features</a>
-                <a href="../index.html#demo">Demo</a>
-                <a href="installation.html">Installation</a>
-                <a href="design.html">Design &amp; Architecture</a>
-                <a href="docs.html" class="active">Docs</a>
-                <a href="../fde.html">FDE</a>
-                <a href="../aladdin-v2.html">Aladdin V2</a>
-                <a href="../efhw/index.html">EFHW</a>
-                <a href="https://github.com/cheenle/UHRR_mac" target="_blank" rel="noopener">
+            <ul class="nav-links">
+                <li><a href="../index.html">Home</a></li>
+                <li><a href="features.html">Features</a></li>
+                <li><a href="../index.html#demo">Demo</a></li>
+                <li><a href="installation.html">Installation</a></li>
+                <li><a href="design.html">Design &amp; Architecture</a></li>
+                <li><a href="docs.html">Docs</a></li>
+                <li><a href="../fde.html">FDE</a></li>
+                <li><a href="../aladdin-v2.html">Aladdin V2</a></li>
+                <li><a href="../efhw/index.html">EFHW</a></li>
+                <li><a href="https://github.com/cheenle/UHRR_mac" target="_blank" rel="noopener">
                     <i class="fab fa-github"></i> GitHub
-                </a>
-            </nav>
-            <div class="lang-switch">
-                <button class="lang-btn active">English</button>
+                </a></li>
+            </ul>
+            <div class="nav-actions">
                 <a href="../zh/docs/docs.html" class="lang-btn">中文</a>
+                <button class="mobile-menu-toggle"><i class="fas fa-bars"></i></button>
             </div>
         </div>
-    </header>
+    </nav>
 
-    <!-- Hero -->
+<!-- Hero -->
     <section class="hero">
         <div class="hero-bg"></div>
         <div class="container">
@@ -58,62 +61,142 @@
                 <h2><span class="feature-icon">🏗️</span> System Architecture</h2>
                 
                 <h3>Overall Architecture</h3>
-                <pre class="code-block" style="font-size: 0.78rem; overflow-x: auto;">
-┌──────────────────────────────────────────────────────────────────────────────┐
-│                          MRRC System Architecture V5.6.5                      │
-├──────────────────────────────────────────────────────────────────────────────┤
-│  Client Layer                                                                 │
-│  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────┐ │
-│  │Mobile UI │ │Desktop UI│ │CW Decode │ │FT8 Ultron│ │Voice Asst│ │PTT   │ │
-│  │mobile    │ │modern.   │ │cw_live.  │ │ft8_ultron│ │mobile_   │ │Safety│ │
-│  │_modern   │ │html      │ │html(ONNX)│ │.html     │ │voice_    │ │T/Opt │ │
-│  └────┬─────┘ └────┬─────┘ └────┬─────┘ └────┬─────┘ └────┬─────┘ └──┬───┘ │
-│       └─────────────┴────────────┴────────────┴────────────┴──────────┘     │
-│                                       │                                       │
-│                          HTTPS / WebSocket (Opus/Int16)                       │
-│                                       ▼                                       │
-├──────────────────────────────────────────────────────────────────────────────┤
-│  Service Layer                                                                │
-│  ┌─────────────────────────────────────────────────────────────────────┐    │
-│  │                        MRRC Main (Tornado / Python 3.12+)             │    │
-│  ├─────────────────────────────────────────────────────────────────────┤    │
-│  │  /WSCTRX     - Control + audio (PTT/freq/mode/WDSP/recording)      │    │
-│  │  /WSaudioRX  - RX audio stream (Opus/Int16, RNNoise/WDSP)          │    │
-│  │  /WSaudioTX  - TX audio upload (Opus encode, EQ chain)              │    │
-│  │  /WSATR1000  - Tuner power/SWR real-time, learning buffer           │    │
-│  │  /WSFT8      - FT8 WebSocket bridge (UDP 2238)                      │    │
-│  │  /WSCW       - CW backend decode (PyTorch, optional)                │    │
-│  └──────┬──────────────────────────────────────────────────┬───────────┘    │
-│         │                                                  │                 │
-│         ▼                                                  ▼                 │
-│  ┌──────────────────┐                          ┌──────────────────────┐    │
-│  │  rigctld (Hamlib)│                          │  ATR-1000 Proxy      │    │
-│  │  IC-M710 @4800bd │                          │  LearningBuffer V5.6 │    │
-│  └────────┬─────────┘                          └──────────┬───────────┘    │
-│           │                                                │                 │
-│           ▼                                                ▼                 │
-│  ┌──────────────────┐                          ┌──────────────────────┐    │
-│  │  Transceiver     │                          │  ATR-1000 Tuner      │    │
-│  │  IC-M710         │                          │  Power/SWR Meter     │    │
-│  └──────────────────┘                          └──────────────────────┘    │
-│                                                                               │
-│  ┌─────────────────────────────────────────────────────────────────────┐    │
-│  │              FT8/ULTRON Remote Console (V5.6+)                       │    │
-│  ├─────────────────────────────────────────────────────────────────────┤    │
-│  │  Browser UI: waterfall, 6 TX slots, auto-sequencer, DXCC tracking   │    │
-│  │  Server: QSOSequencer, ADIF logging, DXCC DB lookup                  │    │
-│  │  Bridge: JTDX/WSJT-X/MSHV via UDP 2237 ← → WS Bridge 2238           │    │
-│  └─────────────────────────────────────────────────────────────────────┘    │
-│                                                                               │
-│  ┌─────────────────────────────────────────────────────────────────────┐    │
-│  │              PTT Safety System (V5.6+)                               │    │
-│  ├─────────────────────────────────────────────────────────────────────┤    │
-│  │  L1 Browser: touch-move release, visibility-change stop, 30s WDT    │    │
-│  │  L2 Protocol: ACK retry ×3 + redundant audio-path fallback           │    │
-│  │  L3 Server: 120s TOT hard limit, persistent 2s retry                 │    │
-│  └─────────────────────────────────────────────────────────────────────┘    │
-└──────────────────────────────────────────────────────────────────────────────┘
-                </pre>
+                <div class="svg-diagram" style="overflow-x:auto;margin:1em 0;">
+<svg viewBox="0 0 1080 840" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:1080px;">
+  <defs>    <marker id="aC" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#22d3ee"/>
+    </marker>
+    <marker id="aG" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#22d3ee"/>
+    </marker>
+  </defs>
+  
+
+  <!-- Title banner -->
+  <rect x="20" y="8" width="1040" height="36" rx="6" fill="#0d1117" stroke="#22d3ee" stroke-width="1.5"/>
+  <text x="540" y="32" text-anchor="middle" fill="#22d3ee" font-family="Inter, -apple-system, sans-serif" font-size="16" font-weight="700">MRRC System Architecture V5.6.5</text>
+
+  <!-- ==== CLIENT LAYER ==== -->
+  <rect x="20" y="52" width="1040" height="162" rx="6" fill="none" stroke="#22d3ee" stroke-width="1.2" stroke-dasharray="6,3"/>
+  <text x="40" y="74" fill="#ffffff" font-family="Inter, -apple-system, sans-serif" font-size="13" font-weight="700">Client Layer</text>
+
+  <!-- Client boxes row -->
+  <!-- Mobile UI -->
+  <rect x="40" y="88" width="140" height="64" rx="6" fill="#0d1117" stroke="#22d3ee" stroke-width="1.5"/>
+  <text x="110" y="112" text-anchor="middle" fill="#22d3ee" font-family="Inter, -apple-system, sans-serif" font-size="12" font-weight="700">Mobile UI</text>
+  <text x="110" y="132" text-anchor="middle" fill="#8899aa" font-family="JetBrains Mono, monospace" font-size="9">mobile_modern</text>
+  <text x="110" y="144" text-anchor="middle" fill="#8899aa" font-family="JetBrains Mono, monospace" font-size="8">.html</text>
+
+  <!-- Desktop UI -->
+  <rect x="196" y="88" width="140" height="64" rx="6" fill="#0d1117" stroke="#22d3ee" stroke-width="1.5"/>
+  <text x="266" y="112" text-anchor="middle" fill="#22d3ee" font-family="Inter, -apple-system, sans-serif" font-size="12" font-weight="700">Desktop UI</text>
+  <text x="266" y="132" text-anchor="middle" fill="#8899aa" font-family="JetBrains Mono, monospace" font-size="9">modern.html</text>
+
+  <!-- CW Decode -->
+  <rect x="352" y="88" width="140" height="64" rx="6" fill="#0d1117" stroke="#22d3ee" stroke-width="1.5"/>
+  <text x="422" y="112" text-anchor="middle" fill="#22d3ee" font-family="Inter, -apple-system, sans-serif" font-size="12" font-weight="700">CW Decode</text>
+  <text x="422" y="132" text-anchor="middle" fill="#8899aa" font-family="JetBrains Mono, monospace" font-size="9">cw_live.html</text>
+  <text x="422" y="144" text-anchor="middle" fill="#8899aa" font-family="JetBrains Mono, monospace" font-size="8">(ONNX Runtime)</text>
+
+  <!-- FT8 Ultron -->
+  <rect x="508" y="88" width="140" height="64" rx="6" fill="#0d1117" stroke="#22d3ee" stroke-width="1.5"/>
+  <text x="578" y="112" text-anchor="middle" fill="#22d3ee" font-family="Inter, -apple-system, sans-serif" font-size="12" font-weight="700">FT8 Ultron</text>
+  <text x="578" y="132" text-anchor="middle" fill="#8899aa" font-family="JetBrains Mono, monospace" font-size="9">ft8_ultron.html</text>
+
+  <!-- Voice Asst -->
+  <rect x="664" y="88" width="140" height="64" rx="6" fill="#0d1117" stroke="#22d3ee" stroke-width="1.5"/>
+  <text x="734" y="112" text-anchor="middle" fill="#22d3ee" font-family="Inter, -apple-system, sans-serif" font-size="12" font-weight="700">Voice Asst</text>
+  <text x="734" y="132" text-anchor="middle" fill="#8899aa" font-family="JetBrains Mono, monospace" font-size="9">mobile_voice_</text>
+
+  <!-- PTT Safety -->
+  <rect x="820" y="88" width="140" height="64" rx="6" fill="#0d1117" stroke="#22d3ee" stroke-width="1.5"/>
+  <text x="890" y="112" text-anchor="middle" fill="#22d3ee" font-family="Inter, -apple-system, sans-serif" font-size="12" font-weight="700">PTT Safety</text>
+  <text x="890" y="132" text-anchor="middle" fill="#8899aa" font-family="JetBrains Mono, monospace" font-size="9">Timeout / Optical</text>
+
+  <!-- Connector line joining all client boxes from bottom -->
+  <line x1="110" y1="154" x2="890" y2="154" stroke="#22d3ee" stroke-width="0.8"/>
+  <line x1="110" y1="154" x2="110" y2="160" stroke="#22d3ee" stroke-width="0.8"/>
+  <line x1="266" y1="154" x2="266" y2="160" stroke="#22d3ee" stroke-width="0.8"/>
+  <line x1="422" y1="154" x2="422" y2="160" stroke="#22d3ee" stroke-width="0.8"/>
+  <line x1="578" y1="154" x2="578" y2="160" stroke="#22d3ee" stroke-width="0.8"/>
+  <line x1="734" y1="154" x2="734" y2="160" stroke="#22d3ee" stroke-width="0.8"/>
+  <line x1="890" y1="154" x2="890" y2="160" stroke="#22d3ee" stroke-width="0.8"/>
+  <line x1="110" y1="160" x2="890" y2="160" stroke="#22d3ee" stroke-width="0.8"/>
+
+  <!-- Arrow down from client bus to service -->
+  <line x1="500" y1="160" x2="500" y2="200" stroke="#22d3ee" stroke-width="1.2"/>
+  <line x1="500" y1="200" x2="500" y2="220" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#aC)"/>
+  <rect x="320" y="172" width="360" height="22" rx="4" fill="#0d1117"/>
+  <text x="500" y="188" text-anchor="middle" fill="#22d3ee" font-family="JetBrains Mono, monospace" font-size="11" font-weight="700">HTTPS / WebSocket (Opus / Int16)</text>
+
+  <!-- ==== SERVICE LAYER ==== -->
+  <rect x="20" y="228" width="1040" height="590" rx="6" fill="none" stroke="#22d3ee" stroke-width="1.2" stroke-dasharray="6,3"/>
+  <text x="40" y="250" fill="#ffffff" font-family="Inter, -apple-system, sans-serif" font-size="13" font-weight="700">Service Layer</text>
+
+  <!-- MRRC Main big box -->
+  <rect x="40" y="265" width="1000" height="188" rx="6" fill="#0d1117" stroke="#22d3ee" stroke-width="1.5"/>
+  <text x="540" y="288" text-anchor="middle" fill="#22d3ee" font-family="Inter, -apple-system, sans-serif" font-size="14" font-weight="700">MRRC Main (Tornado / Python 3.12+)</text>
+  <line x1="40" y1="298" x2="1040" y2="298" stroke="#22d3ee" stroke-width="0.6"/>
+
+  <text x="60" y="320" fill="#ffffff" font-family="JetBrains Mono, monospace" font-size="11">/WSCTRX</text>
+  <text x="190" y="320" fill="#8899aa" font-family="Inter, -apple-system, sans-serif" font-size="10">Control + audio (PTT/freq/mode/WDSP/recording)</text>
+
+  <text x="60" y="342" fill="#ffffff" font-family="JetBrains Mono, monospace" font-size="11">/WSaudioRX</text>
+  <text x="190" y="342" fill="#8899aa" font-family="Inter, -apple-system, sans-serif" font-size="10">RX audio stream (Opus/Int16, RNNoise/WDSP)</text>
+
+  <text x="60" y="364" fill="#ffffff" font-family="JetBrains Mono, monospace" font-size="11">/WSaudioTX</text>
+  <text x="190" y="364" fill="#8899aa" font-family="Inter, -apple-system, sans-serif" font-size="10">TX audio upload (Opus encode, EQ chain)</text>
+
+  <text x="60" y="386" fill="#ffffff" font-family="JetBrains Mono, monospace" font-size="11">/WSATR1000</text>
+  <text x="190" y="386" fill="#8899aa" font-family="Inter, -apple-system, sans-serif" font-size="10">Tuner power/SWR real-time, learning buffer</text>
+
+  <text x="60" y="408" fill="#ffffff" font-family="JetBrains Mono, monospace" font-size="11">/WSFT8</text>
+  <text x="190" y="408" fill="#8899aa" font-family="Inter, -apple-system, sans-serif" font-size="10">FT8 WebSocket bridge (UDP 2238)</text>
+
+  <text x="60" y="430" fill="#ffffff" font-family="JetBrains Mono, monospace" font-size="11">/WSCW</text>
+  <text x="190" y="430" fill="#8899aa" font-family="Inter, -apple-system, sans-serif" font-size="10">CW backend decode (PyTorch, optional)</text>
+
+  <!-- Branch arrows from MRRC Main -->
+  <line x1="400" y1="455" x2="400" y2="475" stroke="#22d3ee" stroke-width="1.2" marker-end="url(#aC)"/>
+  <line x1="680" y1="455" x2="680" y2="475" stroke="#22d3ee" stroke-width="1.2" marker-end="url(#aC)"/>
+
+  <!-- Left column: rigctld + Transceiver -->
+  <rect x="280" y="480" width="240" height="50" rx="6" fill="#0d1117" stroke="#22d3ee" stroke-width="1.5"/>
+  <text x="400" y="502" text-anchor="middle" fill="#22d3ee" font-family="Inter, -apple-system, sans-serif" font-size="12" font-weight="700">rigctld (Hamlib)</text>
+  <text x="400" y="520" text-anchor="middle" fill="#8899aa" font-family="JetBrains Mono, monospace" font-size="10">IC-M710 @ 4800 baud</text>
+
+  <line x1="400" y1="532" x2="400" y2="548" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#aC)"/>
+
+  <rect x="280" y="555" width="240" height="46" rx="6" fill="#0d1117" stroke="rgba(255,255,255,0.08)" stroke-width="1.5"/>
+  <text x="400" y="577" text-anchor="middle" fill="#ffffff" font-family="Inter, -apple-system, sans-serif" font-size="12" font-weight="700">Transceiver (IC-M710)</text>
+  <text x="400" y="593" text-anchor="middle" fill="#ffffff" font-family="Inter, -apple-system, sans-serif" font-size="10">Hardware Device</text>
+
+  <!-- Right column: ATR-1000 Proxy + Tuner -->
+  <rect x="560" y="480" width="240" height="50" rx="6" fill="#0d1117" stroke="#22d3ee" stroke-width="1.5"/>
+  <text x="680" y="502" text-anchor="middle" fill="#22d3ee" font-family="Inter, -apple-system, sans-serif" font-size="12" font-weight="700">ATR-1000 Proxy</text>
+  <text x="680" y="520" text-anchor="middle" fill="#8899aa" font-family="JetBrains Mono, monospace" font-size="10">LearningBuffer V5.6</text>
+
+  <line x1="680" y1="532" x2="680" y2="548" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#aC)"/>
+
+  <rect x="560" y="555" width="240" height="46" rx="6" fill="#0d1117" stroke="rgba(255,255,255,0.08)" stroke-width="1.5"/>
+  <text x="680" y="577" text-anchor="middle" fill="#ffffff" font-family="Inter, -apple-system, sans-serif" font-size="12" font-weight="700">ATR-1000 Tuner</text>
+  <text x="680" y="593" text-anchor="middle" fill="#ffffff" font-family="Inter, -apple-system, sans-serif" font-size="10">Power / SWR Meter</text>
+
+  <!-- FT8/ULTRON Remote Console box -->
+  <rect x="40" y="620" width="1000" height="88" rx="6" fill="#0d1117" stroke="#22d3ee" stroke-width="1.5"/>
+  <text x="540" y="642" text-anchor="middle" fill="#22d3ee" font-family="Inter, -apple-system, sans-serif" font-size="13" font-weight="700">FT8 / ULTRON Remote Console (V5.6+)</text>
+  <line x1="40" y1="652" x2="1040" y2="652" stroke="#22d3ee" stroke-width="0.4"/>
+  <text x="60" y="672" fill="#ffffff" font-family="Inter, -apple-system, sans-serif" font-size="10">Browser UI: waterfall, 6 TX slots, auto-sequencer, DXCC tracking</text>
+  <text x="60" y="690" fill="#8899aa" font-family="Inter, -apple-system, sans-serif" font-size="10">Server: QSOSequencer, ADIF logging, DXCC DB lookup  |  Bridge: JTDX/WSJT-X/MSHV via UDP 2237 to WS Bridge 2238</text>
+
+  <!-- PTT Safety System box -->
+  <rect x="40" y="720" width="1000" height="80" rx="6" fill="#0d1117" stroke="#22d3ee" stroke-width="1.5"/>
+  <text x="540" y="742" text-anchor="middle" fill="#22d3ee" font-family="Inter, -apple-system, sans-serif" font-size="13" font-weight="700">PTT Safety System (V5.6+)</text>
+  <line x1="40" y1="752" x2="1040" y2="752" stroke="#22d3ee" stroke-width="0.4"/>
+  <text x="60" y="770" fill="#ffffff" font-family="Inter, -apple-system, sans-serif" font-size="10">L1 Browser: touch-move release, visibility-change stop, 30s watchdog</text>
+  <text x="60" y="786" fill="#8899aa" font-family="Inter, -apple-system, sans-serif" font-size="10">L2 Protocol: ACK retry x3 + redundant audio-path fallback  |  L3 Server: 120s TOT hard limit, persistent 2s retry</text>
+</svg>
+                </div>
 
                 <h3>Core Components</h3>
                 <table class="comparison-table">
@@ -165,80 +248,116 @@
                 <h2><span class="feature-icon">🔊</span> Audio Processing Pipeline</h2>
                 
                 <h3>Receive Audio Chain (RX)</h3>
-                <pre class="code-block">
-Transceiver Audio (48kHz Float32)
-    │
-    ▼
-┌─────────────────┐
-│ DC Removal +    │  Protect downstream processing
-│ Soft Clipping   │
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│ Int16 Convert   │  48kHz → 16bit
-└────────┬────────┘
-         │
-         ▼  (Optional)
-┌─────────────────┐
-│ WDSP Processing │  NR2/NB/ANF/AGC
-│  - Spectral NR  │  15-20dB reduction
-│  - Noise Blank  │
-│  - Auto Notch   │
-│  - AGC Gain     │
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│ Opus Encode     │  16kHz/20kbps
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│ WebSocket       │  Browser transport
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│ AudioWorklet    │  Low latency playback
-└─────────────────┘
-                </pre>
+                <div class="svg-diagram" style="overflow-x:auto;margin:1em 0;">
+<svg viewBox="0 0 500 760" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:500px;">
+  <defs>    <marker id="aC" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#22d3ee"/>
+    </marker>
+    <marker id="aG" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#22d3ee"/>
+    </marker>
+  </defs>
+  
+  <text x="250" y="22" text-anchor="middle" fill="#ffffff" font-family="Inter, -apple-system, sans-serif" font-size="14" font-weight="700">RX Audio Processing Pipeline</text>
+
+  <!-- Input label -->
+  <text x="250" y="52" text-anchor="middle" fill="#ffffff" font-family="JetBrains Mono, monospace" font-size="11">Transceiver Audio (48kHz Float32)</text>
+  <line x1="250" y1="58" x2="250" y2="72" stroke="#22d3ee" stroke-width="1.2" marker-end="url(#aC)"/>
+
+  <!-- Stage 1: DC Removal -->
+  <rect x="100" y="78" width="300" height="46" rx="6" fill="#0d1117" stroke="#22d3ee" stroke-width="1.5"/>
+  <text x="250" y="98" text-anchor="middle" fill="#22d3ee" font-family="Inter, -apple-system, sans-serif" font-size="12" font-weight="700">DC Removal + Soft Clipping</text>
+  <text x="250" y="116" text-anchor="middle" fill="#8899aa" font-family="Inter, -apple-system, sans-serif" font-size="10">Protect downstream processing</text>
+  <line x1="250" y1="126" x2="250" y2="140" stroke="#22d3ee" stroke-width="1.2" marker-end="url(#aC)"/>
+
+  <!-- Stage 2: Int16 Convert -->
+  <rect x="100" y="146" width="300" height="40" rx="6" fill="#0d1117" stroke="#22d3ee" stroke-width="1.5"/>
+  <text x="250" y="164" text-anchor="middle" fill="#22d3ee" font-family="Inter, -apple-system, sans-serif" font-size="12" font-weight="700">Int16 Convert</text>
+  <text x="250" y="180" text-anchor="middle" fill="#8899aa" font-family="Inter, -apple-system, sans-serif" font-size="10">48kHz to 16-bit</text>
+  <line x1="250" y1="188" x2="250" y2="202" stroke="#22d3ee" stroke-width="1.2" marker-end="url(#aC)"/>
+
+  <!-- Stage 3: WDSP (Optional, larger box) -->
+  <text x="250" y="218" text-anchor="middle" fill="#ffffff" font-family="Inter, -apple-system, sans-serif" font-size="10" font-weight="600">(Optional)</text>
+  <rect x="100" y="228" width="300" height="90" rx="6" fill="#0d1117" stroke="#22d3ee" stroke-width="1.5"/>
+  <text x="250" y="248" text-anchor="middle" fill="#22d3ee" font-family="Inter, -apple-system, sans-serif" font-size="12" font-weight="700">WDSP Processing</text>
+  <text x="250" y="266" text-anchor="middle" fill="#8899aa" font-family="Inter, -apple-system, sans-serif" font-size="10">Spectral NR / Noise Blank / Auto Notch / AGC</text>
+  <text x="250" y="284" text-anchor="middle" fill="#8899aa" font-family="Inter, -apple-system, sans-serif" font-size="10">NR2 / NB / ANF / AGC Gain</text>
+  <text x="250" y="302" text-anchor="middle" fill="#8899aa" font-family="Inter, -apple-system, sans-serif" font-size="9">15–20 dB noise reduction</text>
+  <line x1="250" y1="320" x2="250" y2="334" stroke="#22d3ee" stroke-width="1.2" marker-end="url(#aG)"/>
+
+  <!-- Stage 4: Opus Encode -->
+  <rect x="100" y="340" width="300" height="40" rx="6" fill="#0d1117" stroke="#22d3ee" stroke-width="1.5"/>
+  <text x="250" y="358" text-anchor="middle" fill="#22d3ee" font-family="Inter, -apple-system, sans-serif" font-size="12" font-weight="700">Opus Encode</text>
+  <text x="250" y="374" text-anchor="middle" fill="#8899aa" font-family="Inter, -apple-system, sans-serif" font-size="10">16kHz / 20kbps</text>
+  <line x1="250" y1="382" x2="250" y2="396" stroke="#22d3ee" stroke-width="1.2" marker-end="url(#aC)"/>
+
+  <!-- Stage 5: WebSocket -->
+  <rect x="100" y="402" width="300" height="40" rx="6" fill="#0d1117" stroke="#22d3ee" stroke-width="1.5"/>
+  <text x="250" y="420" text-anchor="middle" fill="#22d3ee" font-family="Inter, -apple-system, sans-serif" font-size="12" font-weight="700">WebSocket Transport</text>
+  <text x="250" y="436" text-anchor="middle" fill="#8899aa" font-family="Inter, -apple-system, sans-serif" font-size="10">Browser client delivery</text>
+  <line x1="250" y1="444" x2="250" y2="458" stroke="#22d3ee" stroke-width="1.2" marker-end="url(#aC)"/>
+
+  <!-- Stage 6: AudioWorklet (output) -->
+  <rect x="100" y="464" width="300" height="46" rx="6" fill="#0d1117" stroke="#22d3ee" stroke-width="1.5"/>
+  <text x="250" y="484" text-anchor="middle" fill="#22d3ee" font-family="Inter, -apple-system, sans-serif" font-size="12" font-weight="700">AudioWorklet</text>
+  <text x="250" y="502" text-anchor="middle" fill="#8899aa" font-family="Inter, -apple-system, sans-serif" font-size="10">Low-latency playback</text>
+
+  <!-- Flow labels -->
+  <text x="360" y="160" fill="#22d3ee" font-family="Inter, -apple-system, sans-serif" font-size="8">Audio Buffer</text>
+  <line x1="360" y1="163" x2="402" y2="163" stroke="#22d3ee" stroke-width="0.5"/>
+</svg>
+                </div>
 
                 <h3>Transmit Audio Chain (TX)</h3>
-                <pre class="code-block">
-Microphone Input (48kHz)
-    │
-    ▼
-┌─────────────────┐
-│ Anti-Alias      │  6kHz lowpass
-│ Filter          │
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│ Downsample      │  48kHz → 16kHz
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│ TX Equalizer    │  3-band EQ presets
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│ Opus Decode     │  16kHz → 48kHz
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│ WebSocket       │  Send to server
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│ Transceiver In  │  CAT PTT control
-└─────────────────┘
-                </pre>
+                <div class="svg-diagram" style="overflow-x:auto;margin:1em 0;">
+<svg viewBox="0 0 500 760" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:500px;">
+  <defs>    <marker id="aC" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#22d3ee"/>
+    </marker>
+  </defs>
+  
+  <text x="250" y="22" text-anchor="middle" fill="#ffffff" font-family="Inter, -apple-system, sans-serif" font-size="14" font-weight="700">TX Audio Processing Pipeline</text>
+
+  <!-- Input -->
+  <text x="250" y="52" text-anchor="middle" fill="#ffffff" font-family="JetBrains Mono, monospace" font-size="11">Microphone Input (48kHz)</text>
+  <line x1="250" y1="58" x2="250" y2="72" stroke="#22d3ee" stroke-width="1.2" marker-end="url(#aC)"/>
+
+  <!-- Stage 1: Anti-Alias -->
+  <rect x="100" y="78" width="300" height="46" rx="6" fill="#0d1117" stroke="#22d3ee" stroke-width="1.5"/>
+  <text x="250" y="98" text-anchor="middle" fill="#22d3ee" font-family="Inter, -apple-system, sans-serif" font-size="12" font-weight="700">Anti-Alias Filter</text>
+  <text x="250" y="116" text-anchor="middle" fill="#8899aa" font-family="Inter, -apple-system, sans-serif" font-size="10">6kHz lowpass</text>
+  <line x1="250" y1="126" x2="250" y2="140" stroke="#22d3ee" stroke-width="1.2" marker-end="url(#aC)"/>
+
+  <!-- Stage 2: Downsample -->
+  <rect x="100" y="146" width="300" height="40" rx="6" fill="#0d1117" stroke="#22d3ee" stroke-width="1.5"/>
+  <text x="250" y="164" text-anchor="middle" fill="#22d3ee" font-family="Inter, -apple-system, sans-serif" font-size="12" font-weight="700">Downsample</text>
+  <text x="250" y="180" text-anchor="middle" fill="#8899aa" font-family="Inter, -apple-system, sans-serif" font-size="10">48kHz to 16kHz</text>
+  <line x1="250" y1="188" x2="250" y2="202" stroke="#22d3ee" stroke-width="1.2" marker-end="url(#aC)"/>
+
+  <!-- Stage 3: TX Equalizer -->
+  <rect x="100" y="208" width="300" height="46" rx="6" fill="#0d1117" stroke="#22d3ee" stroke-width="1.5"/>
+  <text x="250" y="228" text-anchor="middle" fill="#22d3ee" font-family="Inter, -apple-system, sans-serif" font-size="12" font-weight="700">TX Equalizer</text>
+  <text x="250" y="246" text-anchor="middle" fill="#8899aa" font-family="Inter, -apple-system, sans-serif" font-size="10">3-band EQ presets</text>
+  <line x1="250" y1="256" x2="250" y2="270" stroke="#22d3ee" stroke-width="1.2" marker-end="url(#aC)"/>
+
+  <!-- Stage 4: Opus Decode -->
+  <rect x="100" y="276" width="300" height="40" rx="6" fill="#0d1117" stroke="#22d3ee" stroke-width="1.5"/>
+  <text x="250" y="294" text-anchor="middle" fill="#22d3ee" font-family="Inter, -apple-system, sans-serif" font-size="12" font-weight="700">Opus Decode</text>
+  <text x="250" y="310" text-anchor="middle" fill="#8899aa" font-family="Inter, -apple-system, sans-serif" font-size="10">16kHz to 48kHz</text>
+  <line x1="250" y1="318" x2="250" y2="332" stroke="#22d3ee" stroke-width="1.2" marker-end="url(#aC)"/>
+
+  <!-- Stage 5: WebSocket -->
+  <rect x="100" y="338" width="300" height="40" rx="6" fill="#0d1117" stroke="#22d3ee" stroke-width="1.5"/>
+  <text x="250" y="356" text-anchor="middle" fill="#22d3ee" font-family="Inter, -apple-system, sans-serif" font-size="12" font-weight="700">WebSocket Transport</text>
+  <text x="250" y="372" text-anchor="middle" fill="#8899aa" font-family="Inter, -apple-system, sans-serif" font-size="10">Send audio to server</text>
+  <line x1="250" y1="380" x2="250" y2="394" stroke="#22d3ee" stroke-width="1.2" marker-end="url(#aC)"/>
+
+  <!-- Stage 6: Transceiver In -->
+  <rect x="100" y="400" width="300" height="46" rx="6" fill="#0d1117" stroke="rgba(255,255,255,0.08)" stroke-width="1.5"/>
+  <text x="250" y="420" text-anchor="middle" fill="#ffffff" font-family="Inter, -apple-system, sans-serif" font-size="12" font-weight="700">Transceiver Input</text>
+  <text x="250" y="438" text-anchor="middle" fill="#ffffff" font-family="Inter, -apple-system, sans-serif" font-size="10">CAT PTT control</text>
+</svg>
+                </div>
             </div>
 
             <!-- WDSP -->
@@ -292,39 +411,82 @@ Microphone Input (48kHz)
                 <p>MRRC V4.9 introduces a complete CW real-time decoding system with a Browser-First AI design philosophy.</p>
 
                 <h3>Dual-Mode Decoding Architecture</h3>
-                <pre class="code-block">
-┌─────────────────────────────────────────────────────────────┐
-│                     CW Decoding Dual-Mode                   │
-├─────────────────────────────────────────────────────────────┤
-│                                                              │
-│  Frontend Mode (Recommended)                                 │
-│  ┌──────────────┐    ┌──────────────┐    ┌──────────────┐  │
-│  │ Audio Stream │───►│ ONNX Runtime │───►│ CTC Decode   │  │
-│  │ (16kHz)      │    │ (2MB model)  │    │              │  │
-│  └──────────────┘    └──────────────┘    └──────────────┘  │
-│         │                                       │             │
-│         │                              ┌────────▼────────┐    │
-│         │                              │ QSO State       │    │
-│         │                              │ Machine         │    │
-│         │                              │ Smart Reply     │    │
-│         │                              └────────────────┘    │
-│         │                                                     │
-│  Latency: &lt;50ms                                              │
-│  Dependencies: None (pure browser)                           │
-│                                                              │
-├─────────────────────────────────────────────────────────────┤
-│                                                              │
-│  Backend Mode (Alternative)                                  │
-│  ┌──────────────┐    ┌──────────────┐    ┌──────────────┐  │
-│  │ WebSocket   │───►│ morseangel   │───►│ Text Output  │  │
-│  │ /WSCW       │    │ (PyTorch)    │    │              │  │
-│  └──────────────┘    └──────────────┘    └──────────────┘  │
-│                                                              │
-│  Latency: &lt;100ms                                            │
-│  Dependencies: PyTorch + CUDA                                │
-│                                                              │
-└─────────────────────────────────────────────────────────────┘
-                </pre>
+                <div class="svg-diagram" style="overflow-x:auto;margin:1em 0;">
+<svg viewBox="0 0 880 520" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:880px;">
+  <defs>    <marker id="aC" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#22d3ee"/>
+    </marker>
+    <marker id="aG" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#22d3ee"/>
+    </marker>
+  </defs>
+  
+  <text x="440" y="22" text-anchor="middle" fill="#ffffff" font-family="Inter, -apple-system, sans-serif" font-size="14" font-weight="700">CW Decoding Dual-Mode Architecture</text>
+
+  <!-- Outer containing box -->
+  <rect x="20" y="36" width="840" height="468" rx="6" fill="none" stroke="#22d3ee" stroke-width="1.2"/>
+
+  <!-- ==== Frontend Mode ==== -->
+  <rect x="40" y="52" width="800" height="195" rx="4" fill="#0d1117" stroke="#22d3ee" stroke-width="1"/>
+  <text x="440" y="72" text-anchor="middle" fill="#22d3ee" font-family="Inter, -apple-system, sans-serif" font-size="13" font-weight="700">Frontend Mode (Recommended)</text>
+
+  <!-- Frontend flow boxes -->
+  <rect x="60" y="88" width="170" height="46" rx="6" fill="#0d1117" stroke="#22d3ee" stroke-width="1.5"/>
+  <text x="145" y="108" text-anchor="middle" fill="#22d3ee" font-family="Inter, -apple-system, sans-serif" font-size="12" font-weight="700">Audio Stream</text>
+  <text x="145" y="126" text-anchor="middle" fill="#8899aa" font-family="JetBrains Mono, monospace" font-size="10">16kHz</text>
+
+  <line x1="232" y1="111" x2="258" y2="111" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#aC)"/>
+
+  <rect x="268" y="88" width="170" height="46" rx="6" fill="#0d1117" stroke="#22d3ee" stroke-width="1.5"/>
+  <text x="353" y="108" text-anchor="middle" fill="#22d3ee" font-family="Inter, -apple-system, sans-serif" font-size="12" font-weight="700">ONNX Runtime</text>
+  <text x="353" y="126" text-anchor="middle" fill="#8899aa" font-family="JetBrains Mono, monospace" font-size="10">2MB model</text>
+
+  <line x1="440" y1="111" x2="466" y2="111" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#aC)"/>
+
+  <rect x="476" y="88" width="170" height="46" rx="6" fill="#0d1117" stroke="#22d3ee" stroke-width="1.5"/>
+  <text x="561" y="108" text-anchor="middle" fill="#22d3ee" font-family="Inter, -apple-system, sans-serif" font-size="12" font-weight="700">CTC Decode</text>
+
+  <!-- Branch from CTC Decode to QSO State Machine -->
+  <line x1="561" y1="136" x2="561" y2="158" stroke="#22d3ee" stroke-width="1.2" marker-end="url(#aC)"/>
+
+  <rect x="450" y="164" width="222" height="54" rx="6" fill="#0d1117" stroke="#22d3ee" stroke-width="1.5"/>
+  <text x="561" y="184" text-anchor="middle" fill="#22d3ee" font-family="Inter, -apple-system, sans-serif" font-size="11" font-weight="700">QSO State Machine</text>
+  <text x="561" y="204" text-anchor="middle" fill="#8899aa" font-family="Inter, -apple-system, sans-serif" font-size="9">Smart Reply</text>
+
+  <!-- Side branch: Audio Stream to QSO -->
+  <line x1="145" y1="136" x2="145" y2="190" stroke="#22d3ee" stroke-width="0.6" stroke-dasharray="3,2"/>
+  <line x1="145" y1="190" x2="448" y2="190" stroke="#22d3ee" stroke-width="0.6" stroke-dasharray="3,2"/>
+
+  <!-- Frontend stats -->
+  <text x="440" y="238" text-anchor="middle" fill="#8899aa" font-family="Inter, -apple-system, sans-serif" font-size="10">Latency: &lt;50ms  |  Dependencies: None (pure browser)</text>
+
+  <!-- Separator -->
+  <line x1="60" y1="255" x2="820" y2="255" stroke="#22d3ee" stroke-width="0.6" stroke-dasharray="6,4"/>
+
+  <!-- ==== Backend Mode ==== -->
+  <rect x="40" y="268" width="800" height="130" rx="4" fill="#0d1117" stroke="#22d3ee" stroke-width="1"/>
+  <text x="440" y="288" text-anchor="middle" fill="#22d3ee" font-family="Inter, -apple-system, sans-serif" font-size="13" font-weight="700">Backend Mode (Alternative)</text>
+
+  <!-- Backend flow boxes -->
+  <rect x="60" y="304" width="170" height="46" rx="6" fill="#0d1117" stroke="#22d3ee" stroke-width="1.5"/>
+  <text x="145" y="324" text-anchor="middle" fill="#22d3ee" font-family="Inter, -apple-system, sans-serif" font-size="12" font-weight="700">WebSocket Client</text>
+  <text x="145" y="342" text-anchor="middle" fill="#8899aa" font-family="JetBrains Mono, monospace" font-size="10">/WSCW</text>
+
+  <line x1="232" y1="327" x2="258" y2="327" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#aC)"/>
+
+  <rect x="268" y="304" width="170" height="46" rx="6" fill="#0d1117" stroke="#22d3ee" stroke-width="1.5"/>
+  <text x="353" y="324" text-anchor="middle" fill="#22d3ee" font-family="Inter, -apple-system, sans-serif" font-size="12" font-weight="700">morseangel</text>
+  <text x="353" y="342" text-anchor="middle" fill="#8899aa" font-family="JetBrains Mono, monospace" font-size="10">PyTorch backend</text>
+
+  <line x1="440" y1="327" x2="466" y2="327" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#aC)"/>
+
+  <rect x="476" y="304" width="170" height="46" rx="6" fill="#0d1117" stroke="#22d3ee" stroke-width="1.5"/>
+  <text x="561" y="324" text-anchor="middle" fill="#22d3ee" font-family="Inter, -apple-system, sans-serif" font-size="12" font-weight="700">Text Output</text>
+
+  <!-- Backend stats -->
+  <text x="440" y="388" text-anchor="middle" fill="#8899aa" font-family="Inter, -apple-system, sans-serif" font-size="10">Latency: &lt;100ms  |  Dependencies: PyTorch + CUDA</text>
+</svg>
+                </div>
 
                 <h3>Technical Specifications</h3>
                 <table class="comparison-table">
@@ -371,37 +533,66 @@ Microphone Input (48kHz)
                 <h2><span class="feature-icon">📊</span> ATR-1000 Integration</h2>
                 
                 <h3>System Architecture</h3>
-                <pre class="code-block">
-┌─────────────────────────────────────────────────────────────┐
-│                    ATR-1000 Integration                      │
-├─────────────────────────────────────────────────────────────┤
-│                                                              │
-│  Frontend (mobile_modern.js)                                 │
-│      │                                                        │
-│      │ WebSocket /WSATR1000                                  │
-│      ▼                                                        │
-│  ┌─────────────────┐                                         │
-│  │ MRRC Main       │  Message routing + batch broadcast     │
-│  └────────┬────────┘                                         │
-│           │                                                  │
-│           │ Unix Socket                                      │
-│           ▼                                                  │
-│  ┌─────────────────┐     WebSocket                          │
-│  │ atr1000_proxy  │◄────────────────────────────────┐        │
-│  │ Independent    │                                  │        │
-│  │ Process        │                                  │        │
-│  └────────┬────────┘                                  │        │
-│           │                                             │        │
-│           └──────────────────────┬──────────────────────┘        │
-│                                  │                                │
-│                                  ▼                                │
-│                    ┌──────────────────────┐                      │
-│                    │  ATR-1000 Device     │                      │
-│                    │  192.168.1.63:60001  │                      │
-│                    │  Power/SWR/Relay     │                      │
-│                    └──────────────────────┘                      │
-└─────────────────────────────────────────────────────────────┘
-                </pre>
+                <div class="svg-diagram" style="overflow-x:auto;margin:1em 0;">
+<svg viewBox="0 0 720 540" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:720px;">
+  <defs>    <marker id="aC" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#22d3ee"/>
+    </marker>
+    <marker id="aG" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#22d3ee"/>
+    </marker>
+  </defs>
+  
+  <text x="360" y="22" text-anchor="middle" fill="#ffffff" font-family="Inter, -apple-system, sans-serif" font-size="14" font-weight="700">ATR-1000 Integration Architecture</text>
+
+  <!-- Outer box -->
+  <rect x="20" y="36" width="680" height="488" rx="6" fill="none" stroke="#22d3ee" stroke-width="1.2"/>
+
+  <!-- Frontend label -->
+  <text x="120" y="68" text-anchor="middle" fill="#ffffff" font-family="Inter, -apple-system, sans-serif" font-size="12" font-weight="700">Frontend</text>
+  <text x="120" y="88" text-anchor="middle" fill="#8899aa" font-family="JetBrains Mono, monospace" font-size="11">mobile_modern.js</text>
+
+  <!-- Arrow down from Frontend -->
+  <line x1="120" y1="96" x2="120" y2="118" stroke="#22d3ee" stroke-width="1.2"/>
+  <text x="180" y="112" fill="#8899aa" font-family="Inter, -apple-system, sans-serif" font-size="9">WebSocket /WSATR1000</text>
+  <line x1="120" y1="118" x2="120" y2="132" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#aC)"/>
+
+  <!-- MRRC Main box -->
+  <rect x="45" y="140" width="150" height="50" rx="6" fill="#0d1117" stroke="#22d3ee" stroke-width="1.5"/>
+  <text x="120" y="160" text-anchor="middle" fill="#22d3ee" font-family="Inter, -apple-system, sans-serif" font-size="12" font-weight="700">MRRC Main</text>
+  <text x="120" y="180" text-anchor="middle" fill="#8899aa" font-family="Inter, -apple-system, sans-serif" font-size="9">Message routing</text>
+
+  <!-- Arrow down from MRRC Main -->
+  <line x1="120" y1="192" x2="120" y2="218" stroke="#22d3ee" stroke-width="1.2"/>
+  <text x="170" y="212" fill="#8899aa" font-family="Inter, -apple-system, sans-serif" font-size="9">Unix Socket</text>
+  <line x1="120" y1="218" x2="120" y2="232" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#aC)"/>
+
+  <!-- atr1000_proxy box -->
+  <rect x="35" y="240" width="170" height="60" rx="6" fill="#0d1117" stroke="#22d3ee" stroke-width="1.5"/>
+  <text x="120" y="262" text-anchor="middle" fill="#22d3ee" font-family="Inter, -apple-system, sans-serif" font-size="12" font-weight="700">atr1000_proxy</text>
+  <text x="120" y="282" text-anchor="middle" fill="#8899aa" font-family="Inter, -apple-system, sans-serif" font-size="9">Independent Process</text>
+
+  <!-- WebSocket feedback arrow (right side) -->
+  <text x="380" y="265" fill="#8899aa" font-family="Inter, -apple-system, sans-serif" font-size="10">WebSocket</text>
+  <line x1="207" y1="260" x2="530" y2="260" stroke="#22d3ee" stroke-width="1.2"/>
+  <line x1="530" y1="260" x2="530" y2="168" stroke="#22d3ee" stroke-width="1.2"/>
+  <line x1="530" y1="168" x2="198" y2="168" stroke="#22d3ee" stroke-width="1.2" marker-end="url(#aC)"/>
+
+  <!-- Arrow down from atr1000_proxy -->
+  <line x1="120" y1="302" x2="120" y2="350" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#aC)"/>
+
+  <!-- ATR-1000 Device box -->
+  <rect x="45" y="358" width="150" height="60" rx="6" fill="#0d1117" stroke="rgba(255,255,255,0.08)" stroke-width="1.5"/>
+  <text x="120" y="380" text-anchor="middle" fill="#ffffff" font-family="Inter, -apple-system, sans-serif" font-size="12" font-weight="700">ATR-1000 Device</text>
+  <text x="120" y="398" text-anchor="middle" fill="#8899aa" font-family="JetBrains Mono, monospace" font-size="9">192.168.1.63:60001</text>
+  <text x="120" y="412" text-anchor="middle" fill="#ffffff" font-family="Inter, -apple-system, sans-serif" font-size="9">Power / SWR / Relay</text>
+
+  <!-- Flow summary footer -->
+  <rect x="50" y="440" width="620" height="60" rx="6" fill="#0d1117" stroke="#22d3ee" stroke-width="0.8" stroke-dasharray="4,2"/>
+  <text x="360" y="462" text-anchor="middle" fill="#ffffff" font-family="Inter, -apple-system, sans-serif" font-size="11">Frontend (browser) connects via WebSocket to MRRC Main, which routes commands through Unix Socket to atr1000_proxy.</text>
+  <text x="360" y="482" text-anchor="middle" fill="#8899aa" font-family="Inter, -apple-system, sans-serif" font-size="10">atr1000_proxy communicates with ATR-1000 hardware over TCP and pushes real-time power/SWR/relay data back via WebSocket broadcasts.</text>
+</svg>
+                </div>
 
                 <h3>Smart ATU Learning</h3>
                 <ul>
@@ -572,5 +763,6 @@ python dxcc_analyzer.py</code></pre>
     </footer>
 
     <script src="../js/main.js"></script>
+    <script src="../js/global-nav.js?v=4" defer data-gn="1"></script>
 </body>
 </html>

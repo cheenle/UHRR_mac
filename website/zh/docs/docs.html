@@ -6,42 +6,45 @@
     <title>技术文档 - MRRC 移动远程电台控制</title>
     <meta name="description" content="MRRC完整技术文档：系统架构、DSP处理、CW解码方案、ATR-1000集成等">
     <link rel="stylesheet" href="../../css/style.css">
+    <link rel="stylesheet" href="../../css/octen.css?v=2">
+    <link rel="stylesheet" href="../../css/sunsdrmobile.css?v=1">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="../../css/docs.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7442510147240155"
      crossorigin="anonymous"></script>
 </head>
-<body>
-    <!-- Header -->
-    <header class="header">
-        <div class="container header-content">
+<body data-site="mrrc">
+        <!-- Navigation -->
+    <nav class="navbar">
+        <div class="container navbar-content">
             <a href="../../index.html" class="logo">
-                <span class="logo-icon">📻</span>
+                <span class="logo-icon">&#x1f4fb;</span>
                 <span>MRRC</span>
             </a>
-            <nav class="nav">
-                <a href="../../index.html" data-i18n="nav_home">首页</a>
-                <a href="features.html" data-i18n="nav_features">功能</a>
-                <a href="../../index.html#demo" data-i18n="nav_demo">演示</a>
-                <a href="installation.html" data-i18n="nav_install">安装</a>
-                <a href="design.html" data-i18n="nav_design">设计 &amp; 架构</a>
-                <a href="docs.html" class="active" data-i18n="nav_docs">文档</a>
-                <a href="../../fde.html">FDE</a>
-                <a href="../aladdin-v2.html">阿拉丁 V2</a>
-                <a href="../../efhw/index.html">EFHW</a>
-                <a href="https://github.com/cheenle/UHRR_mac" target="_blank" rel="noopener">
+            <ul class="nav-links">
+                <li><a href="../../index.html">Home</a></li>
+                <li><a href="features.html">Features</a></li>
+                <li><a href="../../index.html#demo">Demo</a></li>
+                <li><a href="installation.html">Installation</a></li>
+                <li><a href="design.html">Design &amp; Architecture</a></li>
+                <li><a href="docs.html">Docs</a></li>
+                <li><a href="../../fde.html">FDE</a></li>
+                <li><a href="../../aladdin-v2.html">Aladdin V2</a></li>
+                <li><a href="../../efhw/index.html">EFHW</a></li>
+                <li><a href="https://github.com/cheenle/UHRR_mac" target="_blank" rel="noopener">
                     <i class="fab fa-github"></i> GitHub
-                </a>
-            </nav>
-            <div class="lang-switch">
-                <button class="lang-btn" data-lang="en"><a href="../../docs/docs.html" style="color:inherit;text-decoration:none;">English</a></button>
-                <button class="lang-btn active" data-lang="zh">中文</button>
+                </a></li>
+            </ul>
+            <div class="nav-actions">
+                <a href="../../docs/docs.html" class="lang-btn">English</a>
+                <button class="mobile-menu-toggle"><i class="fas fa-bars"></i></button>
             </div>
         </div>
-    </header>
+    </nav>
 
-    <!-- Hero -->
+<!-- Hero -->
     <section class="hero">
         <div class="hero-bg"></div>
         <div class="container">
@@ -58,62 +61,145 @@
                 <h2><span class="feature-icon">🏗️</span> 系统架构</h2>
                 
                 <h3>整体架构图</h3>
-                <pre class="code-block" style="font-size: 0.78rem; overflow-x: auto;">
-┌──────────────────────────────────────────────────────────────────────────────┐
-│                          MRRC 系统架构 V5.6.5                                  │
-├──────────────────────────────────────────────────────────────────────────────┤
-│  客户端层                                                                      │
-│  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────┐ │
-│  │移动端界面│ │桌面端界面│ │CW解码    │ │FT8 Ultron│ │语音助手  │ │PTT   │ │
-│  │mobile    │ │modern.   │ │cw_live.  │ │ft8_ultron│ │mobile_   │ │安全  │ │
-│  │_modern   │ │html      │ │html(ONNX)│ │.html     │ │voice_    │ │Touch │ │
-│  └────┬─────┘ └────┬─────┘ └────┬─────┘ └────┬─────┘ └────┬─────┘ └──┬───┘ │
-│       └─────────────┴────────────┴────────────┴────────────┴──────────┘     │
-│                                       │                                       │
-│                          HTTPS / WebSocket (Opus/Int16)                       │
-│                                       ▼                                       │
-├──────────────────────────────────────────────────────────────────────────────┤
-│  服务层                                                                        │
-│  ┌─────────────────────────────────────────────────────────────────────┐    │
-│  │                    MRRC 主程序 (Tornado / Python 3.12+)               │    │
-│  ├─────────────────────────────────────────────────────────────────────┤    │
-│  │  /WSCTRX     - 控制+音频 (PTT/频率/模式/WDSP/录音)                    │    │
-│  │  /WSaudioRX  - RX 音频流 (Opus/Int16, RNNoise/WDSP)                  │    │
-│  │  /WSaudioTX  - TX 音频上传 (Opus 编码, EQ 链)                         │    │
-│  │  /WSATR1000  - 天调功率/SWR 实时显示, 学习缓冲                          │    │
-│  │  /WSFT8      - FT8 WebSocket 桥接 (UDP 2238)                           │    │
-│  │  /WSCW       - CW 后端解码 (PyTorch, 可选)                              │    │
-│  └──────┬──────────────────────────────────────────────────┬───────────┘    │
-│         │                                                  │                 │
-│         ▼                                                  ▼                 │
-│  ┌──────────────────┐                          ┌──────────────────────┐    │
-│  │  rigctld (Hamlib)│                          │  ATR-1000 代理        │    │
-│  │  IC-M710 @4800bd │                          │  LearningBuffer V5.6 │    │
-│  └────────┬─────────┘                          └──────────┬───────────┘    │
-│           │                                                │                 │
-│           ▼                                                ▼                 │
-│  ┌──────────────────┐                          ┌──────────────────────┐    │
-│  │  电台设备        │                          │  ATR-1000 天调        │    │
-│  │  IC-M710         │                          │  功率/SWR 计           │    │
-│  └──────────────────┘                          └──────────────────────┘    │
-│                                                                               │
-│  ┌─────────────────────────────────────────────────────────────────────┐    │
-│  │              FT8/ULTRON 远程控制台 (V5.6+)                            │    │
-│  ├─────────────────────────────────────────────────────────────────────┤    │
-│  │  浏览器 UI：瀑布图、6 消息槽、自动序列器、DXCC 追踪                       │    │
-│  │  服务端：QSOSequencer、ADIF 日志、DXCC 数据库查询                        │    │
-│  │  桥接：JTDX/WSJT-X/MSHV via UDP 2237 ← → WS Bridge 2238              │    │
-│  └─────────────────────────────────────────────────────────────────────┘    │
-│                                                                               │
-│  ┌─────────────────────────────────────────────────────────────────────┐    │
-│  │              PTT 安全防护系统 (V5.6+)                                   │    │
-│  ├─────────────────────────────────────────────────────────────────────┤    │
-│  │  L1 浏览器：触摸滑动释放、页面隐藏停发、30s 看门狗                          │    │
-│  │  L2 协议层：ACK ×3 重试 + 冗余音频通路回退                                  │    │
-│  │  L3 服务端：120s TOT 硬限制、每 2s 持续重试                                │    │
-│  └─────────────────────────────────────────────────────────────────────┘    │
-└──────────────────────────────────────────────────────────────────────────────┘
-                </pre>
+                <div class="svg-diagram" style="overflow-x:auto;margin:1em 0;">
+                    <svg viewBox="0 0 960 920" width="100%" height="auto" xmlns="http://www.w3.org/2000/svg">
+                        <defs>
+                            <marker id="arrCyan" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto">
+                                <path d="M0,0 L8,4 L0,8 Z" fill="#22d3ee"/>
+                            </marker>
+                        </defs>
+                        <!-- Main title -->
+                        <text x="480" y="28" text-anchor="middle" font-family="Inter, -apple-system, sans-serif" font-size="16" font-weight="700" fill="#ffffff">MRRC 系统架构 V5.6.5</text>
+
+                        <!-- ===== 1. CLIENT LAYER ===== -->
+                        <rect x="20" y="45" width="920" height="125" rx="6" fill="#0d1117" stroke="rgba(255,255,255,0.06)" stroke-width="1.5" stroke-dasharray="6,4"/>
+                        <rect x="20" y="45" width="100" height="26" rx="6" fill="rgba(255,255,255,0.08)"/>
+                        <text x="70" y="63" text-anchor="middle" font-family="Inter, -apple-system, sans-serif" font-size="11" font-weight="700" fill="#ffffff">客户端层</text>
+
+                        <!-- 6 client boxes -->
+                        <!-- Box 1: Mobile -->
+                        <rect x="35" y="82" width="138" height="76" rx="6" fill="#0d1117" stroke="#22d3ee" stroke-width="1"/>
+                        <text x="104" y="105" text-anchor="middle" font-family="Inter, -apple-system, sans-serif" font-size="11" font-weight="700" fill="#ffffff">移动端界面</text>
+                        <text x="104" y="122" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="9" fill="#8899aa">mobile_modern</text>
+                        <text x="104" y="148" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="9" fill="#8899aa">.html / .js</text>
+
+                        <!-- Box 2: Desktop -->
+                        <rect x="183" y="82" width="138" height="76" rx="6" fill="#0d1117" stroke="#22d3ee" stroke-width="1"/>
+                        <text x="252" y="105" text-anchor="middle" font-family="Inter, -apple-system, sans-serif" font-size="11" font-weight="700" fill="#ffffff">桌面端界面</text>
+                        <text x="252" y="122" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="9" fill="#8899aa">modern.html</text>
+                        <text x="252" y="148" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="9" fill="#8899aa">controls.js</text>
+
+                        <!-- Box 3: CW Decode -->
+                        <rect x="331" y="82" width="138" height="76" rx="6" fill="#0d1117" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
+                        <text x="400" y="105" text-anchor="middle" font-family="Inter, -apple-system, sans-serif" font-size="11" font-weight="700" fill="#ffffff">CW解码</text>
+                        <text x="400" y="122" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="9" fill="#8899aa">cw_live.html</text>
+                        <text x="400" y="148" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="9" fill="#8899aa">ONNX Runtime</text>
+
+                        <!-- Box 4: FT8 Ultron -->
+                        <rect x="479" y="82" width="138" height="76" rx="6" fill="#0d1117" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
+                        <text x="548" y="105" text-anchor="middle" font-family="Inter, -apple-system, sans-serif" font-size="11" font-weight="700" fill="#ffffff">FT8 Ultron</text>
+                        <text x="548" y="122" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="9" fill="#8899aa">ft8_ultron.html</text>
+                        <text x="548" y="148" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="9" fill="#8899aa">UDP 2237-2238</text>
+
+                        <!-- Box 5: Voice -->
+                        <rect x="627" y="82" width="138" height="76" rx="6" fill="#0d1117" stroke="#22d3ee" stroke-width="1"/>
+                        <text x="696" y="105" text-anchor="middle" font-family="Inter, -apple-system, sans-serif" font-size="11" font-weight="700" fill="#ffffff">语音助手</text>
+                        <text x="696" y="122" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="9" fill="#8899aa">mobile_voice_</text>
+                        <text x="696" y="148" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="9" fill="#8899aa">Whisper+TTS</text>
+
+                        <!-- Box 6: PTT Safety -->
+                        <rect x="775" y="82" width="145" height="76" rx="6" fill="#0d1117" stroke="rgba(255,255,255,0.08)" stroke-width="1.5"/>
+                        <text x="847" y="105" text-anchor="middle" font-family="Inter, -apple-system, sans-serif" font-size="11" font-weight="700" fill="#ffffff">PTT 安全</text>
+                        <text x="847" y="122" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="9" fill="#8899aa">Touch Release</text>
+                        <text x="847" y="148" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="9" fill="#8899aa">3-Level Guard</text>
+
+                        <!-- ===== Connection Bar ===== -->
+                        <rect x="100" y="180" width="760" height="30" rx="6" fill="#0d1117" stroke="rgba(255,255,255,0.06)" stroke-width="1" stroke-dasharray="6,4"/>
+                        <text x="480" y="200" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="11" fill="#22d3ee">HTTPS / WebSocket (Opus / Int16)</text>
+
+                        <!-- Arrow down -->
+                        <line x1="480" y1="210" x2="480" y2="248" stroke="#22d3ee" stroke-width="2" marker-end="url(#arrCyan)"/>
+
+                        <!-- ===== 2. SERVICE LAYER ===== -->
+                        <rect x="20" y="253" width="920" height="290" rx="6" fill="#0d1117" stroke="rgba(255,255,255,0.08)" stroke-width="1.5" stroke-dasharray="6,4"/>
+                        <rect x="20" y="253" width="85" height="26" rx="6" fill="rgba(255,255,255,0.08)"/>
+                        <text x="62" y="271" text-anchor="middle" font-family="Inter, -apple-system, sans-serif" font-size="11" font-weight="700" fill="#ffffff">服务层</text>
+
+                        <!-- MRRC Main Program box -->
+                        <rect x="40" y="290" width="880" height="120" rx="6" fill="#0d1117" stroke="#22d3ee" stroke-width="1.5"/>
+                        <text x="480" y="312" text-anchor="middle" font-family="Inter, -apple-system, sans-serif" font-size="13" font-weight="700" fill="#ffffff">MRRC 主程序 (Tornado / Python 3.12+)</text>
+                        <line x1="60" y1="322" x2="900" y2="322" stroke="rgba(255,255,255,0.12)" stroke-width="0.5"/>
+
+                        <!-- WebSocket endpoint labels (two columns) -->
+                        <text x="70" y="342" font-family="JetBrains Mono, monospace" font-size="9" fill="#8899aa">/WSCTRX</text>
+                        <text x="185" y="342" font-family="Inter, -apple-system, sans-serif" font-size="9" fill="#8899aa">控制+音频 (PTT/频率/模式/WDSP/录音)</text>
+                        <text x="70" y="358" font-family="JetBrains Mono, monospace" font-size="9" fill="#8899aa">/WSaudioRX</text>
+                        <text x="185" y="358" font-family="Inter, -apple-system, sans-serif" font-size="9" fill="#8899aa">RX 音频流 (Opus/Int16, RNNoise/WDSP)</text>
+                        <text x="70" y="374" font-family="JetBrains Mono, monospace" font-size="9" fill="#8899aa">/WSaudioTX</text>
+                        <text x="185" y="374" font-family="Inter, -apple-system, sans-serif" font-size="9" fill="#8899aa">TX 音频上传 (Opus 编码, EQ 链)</text>
+
+                        <text x="500" y="342" font-family="JetBrains Mono, monospace" font-size="9" fill="#8899aa">/WSATR1000</text>
+                        <text x="620" y="342" font-family="Inter, -apple-system, sans-serif" font-size="9" fill="#8899aa">天调功率/SWR 实时显示, 学习缓冲</text>
+                        <text x="500" y="358" font-family="JetBrains Mono, monospace" font-size="9" fill="#8899aa">/WSFT8</text>
+                        <text x="620" y="358" font-family="Inter, -apple-system, sans-serif" font-size="9" fill="#8899aa">FT8 WebSocket 桥接 (UDP 2238)</text>
+                        <text x="500" y="374" font-family="JetBrains Mono, monospace" font-size="9" fill="#8899aa">/WSCW</text>
+                        <text x="620" y="374" font-family="Inter, -apple-system, sans-serif" font-size="9" fill="#8899aa">CW 后端解码 (PyTorch, 可选)</text>
+
+                        <!-- Left branch: rigctld -->
+                        <line x1="280" y1="410" x2="280" y2="438" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#arrCyan)"/>
+
+                        <rect x="165" y="443" width="230" height="42" rx="6" fill="#0d1117" stroke="#22d3ee" stroke-width="1"/>
+                        <text x="280" y="461" text-anchor="middle" font-family="Inter, -apple-system, sans-serif" font-size="11" font-weight="700" fill="#ffffff">rigctld (Hamlib)</text>
+                        <text x="280" y="477" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="9" fill="#8899aa">IC-M710 @4800bd</text>
+
+                        <line x1="280" y1="485" x2="280" y2="508" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#arrCyan)"/>
+
+                        <rect x="170" y="513" width="220" height="20" rx="4" fill="#0d1117" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
+                        <text x="280" y="527" text-anchor="middle" font-family="Inter, -apple-system, sans-serif" font-size="10" font-weight="600" fill="#ffffff">电台设备: IC-M710</text>
+
+                        <!-- Right branch: ATR-1000 -->
+                        <line x1="680" y1="410" x2="680" y2="438" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#arrCyan)"/>
+
+                        <rect x="575" y="443" width="210" height="42" rx="6" fill="#0d1117" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
+                        <text x="680" y="461" text-anchor="middle" font-family="Inter, -apple-system, sans-serif" font-size="11" font-weight="700" fill="#ffffff">ATR-1000 代理</text>
+                        <text x="680" y="477" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="9" fill="#8899aa">LearningBuffer V5.6</text>
+
+                        <line x1="680" y1="485" x2="680" y2="508" stroke="rgba(255,255,255,0.2)" stroke-width="1.5" marker-end="url(#arrCyan)"/>
+
+                        <rect x="575" y="513" width="210" height="20" rx="4" fill="#0d1117" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
+                        <text x="680" y="527" text-anchor="middle" font-family="Inter, -apple-system, sans-serif" font-size="10" font-weight="600" fill="#ffffff">ATR-1000 天调: 功率/SWR 计</text>
+
+                        <!-- ===== Separator ===== -->
+                        <line x1="20" y1="553" x2="940" y2="553" stroke="rgba(255,255,255,0.12)" stroke-width="0.5" stroke-dasharray="8,5"/>
+
+                        <!-- ===== 3. FT8/ULTRON Section ===== -->
+                        <rect x="20" y="565" width="920" height="90" rx="6" fill="#0d1117" stroke="rgba(255,255,255,0.06)" stroke-width="1.5" stroke-dasharray="6,4"/>
+                        <rect x="20" y="565" width="230" height="26" rx="6" fill="rgba(255,255,255,0.08)"/>
+                        <text x="135" y="583" text-anchor="middle" font-family="Inter, -apple-system, sans-serif" font-size="11" font-weight="700" fill="#ffffff">FT8 / ULTRON 远程控制台 (V5.6+)</text>
+
+                        <text x="45" y="610" font-family="Inter, -apple-system, sans-serif" font-size="10" fill="#ffffff"><tspan font-weight="700" fill="#22d3ee">浏览器UI：</tspan>瀑布图、6 消息槽、自动序列器、DXCC 追踪</text>
+                        <text x="45" y="628" font-family="Inter, -apple-system, sans-serif" font-size="10" fill="#ffffff"><tspan font-weight="700" fill="#22d3ee">服务端：</tspan>QSOSequencer、ADIF 日志、DXCC 数据库查询</text>
+                        <text x="45" y="646" font-family="Inter, -apple-system, sans-serif" font-size="10" fill="#ffffff"><tspan font-weight="700" fill="#22d3ee">桥接：</tspan>JTDX/WSJT-X/MSHV via UDP 2237 - WS Bridge 2238</text>
+
+                        <!-- ===== 4. PTT Safety Section ===== -->
+                        <rect x="20" y="667" width="920" height="100" rx="6" fill="#0d1117" stroke="rgba(255,255,255,0.10)" stroke-width="1.5" stroke-dasharray="6,4"/>
+                        <rect x="20" y="667" width="210" height="26" rx="6" fill="rgba(255,255,255,0.08)"/>
+                        <text x="125" y="685" text-anchor="middle" font-family="Inter, -apple-system, sans-serif" font-size="11" font-weight="700" fill="#ffffff">PTT 安全防护系统 (V5.6+)</text>
+
+                        <!-- L1, L2, L3 as horizontal rows -->
+                        <rect x="40" y="703" width="880" height="24" rx="4" fill="#0d1117" stroke="rgba(255,255,255,0.08)" stroke-width="0.5"/>
+                        <text x="55" y="719" font-family="JetBrains Mono, monospace" font-size="10" font-weight="700" fill="#22d3ee">L1</text>
+                        <text x="80" y="719" font-family="Inter, -apple-system, sans-serif" font-size="10" fill="#ffffff">浏览器：触摸滑动释放、页面隐藏停发、30s 看门狗</text>
+
+                        <rect x="40" y="731" width="880" height="24" rx="4" fill="#0d1117" stroke="rgba(255,255,255,0.10)" stroke-width="0.5"/>
+                        <text x="55" y="747" font-family="JetBrains Mono, monospace" font-size="10" font-weight="700" fill="#22d3ee">L2</text>
+                        <text x="80" y="747" font-family="Inter, -apple-system, sans-serif" font-size="10" fill="#ffffff">协议层：ACK x3 重试 + 冗余音频通路回退</text>
+
+                        <rect x="40" y="759" width="880" height="24" rx="4" fill="#0d1117" stroke="rgba(255,255,255,0.12)" stroke-width="0.5"/>
+                        <text x="55" y="775" font-family="JetBrains Mono, monospace" font-size="10" font-weight="700" fill="#22d3ee">L3</text>
+                        <text x="80" y="775" font-family="Inter, -apple-system, sans-serif" font-size="10" fill="#ffffff">服务端：120s TOT 硬限制、每 2s 持续重试</text>
+                    </svg>
+                </div>
 
                 <h3>核心组件</h3>
                 <table class="comparison-table">
@@ -165,78 +251,115 @@
                 <h2><span class="feature-icon">🔊</span> 音频处理流程</h2>
                 
                 <h3>接收音频链路 (RX)</h3>
-                <pre class="code-block">
-电台音频 (48kHz Float32)
-    │
-    ▼
-┌─────────────────┐
-│ DC去除 + 软削波  │  保护后续处理
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│ Int16 转换      │  48kHz → 16bit
-└────────┬────────┘
-         │
-         ▼  (可选)
-┌─────────────────┐
-│ WDSP 处理       │  NR2/NB/ANF/AGC
-│  - 频谱降噪     │  15-20dB降噪
-│  - 噪声抑制     │
-│  - 自动陷波     │
-│  - AGC增益     │
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│ Opus 编码       │  16kHz/20kbps
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│ WebSocket      │  浏览器传输
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│ AudioWorklet   │  低延迟播放
-└─────────────────┘
-                </pre>
+                <div class="svg-diagram" style="overflow-x:auto;margin:1em 0;">
+                    <svg viewBox="0 0 480 780" width="100%" height="auto" xmlns="http://www.w3.org/2000/svg">
+                        <defs>
+                            <marker id="arrowCyan" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto">
+                                <path d="M0,0 L8,4 L0,8 Z" fill="#22d3ee"/>
+                            </marker>
+                        </defs>
+                        <!-- Source -->
+                        <rect x="90" y="20" width="300" height="52" rx="6" fill="#0d1117" stroke="#22d3ee" stroke-width="1.5"/>
+                        <text x="240" y="42" text-anchor="middle" font-family="Inter, -apple-system, sans-serif" font-size="13" font-weight="700" fill="#ffffff">电台音频</text>
+                        <text x="240" y="60" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="11" fill="#8899aa">48kHz Float32</text>
+                        <!-- Arrow 1 -->
+                        <line x1="240" y1="72" x2="240" y2="100" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#arrowCyan)"/>
+                        <!-- DC去除 -->
+                        <rect x="100" y="105" width="280" height="52" rx="6" fill="#0d1117" stroke="#22d3ee" stroke-width="1.5"/>
+                        <text x="240" y="127" text-anchor="middle" font-family="Inter, -apple-system, sans-serif" font-size="13" font-weight="700" fill="#ffffff">DC去除 + 软削波</text>
+                        <text x="240" y="145" text-anchor="middle" font-family="Inter, -apple-system, sans-serif" font-size="10" fill="#8899aa">保护后续处理</text>
+                        <!-- Arrow 2 -->
+                        <line x1="240" y1="157" x2="240" y2="185" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#arrowCyan)"/>
+                        <!-- Int16 -->
+                        <rect x="110" y="190" width="260" height="46" rx="6" fill="#0d1117" stroke="rgba(255,255,255,0.08)" stroke-width="1.5"/>
+                        <text x="240" y="212" text-anchor="middle" font-family="Inter, -apple-system, sans-serif" font-size="13" font-weight="700" fill="#ffffff">Int16 转换</text>
+                        <text x="240" y="228" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="10" fill="#8899aa">48kHz - 16bit</text>
+                        <!-- Arrow 3 -->
+                        <line x1="240" y1="236" x2="240" y2="264" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#arrowCyan)"/>
+                        <text x="260" y="256" font-family="Inter, -apple-system, sans-serif" font-size="10" fill="#8899aa">(可选)</text>
+                        <!-- WDSP -->
+                        <rect x="50" y="269" width="380" height="90" rx="6" fill="#0d1117" stroke="#22d3ee" stroke-width="2"/>
+                        <text x="240" y="291" text-anchor="middle" font-family="Inter, -apple-system, sans-serif" font-size="13" font-weight="700" fill="#ffffff">WDSP 处理</text>
+                        <text x="240" y="310" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="10" fill="#22d3ee">NR2 / NB / ANF / AGC</text>
+                        <text x="240" y="328" text-anchor="middle" font-family="Inter, -apple-system, sans-serif" font-size="10" fill="#8899aa">频谱降噪 - 噪声抑制 - 自动陷波 - AGC增益</text>
+                        <text x="240" y="346" text-anchor="middle" font-family="Inter, -apple-system, sans-serif" font-size="10" fill="#22d3ee">15-20dB降噪</text>
+                        <!-- Arrow 4 -->
+                        <line x1="240" y1="359" x2="240" y2="395" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#arrowCyan)"/>
+                        <!-- Opus -->
+                        <rect x="110" y="400" width="260" height="46" rx="6" fill="#0d1117" stroke="rgba(255,255,255,0.08)" stroke-width="1.5"/>
+                        <text x="240" y="422" text-anchor="middle" font-family="Inter, -apple-system, sans-serif" font-size="13" font-weight="700" fill="#ffffff">Opus 编码</text>
+                        <text x="240" y="438" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="10" fill="#8899aa">16kHz / 20kbps</text>
+                        <!-- Arrow 5 -->
+                        <line x1="240" y1="446" x2="240" y2="482" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#arrowCyan)"/>
+                        <!-- WebSocket -->
+                        <rect x="115" y="487" width="250" height="46" rx="6" fill="#0d1117" stroke="#22d3ee" stroke-width="1.5"/>
+                        <text x="240" y="509" text-anchor="middle" font-family="Inter, -apple-system, sans-serif" font-size="13" font-weight="700" fill="#ffffff">WebSocket</text>
+                        <text x="240" y="525" text-anchor="middle" font-family="Inter, -apple-system, sans-serif" font-size="10" fill="#8899aa">浏览器传输</text>
+                        <!-- Arrow 6 -->
+                        <line x1="240" y1="533" x2="240" y2="569" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#arrowCyan)"/>
+                        <!-- AudioWorklet -->
+                        <rect x="115" y="574" width="250" height="46" rx="6" fill="#0d1117" stroke="#22d3ee" stroke-width="1.5"/>
+                        <text x="240" y="596" text-anchor="middle" font-family="Inter, -apple-system, sans-serif" font-size="13" font-weight="700" fill="#ffffff">AudioWorklet</text>
+                        <text x="240" y="612" text-anchor="middle" font-family="Inter, -apple-system, sans-serif" font-size="10" fill="#8899aa">低延迟播放</text>
+                        <!-- Left vertical pipeline indicator -->
+                        <line x1="30" y1="46" x2="30" y2="597" stroke="rgba(255,255,255,0.15)" stroke-width="1" stroke-dasharray="4,4"/>
+                        <text x="30" y="330" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="10" fill="#8899aa" transform="rotate(-90,30,330)">RX AUDIO PIPELINE</text>
+                    </svg>
+                </div>
 
                 <h3>发射音频链路 (TX)</h3>
-                <pre class="code-block">
-麦克风输入 (48kHz)
-    │
-    ▼
-┌─────────────────┐
-│ 抗混叠滤波     │  6kHz低通
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│ 降采样         │  48kHz → 16kHz
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│ TX均衡器       │  三段EQ预设
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│ Opus 解码      │  16kHz → 48kHz
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│ WebSocket      │  发送到服务器
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│ 电台输入       │  CAT PTT控制
-└─────────────────┘
-                </pre>
+                <div class="svg-diagram" style="overflow-x:auto;margin:1em 0;">
+                    <svg viewBox="0 0 480 780" width="100%" height="auto" xmlns="http://www.w3.org/2000/svg">
+                        <defs>
+                            <marker id="arrowAmber" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto">
+                                <path d="M0,0 L8,4 L0,8 Z" fill="#22d3ee"/>
+                            </marker>
+                        </defs>
+                        <!-- Source -->
+                        <rect x="100" y="20" width="280" height="46" rx="6" fill="#0d1117" stroke="#22d3ee" stroke-width="1.5"/>
+                        <text x="240" y="42" text-anchor="middle" font-family="Inter, -apple-system, sans-serif" font-size="13" font-weight="700" fill="#ffffff">麦克风输入</text>
+                        <text x="240" y="58" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="10" fill="#8899aa">48kHz</text>
+                        <!-- Arrow 1 -->
+                        <line x1="240" y1="66" x2="240" y2="102" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#arrowAmber)"/>
+                        <!-- Anti-alias -->
+                        <rect x="110" y="107" width="260" height="46" rx="6" fill="#0d1117" stroke="#22d3ee" stroke-width="1.5"/>
+                        <text x="240" y="129" text-anchor="middle" font-family="Inter, -apple-system, sans-serif" font-size="13" font-weight="700" fill="#ffffff">抗混叠滤波</text>
+                        <text x="240" y="145" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="10" fill="#8899aa">6kHz 低通</text>
+                        <!-- Arrow 2 -->
+                        <line x1="240" y1="153" x2="240" y2="189" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#arrowAmber)"/>
+                        <!-- Downsample -->
+                        <rect x="110" y="194" width="260" height="46" rx="6" fill="#0d1117" stroke="rgba(255,255,255,0.08)" stroke-width="1.5"/>
+                        <text x="240" y="216" text-anchor="middle" font-family="Inter, -apple-system, sans-serif" font-size="13" font-weight="700" fill="#ffffff">降采样</text>
+                        <text x="240" y="232" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="10" fill="#8899aa">48kHz - 16kHz</text>
+                        <!-- Arrow 3 -->
+                        <line x1="240" y1="240" x2="240" y2="276" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#arrowAmber)"/>
+                        <!-- TX EQ -->
+                        <rect x="110" y="281" width="260" height="46" rx="6" fill="#0d1117" stroke="rgba(255,255,255,0.08)" stroke-width="1.5"/>
+                        <text x="240" y="303" text-anchor="middle" font-family="Inter, -apple-system, sans-serif" font-size="13" font-weight="700" fill="#ffffff">TX均衡器</text>
+                        <text x="240" y="319" text-anchor="middle" font-family="Inter, -apple-system, sans-serif" font-size="10" fill="#8899aa">三段EQ预设</text>
+                        <!-- Arrow 4 -->
+                        <line x1="240" y1="327" x2="240" y2="363" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#arrowAmber)"/>
+                        <!-- Opus decode -->
+                        <rect x="110" y="368" width="260" height="46" rx="6" fill="#0d1117" stroke="rgba(255,255,255,0.08)" stroke-width="1.5"/>
+                        <text x="240" y="390" text-anchor="middle" font-family="Inter, -apple-system, sans-serif" font-size="13" font-weight="700" fill="#ffffff">Opus 解码</text>
+                        <text x="240" y="406" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="10" fill="#8899aa">16kHz - 48kHz</text>
+                        <!-- Arrow 5 -->
+                        <line x1="240" y1="414" x2="240" y2="450" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#arrowAmber)"/>
+                        <!-- WebSocket -->
+                        <rect x="115" y="455" width="250" height="46" rx="6" fill="#0d1117" stroke="#22d3ee" stroke-width="1.5"/>
+                        <text x="240" y="477" text-anchor="middle" font-family="Inter, -apple-system, sans-serif" font-size="13" font-weight="700" fill="#ffffff">WebSocket</text>
+                        <text x="240" y="493" text-anchor="middle" font-family="Inter, -apple-system, sans-serif" font-size="10" fill="#8899aa">发送到服务器</text>
+                        <!-- Arrow 6 -->
+                        <line x1="240" y1="501" x2="240" y2="537" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#arrowAmber)"/>
+                        <!-- Radio input -->
+                        <rect x="110" y="542" width="260" height="46" rx="6" fill="#0d1117" stroke="#22d3ee" stroke-width="2"/>
+                        <text x="240" y="564" text-anchor="middle" font-family="Inter, -apple-system, sans-serif" font-size="13" font-weight="700" fill="#ffffff">电台输入</text>
+                        <text x="240" y="580" text-anchor="middle" font-family="Inter, -apple-system, sans-serif" font-size="10" fill="#8899aa">CAT PTT控制</text>
+                        <!-- Left vertical pipeline indicator -->
+                        <line x1="30" y1="43" x2="30" y2="565" stroke="rgba(255,255,255,0.15)" stroke-width="1" stroke-dasharray="4,4"/>
+                        <text x="30" y="310" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="10" fill="#8899aa" transform="rotate(-90,30,310)">TX AUDIO PIPELINE</text>
+                    </svg>
+                </div>
             </div>
 
             <!-- WDSP -->
@@ -290,38 +413,83 @@
                 <p>MRRC V5.4 引入了完整的 CW 实时解码系统，采用 Browser-First AI 设计理念。</p>
 
                 <h3>双模式解码架构</h3>
-                <pre class="code-block">
-┌─────────────────────────────────────────────────────────────┐
-│                     CW 解码双模式架构                          │
-├─────────────────────────────────────────────────────────────┤
-│                                                              │
-│  前端模式 (推荐)                                              │
-│  ┌──────────────┐    ┌──────────────┐    ┌──────────────┐  │
-│  │ 音频流       │───►│ ONNX Runtime │───►│ CTC 解码     │  │
-│  │ (16kHz)      │    │ (2MB模型)    │    │              │  │
-│  └──────────────┘    └──────────────┘    └──────────────┘  │
-│         │                                       │             │
-│         │                              ┌────────▼────────┐    │
-│         │                              │ QSO 状态机     │    │
-│         │                              │ 智能回复建议   │    │
-│         │                              └────────────────┘    │
-│         │                                                     │
-│  延迟: &lt;50ms                                              │
-│  依赖: 无 (纯浏览器)                                          │
-│                                                              │
-├─────────────────────────────────────────────────────────────┤
-│                                                              │
-│  后端模式 (备选)                                              │
-│  ┌──────────────┐    ┌──────────────┐    ┌──────────────┐  │
-│  │ WebSocket   │───►│ morseangel   │───►│ 文本输出     │  │
-│  │ /WSCW       │    │ (PyTorch)    │    │              │  │
-│  └──────────────┘    └──────────────┘    └──────────────┘  │
-│                                                              │
-│  延迟: &lt;100ms                                              │
-│  依赖: PyTorch + CUDA                                        │
-│                                                              │
-└─────────────────────────────────────────────────────────────┘
-                </pre>
+                <div class="svg-diagram" style="overflow-x:auto;margin:1em 0;">
+                    <svg viewBox="0 0 720 550" width="100%" height="auto" xmlns="http://www.w3.org/2000/svg">
+                        <defs>
+                            <marker id="arrowCyan2" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto">
+                                <path d="M0,0 L8,4 L0,8 Z" fill="#22d3ee"/>
+                            </marker>
+                        </defs>
+                        <!-- Title -->
+                        <text x="360" y="30" text-anchor="middle" font-family="Inter, -apple-system, sans-serif" font-size="15" font-weight="700" fill="#ffffff">CW 解码双模式架构</text>
+
+                        <!-- ===== Frontend Mode Section ===== -->
+                        <rect x="20" y="48" width="680" height="210" rx="6" fill="#0d1117" stroke="rgba(255,255,255,0.06)" stroke-width="1.5" stroke-dasharray="6,4"/>
+                        <!-- Section label -->
+                        <rect x="20" y="48" width="150" height="28" rx="6" fill="rgba(255,255,255,0.08)"/>
+                        <text x="95" y="67" text-anchor="middle" font-family="Inter, -apple-system, sans-serif" font-size="12" font-weight="700" fill="#ffffff">前端模式 (推荐)</text>
+
+                        <!-- Box 1: Audio Stream -->
+                        <rect x="50" y="95" width="135" height="55" rx="6" fill="#0d1117" stroke="#22d3ee" stroke-width="1"/>
+                        <text x="117" y="118" text-anchor="middle" font-family="Inter, -apple-system, sans-serif" font-size="12" font-weight="700" fill="#ffffff">音频流</text>
+                        <text x="117" y="138" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="10" fill="#8899aa">16kHz</text>
+                        <!-- Arrow -->
+                        <line x1="185" y1="122" x2="230" y2="122" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#arrowCyan2)"/>
+                        <!-- Box 2: ONNX -->
+                        <rect x="235" y="95" width="135" height="55" rx="6" fill="#0d1117" stroke="rgba(255,255,255,0.08)" stroke-width="1.5"/>
+                        <text x="302" y="118" text-anchor="middle" font-family="Inter, -apple-system, sans-serif" font-size="12" font-weight="700" fill="#ffffff">ONNX Runtime</text>
+                        <text x="302" y="138" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="10" fill="#8899aa">2MB模型</text>
+                        <!-- Arrow -->
+                        <line x1="370" y1="122" x2="415" y2="122" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#arrowCyan2)"/>
+                        <!-- Box 3: CTC -->
+                        <rect x="420" y="95" width="135" height="55" rx="6" fill="#0d1117" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
+                        <text x="487" y="122" text-anchor="middle" font-family="Inter, -apple-system, sans-serif" font-size="12" font-weight="700" fill="#ffffff">CTC 解码</text>
+
+                        <!-- Down arrow from ONNX to QSO -->
+                        <line x1="302" y1="150" x2="302" y2="177" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#arrowCyan2)"/>
+                        <!-- Box 4: QSO State Machine -->
+                        <rect x="225" y="182" width="155" height="55" rx="6" fill="#0d1117" stroke="rgba(255,255,255,0.08)" stroke-width="1.5"/>
+                        <text x="302" y="205" text-anchor="middle" font-family="Inter, -apple-system, sans-serif" font-size="12" font-weight="700" fill="#ffffff">QSO 状态机</text>
+                        <text x="302" y="225" text-anchor="middle" font-family="Inter, -apple-system, sans-serif" font-size="10" fill="#8899aa">智能回复建议</text>
+
+                        <!-- Info text -->
+                        <text x="45" y="245" font-family="JetBrains Mono, monospace" font-size="11" fill="#22d3ee">延迟: &lt;50ms</text>
+                        <text x="350" y="245" font-family="JetBrains Mono, monospace" font-size="11" fill="#8899aa">依赖: 无 (纯浏览器)</text>
+
+                        <!-- ===== Divider ===== -->
+                        <line x1="30" y1="268" x2="690" y2="268" stroke="rgba(255,255,255,0.12)" stroke-width="0.5" stroke-dasharray="6,4"/>
+
+                        <!-- ===== Backend Mode Section ===== -->
+                        <rect x="20" y="283" width="680" height="185" rx="6" fill="#0d1117" stroke="rgba(255,255,255,0.06)" stroke-width="1.5" stroke-dasharray="6,4"/>
+                        <!-- Section label -->
+                        <rect x="20" y="283" width="150" height="28" rx="6" fill="rgba(255,255,255,0.08)"/>
+                        <text x="95" y="302" text-anchor="middle" font-family="Inter, -apple-system, sans-serif" font-size="12" font-weight="700" fill="#ffffff">后端模式 (备选)</text>
+
+                        <!-- Box 1: WebSocket -->
+                        <rect x="50" y="330" width="160" height="55" rx="6" fill="#0d1117" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
+                        <text x="130" y="353" text-anchor="middle" font-family="Inter, -apple-system, sans-serif" font-size="12" font-weight="700" fill="#ffffff">WebSocket</text>
+                        <text x="130" y="373" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="10" fill="#8899aa">/WSCW</text>
+                        <!-- Arrow -->
+                        <line x1="210" y1="357" x2="260" y2="357" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#arrowCyan2)"/>
+                        <!-- Box 2: morseangel -->
+                        <rect x="265" y="330" width="160" height="55" rx="6" fill="#0d1117" stroke="rgba(255,255,255,0.08)" stroke-width="1.5"/>
+                        <text x="345" y="353" text-anchor="middle" font-family="Inter, -apple-system, sans-serif" font-size="12" font-weight="700" fill="#ffffff">morseangel</text>
+                        <text x="345" y="373" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="10" fill="#8899aa">PyTorch</text>
+                        <!-- Arrow -->
+                        <line x1="425" y1="357" x2="475" y2="357" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#arrowCyan2)"/>
+                        <!-- Box 3: Text output -->
+                        <rect x="480" y="330" width="135" height="55" rx="6" fill="#0d1117" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
+                        <text x="547" y="357" text-anchor="middle" font-family="Inter, -apple-system, sans-serif" font-size="12" font-weight="700" fill="#ffffff">文本输出</text>
+
+                        <!-- Info text -->
+                        <text x="45" y="455" font-family="JetBrains Mono, monospace" font-size="11" fill="#22d3ee">延迟: &lt;100ms</text>
+                        <text x="350" y="455" font-family="JetBrains Mono, monospace" font-size="11" fill="#8899aa">依赖: PyTorch + CUDA</text>
+
+                        <!-- Vertical mode labels -->
+                        <text x="5" y="160" font-family="JetBrains Mono, monospace" font-size="9" fill="#8899aa" transform="rotate(-90,5,160)">BROWSER-FIRST AI</text>
+                        <text x="5" y="380" font-family="JetBrains Mono, monospace" font-size="9" fill="#8899aa" transform="rotate(-90,5,380)">SERVER-SIDE</text>
+                    </svg>
+                </div>
 
                 <h3>技术规格</h3>
                 <table class="comparison-table">
@@ -368,36 +536,58 @@
                 <h2><span class="feature-icon">📊</span> ATR-1000 集成</h2>
                 
                 <h3>系统架构</h3>
-                <pre class="code-block">
-┌─────────────────────────────────────────────────────────────┐
-│                    ATR-1000 集成架构                          │
-├─────────────────────────────────────────────────────────────┤
-│                                                              │
-│  前端 (mobile_modern.js)                                     │
-│      │                                                        │
-│      │ WebSocket /WSATR1000                                  │
-│      ▼                                                        │
-│  ┌─────────────────┐                                         │
-│  │ UHRR 主程序     │  消息路由 + 批量广播                      │
-│  └────────┬────────┘                                         │
-│           │                                                  │
-│           │ Unix Socket                                      │
-│           ▼                                                  │
-│  ┌─────────────────┐     WebSocket                          │
-│  │ atr1000_proxy  │◄────────────────────────────────┐        │
-│  │ 独立进程        │                                  │        │
-│  └────────┬────────┘                                  │        │
-│           │                                             │        │
-│           └──────────────────────┬──────────────────────┘        │
-│                                  │                                │
-│                                  ▼                                │
-│                    ┌──────────────────────┐                      │
-│                    │  ATR-1000 设备       │                      │
-│                    │  192.168.1.63:60001  │                      │
-│                    │  功率/SWR/继电器状态  │                      │
-│                    └──────────────────────┘                      │
-└─────────────────────────────────────────────────────────────┘
-                </pre>
+                <div class="svg-diagram" style="overflow-x:auto;margin:1em 0;">
+                    <svg viewBox="0 0 680 500" width="100%" height="auto" xmlns="http://www.w3.org/2000/svg">
+                        <defs>
+                            <marker id="arrowCyan3" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto">
+                                <path d="M0,0 L8,4 L0,8 Z" fill="#22d3ee"/>
+                            </marker>
+                        </defs>
+                        <!-- Title -->
+                        <text x="340" y="28" text-anchor="middle" font-family="Inter, -apple-system, sans-serif" font-size="15" font-weight="700" fill="#ffffff">ATR-1000 集成架构</text>
+
+                        <!-- Box: Frontend -->
+                        <rect x="170" y="50" width="340" height="42" rx="6" fill="#0d1117" stroke="#22d3ee" stroke-width="1"/>
+                        <text x="340" y="68" text-anchor="middle" font-family="Inter, -apple-system, sans-serif" font-size="12" font-weight="700" fill="#ffffff">前端</text>
+                        <text x="340" y="83" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="10" fill="#8899aa">mobile_modern.js</text>
+
+                        <!-- Arrow: Frontend -> Main -->
+                        <line x1="340" y1="92" x2="340" y2="125" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#arrowCyan3)"/>
+                        <text x="355" y="112" font-family="JetBrains Mono, monospace" font-size="9" fill="#22d3ee">WebSocket /WSATR1000</text>
+
+                        <!-- Box: UHRR Main -->
+                        <rect x="170" y="130" width="340" height="42" rx="6" fill="#0d1117" stroke="#22d3ee" stroke-width="1.5"/>
+                        <text x="340" y="148" text-anchor="middle" font-family="Inter, -apple-system, sans-serif" font-size="12" font-weight="700" fill="#ffffff">UHRR 主程序</text>
+                        <text x="340" y="163" text-anchor="middle" font-family="Inter, -apple-system, sans-serif" font-size="10" fill="#8899aa">消息路由 + 批量广播</text>
+
+                        <!-- Arrow: Main -> Proxy -->
+                        <line x1="340" y1="172" x2="340" y2="205" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#arrowCyan3)"/>
+                        <text x="355" y="192" font-family="JetBrains Mono, monospace" font-size="9" fill="#22d3ee">Unix Socket</text>
+
+                        <!-- Box: ATR-1000 Proxy -->
+                        <rect x="130" y="210" width="420" height="48" rx="6" fill="#0d1117" stroke="rgba(255,255,255,0.08)" stroke-width="1.5"/>
+                        <text x="340" y="230" text-anchor="middle" font-family="Inter, -apple-system, sans-serif" font-size="12" font-weight="700" fill="#ffffff">atr1000_proxy 独立进程</text>
+                        <text x="340" y="248" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="10" fill="#8899aa">WebSocket - 设备协议转换</text>
+
+                        <!-- Arrow: Proxy -> Device directly -->
+                        <line x1="340" y1="258" x2="340" y2="295" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#arrowCyan3)"/>
+
+                        <!-- Box: ATR-1000 Device -->
+                        <rect x="120" y="300" width="440" height="60" rx="6" fill="#0d1117" stroke="#22d3ee" stroke-width="2"/>
+                        <text x="340" y="322" text-anchor="middle" font-family="Inter, -apple-system, sans-serif" font-size="13" font-weight="700" fill="#ffffff">ATR-1000 设备</text>
+                        <text x="340" y="340" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="10" fill="#22d3ee">192.168.1.63:60001</text>
+                        <text x="340" y="354" text-anchor="middle" font-family="Inter, -apple-system, sans-serif" font-size="10" fill="#8899aa">功率 / SWR / 继电器状态</text>
+
+                        <!-- Right side: bidirectional arrow Proxy <-> Device -->
+                        <rect x="570" y="270" width="80" height="28" rx="4" fill="#0d1117" stroke="rgba(255,255,255,0.08)" stroke-width="1" stroke-dasharray="3,3"/>
+                        <text x="610" y="288" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="9" fill="#8899aa">TCP/IP</text>
+
+                        <!-- Decorative elements -->
+                        <circle cx="340" cy="102" r="3" fill="#22d3ee"/>
+                        <circle cx="340" cy="182" r="3" fill="#22d3ee"/>
+                        <circle cx="340" cy="268" r="3" fill="rgba(255,255,255,0.2)"/>
+                    </svg>
+                </div>
 
                 <h3>智能天调学习</h3>
                 <ul>
@@ -551,5 +741,6 @@
     </footer>
 
     <script src="../../js/main.js"></script>
+    <script src="../../js/global-nav.js?v=4" defer data-gn="1"></script>
 </body>
 </html>

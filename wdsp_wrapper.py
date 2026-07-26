@@ -112,6 +112,79 @@ else:
     print(f"⚠️ WDSP 库未找到！请编译安装: cd /tmp && git clone https://github.com/g0orx/wdsp.git && cd wdsp && make")
 
 
+# ═══════════════════════════════════════════════════════════════════════════════
+# C 函数符号绑定辅助
+# ═══════════════════════════════════════════════════════════════════════════════
+
+def _bind(name: str, argtypes: list, restype=ctypes.c_int):
+    """
+    动态绑定 WDSP C 函数符号，缺失时优雅降级。
+    """
+    if not WDSP_AVAILABLE:
+        return
+    try:
+        func = getattr(_wdsp, name)
+        func.argtypes = argtypes
+        func.restype = restype
+    except AttributeError:
+        if WDSP_DEBUG:
+            print(f"   ⚠️ WDSP 符号缺失: {name} (libwdsp 版本可能过旧)")
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# TX 发射链 C 函数签名绑定 (OpenHPSDR 广播级处理链)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+def _bind_tx_signatures():
+    """绑定 TX 面板控制、DEXP 噪声门、TX AGC 话务压缩、TX EQ 塑形"""
+    c_int = ctypes.c_int
+    c_double = ctypes.c_double
+    c_pointer = ctypes.POINTER(ctypes.c_double)
+
+    # ── TX 面板总开关 ──
+    _bind("SetTXAMode",        [c_int, c_int], c_int)
+    _bind("SetTXAPanelRun",    [c_int, c_int], c_int)
+
+    # ── DEXP (发射级智能向下扩展噪声门 — 斩杀空调/风扇环境杂音) ──
+    _bind("SetDEXPRun",              [c_int, c_int],    c_int)
+    _bind("SetDEXPAttackThreshold",  [c_int, c_double], c_int)
+    _bind("SetDEXPReleaseTime",      [c_int, c_double], c_int)
+
+    # ── TX AGC (RF Speech Compressor — 绝不泼溅的强推功率) ──
+    _bind("SetTXAAGCMode",    [c_int, c_int],    c_int)
+    _bind("SetTXAAGCThresh",  [c_int, c_double], c_int)
+
+    # ── TX EQ (十段发射均衡器 — 打造完美低音/高音 HAM 磁性听感) ──
+    _bind("SetTXAEQRun",      [c_int, c_int],                    c_int)
+    _bind("SetTXAEQProfile",  [c_int, c_int, c_pointer],         c_int)
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# 空间分集接收 (Spatial Diversity RX) 函数签名
+# ═══════════════════════════════════════════════════════════════════════════════
+
+def _bind_diversity_signatures():
+    """绑定双通道交换 & 分集矩阵控制"""
+    c_int = ctypes.c_int
+    c_double = ctypes.c_double
+    c_pointer_double = ctypes.POINTER(ctypes.c_double)
+    c_pointer_int = ctypes.POINTER(ctypes.c_int)
+
+    # fexchange2 — 双通道零拷贝复数交换 (Diversity 核心)
+    _bind("fexchange2", [c_int, c_pointer_double, c_pointer_double,
+                         c_pointer_double, c_pointer_double, c_pointer_int], c_int)
+
+    # 分集矩阵控制
+    _bind("SetEXTDIVRun",    [c_int, c_int],    c_int)
+    _bind("SetEXTDIVRotate", [c_int, c_double], c_int)
+
+
+# ── 执行绑定 ──
+if WDSP_AVAILABLE:
+    _bind_tx_signatures()
+    _bind_diversity_signatures()
+
+
 class WDSPProcessor:
     """
     WDSP Audio Processor for SSB voice communication.

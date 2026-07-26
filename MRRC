@@ -1672,46 +1672,54 @@ class ATR1000ProxyManager:
         
         while self.running and self.unix_socket:
             try:
-                ready, _, _ = select.select([self.unix_socket], [], [], 0.005)
+                ready, _, _ = select.select([self.unix_socket], [], [], 0.1)
                 if ready:
                     try:
                         data = self.unix_socket.recv(4096)
-                        if data:
-                            data_buffer += data.decode('utf-8')
+                        if not data:
+                            logger.warning("⚠️ ATR-1000 Unix Socket closed by peer")
+                            try:
+                                self.unix_socket.close()
+                            except Exception:
+                                pass
+                            self.unix_socket = None
+                            break
+
+                        data_buffer += data.decode('utf-8')
                             
-                            # 处理可能的多条消息（按换行分割）
-                            while '\n' in data_buffer:
-                                line, data_buffer = data_buffer.split('\n', 1)
-                                line = line.strip()
-                                if not line:
-                                    continue
+                        # 处理可能的多条消息（按换行分割）
+                        while '\n' in data_buffer:
+                            line, data_buffer = data_buffer.split('\n', 1)
+                            line = line.strip()
+                            if not line:
+                                continue
                                 
-                                try:
-                                    # 验证JSON格式
-                                    msg = json.loads(line)
-                                    if msg.get('type') == 'atr1000_meter':
-                                        self.message_count += 1
-                                        self.last_data = line
+                            try:
+                                # 验证JSON格式
+                                msg = json.loads(line)
+                                if msg.get('type') == 'atr1000_meter':
+                                    self.message_count += 1
+                                    self.last_data = line
                                         
-                                        # 提取功率和SWR用于日志
-                                        power = msg.get('power', 0)
-                                        swr = msg.get('swr', 0)
+                                    # 提取功率和SWR用于日志
+                                    power = msg.get('power', 0)
+                                    swr = msg.get('swr', 0)
                                         
-                                        # V4.5.6: 减少日志输出，每 10 次数据变化才打印一次
-                                        if (power != last_power or abs(swr - last_swr) > 0.5) and power > 0:
-                                            self._meter_log_count = getattr(self, '_meter_log_count', 0) + 1
-                                            if self._meter_log_count >= 10:
-                                                logger.debug(f"📥 ATR-1000: power={power}W, SWR={swr:.2f}")
-                                                self._meter_log_count = 0
-                                            last_power = power
-                                            last_swr = swr
+                                    # V4.5.6: 减少日志输出，每 10 次数据变化才打印一次
+                                    if (power != last_power or abs(swr - last_swr) > 0.5) and power > 0:
+                                        self._meter_log_count = getattr(self, '_meter_log_count', 0) + 1
+                                        if self._meter_log_count >= 10:
+                                            logger.debug(f"📥 ATR-1000: power={power}W, SWR={swr:.2f}")
+                                            self._meter_log_count = 0
+                                        last_power = power
+                                        last_swr = swr
                                         
-                                        # 添加到批次
-                                        message_batch.append(line)
-                                except json.JSONDecodeError:
-                                    logger.debug(f"无效的JSON数据: {line[:100]}")
-                                except Exception as e:
-                                    logger.debug(f"处理消息错误: {e}")
+                                    # 添加到批次
+                                    message_batch.append(line)
+                            except json.JSONDecodeError:
+                                logger.debug(f"无效的JSON数据: {line[:100]}")
+                            except Exception as e:
+                                logger.debug(f"处理消息错误: {e}")
                                     
                     except BlockingIOError:
                         pass

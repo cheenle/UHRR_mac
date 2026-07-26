@@ -6,42 +6,45 @@
     <title>安装指南 - MRRC 移动远程电台控制</title>
     <meta name="description" content="MRRC详细安装指南：macOS/Linux系统配置、硬件连接、软件依赖、服务启动等完整步骤">
     <link rel="stylesheet" href="../../css/style.css">
+    <link rel="stylesheet" href="../../css/octen.css?v=2">
+    <link rel="stylesheet" href="../../css/sunsdrmobile.css?v=1">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="../../css/docs.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7442510147240155"
      crossorigin="anonymous"></script>
 </head>
-<body>
-    <!-- Header -->
-    <header class="header">
-        <div class="container header-content">
+<body data-site="mrrc">
+        <!-- Navigation -->
+    <nav class="navbar">
+        <div class="container navbar-content">
             <a href="../../index.html" class="logo">
-                <span class="logo-icon">📻</span>
+                <span class="logo-icon">&#x1f4fb;</span>
                 <span>MRRC</span>
             </a>
-            <nav class="nav">
-                <a href="../../index.html" data-i18n="nav_home">首页</a>
-                <a href="features.html" data-i18n="nav_features">功能</a>
-                <a href="../../index.html#demo" data-i18n="nav_demo">演示</a>
-                <a href="installation.html" class="active" data-i18n="nav_install">安装</a>
-                <a href="design.html" data-i18n="nav_design">设计 &amp; 架构</a>
-                <a href="docs.html" data-i18n="nav_docs">文档</a>
-                <a href="../../fde.html">FDE</a>
-                <a href="../aladdin-v2.html">阿拉丁 V2</a>
-                <a href="../../efhw/index.html">EFHW</a>
-                <a href="https://github.com/cheenle/UHRR_mac" target="_blank" rel="noopener">
+            <ul class="nav-links">
+                <li><a href="../../index.html">Home</a></li>
+                <li><a href="features.html">Features</a></li>
+                <li><a href="../../index.html#demo">Demo</a></li>
+                <li><a href="installation.html">Installation</a></li>
+                <li><a href="design.html">Design &amp; Architecture</a></li>
+                <li><a href="docs.html">Docs</a></li>
+                <li><a href="../../fde.html">FDE</a></li>
+                <li><a href="../../aladdin-v2.html">Aladdin V2</a></li>
+                <li><a href="../../efhw/index.html">EFHW</a></li>
+                <li><a href="https://github.com/cheenle/UHRR_mac" target="_blank" rel="noopener">
                     <i class="fab fa-github"></i> GitHub
-                </a>
-            </nav>
-            <div class="lang-switch">
-                <button class="lang-btn" data-lang="en"><a href="../../docs/installation.html" style="color:inherit;text-decoration:none;">English</a></button>
-                <button class="lang-btn active" data-lang="zh">中文</button>
+                </a></li>
+            </ul>
+            <div class="nav-actions">
+                <a href="../../docs/installation.html" class="lang-btn">English</a>
+                <button class="mobile-menu-toggle"><i class="fas fa-bars"></i></button>
             </div>
         </div>
-    </header>
+    </nav>
 
-    <!-- Hero -->
+<!-- Hero -->
     <section class="hero">
         <div class="hero-bg"></div>
         <div class="container">
@@ -128,18 +131,62 @@
 
                 <h3>连接示意图</h3>
                 <div class="connection-diagram">
-                    <pre class="diagram">
-    ┌─────────────┐      USB串口       ┌──────────┐
-    │   电台设备   │◄──────────────────►│  计算机   │
-    │  (IC-7100)  │      USB音频       │ (macOS)  │
-    └──────┬──────┘◄──────────────────►└────┬─────┘
-           │                                   │
-           │ 射频                                │ 网络
-           │                                   │
-    ┌──────▼──────┐                      ┌────▼─────┐
-    │    天线     │                      │  手机/平板 │
-    └─────────────┘                      └──────────┘
-                    </pre>
+                    <div class="svg-diagram" style="overflow-x:auto;margin:1em 0;">
+                        <svg viewBox="0 0 700 450" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:700px;">
+                            <defs>
+                                <marker id="arrowCyan" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto">
+                                    <path d="M0,0 L10,4 L0,8 Z" fill="#22d3ee"/>
+                                </marker>
+                                <marker id="arrowCyanRev" markerWidth="10" markerHeight="8" refX="1" refY="4" orient="auto">
+                                    <path d="M10,0 L0,4 L10,8 Z" fill="#22d3ee"/>
+                                </marker>
+                            </defs>
+
+                            <!-- Connection: USB串口 (Radio <-> Computer, double-headed) -->
+                            <line x1="255" y1="65" x2="135" y2="195" stroke="#22d3ee" stroke-width="1.5" marker-start="url(#arrowCyanRev)" marker-end="url(#arrowCyan)"/>
+                            <!-- Connection: USB音频 (Radio <-> Computer, double-headed) -->
+                            <line x1="255" y1="100" x2="172" y2="195" stroke="rgba(255,255,255,0.2)" stroke-width="1.5" marker-start="url(#arrowCyanRev)" marker-end="url(#arrowCyan)"/>
+
+                            <!-- Connection: 射频 (Radio -> Antenna) -->
+                            <line x1="350" y1="120" x2="240" y2="355" stroke="rgba(255,255,255,0.2)" stroke-width="1.5" marker-end="url(#arrowCyan)"/>
+                            <!-- Connection: 网络 (Computer -> Phone/Tablet) -->
+                            <line x1="157" y1="260" x2="510" y2="355" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#arrowCyan)"/>
+
+                            <!-- Label: USB串口 -->
+                            <rect x="148" y="122" width="64" height="20" rx="3" fill="#0d1117"/>
+                            <text x="180" y="136" text-anchor="middle" fill="#22d3ee" font-family="Inter, -apple-system, sans-serif" font-size="11">USB串口</text>
+
+                            <!-- Label: USB音频 -->
+                            <rect x="175" y="142" width="64" height="20" rx="3" fill="#0d1117"/>
+                            <text x="207" y="156" text-anchor="middle" fill="#8899aa" font-family="Inter, -apple-system, sans-serif" font-size="11">USB音频</text>
+
+                            <!-- Label: 射频 -->
+                            <rect x="267" y="228" width="52" height="20" rx="3" fill="#0d1117"/>
+                            <text x="293" y="242" text-anchor="middle" fill="#8899aa" font-family="Inter, -apple-system, sans-serif" font-size="11">射频</text>
+
+                            <!-- Label: 网络 -->
+                            <rect x="304" y="298" width="52" height="20" rx="3" fill="#0d1117"/>
+                            <text x="330" y="312" text-anchor="middle" fill="#22d3ee" font-family="Inter, -apple-system, sans-serif" font-size="11">网络</text>
+
+                            <!-- Node: 电台设备 (IC-7100) - Top center -->
+                            <rect x="255" y="45" width="190" height="75" rx="6" fill="#0d1117" stroke="#22d3ee" stroke-width="2"/>
+                            <text x="350" y="72" text-anchor="middle" fill="#ffffff" font-family="Inter, -apple-system, sans-serif" font-weight="700" font-size="14">电台设备</text>
+                            <text x="350" y="98" text-anchor="middle" fill="#8899aa" font-family="Inter, -apple-system, sans-serif" font-size="12">(IC-7100)</text>
+
+                            <!-- Node: 计算机 (macOS) - Left center -->
+                            <rect x="75" y="195" width="165" height="65" rx="6" fill="#0d1117" stroke="rgba(255,255,255,0.08)" stroke-width="2"/>
+                            <text x="157" y="224" text-anchor="middle" fill="#ffffff" font-family="Inter, -apple-system, sans-serif" font-weight="700" font-size="14">计算机</text>
+                            <text x="157" y="246" text-anchor="middle" fill="#8899aa" font-family="Inter, -apple-system, sans-serif" font-size="12">(macOS)</text>
+
+                            <!-- Node: 天线 - Bottom left -->
+                            <rect x="175" y="355" width="130" height="50" rx="6" fill="#0d1117" stroke="rgba(255,255,255,0.08)" stroke-width="2"/>
+                            <text x="240" y="385" text-anchor="middle" fill="#ffffff" font-family="Inter, -apple-system, sans-serif" font-weight="700" font-size="14">天线</text>
+
+                            <!-- Node: 手机/平板 - Bottom right -->
+                            <rect x="445" y="355" width="135" height="50" rx="6" fill="#0d1117" stroke="#22d3ee" stroke-width="2"/>
+                            <text x="512" y="385" text-anchor="middle" fill="#ffffff" font-family="Inter, -apple-system, sans-serif" font-weight="700" font-size="14">手机/平板</text>
+                        </svg>
+                    </div>
                 </div>
             </div>
 
@@ -576,5 +623,6 @@ open dev_tools/debug_audio.html</code></pre>
     </footer>
 
     <script src="../../js/main.js"></script>
+    <script src="../../js/global-nav.js?v=4" defer data-gn="1"></script>
 </body>
 </html>

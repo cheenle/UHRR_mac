@@ -4937,3 +4937,127 @@ function handleCQCompleteMobile() {
 // 导出 CQ 相关函数
 window.playCQAudio = playCQAudio;
 window.handleCQCompleteMobile = handleCQCompleteMobile;
+
+
+////////////////////////////////////////////////////////////
+// FT-710 风格交互增补 (v5.6.0)
+// 纯追加：不修改任何现有逻辑（PTT 时序 / tune / cq / DSP / 记忆同步等）
+////////////////////////////////////////////////////////////
+(function() {
+    'use strict';
+
+    // ---------- 简易 toast（VFO 占位按钮等使用） ----------
+    var toastEl = null;
+    var toastTimer = null;
+    function showMobileToast(msg) {
+        if (!toastEl) {
+            toastEl = document.createElement('div');
+            toastEl.id = 'mrrc-toast';
+            document.body.appendChild(toastEl);
+        }
+        toastEl.textContent = msg;
+        toastEl.classList.add('show');
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(function() {
+            toastEl.classList.remove('show');
+        }, 1800);
+    }
+
+    // ---------- #status-band：由当前频率推导波段 ----------
+    function updateStatusBand() {
+        var el = document.getElementById('status-band');
+        if (!el) return;
+        var freq = (typeof TRXfrequency !== 'undefined' && TRXfrequency)
+            ? TRXfrequency
+            : mobileState.currentFrequency;
+        var band = getMobileBandForFrequency(freq);
+        el.textContent = band ? band.name : '--';
+    }
+
+    // 包装现有 updateFrequencyDisplay：频率显示更新后同步波段指示
+    var _origUpdateFrequencyDisplay = window.updateFrequencyDisplay;
+    if (typeof _origUpdateFrequencyDisplay === 'function') {
+        window.updateFrequencyDisplay = function() {
+            _origUpdateFrequencyDisplay.apply(this, arguments);
+            updateStatusBand();
+        };
+    }
+
+    // ---------- #status-tx：RX/TX 文本 + 红色 TX 态 ----------
+    function updateStatusTx(isTx) {
+        var el = document.getElementById('status-tx');
+        if (!el) return;
+        el.textContent = isTx ? 'TX' : 'RX';
+        el.classList.toggle('tx', !!isTx);
+    }
+
+    // 包装 ptt_manager.js 的全局 updatePTTStatus（controls.js / tx_button_optimized.js 共用此路径）
+    var _origUpdatePTTStatus = window.updatePTTStatus;
+    window.updatePTTStatus = function(isPTTOn) {
+        if (typeof _origUpdatePTTStatus === 'function') {
+            _origUpdatePTTStatus.apply(this, arguments);
+        }
+        updateStatusTx(isPTTOn);
+    };
+
+    // ---------- DOM 就绪后绑定新按钮 ----------
+    document.addEventListener('DOMContentLoaded', function() {
+        // 初始状态
+        updateStatusBand();
+        updateStatusTx(false);
+
+        // #wakelock-btn：切换 Screen Wake Lock（复用文件顶部现有 wakeLock 逻辑）
+        var wlBtn = document.getElementById('wakelock-btn');
+        if (wlBtn) {
+            var syncWakeLockBtn = function() {
+                wlBtn.classList.toggle('active', !!wakeLock);
+                wlBtn.setAttribute('aria-pressed', wakeLock ? 'true' : 'false');
+            };
+            wlBtn.addEventListener('click', async function() {
+                if (wakeLock) {
+                    await releaseWakeLock();
+                } else {
+                    await requestWakeLock();
+                }
+                syncWakeLockBtn();
+            });
+            // wakeLock 可能被系统/页面隐藏自动释放，周期同步按钮态
+            setInterval(syncWakeLockBtn, 3000);
+            syncWakeLockBtn();
+        }
+
+        // #fullscreen-btn（header 图标按钮）：与菜单 fullscreen 项相同的切换逻辑
+        var fsBtn = document.getElementById('fullscreen-btn');
+        if (fsBtn) {
+            fsBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                toggleFullscreen();
+            });
+            // setupFullscreenListener() 会把该按钮 innerHTML 改写为文字标签；
+            // 本监听器注册更晚（DOMContentLoaded 顺序在其后），在其之后恢复图标并同步 active 态
+            var syncFsBtn = function() {
+                var isFs = !!(document.fullscreenElement ||
+                              document.webkitFullscreenElement ||
+                              document.mozFullScreenElement ||
+                              document.msFullscreenElement);
+                fsBtn.innerHTML = '⛶';
+                fsBtn.classList.toggle('active', isFs);
+                fsBtn.setAttribute('aria-pressed', isFs ? 'true' : 'false');
+            };
+            ['fullscreenchange', 'webkitfullscreenchange', 'mozfullscreenchange', 'MSFullscreenChange']
+                .forEach(function(ev) {
+                    document.addEventListener(ev, syncFsBtn);
+                });
+        }
+
+        // VFO 占位按钮：disabled 不触发 click，此为双保险提示
+        ['btn-vfoa', 'btn-vfob', 'btn-ab', 'btn-split'].forEach(function(id) {
+            var btn = document.getElementById(id);
+            if (btn) {
+                btn.addEventListener('click', function() {
+                    showMobileToast('后端暂不支持');
+                });
+            }
+        });
+    });
+})();

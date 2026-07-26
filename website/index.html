@@ -3,397 +3,310 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="MRRC - Mobile Remote Radio Control. Amateur Radio, Anytime, Anywhere. Ultra-low latency remote transceiver control solution">
+    <meta name="description" content="MRRC — Universal HF remote control in the VLSC ecosystem. Web-based HAM operation via Hamlib/rigctld with low-latency audio, WDSP, and PTT safety.">
     <meta name="keywords" content="HAM Radio, Amateur Radio, Remote Control, WebSDR, Shortwave">
     <meta name="author" content="BG1SB">
     <meta name="theme-color" content="#000000">
-    
-    <title>MRRC | Amateur Radio, Anytime, Anywhere</title>
-    
-    <!-- Fonts -->
+
+    <title>MRRC — Universal HF Remote Control | VLSC Ecosystem</title>
+
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-    
-    <!-- Styles -->
-    <link rel="stylesheet" href="css/octen.css">
+
+    <link rel="stylesheet" href="css/octen.css?v=5">
+    <link rel="stylesheet" href="css/sunsdrmobile.css?v=1">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
-    <!-- Favicon -->
+
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect fill='%2322d3ee' width='100' height='100' rx='20'/><text y='.9em' x='50%' text-anchor='middle' font-size='60'>📻</text></svg>">
-    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7442510147240155"
-     crossorigin="anonymous"></script>
 </head>
-<body>
-    <!-- Navigation -->
-    <nav class="navbar">
-        <div class="container navbar-content">
-            <a href="#" class="logo">
-                <span class="logo-icon">📻</span>
-                <span>MRRC</span>
+<body data-site="mrrc">
+
+<nav class="navbar">
+    <div class="container navbar-content">
+        <a href="#" class="logo">
+            <span class="logo-icon">📻</span>
+            <span>MRRC</span>
+        </a>
+        <ul class="nav-links">
+            <li><a href="#ecosystem">Ecosystem</a></li>
+            <li><a href="#features">Features</a></li>
+            <li><a href="#demo">Demo</a></li>
+            <li><a href="docs/installation.html">Installation</a></li>
+            <li><a href="docs/design.html">Architecture</a></li>
+            <li><a href="docs/docs.html">Docs</a></li>
+            <li><a href="aladdin-v2.html">Aladdin V2</a></li>
+            <li><a href="efhw/index.html">EFHW</a></li>
+            <li><a href="https://github.com/cheenle/UHRR_mac" target="_blank" rel="noopener">
+                <i class="fab fa-github"></i> GitHub
+            </a></li>
+        </ul>
+        <div class="nav-actions">
+            <a href="zh/index.html" class="lang-btn">中文</a>
+            <button class="mobile-menu-toggle" onclick="toggleMobileMenu()"><i class="fas fa-bars"></i></button>
+        </div>
+    </div>
+</nav>
+
+<section class="hero">
+    <div class="hero-content">
+        <div class="hero-badge">
+            <i class="fas fa-satellite-dish"></i>
+            <span>V5.6.5 · Production Ready</span>
+        </div>
+        <h1 class="hero-title">
+            Amateur Radio<br>
+            <span class="gradient">Anytime, Anywhere</span>
+        </h1>
+        <p class="hero-subtitle">
+            MRRC is the universal HF route in the VLSC remote radio ecosystem. Control your HF radio from phone, tablet, or computer.
+            Opus-optimized audio, WDSP professional noise reduction, AI voice assistant, CW/FT8 digital modes,
+            studio-grade TX audio processing, and 3-layer PTT safety.
+        </p>
+        <div class="hero-actions">
+            <a href="/#selector" class="btn btn-secondary btn-large">
+                <i class="fas fa-compass"></i> Project Selector
             </a>
-            
-            <ul class="nav-links">
-                <li><a href="#features">Features</a></li>
-                <li><a href="#demo">Demo</a></li>
-                <li><a href="docs/installation.html">Installation</a></li>
-                <li><a href="docs/design.html">Design & Architecture</a></li>
-                <li><a href="docs/docs.html">Docs</a></li>
-                <li><a href="fde.html">FDE</a></li>
-                <li><a href="aladdin-v2.html">Aladdin V2</a></li>
-                <li><a href="efhw/index.html">EFHW</a></li>
-                <li><a href="https://github.com/cheenle/UHRR_mac" target="_blank" rel="noopener">
-                    <i class="fab fa-github"></i> GitHub
-                </a></li>
-            </ul>
-            
-            <div class="nav-actions">
-                <a href="zh/index.html" class="lang-btn">中文</a>
-                <button class="mobile-menu-toggle">
-                    <i class="fas fa-bars"></i>
-                </button>
+            <a href="https://radio.vlsc.net:8877/mobile_modern.html" class="btn btn-primary btn-large" target="_blank">
+                <i class="fas fa-play"></i> Try Now
+            </a>
+            <a href="https://github.com/cheenle/UHRR_mac" class="btn btn-secondary btn-large" target="_blank" rel="noopener">
+                <i class="fab fa-github"></i> Source
+            </a>
+        </div>
+        <div class="hero-stats">
+            <div class="stat-item"><span class="stat-value">&lt;100ms</span><span class="stat-label">TX/RX Switch</span></div>
+            <div class="stat-item"><span class="stat-value">99%+</span><span class="stat-label">PTT Reliability</span></div>
+            <div class="stat-item"><span class="stat-value">15-20dB</span><span class="stat-label">WDSP NR</span></div>
+            <div class="stat-item"><span class="stat-value">V5.6.5</span><span class="stat-label">280+ Commits</span></div>
+        </div>
+    </div>
+</section>
+
+<section class="section" id="ecosystem" style="background: var(--bg-primary); padding-top: 4rem; padding-bottom: 4rem;">
+    <div class="container">
+        <div class="section-header" style="margin-bottom: 2rem;">
+            <span class="section-label">Ecosystem</span>
+            <h2 class="section-title">Where MRRC Fits</h2>
+            <p class="section-subtitle">Use MRRC for universal CAT-based HF remote control. Other radio classes map to dedicated VLSC projects.</p>
+        </div>
+        <div class="perf-grid">
+            <a href="/mrrc/" class="perf-card" style="text-decoration:none;">
+                <div class="metric">MRRC</div>
+                <div class="metric-label">Any HF radio with CAT<br><small>Universal Hamlib path</small></div>
+            </a>
+            <a href="/mrrc_ft710/" class="perf-card" style="text-decoration:none;">
+                <div class="metric">FT-710</div>
+                <div class="metric-label">Yaesu FT-710<br><small>Direct USB + FT4222 SPI</small></div>
+            </a>
+            <a href="/sunmrrc/" class="perf-card" style="text-decoration:none;">
+                <div class="metric">SunMRRC</div>
+                <div class="metric-label">SunSDR2 DX server<br><small>UDP IQ demodulation path</small></div>
+            </a>
+            <a href="/sunsdrmobile/" class="perf-card" style="text-decoration:none;">
+                <div class="metric">iOS</div>
+                <div class="metric-label">SunsdrMobile client<br><small>Native iPhone control</small></div>
+            </a>
+        </div>
+    </div>
+</section>
+
+<section class="section" id="features" style="background: var(--bg-secondary);">
+    <div class="container">
+        <div class="section-header">
+            <span class="section-label">Core Features</span>
+            <h2 class="section-title">Built for Modern HAM Radio</h2>
+        </div>
+
+        <div class="features-grid">
+            <div class="feature-card animate">
+                <div class="icon"><i class="fas fa-bolt"></i></div>
+                <h3>Ultra Low Latency</h3>
+                <p>TX ~65ms / RX ~51ms, &lt;100ms TX↔RX switch. Opus 28kbps codec, AudioWorklet playback, Int16 transport — professional real-time experience.</p>
+                <ul>
+                    <li>Opus codec · AudioWorklet pipeline</li>
+                    <li>Under 100ms TX↔RX switching</li>
+                    <li>Int16 lossless transport option</li>
+                </ul>
+            </div>
+
+            <div class="feature-card animate">
+                <div class="icon"><i class="fas fa-brain"></i></div>
+                <h3>WDSP Professional NR</h3>
+                <p>OpenHPSDR WDSP library: NR2 spectral noise reduction 15-20dB, AGC (4 modes), ANF auto-notch, NB noise blanker — SSB-optimized.</p>
+                <ul>
+                    <li>NR2 spectral NR 15-20dB</li>
+                    <li>AGC 4-mode · ANF · NB</li>
+                    <li>SSB-optimized DSP chain</li>
+                </ul>
+            </div>
+
+            <div class="feature-card animate">
+                <div class="icon"><i class="fas fa-microphone-alt"></i></div>
+                <h3>AI Voice Assistant</h3>
+                <p>Whisper ASR + Qwen3-TTS: speech-to-text receive, text-to-speech transmit with automatic phonetic alphabet callsign conversion.</p>
+                <ul>
+                    <li>Whisper ASR RX → text</li>
+                    <li>Qwen3 TTS text → TX voice</li>
+                    <li>Auto phonetic callsign conversion</li>
+                </ul>
+            </div>
+
+            <div class="feature-card animate">
+                <div class="icon"><i class="fas fa-wave-square"></i></div>
+                <h3>CW + FT8 Digital Modes</h3>
+                <p>Browser-first AI CW decode (&lt;2MB ONNX, &lt;50ms). FT8 ULTRON Console: JTDX/WSJT-X/MSHV integration with live waterfall, auto-sequencer, DXCC tracking.</p>
+                <ul>
+                    <li>ONNX AI CW decode · QSO state machine</li>
+                    <li>FT8 ULTRON: JTDX/WSJT-X/MSHV bridge</li>
+                    <li>Auto-sequencer · DXCC tracking</li>
+                </ul>
+            </div>
+
+            <div class="feature-card animate">
+                <div class="icon"><i class="fas fa-shield-alt"></i></div>
+                <h3>3-Layer PTT Safety</h3>
+                <p>Release ACK protocol with 3× retry + redundant audio-path fallback, 120s TOT hard limit, touch-move auto-release, visibility-change forced stop — prevents stuck transmissions.</p>
+                <ul>
+                    <li>ACK × 3 retry + audio-path fallback</li>
+                    <li>120s TOT hard limit</li>
+                    <li>Touch-move / visibility-change stop</li>
+                </ul>
+            </div>
+
+            <div class="feature-card animate">
+                <div class="icon"><i class="fas fa-chart-line"></i></div>
+                <h3>ATR-1000 + RagChew Audio</h3>
+                <p>ATR-1000: 0-200W real-time power display, SWR 1.0-9.99, smart frequency→tuner learning. RagChew TX chain: low-cut 150Hz, presence +3dB@2.4kHz, 3:1 compressor, -50dB noise gate.</p>
+                <ul>
+                    <li>ATR-1000: power/SWR/tuner learning</li>
+                    <li>RagChew: EQ + compressor + noise gate</li>
+                    <li>MemoryChannelManager · LearningBuffer</li>
+                </ul>
             </div>
         </div>
-    </nav>
+    </div>
+</section>
 
-    <!-- Hero Section -->
-    <section class="hero">
-        <div class="hero-content">
-            <div class="hero-badge">
-                <i class="fas fa-satellite-dish"></i>
-                <span>V5.6.5 · Production Ready</span>
-            </div>            
-            <h1 class="hero-title">
-                Amateur Radio<br>
-                <span class="gradient">Anytime, Anywhere</span>
-            </h1>
-            
-            <p class="hero-subtitle">
-                MRRC - Modern Web-based remote transceiver control system. Control your HF radio from phone, tablet, or computer.
-                Opus-optimized audio streaming, WDSP professional noise reduction, AI voice assistant, CW/FT8 digital modes, studio-grade TX audio processing, and 3-layer PTT safety system.
-            </p>
-            
-            <div class="hero-actions">
-                <a href="https://radio.vlsc.net:8877/mobile_modern.html" class="btn btn-primary btn-large" target="_blank">
-                    <i class="fas fa-play"></i>
-                    Try Now
-                </a>
-                <a href="https://github.com/cheenle/UHRR_mac" class="btn btn-secondary btn-large" target="_blank" rel="noopener">
-                    <i class="fab fa-github"></i>
-                    Source
-                </a>
-            </div>
-            
-            <div class="hero-preview">
-                <img src="images/hero_preview_thumb.jpg" alt="MRRC Remote Radio Control Interface - Desktop and Mobile" onclick="document.getElementById('lightbox-hero').style.display='flex'" style="cursor:zoom-in" />
-            </div>
-            <div id="lightbox-hero" class="lightbox" onclick="this.style.display='none'">
-                <span class="lightbox-close">&times;</span>
-                <img src="images/hero_preview.jpg" alt="MRRC Remote Radio Control Interface" />
-            </div>
+<section class="section" id="demo" style="background: var(--bg-primary);">
+    <div class="container">
+        <div class="section-header">
+            <span class="section-label">Live Demo</span>
+            <h2 class="section-title">Experience It Yourself</h2>
+            <p class="section-subtitle">All demos connect to a live FT-710 station. Try each interface — mobile, voice, CW, SDR, FT8, recordings.</p>
+        </div>
 
-            <div class="hero-preview">
-                <p style="text-align:center; color: var(--text-secondary); margin-bottom: 12px; font-size: 0.95rem; font-weight: 500;">MRRC V5.6.5 System Architecture — 4-Layer Design</p>
-                <img src="images/architecture52.jpg" alt="MRRC V5.4 System Architecture Diagram" onclick="document.getElementById('lightbox-arch').style.display='flex'" style="cursor:zoom-in" />
-            </div>
-            <div id="lightbox-arch" class="lightbox" onclick="this.style.display='none'">
-                <span class="lightbox-close">&times;</span>
-                <img src="images/architecture52.jpg" alt="MRRC V5.2 System Architecture Diagram" />
-            </div>
+        <div class="perf-grid">
+            <a href="https://radio.vlsc.net:8877/mobile_modern.html" target="_blank" class="perf-card" style="text-decoration:none;">
+                <div class="metric"><i class="fas fa-mobile-alt"></i></div>
+                <div class="metric-label">Mobile UI<br><small>Touch-optimised modern interface</small></div>
+            </a>
+            <a href="https://radio.vlsc.net:8877/mobile_voice_text.html" target="_blank" class="perf-card" style="text-decoration:none;">
+                <div class="metric"><i class="fas fa-microphone"></i></div>
+                <div class="metric-label">Voice Assistant<br><small>AI speech recognition & synthesis</small></div>
+            </a>
+            <a href="https://radio.vlsc.net:8877/cw_live.html" target="_blank" class="perf-card" style="text-decoration:none;">
+                <div class="metric"><i class="fas fa-wave-square"></i></div>
+                <div class="metric-label">CW Decode<br><small>Real-time Morse code AI</small></div>
+            </a>
+            <a href="https://radio.vlsc.net:8877/ft8_ultron.html" target="_blank" class="perf-card" style="text-decoration:none;">
+                <div class="metric"><i class="fas fa-broadcast-tower"></i></div>
+                <div class="metric-label">FT8 Console<br><small>ULTRON automation tool</small></div>
+            </a>
+            <a href="https://radio.vlsc.net:8877/sdr_modern.html" target="_blank" class="perf-card" style="text-decoration:none;">
+                <div class="metric"><i class="fas fa-signal"></i></div>
+                <div class="metric-label">SDR Interface<br><small>Modern SDR control interface</small></div>
+            </a>
+            <a href="https://radio.vlsc.net:8877/recordings.html" target="_blank" class="perf-card" style="text-decoration:none;">
+                <div class="metric"><i class="fas fa-record-vinyl"></i></div>
+                <div class="metric-label">Recordings<br><small>QSO recording and playback</small></div>
+            </a>
+        </div>
+    </div>
+</section>
 
-            <div class="hero-stats">
-                <div class="stat-item">
-                    <span class="stat-value">&lt;100ms</span>
-                    <span class="stat-label">TX/RX Switch</span>
-                </div>
-                <div class="stat-item">
-                    <span class="stat-value">99%+</span>
-                    <span class="stat-label">PTT Reliability</span>
-                </div>
-                <div class="stat-item">
-                    <span class="stat-value">15-20dB</span>
-                    <span class="stat-label">WDSP NR</span>
-                </div>
-                <div class="stat-item">
-                    <span class="stat-value">V5.6.5</span>
-                    <span class="stat-label">280+ Commits</span>
-                </div>
+<section class="section" id="start" style="background: var(--bg-secondary);">
+    <div class="container">
+        <div class="section-header">
+            <span class="section-label">Get Started</span>
+            <h2 class="section-title">Set Up in 5 Minutes</h2>
+        </div>
+
+        <div class="steps">
+            <div class="step">
+                <h4>Connect Your Radio</h4>
+                <p>CAT serial + audio cable to your computer. MRRC auto-detects via Hamlib</p>
+                <code>rigctld -m 2 -r /dev/ttyUSB0 -s 38400</code>
+            </div>
+            <div class="step">
+                <h4>Install MRRC</h4>
+                <p>Clone the repo and run the setup script</p>
+                <code>git clone https://github.com/cheenle/UHRR_mac && cd UHRR_mac && ./install.sh</code>
+            </div>
+            <div class="step">
+                <h4>Start the Server</h4>
+                <p>Launch the Python backend — TLS, WebSocket, and audio pipeline in one process</p>
+                <code>python3 server.py --port 8877</code>
+            </div>
+            <div class="step">
+                <h4>Open Your Browser</h4>
+                <p>Any device on your network — phone, tablet, or computer</p>
+                <code>https://radio-host:8877/mobile_modern.html</code>
             </div>
         </div>
-    </section>
 
-    <!-- Features Section -->
-    <section class="section" id="features">
-        <div class="container">
-            <div class="section-header">
-                <span class="section-label">Core Features</span>
-                <h2 class="section-title">Built for Modern HAM Radio</h2>
+        <div style="text-align:center;margin-top:3rem">
+            <a href="docs/installation.html" class="btn btn-primary btn-large">
+                <i class="fas fa-download"></i> Installation Guide
+            </a>
+        </div>
+    </div>
+</section>
+
+<footer class="footer">
+    <div class="container">
+        <div class="footer-grid">
+            <div class="footer-section">
+                <h4>MRRC</h4>
+                <p>
+                    Mobile Remote Radio Control<br>
+                    Amateur Radio, Anytime, Anywhere<br>
+                    V5.6.5 · GPLv3 License
+                </p>
             </div>
-            
-            <div class="features-grid">
-                <article class="card">
-                    <div class="card-icon">
-                        <i class="fas fa-mobile-alt"></i>
-                    </div>
-                    <h3 class="card-title">Mobile First</h3>
-                    <p class="card-text">
-                        Touch-optimized glassmorphism UI, PWA add-to-home-screen, haptic feedback, safe-area adaptation for all modern phones.
-                    </p>
-                </article>
-                
-                <article class="card">
-                    <div class="card-icon">
-                        <i class="fas fa-bolt"></i>
-                    </div>
-                    <h3 class="card-title">Ultra Low Latency</h3>
-                    <p class="card-text">
-                        TX ~65ms / RX ~51ms, &lt;100ms TX↔RX switch. Opus codec 28kbps, AudioWorklet playback, Int16 transport — professional real-time experience.
-                    </p>
-                </article>
-                
-                <article class="card">
-                    <div class="card-icon">
-                        <i class="fas fa-brain"></i>
-                    </div>
-                    <h3 class="card-title">WDSP Professional NR</h3>
-                    <p class="card-text">
-                        OpenHPSDR WDSP library: NR2 spectral noise reduction 15-20dB, AGC (4 modes), ANF auto-notch, NB noise blanker — SSB-optimized.
-                    </p>
-                </article>
-                
-                <article class="card">
-                    <div class="card-icon">
-                        <i class="fas fa-microphone-alt"></i>
-                    </div>
-                    <h3 class="card-title">AI Voice Assistant</h3>
-                    <p class="card-text">
-                        Whisper ASR + Qwen3-TTS: speech-to-text receive, text-to-speech transmit with automatic phonetic alphabet callsign conversion.
-                    </p>
-                </article>
-                
-                <article class="card">
-                    <div class="card-icon">
-                        <i class="fas fa-wave-square"></i>
-                    </div>
-                    <h3 class="card-title">CW Real-time Decode</h3>
-                    <p class="card-text">
-                        Browser-first AI: &lt;2MB ONNX model, &lt;50ms inference, QSO state machine auto-detects callsign/RST/QTH with smart reply suggestions.
-                    </p>
-                </article>
-                
-                <article class="card">
-                    <div class="card-icon">
-                        <i class="fas fa-chart-line"></i>
-                    </div>
-                    <h3 class="card-title">ATR-1000 Integration</h3>
-                    <p class="card-text">
-                        0-200W real-time power display, SWR 1.0-9.99, smart frequency→tuner learning with ±10kHz recall, JSON persistence.
-                    </p>
-                </article>
-                
-                <article class="card">
-                    <div class="card-icon">
-                        <i class="fas fa-shield-alt"></i>
-                    </div>
-                    <h3 class="card-title">PTT Safety System</h3>
-                    <p class="card-text">
-                        3-layer TX protection: release ACK protocol with 3x retry + redundant audio-path fallback, 120s TOT hard limit, touch-move auto-release, visibility-change forced stop — prevents stuck transmissions.
-                    </p>
-                </article>
-                
-                <article class="card">
-                    <div class="card-icon">
-                        <i class="fas fa-broadcast-tower"></i>
-                    </div>
-                    <h3 class="card-title">FT8 ULTRON Console</h3>
-                    <p class="card-text">
-                        JTDX/WSJT-X/MSHV integration with full remote UI: live waterfall spectrogram, 6 customizable TX message slots, server-side QSO auto-sequencer, DXCC entity/new-grid tracking, desktop notifications, and CQ-only filtering.
-                    </p>
-                </article>
-
-                <article class="card">
-                    <div class="card-icon">
-                        <i class="fas fa-sliders-h"></i>
-                    </div>
-                    <h3 class="card-title">RagChew TX Audio</h3>
-                    <p class="card-text">
-                        Web Audio API TX chain: low-cut 150Hz, mid-cut -2dB@500Hz, presence +3dB@2.4kHz, high-cut 3kHz, 3:1 compressor, -50dB noise gate.
-                    </p>
-                </article>
-
-                <article class="card">
-                    <div class="card-icon">
-                        <i class="fas fa-wand-magic-sparkles"></i>
-                    </div>
-                    <h3 class="card-title">Aladdin V2 Method</h3>
-                    <p class="card-text">
-                        A research methodology distilled from MRRC: IT veteran judgment awakened by vibe coding, structured by FDE, SDD, harness, and agentic engineering.
-                    </p>
-                    <p style="margin-top: 12px;"><a href="aladdin-v2.html" class="btn btn-secondary" style="padding: 8px 14px; font-size: 0.85rem;">Read the Method</a></p>
-                </article>
+            <div class="footer-section">
+                <h4>Links</h4>
+                <ul>
+                    <li><a href="#">Home</a></li>
+                    <li><a href="#features">Features</a></li>
+                    <li><a href="#demo">Demo</a></li>
+                    <li><a href="docs/installation.html">Installation</a></li>
+                    <li><a href="docs/design.html">Design & Architecture</a></li>
+                    <li><a href="docs/docs.html">Documentation</a></li>
+                    <li><a href="aladdin-v2.html">Aladdin V2</a></li>
+                    <li><a href="efhw/index.html">EFHW Antenna</a></li>
+                </ul>
+            </div>
+            <div class="footer-section">
+                <h4>Resources</h4>
+                <ul>
+                    <li><a href="https://github.com/cheenle/UHRR_mac" target="_blank" rel="noopener">GitHub</a></li>
+                    <li><a href="https://github.com/cheenle/UHRR_mac/issues" target="_blank" rel="noopener">Issue Tracker</a></li>
+                    <li><a href="https://radio.vlsc.net:8877/" target="_blank" rel="noopener">Live System</a></li>
+                </ul>
             </div>
         </div>
-    </section>
-
-    <!-- Demo Section -->
-    <section class="section" id="demo" style="background: var(--bg-secondary);">
-        <div class="container">
-            <div class="section-header">
-                <span class="section-label">Live Demo</span>
-                <h2 class="section-title">Experience It Yourself</h2>
-            </div>
-            
-            <div class="demo-grid">
-                <a href="https://radio.vlsc.net:8877/mobile_modern.html" target="_blank" class="demo-link">
-                    <div class="card-icon">
-                        <i class="fas fa-mobile-alt"></i>
-                    </div>
-                    <h3 class="card-title">Mobile UI</h3>
-                    <p class="card-text">Touch-optimized modern interface</p>
-                    <span class="arrow">
-                        Try <i class="fas fa-arrow-right"></i>
-                    </span>
-                </a>
-                
-                <a href="https://radio.vlsc.net:8877/mobile_voice_text.html" target="_blank" class="demo-link">
-                    <div class="card-icon">
-                        <i class="fas fa-microphone"></i>
-                    </div>
-                    <h3 class="card-title">Voice Assistant</h3>
-                    <p class="card-text">AI speech recognition & synthesis</p>
-                    <span class="arrow">
-                        Try <i class="fas fa-arrow-right"></i>
-                    </span>
-                </a>
-                
-                <a href="https://radio.vlsc.net:8877/cw_live.html" target="_blank" class="demo-link">
-                    <div class="card-icon">
-                        <i class="fas fa-wave-square"></i>
-                    </div>
-                    <h3 class="card-title">CW Decode</h3>
-                    <p class="card-text">Real-time Morse code AI decoding</p>
-                    <span class="arrow">
-                        Try <i class="fas fa-arrow-right"></i>
-                    </span>
-                </a>
-                
-                <a href="https://radio.vlsc.net:8877/recordings.html" target="_blank" class="demo-link">
-                    <div class="card-icon">
-                        <i class="fas fa-record-vinyl"></i>
-                    </div>
-                    <h3 class="card-title">Recordings</h3>
-                    <p class="card-text">QSO recording and playback</p>
-                    <span class="arrow">
-                        Try <i class="fas fa-arrow-right"></i>
-                    </span>
-                </a>
-                
-                <a href="https://radio.vlsc.net:8877/ft8_ultron.html" target="_blank" class="demo-link">
-                    <div class="card-icon">
-                        <i class="fas fa-broadcast-tower"></i>
-                    </div>
-                    <h3 class="card-title">FT8 Console</h3>
-                    <p class="card-text">ULTRON automation tool</p>
-                    <span class="arrow">
-                        Try <i class="fas fa-arrow-right"></i>
-                    </span>
-                </a>
-                
-                <a href="https://radio.vlsc.net:8877/sdr_modern.html" target="_blank" class="demo-link">
-                    <div class="card-icon">
-                        <i class="fas fa-signal"></i>
-                    </div>
-                    <h3 class="card-title">SDR Interface</h3>
-                    <p class="card-text">Modern SDR control interface</p>
-                    <span class="arrow">
-                        Try <i class="fas fa-arrow-right"></i>
-                    </span>
-                </a>
-            </div>
+        <div class="footer-bottom">
+            <p>&copy; 2024-2026 MRRC Project. Open Source under GPL-3.0 License.</p>
         </div>
-    </section>
+    </div>
+</footer>
 
-    <!-- CTA Section -->
-    <section class="section section-cta">
-        <div class="container" style="text-align: center;">
-            <h2 class="section-title" style="margin-bottom: 1rem;">Get Started</h2>
-            <p class="section-subtitle" style="margin-bottom: 3rem;">
-                Set up a complete remote radio control system in 5 minutes
-            </p>
-            <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
-                <a href="docs/installation.html" class="btn btn-primary btn-large">
-                    <i class="fas fa-download"></i>
-                    Installation Guide
-                </a>
-                <a href="https://github.com/cheenle/UHRR_mac/blob/main/README.md" class="btn btn-secondary btn-large" target="_blank">
-                    <i class="fas fa-book"></i>
-                    Documentation
-                </a>
-            </div>
-        </div>
-    </section>
-
-    <!-- Footer -->
-    <footer class="footer">
-        <div class="container">
-            <div class="footer-grid">
-                <div class="footer-section">
-                    <h4>MRRC</h4>
-                    <p>
-                        Mobile Remote Radio Control<br>
-                        Amateur Radio, Anytime, Anywhere
-                    </p>
-                </div>
-                <div class="footer-section">
-                    <h4>Quick Links</h4>
-                    <ul>
-                        <li><a href="#">Home</a></li>
-                        <li><a href="#features">Features</a></li>
-                        <li><a href="#demo">Demo</a></li>
-                        <li><a href="docs/installation.html">Installation</a></li>
-                        <li><a href="docs/design.html">Design &amp; Architecture</a></li>
-                        <li><a href="docs/docs.html">Documentation</a></li>
-                        <li><a href="fde.html">FDE</a></li>
-                        <li><a href="aladdin-v2.html">Aladdin V2</a></li>
-                        <li><a href="efhw/index.html">EFHW Antenna</a></li>
-                    </ul>
-                </div>
-                <div class="footer-section">
-                    <h4>Resources</h4>
-                    <ul>
-                        <li><a href="https://github.com/cheenle/UHRR_mac" target="_blank">GitHub</a></li>
-                        <li><a href="https://github.com/cheenle/UHRR_mac/issues" target="_blank">Issue Tracker</a></li>
-                        <li><a href="https://radio.vlsc.net:8877/" target="_blank">Live System</a></li>
-                    </ul>
-                </div>
-            </div>
-            <div class="footer-bottom">
-                <p>&copy; 2024-2026 MRRC Project. Open Source under GPL-3.0 License.</p>
-            </div>
-        </div>
-    </footer>
-
-    <script>
-        // Smooth scroll for anchor links
-        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-            anchor.addEventListener('click', function (e) {
-                e.preventDefault();
-                const target = document.querySelector(this.getAttribute('href'));
-                if (target) {
-                    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                }
-            });
-        });
-
-        // Navbar scroll effect
-        const navbar = document.querySelector('.navbar');
-        window.addEventListener('scroll', () => {
-            if (window.scrollY > 50) {
-                navbar.style.background = 'rgba(0, 0, 0, 0.95)';
-            } else {
-                navbar.style.background = 'rgba(0, 0, 0, 0.8)';
-            }
-        });
-    </script>
+<script>
+function toggleMobileMenu() { document.querySelector('.nav-links').classList.toggle('active'); }
+document.querySelectorAll('a[href^="#"]').forEach(a => { a.addEventListener('click', function(e) { e.preventDefault(); const t = document.querySelector(this.getAttribute('href')); if (t) t.scrollIntoView({ behavior: 'smooth', block: 'start' }); }); });
+const nav = document.querySelector('.navbar'); window.addEventListener('scroll', () => { nav.style.background = window.scrollY > 50 ? 'rgba(0,0,0,0.98)' : 'rgba(0,0,0,0.92)'; });
+</script>
+    <script src="js/global-nav.js?v=4" defer data-gn="1"></script>
 </body>
 </html>

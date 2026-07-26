@@ -1,15 +1,15 @@
 #!/bin/bash
 # MRRC Website Deployment Script
-# Deploy to www.vlsc.net Apache server
+# Deploy to www.vlsc.net nginx server
 
 set -e
 
 # Configuration
 LOCAL_WEBSITE_DIR="/Users/cheenle/UHRR/MRRC/website"
 REMOTE_HOST="www.vlsc.net"
-REMOTE_USER="cheenle"  # Adjust if different
-REMOTE_WEBROOT="/var/www/html/mrrc"  # Adjust path as needed
-BACKUP_DIR="/var/www/backups/mrrc_$(date +%Y%m%d_%H%M%S)"
+REMOTE_USER="cheenle"
+REMOTE_WEBROOT="/var/www/vlsc.net/mrrc"
+BACKUP_DIR="/tmp/mrrc_backup_$(date +%Y%m%d_%H%M%S)"
 
 echo "=========================================="
 echo "MRRC Website Deployment"
@@ -41,9 +41,8 @@ cd "$LOCAL_WEBSITE_DIR"
 echo "Checking required files..."
 REQUIRED_FILES=(
     "index.html"
-    "css/style.css"
-    "js/main.js"
-    "js/i18n.js"
+    "css/octen.css"
+    "js/global-nav.js"
 )
 
 for file in "${REQUIRED_FILES[@]}"; do
@@ -83,20 +82,15 @@ fi
 # SSH commands for deployment
 ssh "$REMOTE_USER@$REMOTE_HOST" << EOF
     set -e
-    
+
     echo "Creating backup..."
     if [ -d "$REMOTE_WEBROOT" ]; then
-        sudo mkdir -p /var/www/backups
         sudo cp -r "$REMOTE_WEBROOT" "$BACKUP_DIR"
         echo "Backup created: $BACKUP_DIR"
     fi
-    
+
     echo "Creating webroot directory..."
     sudo mkdir -p "$REMOTE_WEBROOT"
-    
-    echo "Setting permissions..."
-    sudo chown -R www-data:www-data "$REMOTE_WEBROOT"
-    sudo chmod -R 755 "$REMOTE_WEBROOT"
 EOF
 
 # Upload files
@@ -106,29 +100,23 @@ scp "$DEPLOY_PACKAGE" "$REMOTE_USER@$REMOTE_HOST:/tmp/"
 # Extract on remote server
 ssh "$REMOTE_USER@$REMOTE_HOST" << EOF
     set -e
-    
+
     echo "Extracting files..."
-    cd "$REMOTE_WEBROOT"
-    sudo tar -xzf "$DEPLOY_PACKAGE" --overwrite
-    
+    sudo tar -xzf "$DEPLOY_PACKAGE" -C "$REMOTE_WEBROOT" --overwrite
+
     echo "Setting ownership..."
     sudo chown -R www-data:www-data "$REMOTE_WEBROOT"
     sudo chmod -R 755 "$REMOTE_WEBROOT"
-    
-    # Set correct permissions for sensitive files
-    sudo chmod 644 "$REMOTE_WEBROOT"/*.html
-    sudo chmod 644 "$REMOTE_WEBROOT"/*.css 2>/dev/null || true
-    sudo chmod 644 "$REMOTE_WEBROOT"/*.js 2>/dev/null || true
-    
+
     # Clean up
     rm -f "$DEPLOY_PACKAGE"
-    
-    echo "Testing Apache configuration..."
-    sudo apache2ctl configtest || true
-    
-    echo "Reloading Apache..."
-    sudo systemctl reload apache2 || sudo service apache2 reload || true
-    
+
+    echo "Testing nginx configuration..."
+    sudo nginx -t
+
+    echo "Reloading nginx..."
+    sudo systemctl reload nginx
+
     echo ""
     echo "Deployment completed successfully!"
     echo "Website URL: https://$REMOTE_HOST/mrrc/"
