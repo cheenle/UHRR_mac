@@ -179,10 +179,23 @@ def _bind_diversity_signatures():
     _bind("SetEXTDIVRotate", [c_int, c_double], c_int)
 
 
+def _bind_nr2_signatures():
+    """绑定 NR2 (EMNR) 自动均衡(AE)参数 — 直接控制频谱减法"音乐噪声/水音"。
+
+    ae.psi:     掩码跨 bin 平滑宽度系数，越大平滑越宽 → 音乐噪声越少（默认10）
+    ae.zetaThresh: AE 触发阈值，越小 AE 越常触发（默认0.75）
+    """
+    c_int = ctypes.c_int
+    c_double = ctypes.c_double
+    _bind("SetRXAEMNRaePsi",        [c_int, c_double], c_int)
+    _bind("SetRXAEMNRaeZetaThresh", [c_int, c_double], c_int)
+
+
 # ── 执行绑定 ──
 if WDSP_AVAILABLE:
     _bind_tx_signatures()
     _bind_diversity_signatures()
+    _bind_nr2_signatures()
 
 
 class WDSPProcessor:
@@ -197,17 +210,19 @@ class WDSPProcessor:
     - Bandpass filtering
     """
     
-    def __init__(self, 
+    def __init__(self,
                  sample_rate: int = 48000,
                  buffer_size: int = 256,
                  mode: int = WDSPMode.USB,
                  enable_nr2: bool = True,
                  enable_nb: bool = False,
                  enable_anf: bool = False,
-                 agc_mode: int = WDSPAGCMode.MED):
+                 agc_mode: int = WDSPAGCMode.MED,
+                 nr2_ae_psi: float = 20.0,
+                 nr2_ae_zeta_thresh: float = 0.5):
         """
         Initialize WDSP processor.
-        
+
         Args:
             sample_rate: Audio sample rate (48000 or 16000 recommended)
             buffer_size: Processing buffer size
@@ -216,15 +231,17 @@ class WDSPProcessor:
             enable_nb: Enable noise blanker
             enable_anf: Enable automatic notch filter
             agc_mode: AGC mode (OFF, LONG, SLOW, MED, FAST)
+            nr2_ae_psi: EMNR 自动均衡掩码平滑宽度（越大音乐噪声越少，默认20）
+            nr2_ae_zeta_thresh: EMNR 自动均衡触发阈值（越小越常触发，默认0.5）
         """
         if not WDSP_AVAILABLE:
             raise RuntimeError("WDSP library not available")
-        
+
         self.sample_rate = sample_rate
         self.buffer_size = buffer_size
         self.mode = mode
         self.channel = 0  # Default channel
-        
+
         # State tracking - 正确初始化启用状态
         self._initialized = False
         self._nr2_enabled = enable_nr2   # 修复：使用参数值
@@ -232,6 +249,8 @@ class WDSPProcessor:
         self._anf_enabled = enable_anf   # 修复：使用参数值
         self._notches_enabled = False    # 手动陷波滤波器（NF）
         self._agc_mode = agc_mode
+        self._nr2_ae_psi = nr2_ae_psi
+        self._nr2_ae_zeta_thresh = nr2_ae_zeta_thresh
         # Buffers for WDSP processing (float64 - WDSP 库要求)
         self._in_buffer = np.zeros(buffer_size * 2, dtype=np.float64)
         self._out_buffer = np.zeros(buffer_size * 2, dtype=np.float64)
@@ -311,13 +330,36 @@ class WDSPProcessor:
             _wdsp.SetRXAEMNRaeRun(ctypes.c_int(self.channel), ctypes.c_int(1))
             # Position=0: 在 AGC 之前降噪，避免 AGC 放大残留噪声
             _wdsp.SetRXAEMNRPosition(ctypes.c_int(self.channel), ctypes.c_int(0))
+            # 调强 AE 掩码平滑（psi=20, zetaThresh=0.5），压制频谱减法"水音"音乐噪声
+            self.set_nr2_ae(self._nr2_ae_psi, self._nr2_ae_zeta_thresh)
 
             self._nr2_enabled = True
             self._nr2_level = 2  # 默认温和
-            print(f"   NR2 (EMNR) configured - Gaussian, OSMS, AE=ON, Pre-AGC (温和)")
+            print(f"   NR2 (EMNR) configured - Gaussian, OSMS, AE=ON(psi={self._nr2_ae_psi},zeta={self._nr2_ae_zeta_thresh}), Pre-AGC (温和)")
         except Exception as e:
             print(f"   ⚠️ NR2 setup error: {e}")
-    
+
+    def set_nr2_ae(self, psi: float = None, zeta_thresh: float = None):
+        """调 NR2 (EMNR) 自动均衡(AE) 参数，抑制频谱减法"水音/音乐噪声"。
+
+        psi: 掩码跨 bin 平滑宽度系数。越大 → 平滑越宽 → 音乐噪声越少。
+             但过大(>40)会抹掉窄带噪声细节。默认 20（WDSP 出厂 10）。
+        zeta_thresh: AE 触发阈值，越小 AE 越常触发。默认 0.5（WDSP 出厂 0.75）。
+        """
+        if not self._initialized:
+            return
+        if psi is not None:
+            self._nr2_ae_psi = psi
+        if zeta_thresh is not None:
+            self._nr2_ae_zeta_thresh = zeta_thresh
+        try:
+            _wdsp.SetRXAEMNRaePsi(ctypes.c_int(self.channel),
+                                  ctypes.c_double(self._nr2_ae_psi))
+            _wdsp.SetRXAEMNRaeZetaThresh(ctypes.c_int(self.channel),
+                                         ctypes.c_double(self._nr2_ae_zeta_thresh))
+        except Exception as e:
+            print(f"⚠️ NR2 AE setup error: {e}")
+
     def set_nr2_level(self, level: int):
         """
         Set NR2 intensity level.
@@ -361,6 +403,8 @@ class WDSPProcessor:
                 _wdsp.SetRXAEMNRaeRun(ctypes.c_int(self.channel), ctypes.c_int(ae_run))
                 # 保持 Position=0 (AGC 前)
                 _wdsp.SetRXAEMNRPosition(ctypes.c_int(self.channel), ctypes.c_int(0))
+                # 级别切换后保持 AE 掩码平滑参数（抑制水音）
+                self.set_nr2_ae()
 
                 self._nr2_enabled = True
                 self._nr2_level = level

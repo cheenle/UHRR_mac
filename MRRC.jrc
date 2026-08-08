@@ -61,6 +61,9 @@ nr2_enabled = True
 # NR2 强度级别: 0-4 (前端显示 0=关, 1=极温和, 2=温和, 3=中等, 4=强力)
 # 默认改为 2 (温和)，4 容易导致削峰
 nr2_level = 1
+# NR2 AE 掩码平滑（抑制频谱减法"水音"）：psi 越大越平滑, zeta_thresh 越小越常触发
+nr2_ae_psi = 20.0
+nr2_ae_zeta_thresh = 0.5
 # NR2 Gain Method: 0=Gaussian(保守), 1=Gaussian(log), 2=Gamma(激进)
 # 0 最保守，适合语音；2 默认但可能过于激进
 nr2_gain_method = 2

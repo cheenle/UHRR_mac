@@ -255,6 +255,9 @@ class PyAudioCapture(threading.Thread):
                     'agc_mode': config['WDSP'].getint('agc_mode', 3),
                     'bandpass_low': config['WDSP'].getfloat('bandpass_low', 300.0),
                     'bandpass_high': config['WDSP'].getfloat('bandpass_high', 2700.0),
+                    # AE 掩码平滑（抑制 NR2"水音"音乐噪声）：psi 越大越平滑，阈值越小越常触发
+                    'nr2_ae_psi': config['WDSP'].getfloat('nr2_ae_psi', 20.0),
+                    'nr2_ae_zeta_thresh': config['WDSP'].getfloat('nr2_ae_zeta_thresh', 0.5),
                 }
                 cfg = PyAudioCapture.wdsp_config
                 print(f"🔧 WDSP DSP 已启用（替代 RNNoise）")
@@ -460,7 +463,7 @@ class PyAudioCapture(threading.Thread):
                     if PyAudioCapture.wdsp_enabled and WDSP_AVAILABLE:
                         try:
                             cfg = PyAudioCapture.wdsp_config
-                            # 快速哈希：只取 6 个最可能变更的键
+                            # 快速哈希：只取最可能变更的键
                             new_hash = hash((
                                 cfg.get('nr2_enabled', True),
                                 cfg.get('nr2_level', 1),
@@ -469,6 +472,8 @@ class PyAudioCapture(threading.Thread):
                                 cfg.get('agc_mode', 3),
                                 cfg.get('bandpass_low', 300.0),
                                 cfg.get('bandpass_high', 2700.0),
+                                cfg.get('nr2_ae_psi', 20.0),
+                                cfg.get('nr2_ae_zeta_thresh', 0.5),
                             ))
                             
                             if new_hash != PyAudioCapture._wdsp_config_hash or self.wdsp_processor is None:
@@ -483,7 +488,9 @@ class PyAudioCapture(threading.Thread):
                                         enable_nr2=cfg['nr2_enabled'],
                                         enable_nb=cfg['nb_enabled'],
                                         enable_anf=cfg['anf_enabled'],
-                                        agc_mode=cfg['agc_mode']
+                                        agc_mode=cfg['agc_mode'],
+                                        nr2_ae_psi=cfg.get('nr2_ae_psi', 20.0),
+                                        nr2_ae_zeta_thresh=cfg.get('nr2_ae_zeta_thresh', 0.5),
                                     )
                                     self.wdsp_processor.set_bandpass(cfg['bandpass_low'], cfg['bandpass_high'])
                                     if cfg['nr2_enabled']:
