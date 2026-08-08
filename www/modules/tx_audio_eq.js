@@ -40,8 +40,8 @@ var isRagchewMode = false;     // 当前是否为 RagChew 模式
 var TX_EQ_PRESETS = {
     'DEFAULT': {
         name: '默认',
-        low: 6, mid: 8, high: -6,
-        desc: '基础增强：适度提升发射功率'
+        low: 0, mid: 0, high: 0,
+        desc: '保真直通：不塑形，最纯净的声音'
     },
     'MEDIUM': {
         name: '中',
@@ -75,9 +75,10 @@ function initTX_EQ(context) {
     if (!context) return;
 
     // ========== TX 前置放大器 ==========
-    // 实质性提升发射功率，补偿手机麦克风输出电平低的问题
+    // 保真优先：归 0dB 直通，不再 +9.5dB 提升。
+    // 电台 ALC + 服务端 soft_peak_limiter 负责电平，避免前置增益推入削波
     AudioTX_preamp = context.createGain();
-    AudioTX_preamp.gain.setValueAtTime(3.0, context.currentTime);  // +9.5dB 前置增益
+    AudioTX_preamp.gain.setValueAtTime(1.0, context.currentTime);  // 0dB 直通
 
     // ========== 轻度高切，保留语音完整性 ==========
     AudioTX_antiAlias = context.createBiquadFilter();
@@ -141,9 +142,11 @@ function initTX_EQ(context) {
     AudioTX_presence.gain.setValueAtTime(0, context.currentTime);
 
     AudioTX_compressor = context.createDynamicsCompressor();
-    AudioTX_compressor.threshold.setValueAtTime(-24, context.currentTime);
-    AudioTX_compressor.knee.setValueAtTime(30, context.currentTime);
-    AudioTX_compressor.ratio.setValueAtTime(3, context.currentTime);
+    // 保真优先：压缩器透明旁路（threshold=0/ratio=1/knee=0 永不触发）。
+    // 动态交给电台 ALC，避免压缩器引入 pumping/削波
+    AudioTX_compressor.threshold.setValueAtTime(0, context.currentTime);
+    AudioTX_compressor.knee.setValueAtTime(0, context.currentTime);
+    AudioTX_compressor.ratio.setValueAtTime(1, context.currentTime);
     AudioTX_compressor.attack.setValueAtTime(0.003, context.currentTime);
     AudioTX_compressor.release.setValueAtTime(0.25, context.currentTime);
 
@@ -216,11 +219,11 @@ function setTX_EQ_Preset(presetName) {
         // 高切 3kHz — 在 presence 之后再加一级低通
         // 使用 AudioTX_highCut 串联 antiAlias2 实现: highCut(highpass @ 150) → midCut → presence → antiAlias2(lowpass @ 3k)
 
-        // 压缩器: Ratio 3:1, 温和压缩
+        // 压缩器: 透明旁路（threshold=0/ratio=1 永不触发，保真优先）
         if (AudioTX_compressor) {
-            AudioTX_compressor.threshold.setValueAtTime(-24, ctx.currentTime);
-            AudioTX_compressor.knee.setValueAtTime(30, ctx.currentTime);
-            AudioTX_compressor.ratio.setValueAtTime(3, ctx.currentTime);
+            AudioTX_compressor.threshold.setValueAtTime(0, ctx.currentTime);
+            AudioTX_compressor.knee.setValueAtTime(0, ctx.currentTime);
+            AudioTX_compressor.ratio.setValueAtTime(1, ctx.currentTime);
             AudioTX_compressor.attack.setValueAtTime(0.003, ctx.currentTime);
             AudioTX_compressor.release.setValueAtTime(0.250, ctx.currentTime);
         }
