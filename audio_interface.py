@@ -245,7 +245,7 @@ class PyAudioCapture(threading.Thread):
             PyAudioCapture.wdsp_enabled = config['WDSP'].getboolean('enabled', True)  # 默认启用
             if PyAudioCapture.wdsp_enabled and WDSP_AVAILABLE:
                 PyAudioCapture.wdsp_config = {
-                    'sample_rate': config['WDSP'].getint('sample_rate', 16000),
+                    'sample_rate': config['WDSP'].getint('sample_rate', 48000),
                     'buffer_size': config['WDSP'].getint('buffer_size', 256),
                     'nr2_enabled': config['WDSP'].getboolean('nr2_enabled', True),
                     'nr2_level': config['WDSP'].getint('nr2_level', 2),
@@ -475,7 +475,7 @@ class PyAudioCapture(threading.Thread):
                                 PyAudioCapture._wdsp_config_hash = new_hash
                                 
                                 if self.wdsp_processor is None:
-                                    wdsp_sr = cfg.get('sample_rate', 16000)
+                                    wdsp_sr = cfg.get('sample_rate', 48000)
                                     wdsp_bs = cfg.get('buffer_size', 256)
                                     self.wdsp_processor = WDSPProcessor(
                                         sample_rate=wdsp_sr, buffer_size=wdsp_bs,

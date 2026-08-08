@@ -43,8 +43,8 @@ suppress_level = 50
 # 提供专业的业余无线电音频处理功能，替代 RNNoise
 # 需要先编译安装 WDSP 库: https://github.com/g0orx/wdsp
 enabled = True
-# 采样率，支持 16000 或 48000（16000 与 Opus 编码率对齐，推荐）
-sample_rate = 16000
+# 采样率，支持 16000 或 48000（推荐 48000: EMNR FFT bin 更粗, 水音更少）
+sample_rate = 48000
 # 处理缓冲区大小 (128, 256, 512, 1024)
 # 推荐使用 256，平衡性能和稳定性
 buffer_size = 256
