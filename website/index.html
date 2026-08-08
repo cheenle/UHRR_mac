@@ -60,8 +60,8 @@
         </h1>
         <p class="hero-subtitle">
             MRRC is the universal HF route in the VLSC remote radio ecosystem. Control your HF radio from phone, tablet, or computer.
-            Opus-optimized audio, WDSP professional noise reduction, AI voice assistant, CW/FT8 digital modes,
-            studio-grade TX audio processing, and 3-layer PTT safety.
+            V5.7 high-fidelity audio: 48kHz full-band TX (64kbps CBR) + clean-RX Opus (arm64-fixed bitrate), WDSP 48kHz NR2 with
+            musical-noise AE tuning, tagged codec frames, and fidelity-first TX (0dB preamp, transparent compressor).
         </p>
         <div class="hero-actions">
             <a href="/#selector" class="btn btn-secondary btn-large">
@@ -77,8 +77,50 @@
         <div class="hero-stats">
             <div class="stat-item"><span class="stat-value">&lt;100ms</span><span class="stat-label">TX/RX Switch</span></div>
             <div class="stat-item"><span class="stat-value">99%+</span><span class="stat-label">PTT Reliability</span></div>
-            <div class="stat-item"><span class="stat-value">15-20dB</span><span class="stat-label">WDSP NR</span></div>
+            <div class="stat-item"><span class="stat-value">48kHz</span><span class="stat-label">TX Full-Band</span></div>
+            <div class="stat-item"><span class="stat-value">64kbps</span><span class="stat-label">TX Opus CBR</span></div>
             <div class="stat-item"><span class="stat-value">V5.7.0</span><span class="stat-label">280+ Commits</span></div>
+        </div>
+    </div>
+</section>
+
+<section class="section" id="whatsnew" style="background: var(--bg-primary); padding-top: 2rem; padding-bottom: 2rem;">
+    <div class="container">
+        <div class="section-header">
+            <span class="section-label">What's New</span>
+            <h2 class="section-title">V5.7.0 · High-Fidelity Audio</h2>
+        </div>
+        <div class="features-grid">
+            <div class="feature-card animate">
+                <div class="icon"><i class="fas fa-microphone-alt"></i></div>
+                <h3>TX 48kHz Full-Band</h3>
+                <p>TX upgraded 16k → 48kHz full-bandwidth with 64kbps CBR Opus. Removed 3:1 downsample, 44.1k mic auto-resample, tagged frames, and a soft-knee server limiter replacing hard clip.</p>
+                <ul>
+                    <li>48kHz encode · 64kbps CBR</li>
+                    <li>Fidelity-first: 0dB preamp, transparent compressor</li>
+                    <li>Fixed frame_size overallocation bug</li>
+                </ul>
+            </div>
+            <div class="feature-card animate">
+                <div class="icon"><i class="fas fa-headphones-alt"></i></div>
+                <h3>Clean-RX Audio</h3>
+                <p>Opus bitrate control fixed on Apple Silicon (max_data_bytes cap), AUDIO-mode codec, 20ms frames, tagged decode, and a time-watermark jitter buffer replacing frame-count buffering.</p>
+                <ul>
+                    <li>arm64-safe bitrate control · 32kbps</li>
+                    <li>WDSP @48kHz + NR2 AE tuning</li>
+                    <li>Soft-knee limiting (knee 0.97)</li>
+                </ul>
+            </div>
+            <div class="feature-card animate">
+                <div class="icon"><i class="fas fa-rocket"></i></div>
+                <h3>Release Infrastructure</h3>
+                <p>Client script cache-busting (version params + no-cache headers), repo cleanup (nested git repos, private keys removed), restart.sh, and docs to V5.7.0.</p>
+                <ul>
+                    <li>?v= cache bust · no-store JS/CSS</li>
+                    <li>Private keys &amp; nested repos removed</li>
+                    <li>CHANGELOG / README / website synced</li>
+                </ul>
+            </div>
         </div>
     </div>
 </section>
@@ -122,22 +164,22 @@
             <div class="feature-card animate">
                 <div class="icon"><i class="fas fa-bolt"></i></div>
                 <h3>Ultra Low Latency</h3>
-                <p>TX ~65ms / RX ~51ms, &lt;100ms TX↔RX switch. Opus 28kbps codec, AudioWorklet playback, Int16 transport — professional real-time experience.</p>
+                <p>TX ~65ms / RX ~51ms, &lt;100ms TX↔RX switch. RX Opus 32kbps AUDIO-mode, 20ms frames, time-watermark jitter buffer; TX 48kHz/64kbps CBR — professional real-time experience.</p>
                 <ul>
-                    <li>Opus codec · AudioWorklet pipeline</li>
-                    <li>Under 100ms TX↔RX switching</li>
-                    <li>Int16 lossless transport option</li>
+                    <li>Opus RX 32kbps · TX 64kbps CBR</li>
+                    <li>20ms frames · time-watermark buffer</li>
+                    <li>Tagged codec frames (PCM/Opus)</li>
                 </ul>
             </div>
 
             <div class="feature-card animate">
                 <div class="icon"><i class="fas fa-brain"></i></div>
                 <h3>WDSP Professional NR</h3>
-                <p>OpenHPSDR WDSP library: NR2 spectral noise reduction 15-20dB, AGC (4 modes), ANF auto-notch, NB noise blanker — SSB-optimized.</p>
+                <p>OpenHPSDR WDSP library at 48kHz: NR2 spectral noise reduction with tunable AE (auto-equalize, suppresses "watery" musical noise), AGC (4 modes), ANF, NB — SSB-optimized.</p>
                 <ul>
-                    <li>NR2 spectral NR 15-20dB</li>
+                    <li>NR2 EMNR @48kHz + AE tuning</li>
+                    <li>Soft-knee limiter (no distortion)</li>
                     <li>AGC 4-mode · ANF · NB</li>
-                    <li>SSB-optimized DSP chain</li>
                 </ul>
             </div>
 
@@ -176,11 +218,11 @@
 
             <div class="feature-card animate">
                 <div class="icon"><i class="fas fa-chart-line"></i></div>
-                <h3>ATR-1000 + RagChew Audio</h3>
-                <p>ATR-1000: 0-200W real-time power display, SWR 1.0-9.99, smart frequency→tuner learning. RagChew TX chain: low-cut 150Hz, presence +3dB@2.4kHz, 3:1 compressor, -50dB noise gate.</p>
+                <h3>ATR-1000 + Fidelity-First TX</h3>
+                <p>ATR-1000: 0-200W real-time power display, SWR 1.0-9.99, smart frequency→tuner learning. V5.7 TX: 48kHz full-band, 0dB preamp, transparent compressor, flat default EQ — pure mic to radio, levels handled by rig ALC + soft-knee.</p>
                 <ul>
                     <li>ATR-1000: power/SWR/tuner learning</li>
-                    <li>RagChew: EQ + compressor + noise gate</li>
+                    <li>48kHz TX · fidelity-first chain</li>
                     <li>MemoryChannelManager · LearningBuffer</li>
                 </ul>
             </div>
