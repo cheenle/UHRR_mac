@@ -1,99 +1,114 @@
-// 简化且兼容性更好的AudioWorklet处理器
-// 优化版本：增加缓冲减少抖动
+// AudioWorklet RX player — 时间水印抖动缓冲（移植自 mrrc_ft710）
+//
+// 旧实现用"帧数"水印 (min:2/max:30)。问题是帧数水印在不同码率/帧长下对应的
+// 缓冲时长差异巨大：Opus 帧 20ms 突发到达（20ms 突发对齐到 2.67ms 渲染量子必然
+// 出现 0,1,0,1… 的缺口），帧数阈值容易瞬间欠载 → 插入静音 = 可闻的 Opus 卡顿。
+//
+// 现改为按"毫秒"水印 + 迟滞：
+//   prebufferMs — 冷启动缓冲量：不足此量前保持静音。
+//   recoveryMs  — 欠载后重新武装的缓冲量：只需补到这一较小的水位就恢复播放，
+//                 而不是每次欠载都重新积累完整 prebuffer（迟滞，消除长停顿）。
+//   maxMs       — 硬上限：超过则丢弃最旧帧，约束端到端延迟。
+// 水印基于 AudioWorkletGlobalScope 的 sampleRate 换算样本数，与采样率无关。
 
 class RxPlayerProcessor extends AudioWorkletProcessor {
   constructor() {
     super();
-    this.queue = [];
-    // V5.3.1: 恢复正常缓冲防止卡顿，TX→RX 切换时临时降为 min:1
-    // min:2(40ms缓冲), max:30(约60ms缓冲@16kHz)
-    this.targetMinFrames = 2;
-    this.targetMaxFrames = 30;
-    
-    // 统计计数器
+    this.queue = [];        // Float32Array 队列
+    this.queuedSamples = 0;
+    this._underruns = 0;
     this._processCount = 0;
-    this._underrunCount = 0;
-    
-    // 处理来自主线程的消息
+
+    // 时间水印（毫秒）。默认针对 16kHz 远端链路调校，可经 config 覆盖。
+    this.prebufferMs = 200;   // 冷启动缓冲
+    this.recoveryMs = 80;     // 欠载后重新武装（迟滞，比 prebuffer 小）
+    this.maxMs = 600;         // 硬上限
+
+    this.priming = true;      // 开门标志：true 时累积缓冲
+    this.gateMs = this.prebufferMs;  // 当前开门阈值
+
     this.port.onmessage = (event) => {
       const data = event.data;
-      
-      if (data && data.type === 'push' && data.payload instanceof Float32Array) {
-        // 添加音频数据到队列
+      if (!data) return;
+
+      if (data.type === 'push' && data.payload instanceof Float32Array) {
         this.queue.push(data.payload);
-        
-        // 限制队列长度防止内存问题
-        while (this.queue.length > this.targetMaxFrames) {
-          this.queue.shift();
+        this.queuedSamples += data.payload.length;
+        // 硬上限：丢弃最旧帧，约束延迟
+        const maxSamples = (this.maxMs / 1000) * sampleRate;
+        while (this.queuedSamples > maxSamples && this.queue.length > 1) {
+          this.queuedSamples -= this.queue.shift().length;
         }
-      } 
-      else if (data && data.type === 'flush') {
-        // 清空队列（PTT释放时使用）
+      } else if (data.type === 'flush' || data.type === 'reset') {
+        // PTT 释放 / 重置：清空队列，冷启动重新积累
         this.queue.length = 0;
-        this._underrunCount = 0;
-        console.log('AudioWorklet 缓冲区已清空 (flush)');
-      } 
-      else if (data && data.type === 'reset') {
-        // 重置状态（PTT释放时使用）
-        this.queue.length = 0;
-        this._underrunCount = 0;
-        this._processCount = 0;
-        console.log('AudioWorklet 状态已重置 (reset)');
-      }
-      else if (data && data.type === 'config') {
-        // 配置参数
-        if (typeof data.min === 'number') {
-          this.targetMinFrames = Math.max(1, data.min | 0);
+        this.queuedSamples = 0;
+        this._underruns = 0;
+        this.priming = true;
+        this.gateMs = this.prebufferMs;
+      } else if (data.type === 'config') {
+        if (typeof data.prebufferMs === 'number') {
+          this.prebufferMs = Math.max(20, data.prebufferMs);
         }
-        if (typeof data.max === 'number') {
-          this.targetMaxFrames = Math.max(this.targetMinFrames + 1, data.max | 0);
+        if (typeof data.recoveryMs === 'number') {
+          this.recoveryMs = Math.max(20, data.recoveryMs);
         }
-        console.log(`AudioWorklet config: min=${this.targetMinFrames}, max=${this.targetMaxFrames}`);
+        if (typeof data.maxMs === 'number') {
+          this.maxMs = Math.max(this.prebufferMs + 20, data.maxMs);
+        }
+        // 兼容旧格式 {min, max}（按 20ms 帧假设换算成毫秒）
+        if (typeof data.min === 'number' && typeof data.max === 'number') {
+          const ms = (f) => Math.max(20, f * 20);
+          this.prebufferMs = ms(data.min);
+          this.recoveryMs = ms(data.min);
+          this.maxMs = Math.max(ms(data.min) + 20, ms(data.max));
+        }
+        // 若当前处于冷启动积累中，更新开门阈值
+        if (this.priming) {
+          this.gateMs = this.prebufferMs;
+        }
       }
     };
   }
 
+  _gateSamples() {
+    return Math.round((this.gateMs / 1000) * sampleRate);
+  }
+
   process(inputs, outputs) {
-    const output = outputs[0];
-    const out = output[0]; // 单声道输出
-    
+    const out = outputs[0];
+    const output = out[0]; // 单声道
     this._processCount++;
 
-    // 如果队列为空，输出静音
+    // 队列为空：输出静音，记欠载并重新武装（迟滞）
     if (this.queue.length === 0) {
-      for (let i = 0; i < out.length; i++) {
-        out[i] = 0;
+      output.fill(0);
+      this._underruns++;
+      if (this._underruns % 500 === 0) {
+        console.log(`AudioWorklet 欠载: ${this._underruns} 次`);
       }
-      this._underrunCount++;
-      // 减少日志频率
-      if (this._underrunCount % 500 === 0) {
-        console.log(`AudioWorklet 欠载: ${this._underrunCount} 次, 队列: ${this.queue.length}`);
-      }
+      this.priming = true;
+      this.gateMs = this.recoveryMs;
       return true;
     }
 
-    // V4.5.22: 当 min=1 时立即播放，不等待缓冲
-    // 这样 TX→RX 切换后能立即听到声音
-    // 只有当 min > 1 且数据不足时才等待
-    if (this.targetMinFrames > 1 && this.queue.length < this.targetMinFrames) {
-      // 数据不足最小缓冲，输出静音等待
-      for (let i = 0; i < out.length; i++) {
-        out[i] = 0;
+    // 开门积累中：缓冲不足则输出静音
+    if (this.priming) {
+      if (this.queuedSamples < this._gateSamples()) {
+        output.fill(0);
+        return true;
       }
-      return true;
+      this.priming = false;
     }
 
-    // 处理音频数据
+    // 播放队列数据
     let written = 0;
-    while (written < out.length && this.queue.length > 0) {
+    while (written < output.length && this.queue.length > 0) {
       const cur = this.queue[0];
-      const n = Math.min(cur.length, out.length - written);
-      
-      // 使用 set 方法复制数据（更高效）
-      out.set(cur.subarray(0, n), written);
-      
+      const n = Math.min(cur.length, output.length - written);
+      output.set(cur.subarray(0, n), written);
       written += n;
-      
+      this.queuedSamples -= n;
       if (n >= cur.length) {
         this.queue.shift();
       } else {
@@ -101,16 +116,13 @@ class RxPlayerProcessor extends AudioWorkletProcessor {
       }
     }
 
-    // 如果数据不足，填充静音
-    if (written < out.length) {
-      for (let i = written; i < out.length; i++) {
-        out[i] = 0;
-      }
+    // 数据不足则补静音
+    if (written < output.length) {
+      output.fill(0, written);
     }
 
     return true;
   }
 }
 
-// 注册处理器
 registerProcessor('rx-player', RxPlayerProcessor);

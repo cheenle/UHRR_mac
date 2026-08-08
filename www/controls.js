@@ -206,6 +206,11 @@ var AudioRX_analyser = "";
 var audiobufferready = false;
 var AudioRX_audiobuffer = [];
 var AudioRX_sampleRate=16000;
+
+// 线格式 1 字节编解码标签（与后端 audio_interface.py 一致）
+var AUDIO_TAG_PCM = 0x00;   // Int16 PCM
+var AUDIO_TAG_OPUS = 0x01;  // Opus 帧
+
 var audioSyncMonitor = {
 	lastProcessTime: 0,
 	bufferCount: 0,
@@ -315,7 +320,7 @@ function AudioRX_start(){
 	// 如果 AudioContext 使用不同采样率（如 iOS Safari 的 44100Hz），需要重采样
 	function decodeOpusAudio(data) {
 		try {
-			// Opus 解码采样率：必须与后端编码器一致（24kHz 优化移动端性能）
+			// Opus 解码采样率：必须与后端编码器一致（16kHz，对 2.7kHz SSB 语音近无损）
 			const opusDecodeRate = 16000;
 			// AudioContext 实际采样率
 			var contextRate = AudioRX_context ? AudioRX_context.sampleRate : AudioRX_sampleRate;
@@ -363,6 +368,24 @@ function AudioRX_start(){
 			console.error('Opus 解码错误:', e);
 			return null;
 		}
+	}
+
+	// 统一解码入口：按首字节标签确定性解码（0x00=PCM, 0x01=Opus）。
+	// 无标签（旧服务端）时回退到字节数启发式。
+	function decodeRxFrame(data) {
+		if (!data || data.byteLength < 1) return null;
+		var tag = new Uint8Array(data, 0, 1)[0];
+		if (tag === AUDIO_TAG_OPUS) {
+			return decodeOpusAudio(data.slice(1));
+		}
+		if (tag === AUDIO_TAG_PCM) {
+			return decodeInt16Audio(data.slice(1));
+		}
+		// 旧服务端：<500B 视为 Opus
+		if (AudioRX_opusDecode && data.byteLength < 500) {
+			return decodeOpusAudio(data);
+		}
+		return decodeInt16Audio(data);
 	}
 
     // 显式使用 48kHz 以与后端匹配
@@ -414,9 +437,8 @@ function AudioRX_start(){
                 await AudioRX_context.audioWorklet.addModule('rx_worklet_processor.js');
                 const rxNode = new AudioWorkletNode(AudioRX_context, 'rx-player');
                 AudioRX_source_node = rxNode;
-                // V5.3.1: 恢复正常缓冲配置防止卡顿
-                // min:2(40ms缓冲), max:30(约60ms缓冲@16kHz)
-                try { rxNode.port.postMessage({ type: 'config', min: 2, max: 30 }); } catch(_){}
+                // 时间水印缓冲（rx_worklet_processor.js）: 冷启动200ms, 欠载恢复80ms(迟滞), 上限600ms
+                try { rxNode.port.postMessage({ type: 'config', prebufferMs: 200, recoveryMs: 80, maxMs: 600 }); } catch(_){}
                 window.__pushRxFrame = function(f32) {
                     rxNode.port.postMessage({ type: 'push', payload: f32 });
                 };
@@ -425,16 +447,8 @@ function AudioRX_start(){
                     if (!window.__rxBytes) window.__rxBytes = 0;
                     if (msg && msg.data && msg.data.byteLength) window.__rxBytes += msg.data.byteLength;
                     
-                    // 检测数据类型：Opus 帧通常较小 (<100 bytes)，Int16 帧较大 (512 bytes)
-                    // 如果启用 Opus 解码，使用 Opus 解码器
-                    var float32Data;
-                    // Opus 帧大小阈值：24kHz/40ms 约 100-200 字节
-                    // Int16 帧大小：256 帧 = 512 字节
-                    if (AudioRX_opusDecode && msg.data.byteLength < 500) {
-                        float32Data = decodeOpusAudio(msg.data);
-                    } else {
-                        float32Data = decodeInt16Audio(msg.data);
-                    }
+                    // 按 1 字节编解码标签确定性解码（0x00=PCM, 0x01=Opus）
+                    var float32Data = decodeRxFrame(msg.data);
                     if (float32Data) {
                         window.__pushRxFrame(float32Data);
                     }
@@ -507,14 +521,8 @@ function AudioRX_start(){
                 if (!window.__rxBytes) window.__rxBytes = 0;
                 if (msg && msg.data && msg.data.byteLength) window.__rxBytes += msg.data.byteLength;
                 
-                // 检测数据类型：Opus 帧大小阈值 500（适配 24kHz）
-                // Int16 帧大小：256 帧 = 512 字节
-                var float32Data;
-                if (AudioRX_opusDecode && msg.data.byteLength < 500) {
-                    float32Data = decodeOpusAudio(msg.data);
-                } else {
-                    float32Data = decodeInt16Audio(msg.data);
-                }
+                // 按 1 字节编解码标签确定性解码（0x00=PCM, 0x01=Opus）
+                var float32Data = decodeRxFrame(msg.data);
                 if (float32Data) {
                     // 使用 window 暴露的变量
                     window.__rxAccumulatedBuffer.push(float32Data);
@@ -612,11 +620,11 @@ function wsAudioRXopen(){
 		var opusRequest = JSON.stringify({
 			action: "set_opus_encode",
 			enabled: true,
-			rate: 16000,  // 使用 16kHz 优化移动端性能
-			frame_dur: 40
+			rate: 16000,  // 16kHz：对 2.7kHz SSB 语音近无损且带宽最低
+			frame_dur: 20   // 20ms：Opus 甜点位，延迟减半、音质无损失
 		});
 		wsAudioRX.send(opusRequest);
-		console.log('📡 已请求后端启用 RX Opus 编码 (24kHz - 移动端优化)');
+		console.log('📡 已请求后端启用 RX Opus 编码 (16kHz / 20ms - 移动端优化)');
 	}
 }
 

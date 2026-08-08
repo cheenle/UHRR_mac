@@ -519,8 +519,11 @@ class loadWavdata(threading.Thread):
 					if l > 0:
 						# Only send data if there are connected clients
 						if len(AudioRXHandlerClients) > 0:
+							# 线格式：PCM 帧加 1 字节标签，与 audio_interface.py 一致
+							from audio_interface import PyAudioCapture as _PAC
+							tagged = bytes([_PAC.AUDIO_TAG_PCM]) + ret
 							for c in AudioRXHandlerClients:
-								c.Wavframes.append(ret)
+								c.Wavframes.append(tagged)
 						logger.debug(f"ALSA: Audio data processed for {len(AudioRXHandlerClients)} clients")
 					else:
 						logger.debug("ALSA: audio overrun")
@@ -619,7 +622,7 @@ class WS_AudioRXHandler(AuthenticatedWebSocketHandler):
 				from audio_interface import PyAudioCapture
 				enabled = data.get('enabled', False)
 				rate = data.get('rate', 16000)
-				frame_dur = data.get('frame_dur', 40)
+				frame_dur = data.get('frame_dur', 20)
 				
 				PyAudioCapture.rx_opus_encode = enabled
 				PyAudioCapture.rx_opus_rate = rate
@@ -3975,21 +3978,13 @@ class MainHandler(BaseHandler):
 			self.redirect("/login")
 			return
 			
-		self.application.settings.get("compiled_template_cache", False)
 		self.set_header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
-		# Serve the HTML file directly instead of using render
-		try:
-			print("Attempting to read www/index.html")
-			with open("www/index.html", "r") as f:
-				content = f.read()
-				print(f"Read {len(content)} characters from index.html")
-				self.write(content)
-				print("Content written to response")
-		except Exception as e:
-			print(f"Error reading index.html: {e}")
-			self.write("<html><body><h1>Error loading page</h1><p>Please check the server logs.</p></body></html>")
+		# 默认 web 入口改为移动端控制台 /mobile
+		print("Redirecting to /mobile (default web entry)")
+		self.redirect("/mobile")
+		return
 
-if __name__ == "__main__":	
+if __name__ == "__main__":
 	# 加载频道记忆（服务端持久化）
 	load_memory_channels()
 

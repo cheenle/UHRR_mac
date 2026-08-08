@@ -288,12 +288,12 @@ async function TXControl(action) {
                         // 发送flush命令并立即重置
                         AudioRX_source_node.port.postMessage({type: 'flush'});
                         AudioRX_source_node.port.postMessage({type: 'reset'});
-                        // 临时降为 min:1 实现快速恢复，200ms后恢复稳定缓冲
-                        AudioRX_source_node.port.postMessage({type: 'config', min: 1, max: 20});
-                        console.log(`[${timestamp}] ✅ AudioWorklet 缓冲区已清除并重置，最小缓冲临时设为1帧`);
+                        // 临时降到极小水印实现快速恢复，200ms后恢复稳定缓冲
+                        AudioRX_source_node.port.postMessage({type: 'config', prebufferMs: 20, recoveryMs: 20, maxMs: 400});
+                        console.log(`[${timestamp}] ✅ AudioWorklet 缓冲区已清除并重置，最小缓冲临时设为20ms`);
                         setTimeout(() => {
                             if (AudioRX_source_node && AudioRX_source_node.port) {
-                                AudioRX_source_node.port.postMessage({type: 'config', min: 2, max: 30});
+                                AudioRX_source_node.port.postMessage({type: 'config', prebufferMs: 200, recoveryMs: 80, maxMs: 600});
                             }
                         }, 200);
                     } catch(e) {

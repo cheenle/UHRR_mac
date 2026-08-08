@@ -30,6 +30,11 @@ class Encoder(object):
         self._application = application
         self._state = encoder.create(fs, channels, application)
 
+        # 目标码率（Python 侧保存，由 encode() 内的 max_data_bytes 按帧限幅生效）。
+        # opus_encoder_ctl 是变参函数，经 ctypes 固定 argtypes 调用在 arm64 上静默失败
+        # （见 mrrc_ft710/opus_rx.py 说明），故不依赖 ctl 控制码率。
+        self._bitrate_override = None
+
     def __del__(self):
         if hasattr(self, '_state'):
             # Destroying state only if __init__ completed successfully
@@ -40,11 +45,29 @@ class Encoder(object):
 
         encoder.ctl(self._state, ctl.reset_state)
 
+    def _frame_cap(self, frame_size):
+        """按目标码率计算单帧 max_data_bytes 上限（字节/帧）。
+
+        未设置码率时返回 None（不限制）。opus_encode 的 max_data_bytes 参数
+        是瞬时比特率的硬上限：cap = bitrate * (frame_size / fs) / 8。
+        该方案不依赖 opus_encoder_ctl，跨平台（含 arm64）均有效。
+        """
+        if self._bitrate_override is None:
+            return None
+        cap = int(self._bitrate_override / 8.0 * frame_size / self._fs)
+        return max(16, cap)
+
     def encode(self, data, frame_size):
-        return encoder.encode(self._state, data, frame_size, len(data))
+        cap = self._frame_cap(frame_size)
+        if cap is None or cap >= len(data):
+            cap = len(data)
+        return encoder.encode(self._state, data, frame_size, cap)
 
     def encode_float(self, data, frame_size, decode_fec=False):
-        return encoder.encode_float(self._state, data, frame_size, len(data))
+        cap = self._frame_cap(frame_size)
+        if cap is None or cap >= len(data):
+            cap = len(data)
+        return encoder.encode_float(self._state, data, frame_size, cap)
 
     # CTL interfaces
 
@@ -65,8 +88,23 @@ class Encoder(object):
     _set_complexity = lambda self, x: encoder.ctl(self._state, ctl.set_complexity, x)
     complexity = property(_get_complexity, _set_complexity)
 
-    _get_bitrate = lambda self: encoder.ctl(self._state, ctl.get_bitrate)
-    _set_bitrate = lambda self, x: encoder.ctl(self._state, ctl.set_bitrate, x)
+    def _get_bitrate(self):
+        # 优先返回 Python 侧保存的目标码率；ctl 在 arm64 上失效时回退为 None
+        if self._bitrate_override is not None:
+            return self._bitrate_override
+        try:
+            return encoder.ctl(self._state, ctl.get_bitrate)
+        except Exception:
+            return None
+
+    def _set_bitrate(self, x):
+        # 存 Python 侧，由 encode() 的 max_data_bytes 生效；ctl 仅作兼容尝试
+        self._bitrate_override = int(x)
+        try:
+            encoder.ctl(self._state, ctl.set_bitrate, int(x))
+        except Exception:
+            pass
+
     bitrate = property(_get_bitrate, _set_bitrate)
 
     _get_vbr = lambda self: encoder.ctl(self._state, ctl.get_vbr)

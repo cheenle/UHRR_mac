@@ -58,6 +58,61 @@ except ImportError as e:
     print("   如需 WDSP 功能，请先编译安装: cd /tmp && git clone https://github.com/g0orx/wdsp.git && cd wdsp && make")
 
 
+def soft_peak_limiter(x, knee=0.9, ceiling=0.98, ratio=2.0):
+    """软膝峰值限幅器。
+
+    低于 knee 时直通（不引入任何失真）；knee~ceiling 之间按 ratio 压缩；
+    超过则硬切到 ceiling。替代旧的全范围 tanh 软削波——tanh 会对正常语音电平
+    施加持续非线性压缩，本函数只在峰值接近满幅时才介入。
+    """
+    x = np.asarray(x, dtype=np.float32)
+    if ratio <= 1.0:
+        return np.clip(x, -ceiling, ceiling)
+    ax = np.abs(x)
+    over = ax - knee
+    # 仅在超过 knee 的部分减去压缩量 (1 - 1/ratio)；低于 knee 完全直通
+    reduction = np.where(over > 0, over * (1.0 - 1.0 / ratio), 0.0)
+    out_ax = np.minimum(ax - reduction, ceiling)
+    return np.sign(x) * out_ax
+
+
+class _StatefulDecimator:
+    """有状态 48k→16k 降采样（窗口化sinc低通 + 精确抽取）。
+
+    用 FIR 滤波 + 跨块状态实现连续滤波，避免按块独立 resample 在块边界产生
+    瞬态/咔哒声。抽取相位跨调用连续，输出帧边界不漂移。纯 numpy，无第三方依赖。
+    """
+
+    def __init__(self, factor=3, cutoff_hz=5500.0, fs=48000.0, ntaps=96):
+        self.factor = factor
+        self._ntaps = ntaps
+        n = np.arange(ntaps) - (ntaps - 1) / 2.0
+        # 窗口化 sinc 低通，截止 5.5kHz（目标奈奎斯特 8kHz 以下留足过渡带），
+        # 通带 0~2.7kHz（SSB 语音）完全平坦
+        h = 2.0 * cutoff_hz / fs * np.sinc(2.0 * cutoff_hz / fs * n)
+        h *= np.hamming(ntaps)
+        h /= np.sum(h)
+        self._h = h.astype(np.float64)
+        self._state = np.zeros(ntaps - 1, dtype=np.float64)  # 最近 ntaps-1 个输入样本
+        self._phase = 0  # 抽取相位 0..factor-1
+
+    def process(self, x):
+        x = np.asarray(x, dtype=np.float64)
+        if x.size == 0:
+            return np.zeros(0, dtype=np.float64)
+        combined = np.concatenate([self._state, x])
+        y = np.convolve(combined, self._h)[self._ntaps - 1: self._ntaps - 1 + x.size]
+        # 状态 = 最近 ntaps-1 个输入样本（含本次新增）
+        self._state = combined[-(self._ntaps - 1):] if combined.size >= self._ntaps - 1 else combined
+        out = y[self._phase::self.factor]
+        self._phase = (self._phase - x.size) % self.factor
+        return out
+
+    def reset(self):
+        self._state = np.zeros(self._ntaps - 1, dtype=np.float64)
+        self._phase = 0
+
+
 def enumerate_audio_devices():
     """Enumerate audio devices available on the system"""
     try:
@@ -120,6 +175,14 @@ class PyAudioCapture(threading.Thread):
     rx_opus_frame_dur = 20  # Opus 帧时长 (ms)
     _flush_opus_accumulator = False  # 跨线程标志：PTT释放时清空opus_accumulator
     rx_opus_encoder = None  # Opus 编码器实例
+
+    # 固定 RX 码率（bps）：16kHz AUDIO 模式下 32kbps 为短波语音的平衡点。
+    # 码率经 opus.encoder 的 max_data_bytes 按帧限幅生效（arm64 兼容，见 opus/encoder.py）。
+    RX_OPUS_BITRATE = 32000
+
+    # 线格式 1 字节编解码标签（与 mrrc_ft710/opus_rx.py 一致）
+    AUDIO_TAG_PCM = 0x00   # 裸 Int16 PCM
+    AUDIO_TAG_OPUS = 0x01  # Opus 帧
     
     # RNNoise 降噪设置
     rnnoise_enabled = False
@@ -167,6 +230,8 @@ class PyAudioCapture(threading.Thread):
         # WDSP 处理器实例（延迟初始化）
         self.wdsp_processor = None
         self.wdsp_resample_buffer = np.array([], dtype=np.int16)
+        # 有状态 48k→16k 降采样器（WDSP 配置在低采样率时使用）
+        self._decimator = None
         
         # 读取 RNNoise 配置（已弃用，推荐使用 WDSP）
         if 'RNNOISE' in config:
@@ -180,7 +245,7 @@ class PyAudioCapture(threading.Thread):
             PyAudioCapture.wdsp_enabled = config['WDSP'].getboolean('enabled', True)  # 默认启用
             if PyAudioCapture.wdsp_enabled and WDSP_AVAILABLE:
                 PyAudioCapture.wdsp_config = {
-                    'sample_rate': config['WDSP'].getint('sample_rate', 48000),
+                    'sample_rate': config['WDSP'].getint('sample_rate', 16000),
                     'buffer_size': config['WDSP'].getint('buffer_size', 256),
                     'nr2_enabled': config['WDSP'].getboolean('nr2_enabled', True),
                     'nr2_level': config['WDSP'].getint('nr2_level', 2),
@@ -350,8 +415,8 @@ class PyAudioCapture(threading.Thread):
                                 # 强信号：略微衰减，防止削波
                                 float32_data = float32_data * 0.85
                     
-                    # 3. 软削波保护
-                    float32_data = np.clip(float32_data, -0.95, 0.95)
+                    # 3. 软膝峰值限幅（仅>0.9 介入，强信号不再硬切方波产生谐波）
+                    float32_data = soft_peak_limiter(float32_data, knee=0.9, ceiling=0.98)
                     
                     int16_data = (float32_data * 32767).astype(np.int16)
                     
@@ -383,10 +448,15 @@ class PyAudioCapture(threading.Thread):
                             self.wdsp_processor.close()
                             self.wdsp_processor = None
                             self.wdsp_resample_buffer = np.array([], dtype=np.int16)
+                            if self._decimator is not None:
+                                self._decimator.reset()
                             PyAudioCapture._wdsp_config_hash = None
                         except Exception as e:
                             pass
                     
+                    # 当前 int16_data 的采样率（决定后续是否需降采样到 Opus 率）
+                    stream_rate = 48000
+
                     if PyAudioCapture.wdsp_enabled and WDSP_AVAILABLE:
                         try:
                             cfg = PyAudioCapture.wdsp_config
@@ -405,7 +475,7 @@ class PyAudioCapture(threading.Thread):
                                 PyAudioCapture._wdsp_config_hash = new_hash
                                 
                                 if self.wdsp_processor is None:
-                                    wdsp_sr = 48000
+                                    wdsp_sr = cfg.get('sample_rate', 16000)
                                     wdsp_bs = cfg.get('buffer_size', 256)
                                     self.wdsp_processor = WDSPProcessor(
                                         sample_rate=wdsp_sr, buffer_size=wdsp_bs,
@@ -418,6 +488,11 @@ class PyAudioCapture(threading.Thread):
                                     self.wdsp_processor.set_bandpass(cfg['bandpass_low'], cfg['bandpass_high'])
                                     if cfg['nr2_enabled']:
                                         self.wdsp_processor.set_nr2_level(cfg.get('nr2_level', 2))
+                                    # WDSP 配置在低采样率（如 16k）时，输入需先做有状态 48k→16k 降采样
+                                    if wdsp_sr < 48000:
+                                        self._decimator = _StatefulDecimator(factor=48000 // wdsp_sr)
+                                    else:
+                                        self._decimator = None
                                 else:
                                     self.wdsp_processor.set_nr2_level(cfg.get('nr2_level', 2) if cfg['nr2_enabled'] else 0)
                                     self.wdsp_processor.set_nb_enabled(cfg['nb_enabled'])
@@ -431,10 +506,21 @@ class PyAudioCapture(threading.Thread):
                         # V5.2: WDSP 处理 — 在 try/except 之外，每帧必执行
                         cfg = PyAudioCapture.wdsp_config
                         wdsp_buffer_size = cfg['buffer_size']
-                        wdsp_sample_rate = 48000
-                        
-                        self.wdsp_resample_buffer = np.concatenate([self.wdsp_resample_buffer, int16_data])
-                        
+
+                        # DSP 实际采样率由降采样器决定（其存在 ⟺ DSP 跑在 16k）。
+                        # 以 decimator 而非重读 cfg 为准，避免运行中配置漂移导致率不匹配。
+                        if self._decimator is not None:
+                            wdsp_sr = 48000 // self._decimator.factor
+                            # 有状态 48k→16k 降采样：输出与 Opus 编码率对齐，后续无需二次降采样
+                            decimated = self._decimator.process(int16_data.astype(np.float64) / 32767.0)
+                            dsp_input = np.clip(decimated, -1.0, 1.0)
+                            dsp_input = (dsp_input * 32767.0).astype(np.int16)
+                        else:
+                            wdsp_sr = 48000
+                            dsp_input = int16_data
+
+                        self.wdsp_resample_buffer = np.concatenate([self.wdsp_resample_buffer, dsp_input])
+
                         processed_frames = []
                         while len(self.wdsp_resample_buffer) >= wdsp_buffer_size:
                             frame = self.wdsp_resample_buffer[:wdsp_buffer_size]
@@ -444,17 +530,19 @@ class PyAudioCapture(threading.Thread):
                                 if len(processed) != len(frame):
                                     processed = frame
                                 processed_frames.append(processed)
-                        
+
                         if processed_frames:
                             int16_data = np.concatenate(processed_frames)
                             try:
+                                # 软膝峰值限幅（仅>0.9 介入），替代全范围 tanh——避免对正常语音持续失真
                                 float_output = int16_data.astype(np.float32) / 32767.0
-                                soft_clip_threshold = 0.95
-                                float_output = np.tanh(float_output / soft_clip_threshold) * soft_clip_threshold
+                                float_output = soft_peak_limiter(float_output, knee=0.9, ceiling=0.98)
                                 int16_data = (float_output * 32767.0).astype(np.int16)
                             except Exception:
                                 pass
-                    
+                            # WDSP 输出采样率即 DSP 配置率（16k）
+                            stream_rate = wdsp_sr
+
                     # 发送到客户端队列
                     try:
                         import sys
@@ -492,7 +580,7 @@ class PyAudioCapture(threading.Thread):
                                 if current_opus_mode:
                                     # 降采样：48kHz → 目标采样率
                                     # 使用简单的平均滤波降采样
-                                    source_rate = 48000  # PyAudio 捕获采样率
+                                    source_rate = stream_rate  # 捕获率；WDSP@16k 时为 16k，否则 48k
                                     if current_opus_rate < source_rate:
                                         downsample_ratio = source_rate // current_opus_rate
                                         # 平均降采样：每 downsample_ratio 个样本取平均
@@ -519,33 +607,28 @@ class PyAudioCapture(threading.Thread):
                                         # V5.2: 编码器仅在首次或参数变化时初始化
                                         if self.rx_opus_encoder is None or self.rx_opus_encoder_rate != current_opus_rate:
                                             try:
+                                                # application 传 'audio'(2049)：短波语音/数字模式比 VOIP(2048) 更自然
                                                 self.rx_opus_encoder = OpusEncoder(
-                                                    current_opus_rate, 1, 2048
+                                                    current_opus_rate, 1, 'audio'
                                                 )
                                                 self.rx_opus_encoder_rate = current_opus_rate
+                                                # 固定码率（不再全局自适应）：单客户端拥塞不再拖累全体，
+                                                # 拥塞由下方每客户端的 Wavframes 队列丢帧机制吸收。
                                                 self.rx_opus_encoder.configure_for_voip(
-                                                    bitrate=28000, complexity=8,
+                                                    bitrate=PyAudioCapture.RX_OPUS_BITRATE, complexity=8,
                                                     fec=True, packet_loss_perc=15, dtx=True
                                                 )
                                             except Exception as e:
                                                 PyAudioCapture.rx_opus_encode = False
                                                 break
                                         
-                                        # 自适应 Opus 比特率：队列深度反映网络状况
-                                        qlen = max(len(c.Wavframes) for c in AudioRXHandlerClients) if AudioRXHandlerClients else 0
-                                        target_bps = 32000 if qlen < 5 else (24000 if qlen < 15 else 16000)
-                                        if target_bps != getattr(self, '_rx_opus_bitrate', -1):
-                                            try:
-                                                self.rx_opus_encoder.bitrate = target_bps
-                                                self._rx_opus_bitrate = target_bps
-                                            except Exception:
-                                                pass
-                                        
                                         # 编码
                                         try:
                                             frame_bytes = frame_data.tobytes()
                                             encoded_data = self.rx_opus_encoder.encode(frame_bytes, opus_frame_size)
-                                            
+                                            # 线格式：1 字节编解码标签 + Opus 帧（客户端按标签确定性解码）
+                                            encoded_data = bytes([PyAudioCapture.AUDIO_TAG_OPUS]) + encoded_data
+
                                             # 发送到客户端
                                             # 弱网优化：智能队列管理
                                             # 根据队列深度动态调整策略
@@ -572,7 +655,7 @@ class PyAudioCapture(threading.Thread):
                                 else:
                                     # Int16 PCM 模式（默认）
                                     # 支持 48kHz → 目标采样率 降采样
-                                    source_rate = 48000  # PyAudio 捕获采样率
+                                    source_rate = stream_rate  # 捕获率；WDSP@16k 时为 16k，否则 48k
                                     target_rate = PyAudioCapture.rx_opus_rate  # 目标采样率
                                     if target_rate < source_rate and target_rate > 0:
                                         downsample_ratio = source_rate // target_rate
@@ -587,6 +670,8 @@ class PyAudioCapture(threading.Thread):
                                         int16_data = int16_data[:-1]
                                     
                                     compressed_data = int16_data.tobytes()
+                                    # 线格式：1 字节编解码标签 + Int16 PCM（客户端按标签确定性解码）
+                                    compressed_data = bytes([PyAudioCapture.AUDIO_TAG_PCM]) + compressed_data
                                     # 弱网优化：智能队列管理
                                     for c in AudioRXHandlerClients:
                                         queue_len = len(c.Wavframes)
