@@ -72,8 +72,6 @@ A modern web-based remote control system optimized for mobile devices, enabling 
 
 ## 🏠 System Environment / 系统环境
 
-<img src="screenshots/whole_env.png" alt="System Environment" width="700">
-
 > Complete MRRC system setup: Mobile device remote control station with ATR-1000 power meter and antenna tuner integration.
 
 ---
@@ -82,15 +80,11 @@ A modern web-based remote control system optimized for mobile devices, enabling 
 
 ### 📱 Mobile Interface
 
-<img src="screenshots/main.png" alt="Mobile Interface" width="320">
-
 > Modern mobile UI optimized for iPhone/Android with touch-friendly controls, large PTT button, and real-time S-meter display.
 
 ---
 
 ### 🖥️ Desktop Interface
-
-<img src="screenshots/desktop_interface.jpg" alt="Desktop Interface" width="600">
 
 > Full-featured desktop interface with spectrum display, detailed controls, and comprehensive radio management.
 
