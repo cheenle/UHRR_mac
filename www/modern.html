@@ -324,7 +324,10 @@
     <!-- Scripts -->
     <script src="modern.js"></script>
     <script src="tx_button_optimized.js"></script>
-    <script src="audio_rx.js"></script>
+    <!-- H17: 移除 audio_rx.js — 它与 controls.js 重复声明同一批 RX 全局/函数，
+         controls.js 后加载会覆盖它，使 audio_rx.js 的 V5.2 BufferSourceNode 调度器
+         成为死代码；且其 onmessage 对带标签的裸帧调用 decodeAudioData 必然失败。
+         RX 引擎统一由 controls.js 提供。 -->
     <script src="control_trx.js"></script>
     <script src="controls.js"></script>
 </body>

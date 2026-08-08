@@ -40,7 +40,7 @@ start_tunnel() {
         -o ServerAliveInterval=60 \
         -o ServerAliveCountMax=3 \
         -o ExitOnForwardFailure=yes \
-        -o StrictHostKeyChecking=no \
+        -o StrictHostKeyChecking=accept-new \
         "$REMOTE_USER@$REMOTE_HOST" &
     
     TUNNEL_PID=$!
@@ -135,7 +135,7 @@ check_ssh_key() {
     fi
     
     # 测试连接
-    if ! ssh -o ConnectTimeout=5 -o StrictHostKeyChecking=no "$REMOTE_USER@$REMOTE_HOST" "echo OK" > /dev/null 2>&1; then
+    if ! ssh -o ConnectTimeout=5 -o StrictHostKeyChecking=accept-new "$REMOTE_USER@$REMOTE_HOST" "echo OK" > /dev/null 2>&1; then
         log "⚠️ 无法连接到 $REMOTE_USER@$REMOTE_HOST"
         log "请确保:"
         log "  1. 网络连接正常"

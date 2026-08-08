@@ -14,7 +14,7 @@
 - Docker single-instance command is `docker compose up --build` or `docker-compose up --build`; it maps host `8877:8877`, mounts `MRRC.conf`, `certs/`, `atr1000_tuner.json`, `MRRC_users.db`, `logs/`, and `/dev`.
 - Dockerfile copies only selected runtime files plus `www/`; if adding a backend module needed in containers, update `Dockerfile` explicitly.
 - Multi-instance workflow uses `./mrrc_multi.sh create <name>`, edit `MRRC.<name>.conf`, then `./mrrc_multi.sh start <name>`; each instance needs unique web port, rigctld port, and Unix socket.
-- `mrrc_multi.sh` hardcodes `/opt/local/bin/python3.12` for MRRC startup; change or bypass it on systems without MacPorts Python there.
+- `mrrc_multi.sh` uses a `detect_python()` helper to pick the interpreter for MRRC startup (no longer hardcodes `/opt/local/bin/python3.12`); instance names are validated to `[A-Za-z0-9_-]` to prevent shell→Python string-literal injection.
 
 ## Tests And Diagnostics
 - No root manifest, root test runner, pre-commit config, or CI workflow is present; use focused dev tools instead of assuming pytest/npm for the whole repo.
@@ -35,8 +35,8 @@
 
 ## Audio/PTT Guardrails
 - TX/PTT timing is fragile; preserve the flow documented in `docs/legacy/audio/PTT_Audio_Postmortem_and_Best_Practices.md` and implemented in `www/tx_button_optimized.js`.
-- `rx_worklet_processor.js` default minimum buffer must stay above 1 for normal RX. Safe desktop config is `min: 2, max: 30`.
-- TX-to-RX intentionally uses a transient `min: 1` window in `tx_button_optimized.js`, then restores `min: 2, max: 30` after 200 ms; do not remove that timer.
+- `rx_worklet_processor.js` uses a **millisecond watermark** buffer (not legacy frame counts). Normal RX needs `prebufferMs` well above one frame; safe desktop config is `prebufferMs: 200, recoveryMs: 80, maxMs: 600`.
+- TX-to-RX intentionally drops to a transient low-buffer window (`prebufferMs: 20`, ≈1 frame) in `tx_button_optimized.js`, then restores `prebufferMs: 200 / recoveryMs: 80 / maxMs: 600` after 200 ms; do not remove that timer.
 - PTT release must clear all three queues: `client.Wavframes = []`, `PyAudioCapture._flush_opus_accumulator = True`, and JS `AudioWorklet.flush()` plus `AudioRX_audiobuffer = []`.
 - `tune`, `cq`, and `toggleaudioRX()` stop/unmute paths must keep equivalent flush behavior because they can bypass the main `setPTT` cleanup path.
 - `stream.read()` capture sizes should align to Opus frames; `audio_interface.py` uses 320 samples for 20 ms at 16 kHz.

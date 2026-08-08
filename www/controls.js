@@ -11,6 +11,23 @@ const IS_MOBILE = (function (a) {
 })(navigator.userAgent || navigator.vendor || window.opera)
 /* eslint-enable */
 
+// M3: 统一 WebSocket URL 构造。根据页面协议选择 ws/wss，用 location.host（含端口），
+// 避免 'wss://' + href.split('/')[2] 在 http 本地开发下握手失败、
+// 以及在带 basic-auth URL 中误带凭据的问题。
+function __wsURL(path) {
+	var proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+	return proto + '//' + window.location.host + path;
+}
+
+// M2: 统一获取事件源元素。内联 onclick="fn()" 在被调用函数内，Firefox 已不暴露全局
+// event；接受显式 evt（推荐 onclick="fn(event)"）并回退 window.event（Chrome/Safari 仍可用），
+// 优先 currentTarget（绑定 handler 的元素），再回退 srcElement/target。非破坏性。
+function __evtSrc(evt) {
+	var e = evt || (typeof window.event !== 'undefined' ? window.event : null);
+	if (!e) return null;
+	return e.currentTarget || e.srcElement || e.target || null;
+}
+
 // WebSocket 状态指示器更新函数
 function setWSStatus(elementId, status) {
 	var el = document.getElementById(elementId);
@@ -139,10 +156,12 @@ function safeSetInnerHTML(elementId, htmlContent) {
 	return el;
 }
 
-function powertogle()
+function powertogle(evt)
 {
-	if(event.srcElement.src.replace(/^.*[\\\/]/, '')=="poweroff.png"){
-		event.srcElement.src="img/poweron.png";
+	var src = __evtSrc(evt);
+	if (!src) return;
+	if(src.src.replace(/^.*[\\\/]/, '')=="poweroff.png"){
+		src.src="img/poweron.png";
 		document.getElementById("ombre-body").style.display = "block";
 		document.getElementById("pop-upspinner").style.display = "block";
 		check_connected();
@@ -151,17 +170,17 @@ function powertogle()
 		ControlTRX_start();
 		checklatency();
 		poweron = true;
-		
+
 		canvasRXsmeter = document.getElementById("canRXsmeter");
 		if (canvasRXsmeter) {
 			ctxRXsmeter = canvasRXsmeter.getContext("2d");
 			initRXSmeter();
 		}
-		
+
 		button_light_all("div-filtershortcut");
 	}
 	else{
-		event.srcElement.src="img/poweroff.png";
+		src.src="img/poweroff.png";
 		AudioRX_stop();
 		AudioTX_stop();
 		ControlTRX_stop();
@@ -182,12 +201,17 @@ window.addEventListener('beforeunload', function (e) {
 });
 
 function check_connected() {
+	// L2: 原实现 WS 连不上时每秒递归永不停；加 poweron 守卫与最大重试上限，
+	// 关机后不再空转。
+	if (typeof poweron === 'undefined' || !poweron) return;
+	check_connected._tries = (check_connected._tries || 0) + 1;
     setTimeout(function () {
         // 放宽条件：只要控制通道和接收通道就绪，即可进入接收状态
         if (wsControlTRX && wsControlTRX.readyState === WebSocket.OPEN && wsAudioRX && wsAudioRX.readyState === WebSocket.OPEN) {
             document.getElementById("ombre-body").style.display = "none";
             document.getElementById("pop-upspinner").style.display = "none";
-        } else {
+            check_connected._tries = 0;
+        } else if (poweron && check_connected._tries < 60) {
             check_connected();
         }
     }, 1000);
@@ -251,7 +275,7 @@ function AudioRX_start(){
 		console.log('📡 RX Opus 解码已启用');
 	}
 
-	wsAudioRX = new WebSocket( 'wss://' + window.location.href.split( '/' )[2] + '/WSaudioRX' );
+	wsAudioRX = new WebSocket( __wsURL('/WSaudioRX') );
 	wsAudioRX.binaryType = 'arraybuffer';
 	wsAudioRX.onopen = wsAudioRXopen;
 	wsAudioRX.onclose = wsAudioRXclose;
@@ -388,7 +412,8 @@ function AudioRX_start(){
 		return decodeInt16Audio(data);
 	}
 
-    // 显式使用 48kHz 以与后端匹配
+    // L3: RX 上下文使用 16kHz（与后端 Opus 解码率一致）；TX 上下文才是 48kHz。
+    // 原"显式使用 48kHz"注释与实际 AudioRX_sampleRate=16000 不符，易误导维护者。
     // iOS Safari 注意：AudioContext 创建后可能处于 suspended 状态
     // 需要在用户交互后调用 resume()
     AudioRX_context = new AudioContext({ latencyHint: "interactive", sampleRate: AudioRX_sampleRate });
@@ -581,12 +606,14 @@ function AudioRX_start(){
     
 }
 
-function setaudiofilter(){
+function setaudiofilter(evt){
+	var src = __evtSrc(evt);
+	if (!src) return;
 	if(poweron){
-		AudioRX_biquadFilter_node.type = event.srcElement.getAttribute('ft');
-		AudioRX_biquadFilter_node.frequency.setValueAtTime(parseInt(event.srcElement.getAttribute('frq')), AudioRX_context.currentTime);
-		AudioRX_biquadFilter_node.gain.setValueAtTime(parseInt(event.srcElement.getAttribute('fg')), AudioRX_context.currentTime);
-		AudioRX_biquadFilter_node.Q.setValueAtTime(parseInt(event.srcElement.getAttribute('fq')), AudioRX_context.currentTime);
+		AudioRX_biquadFilter_node.type = src.getAttribute('ft');
+		AudioRX_biquadFilter_node.frequency.setValueAtTime(parseInt(src.getAttribute('frq')), AudioRX_context.currentTime);
+		AudioRX_biquadFilter_node.gain.setValueAtTime(parseInt(src.getAttribute('fg')), AudioRX_context.currentTime);
+		AudioRX_biquadFilter_node.Q.setValueAtTime(parseInt(src.getAttribute('fq')), AudioRX_context.currentTime);
 	}
 }
 
@@ -670,6 +697,9 @@ function wsAudioRXerror(err){
 function AudioRX_stop()
 {
 	audiobufferready = false;
+	// H16: 停止 RX 时清除频谱/音量递归定时器，避免在已关闭的 AudioContext 上持续运行
+	if (__drawBFTimer) { clearTimeout(__drawBFTimer); __drawBFTimer = null; }
+	if (__drawRXvolTimer) { clearTimeout(__drawRXvolTimer); __drawRXvolTimer = null; }
 	if (wsAudioRX && wsAudioRX.readyState !== WebSocket.CLOSED) {
 		wsAudioRX.close();
 	}
@@ -829,7 +859,8 @@ function drawBF(){
 	if(muteRX){Audio_analyser=AudioTX_analyser}else{Audio_analyser=AudioRX_analyser}
 	drawRXSPC(Audio_analyser);
 	drawRXFFT(Audio_analyser);
-	setTimeout(function(){ drawBF(); }, 200);
+	// H16: 保存定时器 id，关机时 clearTimeout，避免在已关闭的 AudioContext 上持续运行
+	__drawBFTimer = setTimeout(function(){ drawBF(); }, 200);
 }
 
 function drawRXvol(){
@@ -837,8 +868,13 @@ function drawRXvol(){
 	AudioRX_analyser.getFloatTimeDomainData(arraySPC);
 	RXinstantMeter.value = Math.max.apply(null, arraySPC)*100;
 	if(RXinstantMeter.value > RXinstantMeter.high){blikcritik("RX-GAIN_control")};
-	setTimeout(function(){ drawRXvol(); }, 300);
+	// H16: 保存定时器 id，关机时清除
+	__drawRXvolTimer = setTimeout(function(){ drawRXvol(); }, 300);
 }
+
+// H16: 持有递归定时器 id，供关机/停 RX 时清理
+var __drawBFTimer = null;
+var __drawRXvolTimer = null;
 
 function showRXvol(){
 	
@@ -855,7 +891,7 @@ function ControlTRX_start(){
 	}
 	
 	setWSStatus('status-ctrl', 'connecting');
-	const wsUrl = 'wss://' + window.location.href.split( '/' )[2] + '/WSCTRX';
+	const wsUrl = __wsURL('/WSCTRX');
 	console.log('🔌 尝试连接WebSocket:', wsUrl);
 	wsControlTRX = new WebSocket( wsUrl );
 	wsControlTRX.onopen = wsControlTRXopen;
@@ -1188,25 +1224,30 @@ function get_digit_freq(){
 }
 
 freq_digit_selected="";
-function freq_digit_scroll() {
+function freq_digit_scroll(evt) {
 	if (poweron) {
-		if(event.deltaY>0){toadd=-1;}else{toadd=1;}
+		var e = evt || (typeof window.event !== 'undefined' ? window.event : null);
+		if (!e || typeof e.deltaY === 'undefined') return;
+		if(e.deltaY>0){toadd=-1;}else{toadd=1;}
 		freq=get_digit_freq()+(freq_digit_selected.getAttribute('v')*toadd);
 		if(freq>0){showTRXfreq(freq);sendTRXfreq();}
 	}
 }
 
-function select_digit() {
-	freq_digit_selected=event.srcElement;
+function select_digit(evt) {
+	var src = __evtSrc(evt);
+	if (src) freq_digit_selected = src;
 }
 
 function clear_select_digit() {
 	freq_digit_selected="";
 }
 
-function rotatefreq(){
+function rotatefreq(evt){
 	if (poweron) {
-		freq=get_digit_freq()+parseInt(event.srcElement.getAttribute('v'));
+		var src = __evtSrc(evt);
+		if (!src) return;
+		freq=get_digit_freq()+parseInt(src.getAttribute('v'));
 		if(freq>0){showTRXfreq(freq);sendTRXfreq();}
 	}
 }
@@ -1325,12 +1366,14 @@ function showTRXmode(mode){
 	}
 }
 
-function sendTRXmode(){
-	if (wsControlTRX.readyState === WebSocket.OPEN) {wsControlTRX.send("setMode:"+event.srcElement.innerHTML);}
+function sendTRXmode(evt){
+	var src = __evtSrc(evt);
+	if (src && wsControlTRX.readyState === WebSocket.OPEN) {wsControlTRX.send("setMode:"+src.innerHTML);}
 }
 
-function recall_hambands(){
-	if (wsControlTRX.readyState === WebSocket.OPEN) {wsControlTRX.send("setFreq:"+event.srcElement.getAttribute('v'));}
+function recall_hambands(evt){
+	var src = __evtSrc(evt);
+	if (src && wsControlTRX.readyState === WebSocket.OPEN) {wsControlTRX.send("setFreq:"+src.getAttribute('v'));}
 }
 
 function initRXSmeter(){
@@ -1464,23 +1507,21 @@ function get_actualmode()
 	return mode
 }
 
-function button_pressed(item)
+function button_pressed(item, evt)
 {
-	if(!item){item=event.srcElement;}
+	if(!item){item=__evtSrc(evt);}
+	if(!item){return;}
 	item.classList.remove('button_unpressed');
 	item.classList.add('button_pressed');
 	button_light(item);
 }
 
-function button_unpressed(item)
+function button_unpressed(item, evt)
 {
 	// 安全检查：如果没有item且event也不存在，直接返回
 	if(!item){
-		if(typeof event !== 'undefined' && event && event.srcElement){
-			item = event.srcElement;
-		} else {
-			return; // 没有有效的item，直接返回
-		}
+		item=__evtSrc(evt);
+		if(!item){return;}
 	}
 	item.classList.remove('button_green');
 	item.classList.remove('button_pressed');
@@ -1505,9 +1546,9 @@ function button_light_all(iddiv)
 }
 
 
-function button_light(item,color="G")
+function button_light(item,color="G", evt)
 {
-	if(!item){item=event.srcElement;}
+	if(!item){item=__evtSrc(evt);if(!item){return;}}
 	if(color=="G"){
 		if(poweron){item.classList.add('button_green');}
 		else{item.classList.remove('button_green');}
@@ -1532,13 +1573,15 @@ function set_css_li_in_ul(items, tag=true)
 	}
 }
 
-function togle_li()
+function togle_li(evt)
 {
-	var items = event.srcElement.parentNode.getElementsByTagName("li");
+	var src = __evtSrc(evt);
+	if (!src) return;
+	var items = src.parentNode.getElementsByTagName("li");
 	for (var i = 0; i < items.length; ++i) {
-		items[i].removeAttribute('lichecked');	
+		items[i].removeAttribute('lichecked');
 	}
-	event.srcElement.setAttribute('lichecked',"");	
+	src.setAttribute('lichecked',"");
 	set_css_li_in_ul(items);
 }
 
@@ -1964,7 +2007,7 @@ function AudioTX_start()
 	isRecording = false;
 	encode = false;
 	setWSStatus('status-tx', 'connecting');
-	wsAudioTX = new WebSocket( 'wss://' + window.location.href.split( '/' )[2] + '/WSaudioTX' );
+	wsAudioTX = new WebSocket( __wsURL('/WSaudioTX') );
 	wsAudioTX.onopen = appendwsAudioTXOpen;
 	wsAudioTX.onerror = appendwsAudioTXError;
 	wsAudioTX.onclose = appendwsAudioTXclose;
@@ -1989,13 +2032,15 @@ function appendwsAudioTXclose(){
 					var oldOnOpen = wsAudioTX ? wsAudioTX.onopen : null;
 					var oldOnError = wsAudioTX ? wsAudioTX.onerror : null;
 					var oldOnClose = wsAudioTX ? wsAudioTX.onclose : null;
-					wsAudioTX = new WebSocket('wss://' + window.location.href.split('/')[2] + '/WSaudioTX');
+					wsAudioTX = new WebSocket(__wsURL('/WSaudioTX'));
 					wsAudioTX.onopen = appendwsAudioTXOpen;
 					wsAudioTX.onerror = appendwsAudioTXError;
 					wsAudioTX.onclose = appendwsAudioTXclose;
 					// 重新绑定编码器
 					if (typeof ap !== 'undefined' && ap) {
-						ap.ws = wsAudioTX;
+						// H15: 编码器使用 this.wsh（见 OpusEncoderProcessor.onAudioProcess），
+						// 原代码写 ap.ws 导致重连后仍向已关闭的旧 socket 发数据、发射期间无音频上行。
+						ap.wsh = wsAudioTX;
 					}
 				}
 			}

@@ -117,8 +117,9 @@ class RigctldClient:
     def set_freq(self, freq: int) -> bool:
         """设置频率"""
         response = self._send_command(f"F {freq}")
-        return "RPRT 0" in response or response == ""
-    
+        # M13: _send_command 在连接失败时返回 ""，不能当作成功，否则在错误频率继续调谐
+        return "RPRT 0" in response
+
     def get_freq(self) -> int:
         """获取当前频率"""
         response = self._send_command("f")
@@ -127,11 +128,12 @@ class RigctldClient:
         except (ValueError, TypeError) as e:
             logger.debug(f"解析频率响应失败: {e}")
             return 0
-    
+
     def set_ptt(self, on: bool) -> bool:
-        """设置 PTT"""
+        """设置 PTT — 必须校验 rigctld 应答，否则调谐可能在无 RF 下读取假 SWR"""
         response = self._send_command(f"T {'1' if on else '0'}")
-        return True
+        # H13: rigctld 成功返回 "RPRT 0"；连接失败返回 "" → False
+        return "RPRT 0" in response
     
     def get_ptt(self) -> bool:
         """获取 PTT 状态"""
@@ -433,8 +435,13 @@ class ATUAutoTuner:
         
         # 5. 额外确保 PTT 状态
         logger.info("🔧 设置 PTT ON")
-        self.rig.set_ptt(True)
-        
+        if not self.rig.set_ptt(True):
+            # H13: PTT 实际未键控 → 在无 RF 下读取假 SWR 并存错误参数，损害 PA。
+            # 必须中止，不要假装发射已启动。
+            logger.error("❌ PTT 启动失败（rigctld 未返回 RPRT 0），中止调谐")
+            self._stop_tune_transmission()
+            raise RuntimeError("PTT 启动失败，无法确认 RF 已键控")
+
         logger.info("  ✅ 发射已启动，开始调谐...")
         return True
     
@@ -580,8 +587,10 @@ class ATUAutoTuner:
     
     def _save_result(self, result: TuneResult):
         """保存结果到映射表"""
-        # 过滤假阳性：SWR=1.0 是假数据，SWR>2.0 也不保存
-        if result.success and 1.01 <= result.swr < 2.0:
+        # M12: H11 已在代理侧修复——swr=1.0 仅在有正向功率且 swr_raw=0 时出现（合法完美匹配），
+        # 不再是"设备未就绪的假数据"。因此接受 1.0，避免把真正的完美匹配漏存。
+        # 仅过滤 SWR>2.0（确不可用）。
+        if result.success and 1.0 <= result.swr < 2.0:
             # 通过 ATR-1000 代理保存
             self.atr._send_command({
                 "action": "learn",
@@ -678,7 +687,14 @@ class ATUAutoTuner:
             self._start_tune_transmission()
             logger.info("🔧 _start_tune_transmission 完成")
         except Exception as e:
+            # H14: 不能仅 return —— state 会永久停在 TUNING，start_tune 再调用
+            # 因 '调谐进行中' 被拒、功能卡死，且 PTT 可能残留。复位为 ERROR 并停止发射。
             logger.error(f"❌ _start_tune_transmission 异常: {e}")
+            self._update_progress(state='error', message=str(e))
+            try:
+                self._stop_tune_transmission()
+            except Exception as stop_e:
+                logger.error(f"停止发射时出错: {stop_e}")
             return
         
         try:

@@ -218,6 +218,9 @@ class PyAudioCapture(threading.Thread):
     
     def __init__(self, config):
         threading.Thread.__init__(self)
+        # daemon=True：进程退出时不因本线程阻塞而挂起；_stop_event 控制 run() 循环退出
+        self.daemon = True
+        self._stop_event = threading.Event()
         self.config = config
         
         # Opus 编码器实例（延迟初始化）
@@ -291,46 +294,55 @@ class PyAudioCapture(threading.Thread):
         
         # Try to open with the device's native channel count first
         try:
-            self.stream = self.p.open(
-                format=pyaudio.paFloat32,
-                channels=device_channels,
-                rate=48000,
-                input=True,
-                input_device_index=device_index,
-                frames_per_buffer=960  # V5.2: 20ms@48kHz → 对齐Opus帧(320samples@16kHz)
-            )
-            print(f'PyAudio input stream opened successfully with {device_channels} channel(s) at 48000 Hz')
-            self.stereo_mode = (device_channels == 2)
-        except Exception as e:
-            print(f"Failed to open PyAudio input stream with {device_channels} channels: {e}")
-            # Fall back to mono
             try:
                 self.stream = self.p.open(
                     format=pyaudio.paFloat32,
-                    channels=1,
+                    channels=device_channels,
                     rate=48000,
                     input=True,
                     input_device_index=device_index,
                     frames_per_buffer=960  # V5.2: 20ms@48kHz → 对齐Opus帧(320samples@16kHz)
                 )
-                print('PyAudio input stream opened successfully with MONO (1 channel) at 48000 Hz - fallback')
-                self.stereo_mode = False
-            except Exception as e2:
-                print(f"Failed to open mono PyAudio input stream: {e2}")
-                # Try with default device
+                print(f'PyAudio input stream opened successfully with {device_channels} channel(s) at 48000 Hz')
+                self.stereo_mode = (device_channels == 2)
+            except Exception as e:
+                print(f"Failed to open PyAudio input stream with {device_channels} channels: {e}")
+                # Fall back to mono
                 try:
                     self.stream = self.p.open(
                         format=pyaudio.paFloat32,
                         channels=1,
                         rate=48000,
                         input=True,
+                        input_device_index=device_index,
                         frames_per_buffer=960  # V5.2: 20ms@48kHz → 对齐Opus帧(320samples@16kHz)
                     )
-                    print('Opened with default input device (mono) at 48000 Hz')
+                    print('PyAudio input stream opened successfully with MONO (1 channel) at 48000 Hz - fallback')
                     self.stereo_mode = False
-                except Exception as e3:
-                    print(f"Failed to open default input device: {e3}")
-                    raise
+                except Exception as e2:
+                    print(f"Failed to open mono PyAudio input stream: {e2}")
+                    # Try with default device
+                    try:
+                        self.stream = self.p.open(
+                            format=pyaudio.paFloat32,
+                            channels=1,
+                            rate=48000,
+                            input=True,
+                            frames_per_buffer=960  # V5.2: 20ms@48kHz → 对齐Opus帧(320samples@16kHz)
+                        )
+                        print('Opened with default input device (mono) at 48000 Hz')
+                        self.stereo_mode = False
+                    except Exception as e3:
+                        print(f"Failed to open default input device: {e3}")
+                        raise
+        except Exception:
+            # 构造失败：必须释放已创建的 PyAudio 上下文，否则句柄泄漏
+            # （调用方拿到异常时对象尚未构造完成，无法调用 close()）
+            try:
+                self.p.terminate()
+            except Exception:
+                pass
+            raise
     
     def _get_device_index(self, device_name):
         """Convert device name to device index for PyAudio"""
@@ -367,7 +379,7 @@ class PyAudioCapture(threading.Thread):
         # 使用简单的平均滤波：每 3 个样本取 1 个
         downsample_factor = 3  # 48000 / 16000 = 3
         
-        while True:
+        while not self._stop_event.is_set():
             try:
                 # 使用非阻塞读取，避免线程被阻塞
                 data = self.stream.read(320, exception_on_overflow=False)
@@ -508,7 +520,8 @@ class PyAudioCapture(threading.Thread):
                                     self.wdsp_processor.set_bandpass(cfg['bandpass_low'], cfg['bandpass_high'])
                                     # nr2_ae_run 已由 set_nr2_level() 内置管理，无需额外设置
                         except Exception as e:
-                            pass
+                            # H10: WDSP 配置异常不可静默吞掉，否则 DSP 静默不工作且无法排查
+                            print(f"⚠️ WDSP config/初始化错误（降级直通）: {e}")
                         
                         # V5.2: WDSP 处理 — 在 try/except 之外，每帧必执行
                         cfg = PyAudioCapture.wdsp_config
@@ -561,6 +574,9 @@ class PyAudioCapture(threading.Thread):
                             client_count = len(AudioRXHandlerClients)
 
                             if client_count > 0:
+                                # H7: 快照客户端列表，避免 Tornado 线程并发 append/remove
+                                # 导致迭代中 'list changed size during iteration'，丢帧并报错
+                                clients_snapshot = list(AudioRXHandlerClients)
                                 # 半双工优化：TX 时停止发送 RX 音频数据
                                 # 避免 Echo 和节省带宽
                                 is_ptt_on = False
@@ -627,6 +643,8 @@ class PyAudioCapture(threading.Thread):
                                                     fec=True, packet_loss_perc=15, dtx=True
                                                 )
                                             except Exception as e:
+                                                # H10: 不可静默回退；记录原因并通知路径（前端协商了 Opus）
+                                                print(f"⚠️ Opus 编码器初始化失败，回退 PCM: {e}")
                                                 PyAudioCapture.rx_opus_encode = False
                                                 break
                                         
@@ -640,7 +658,7 @@ class PyAudioCapture(threading.Thread):
                                             # 发送到客户端
                                             # 弱网优化：智能队列管理
                                             # 根据队列深度动态调整策略
-                                            for c in AudioRXHandlerClients:
+                                            for c in clients_snapshot:
                                                 queue_len = len(c.Wavframes)
                                                 if queue_len < 10:
                                                     # 队列空闲，正常添加
@@ -681,7 +699,7 @@ class PyAudioCapture(threading.Thread):
                                     # 线格式：1 字节编解码标签 + Int16 PCM（客户端按标签确定性解码）
                                     compressed_data = bytes([PyAudioCapture.AUDIO_TAG_PCM]) + compressed_data
                                     # 弱网优化：智能队列管理
-                                    for c in AudioRXHandlerClients:
+                                    for c in clients_snapshot:
                                         queue_len = len(c.Wavframes)
                                         if queue_len < 10:
                                             # 队列空闲，正常添加
@@ -711,11 +729,29 @@ class PyAudioCapture(threading.Thread):
                 time.sleep(0.01)
     
     def close(self):
-        """Close the audio stream"""
-        if self.stream.is_active():
-            self.stream.stop_stream()
-        self.stream.close()
-        self.p.terminate()
+        """Close the audio stream and stop the capture thread."""
+        # 通知 run() 循环退出
+        self._stop_event.set()
+        try:
+            if hasattr(self, 'stream') and self.stream is not None and self.stream.is_active():
+                self.stream.stop_stream()
+        except Exception as e:
+            print(f"⚠️ stop_stream error: {e}")
+        try:
+            if hasattr(self, 'stream') and self.stream is not None:
+                self.stream.close()
+        except Exception as e:
+            print(f"⚠️ stream.close error: {e}")
+        try:
+            if hasattr(self, 'p') and self.p is not None:
+                self.p.terminate()
+        except Exception as e:
+            print(f"⚠️ PyAudio terminate error: {e}")
+        # 等待线程退出，避免非守护线程残留（daemon=True 兜底，仍尽量 join）
+        try:
+            self.join(timeout=2.0)
+        except Exception:
+            pass
     
     # ========== 录音功能静态方法 ==========
     
@@ -886,31 +922,39 @@ class PyAudioPlayback:
         device_index = self._get_device_index(config['AUDIO']['outputdevice'])
         
         try:
-            # Open output stream with optimized settings for low latency
-            self.stream = self.p.open(
-                format=pyaudio.paInt16,
-                channels=1,
-                rate=playback_rate,
-                output=True,
-                output_device_index=device_index,
-                frames_per_buffer=960  # V5.2: 20ms@48kHz → 对齐Opus帧(320samples@16kHz)
-            )
-            print(f'PyAudio output stream opened successfully at {playback_rate}Hz (Opus: {is_encoded})')
-        except Exception as e:
-            print(f"Failed to open PyAudio output stream: {e}")
-            # Try with default device
             try:
+                # Open output stream with optimized settings for low latency
                 self.stream = self.p.open(
                     format=pyaudio.paInt16,
                     channels=1,
-                    rate=playback_rate,  # 使用正确的采样率
+                    rate=playback_rate,
                     output=True,
+                    output_device_index=device_index,
                     frames_per_buffer=960  # V5.2: 20ms@48kHz → 对齐Opus帧(320samples@16kHz)
                 )
-                print(f'Opened with default output device at {playback_rate}Hz')
-            except Exception as e2:
-                print(f"Failed to open default output device: {e2}")
-                raise
+                print(f'PyAudio output stream opened successfully at {playback_rate}Hz (Opus: {is_encoded})')
+            except Exception as e:
+                print(f"Failed to open PyAudio output stream: {e}")
+                # Try with default device
+                try:
+                    self.stream = self.p.open(
+                        format=pyaudio.paInt16,
+                        channels=1,
+                        rate=playback_rate,  # 使用正确的采样率
+                        output=True,
+                        frames_per_buffer=960  # V5.2: 20ms@48kHz → 对齐Opus帧(320samples@16kHz)
+                    )
+                    print(f'Opened with default output device at {playback_rate}Hz')
+                except Exception as e2:
+                    print(f"Failed to open default output device: {e2}")
+                    raise
+        except Exception:
+            # 构造失败：释放 PyAudio 上下文，避免句柄泄漏
+            try:
+                self.p.terminate()
+            except Exception:
+                pass
+            raise
 
         # F2 fix: start dedicated playback writer thread now that the stream is open.
         # All blocking stream.write() calls happen here, off the Tornado IOLoop.

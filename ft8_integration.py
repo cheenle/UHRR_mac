@@ -107,8 +107,9 @@ class DecodeEntry:
 class DXCCDatabase:
     def __init__(self):
         self.db: List[Dict] = []
-        for p in ["ft8/base.json", "base.json",
-                   str(Path(__file__).parent / "ft8" / "base.json")]:
+        # L10: 绝对路径优先（基于 __file__），避免依赖 CWD；相对路径作回退
+        for p in [str(Path(__file__).parent / "ft8" / "base.json"),
+                  "ft8/base.json", "base.json"]:
             if os.path.exists(p):
                 try:
                     with open(p, 'r', encoding='utf-8') as f:
@@ -919,11 +920,12 @@ class FT8Integration:
             host, port = self.jtdx_addr[0], self.jtdx_addr[1]
         else:
             host, port = self.jtdx_host, self.jtdx_port
+        s = None
         try:
             s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             s.settimeout(1.0)
+            # H12: sendto 抛异常时确保 close() 仍执行，避免 FD 泄漏
             sent = s.sendto(data, (host, port))
-            s.close()
             logger.info(f"UDP sent {sent}B to {host}:{port} hex={data[:24].hex()}")
             if len(data) <= 80:
                 logger.debug(f"Full packet: {data.hex()}")
@@ -931,6 +933,12 @@ class FT8Integration:
         except Exception as e:
             logger.error(f"UDP send error → {host}:{port}: {e}")
             return False
+        finally:
+            if s is not None:
+                try:
+                    s.close()
+                except Exception:
+                    pass
 
     def _udp_loop(self):
         try:
@@ -1001,7 +1009,17 @@ class FT8Integration:
                         }
                     })
         except Exception as e:
-            logger.error(f"UDP listener error: {e}")
+            # S8: 监听器崩溃后 is_running 仍为 True 会误导前端"已连接"。
+            # 标记停止并广播错误，让前端正确反映状态。
+            logger.error(f"UDP listener error (listener 已停止): {e}")
+            self.is_running = False
+            try:
+                self._enqueue_broadcast({
+                    'type': 'status',
+                    'data': {'connected': False, 'error': f'UDP listener stopped: {e}'},
+                })
+            except Exception:
+                pass
 
     # ── Web commands ──
     def handle_command(self, command: str, params: dict = None) -> dict:

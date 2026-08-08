@@ -150,8 +150,9 @@ start_mrrc() {
     
 
     # Start MRRC server
-
-    Python "$SCRIPT_DIR/MRRC" > "$MRRC_LOG" 2>&1 &
+    # H20: 原 `Python`（大写）是 python.org 启动器，多数 Linux/非 python.org 环境不存在；
+    # 与脚本其余使用 python3 的地方统一。
+    python3 "$SCRIPT_DIR/MRRC" > "$MRRC_LOG" 2>&1 &
 
     local pid=$!
 
@@ -631,41 +632,9 @@ stop_atr1000_api() {
     rm -f "$LOG_DIR/atr1000_api.pid"
 }
 
-# Function to start ATU server
-start_atu_server() {
-    if is_running "ATU_SERVER_WEBSOCKET"; then
-        print_warning "ATU server is already running"
-        return 1
-    fi
-    
-    print_status "Starting ATU server..."
-    
-    # Clear log files
-    > "$ATU_LOG"
-    
-    # Start ATU server
-    python3 "$LOG_DIR/ATU_SERVER_WEBSOCKET.py" > "$ATU_LOG" 2>&1 &
-    
-    local pid=$!
-    sleep 3
-    
-    if is_running "ATU_SERVER_WEBSOCKET"; then
-        print_success "ATU server started successfully (PID: $pid)"
-        echo "ATU server PID: $pid" > "$LOG_DIR/atu_server.pid"
-        print_success "ATU server is now accessible at https://localhost:$ATU_SERVER_PORT"
-        return 0
-    else
-        print_error "Failed to start ATU server"
-        print_error "Check $ATU_LOG for details"
-        return 1
-    fi
-}
-
-# Function to stop ATU server
-stop_atu_server() {
-    kill_process "ATU_SERVER_WEBSOCKET"
-    rm -f "$LOG_DIR/atu_server.pid"
-}
+# H18: 移除 start_atu_server / stop_atu_server —— 引用未定义的 $ATU_LOG / $ATU_SERVER_PORT
+# 且目标文件 ATU_SERVER_WEBSOCKET.py 在仓库中不存在，子命令必然失败。如需 ATU 服务，
+# 补齐变量定义与脚本文件后再恢复。
 
 # Function to show status
 show_status() {
@@ -813,12 +782,6 @@ case "$1" in
         ;;
     stop-atr1000-api)
         stop_atr1000_api
-        ;;
-    start-atu)
-        start_atu_server
-        ;;
-    stop-atu)
-        stop_atu_server
         ;;
     *)
         echo "MRRC System Control Script"

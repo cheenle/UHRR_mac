@@ -39,7 +39,7 @@ class ModernHamInterface {
     }
 
     initializeComponents() {
-        this.initializeS Meter();
+        this.initializeSMeter();
         this.initializePersonalFreqs();
         this.initializeBitrateMonitoring();
         console.log('现代界面组件初始化完成');
@@ -753,7 +753,8 @@ class ModernHamInterface {
     }
 
     startAudioRX() {
-        wsAudioRX = new WebSocket('wss://' + window.location.host + '/WSaudioRX');
+        const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        wsAudioRX = new WebSocket(proto + '//' + window.location.host + '/WSaudioRX');
         wsAudioRX.binaryType = 'arraybuffer';
         wsAudioRX.onmessage = (msg) => this.appendwsAudioRX(msg);
         wsAudioRX.onopen = () => this.wsAudioRXopen();
@@ -762,7 +763,8 @@ class ModernHamInterface {
     }
 
     startAudioTX() {
-        wsAudioTX = new WebSocket('wss://' + window.location.host + '/WSaudioTX');
+        const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        wsAudioTX = new WebSocket(proto + '//' + window.location.host + '/WSaudioTX');
         wsAudioTX.binaryType = 'arraybuffer';
         wsAudioTX.onopen = () => this.wsAudioTXopen();
         wsAudioTX.onclose = () => this.wsAudioTXclose();
@@ -770,7 +772,9 @@ class ModernHamInterface {
     }
 
     startControlTRX() {
-        wsControlTRX = new WebSocket('wss://' + window.location.host + '/WSControlTRX');
+        // M4: 端点名应为 /WSCTRX（后端路由与 controls.js 一致），原 /WSControlTRX 连不上
+        const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        wsControlTRX = new WebSocket(proto + '//' + window.location.host + '/WSCTRX');
         wsControlTRX.onmessage = (msg) => this.appendwsControlTRX(msg);
         wsControlTRX.onopen = () => this.wsControlTRXopen();
         wsControlTRX.onclose = () => this.wsControlTRXclose();

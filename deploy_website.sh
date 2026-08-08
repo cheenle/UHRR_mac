@@ -71,7 +71,8 @@ rsync "${RSYNC_ARGS[@]}" \
     "$REMOTE_HOST:$REMOTE_PATH/"
 
 # Fix permissions
-ssh "$REMOTE_HOST" "sudo chown -R www-data:www-data $REMOTE_PATH && sudo chmod -R 755 $REMOTE_PATH"
+# M15: $REMOTE_PATH 未加引号，含空格/元字符时远程 shell 会拆分或注入；与 :61 的 mkdir 一致引用
+ssh "$REMOTE_HOST" "sudo chown -R www-data:www-data '$REMOTE_PATH' && sudo chmod -R 755 '$REMOTE_PATH'"
 
 echo ""
 echo "=========================================="

@@ -1,10 +1,26 @@
 #!/bin/bash
 # MRRC 远程控制脚本
 # 用法: ./mrrc_remote.sh start|stop|restart|status
+# S9: 旧硬编码路径(/Users/cheenle/UHRR/MRRC)与解释器(/opt/local/bin/python3)已改为
+# 基于脚本位置自动解析 + 探测可用 python3
+set -euo pipefail
 
-MRRC_DIR="/Users/cheenle/UHRR/MRRC"
-PYTHON_PATH="/opt/local/bin/python3"
-PYTHONPATH="/Users/cheenle/Library/Python/3.12/lib/python/site-packages"
+MRRC_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# 探测可用的 python3 解释器
+detect_python() {
+    for cand in python3 /opt/local/bin/python3 /usr/bin/python3 /opt/homebrew/bin/python3; do
+        if command -v "$cand" >/dev/null 2>&1; then
+            command -v "$cand"
+            return 0
+        fi
+    done
+    echo "python3"
+}
+PYTHON_PATH="$(detect_python)"
+# 用户级 site-packages（按解释器版本探测，找不到则置空）
+_pyver="$("$PYTHON_PATH" -c 'import sys;print("%d.%d"%sys.version_info[:2])' 2>/dev/null || true)"
+PYTHONPATH="${HOME}/Library/Python/${_pyver:-3}/lib/python/site-packages"
 
 case "$1" in
     start)
@@ -21,13 +37,13 @@ case "$1" in
         ;;
     stop)
         echo "停止 MRRC..."
-        pkill -f "MRRC"
+        pkill -f "MRRC" || true
         sleep 1
         echo "✅ MRRC 已停止"
         ;;
     restart)
         echo "重启 MRRC..."
-        pkill -f "MRRC"
+        pkill -f "MRRC" || true
         sleep 2
         cd "$MRRC_DIR"
         PYTHONPATH="$PYTHONPATH" nohup "$PYTHON_PATH" -u ./MRRC > mrrc_service.log 2>&1 &
@@ -41,7 +57,7 @@ case "$1" in
     status)
         if lsof -iTCP:8877 -sTCP:LISTEN -n -P >/dev/null 2>&1; then
             echo "✅ MRRC 运行中"
-            ps aux | grep "MRRC" | grep -v grep
+            ps aux | grep "[M]RRC" || true
         else
             echo "❌ MRRC 未运行"
         fi

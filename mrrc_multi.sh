@@ -115,7 +115,14 @@ kill_process() {
 load_instance_config() {
     local instance_name="$1"
     local config_file="$SCRIPT_DIR/MRRC.$instance_name.conf"
-    
+
+    # H19: 实例名经 shell 插值进入 Python 字符串字面量（如 c.read('$config_file')），
+    # 含单引号/分号等可注入任意代码。严格限制为 [A-Za-z0-9_-] 阻断注入面。
+    if ! [[ "$instance_name" =~ ^[A-Za-z0-9_-]+$ ]]; then
+        print_error "Invalid instance name '$instance_name': only letters, digits, '_' and '-' are allowed"
+        return 1
+    fi
+
     if [ ! -f "$config_file" ]; then
         print_error "Config file not found: $config_file"
         return 1
@@ -495,13 +502,19 @@ restart_instance() {
 # 创建新实例配置文件
 create_instance() {
     local instance_name="$1"
-    
+
     if [ -z "$instance_name" ]; then
         print_error "Instance name required"
         echo "Usage: $0 create <instance_name>"
         exit 1
     fi
-    
+
+    # H19: 实例名会插值进 Python 字符串字面量，严格限制字符集以阻断代码注入
+    if ! [[ "$instance_name" =~ ^[A-Za-z0-9_-]+$ ]]; then
+        print_error "Invalid instance name '$instance_name': only letters, digits, '_' and '-' are allowed"
+        exit 1
+    fi
+
     local config_file="$SCRIPT_DIR/MRRC.$instance_name.conf"
     
     if [ -f "$config_file" ]; then

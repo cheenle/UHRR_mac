@@ -283,6 +283,9 @@ learning_buffer = LearningBuffer()
 # 上次设置的继电器参数（用于节流）
 last_relay_params = None
 relay_throttle_time = 0
+# H8: 保护 last_relay_params/relay_throttle_time 与 _last_learned_state 的
+# read-modify-write 序列，多个 Unix Socket 客户端线程并发调用时不丢更新
+state_lock = threading.Lock()
 
 # 上次日志输出的值（用于减少日志频率）
 last_log_power = 0
@@ -304,26 +307,32 @@ def set_relay_with_throttle(atr1000, sw, ind, cap):
     3. 使用严格的时间比较，避免同一毫秒内的重复发送
     """
     global last_relay_params, relay_throttle_time
-    
+
     current_params = (sw, ind, cap)
     current_time = time.time()
-    
-    # 计算时间差（处理首次调用）
-    if relay_throttle_time > 0:
-        time_diff = current_time - relay_throttle_time
-    else:
-        time_diff = 999  # 首次调用，视为时间已过
-    
-    # 检查参数是否变化
-    params_changed = (last_relay_params is None) or (current_params != last_relay_params)
-    
-    # 决定是否发送
-    should_send = params_changed or (time_diff >= 5.0)
-    
+
+    # H8: 整个 check→send→update 序列加锁，避免并发客户端同时通过 params_changed 检查
+    with state_lock:
+        # 计算时间差（处理首次调用）
+        if relay_throttle_time > 0:
+            time_diff = current_time - relay_throttle_time
+        else:
+            time_diff = 999  # 首次调用，视为时间已过
+
+        # 检查参数是否变化
+        params_changed = (last_relay_params is None) or (current_params != last_relay_params)
+
+        # 决定是否发送
+        should_send = params_changed or (time_diff >= 5.0)
+
+        if should_send:
+            # set_relay 走网络/设备，放到锁外执行更优；但为正确性此处仍持锁。
+            # 若设备 I/O 成为瓶颈，可记录 should_send 后释放锁再发送。
+            atr1000.set_relay(sw, ind, cap)
+            last_relay_params = current_params
+            relay_throttle_time = current_time
+
     if should_send:
-        atr1000.set_relay(sw, ind, cap)
-        last_relay_params = current_params
-        relay_throttle_time = current_time
         logger.debug(f"继电器命令已发送: SW={sw}, IND={ind}, CAP={cap} (参数变化:{params_changed}, 时间差:{time_diff:.2f}s)")
         return True
     else:
@@ -337,9 +346,10 @@ clients = []  # Unix Socket 客户端列表
 UNIX_SOCKET_PATH = "/tmp/atr1000_proxy.sock"
 
 # 轮询间隔（秒）- V4.5.19 优化版：大幅降低设备压力
-POLL_INTERVAL_IDLE = 600.0    # 空闲时：60秒一次（大幅降低压力）
-POLL_INTERVAL_ACTIVE = 300.0  # 有客户端时：30秒一次（降低压力）
-POLL_INTERVAL_TX = 300.0       # TX期间：不发送SYNC，设备会主动推送数据！
+POLL_INTERVAL_IDLE = 600.0    # 空闲时：10分钟一次（600s，大幅降低压力）
+POLL_INTERVAL_ACTIVE = 300.0  # 有客户端时：5分钟一次（300s，降低压力）
+# TX 期间不主动发 SYNC（设备主动推送 RELAY），_poll_loop 内用 5s 状态检查循环
+POLL_INTERVAL_TX = 300.0       # 保留供参考；TX 路径实际使用 _poll_loop 内硬编码 5s 状态检查
 
 
 class ATR1000Client:
@@ -351,6 +361,9 @@ class ATR1000Client:
         self.ws = None
         self.thread = None
         self.connection_time = 0  # 连接时间戳，用于定期刷新
+        # S7: 代际计数器。每次 _on_open 自增，旧轮询线程检测到代际变化即退出，
+        # 避免重连后多个 _poll_loop 并发轮询、重复发 SYNC 加重设备压力
+        self._generation = 0
         
     def connect(self):
         """连接到 ATR-1000 设备"""
@@ -399,9 +412,12 @@ class ATR1000Client:
         """WebSocket 打开 - V4.5.17: 动态轮询模式
 
         连接成功后启动主动轮询线程，动态调整轮询间隔：
-        - 空闲时：3秒
-        - 有客户端：1秒
-        - TX期间：0.5秒
+        - 空闲时：POLL_INTERVAL_IDLE（600s，10分钟，大幅降低设备压力）
+        - 有客户端：POLL_INTERVAL_ACTIVE（300s，5分钟）
+        - TX期间：5秒状态检查，不主动发 SYNC（设备主动推送 RELAY）
+
+        注：每次重连自增 _generation，旧轮询/刷新线程检测到代际变化后退出，
+        避免重连累积多个轮询线程。
         """
         global connected, last_data_time, cache
         connected = True
@@ -413,11 +429,15 @@ class ATR1000Client:
 
         logger.info("✅ ATR-1000 已连接，启动动态轮询")
 
+        # S7: 自增代际，旧线程会在下次循环检测到变化后退出
+        self._generation += 1
+        gen = self._generation
+
         # 启动主动轮询线程
-        threading.Thread(target=self._poll_loop, daemon=True).start()
+        threading.Thread(target=self._poll_loop, args=(gen,), daemon=True).start()
 
         # 启动连接刷新线程（预防设备每小时主动断连）
-        threading.Thread(target=self._connection_refresh_loop, daemon=True).start()
+        threading.Thread(target=self._connection_refresh_loop, args=(gen,), daemon=True).start()
     
     def _on_message(self, ws, data):
         """收到消息 - 更新缓存（V4.5.17: 减少日志输出）"""
@@ -427,25 +447,27 @@ class ATR1000Client:
         if isinstance(data, bytes) and len(data) >= 3:
             self._parse_data(data)
     
-    def _poll_loop(self):
+    def _poll_loop(self, gen):
         """主动轮询循环 - V4.5.28: 优化 TX 模式处理
-        
+
         核心策略：
-        - 空闲时：60秒轮询一次
-        - 有客户端连接：30秒轮询一次
-        - TX模式：不发送 SYNC！设备会主动推送 RELAY 数据
-        
+        - 空闲时：POLL_INTERVAL_IDLE（600s）轮询一次
+        - 有客户端连接：POLL_INTERVAL_ACTIVE（300s）轮询一次
+        - TX模式：5秒状态检查，不发送 SYNC（设备主动推送 RELAY 数据）
+
         关键：TX 模式下设备会主动推送 RELAY 数据，不需要 SYNC。
         只在设备长时间无响应（假死）时才发送 SYNC 唤醒。
+
+        参数 gen: 启动时的代际，与 self._generation 不符时退出（S7）。
         """
         global connected, cache, client_count, is_tx, last_data_time
-        
+
         # 连接后立即发送第一次 SYNC
         self._send_sync()
         log_poll_interval(0, '初始同步')
-        
+
         last_interval = 0
-        while running and connected:
+        while running and connected and gen == self._generation:
             # 计算距离上次收到数据的时间
             time_since_data = time.time() - last_data_time
             
@@ -498,24 +520,38 @@ class ATR1000Client:
             if interval != last_interval:
                 log_poll_interval(interval, reason)
                 last_interval = interval
-            
-            time.sleep(interval)
-        
-        logger.info("🔄 轮询线程结束")
 
-    def _connection_refresh_loop(self):
+            # S7: 分段睡眠，代际变化或断连时尽快退出，避免旧线程滞留
+            self._interruptible_sleep(interval, gen)
+
+        logger.info("🔄 轮询线程结束 (gen=%d)" % gen)
+
+    def _interruptible_sleep(self, seconds, gen):
+        """分段睡眠，每秒检查 running/connected/代际，变化时提前退出。"""
+        end = time.time() + seconds
+        while time.time() < end:
+            if not running or not connected or gen != self._generation:
+                return
+            time.sleep(min(1.0, end - time.time()))
+
+    def _connection_refresh_loop(self, gen):
         """连接定期刷新循环 - V4.5.30
 
         ATR-1000 设备约每 60 分钟会主动断开 WebSocket 连接。
         此循环在连接 ~55 分钟时，若当前不在 TX 模式，
         则主动断开并重连，避免在 TX 期间突然断连。
+
+        参数 gen: 启动时的代际，与 self._generation 不符时退出（S7）。
         """
         global connected
 
         REFRESH_THRESHOLD = 3300  # 55 分钟 = 3300 秒
 
-        while running:
+        while running and gen == self._generation:
             time.sleep(30)  # 每 30 秒检查一次
+
+            if gen != self._generation:
+                break  # 已被新连接取代
 
             if not connected or not hasattr(self, 'connection_time'):
                 continue
@@ -606,9 +642,12 @@ class ATR1000Client:
                 elif swr_raw > 0:
                     cache["swr"] = float(swr_raw)
                 else:
-                    # swr_raw = 0，可能意味着反射功率为 0 (完美匹配)
-                    # 或者设备未就绪。有功率时假设完美匹配
-                    cache["swr"] = 1.0 if power > 0 else 1.0
+                    # swr_raw = 0：可能反射功率为 0（完美匹配），或设备未就绪。
+                    # H11: 原 `1.0 if power > 0 else 1.0` 两分支相同（死代码），
+                    # 且 power==0 时把未知 SWR 当作 1.0 会污染学习缓冲。
+                    # 仅在有正向功率时判定为完美匹配(1.0)；无功率时保留上一个有效 SWR。
+                    if power > 0:
+                        cache["swr"] = 1.0
                 
                 cache["power"] = power
 
@@ -1109,7 +1148,7 @@ def handle_unix_client(conn, addr, atr1000):
                                 logger.info(f"📝 学习被忽略: {freq/1000:.1f}kHz SWR={swr:.2f}, SW={'CL' if sw else 'LC'}, L={ind}, C={cap}")
                         
                 except json.JSONDecodeError:
-                    pass
+                    logger.debug(f"客户端 JSON 解析失败: {data[:64]!r}")
                 
             except socket.timeout:
                 continue
@@ -1118,7 +1157,8 @@ def handle_unix_client(conn, addr, atr1000):
                 logger.debug(f"客户端断开: {type(e).__name__}")
                 break
             except Exception as e:
-                logger.debug(f"客户端处理错误: {e}")
+                # M8: 保留完整 traceback 便于排查编程错误，而非静默断开
+                logger.debug(f"客户端处理错误: {e}", exc_info=True)
                 break
     
     finally:
@@ -1170,7 +1210,8 @@ def signal_handler(sig, frame):
     global running
     logger.info("收到终止信号，正在关闭...")
     running = False
-    sys.exit(0)
+    # M8: 不在信号处理上下文中抛 SystemExit（会强杀 daemon 线程，可能跳过
+    # main() finally 中的统计汇总）。仅置 running=False，让主循环自然退出。
 
 
 def main():

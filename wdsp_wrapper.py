@@ -19,6 +19,7 @@ This wrapper provides a Pythonic interface to the WDSP C library using ctypes.
 
 import ctypes
 import numpy as np
+import threading
 
 # WDSP 诊断开关 - 设为 True 开启详细调试日志
 WDSP_DEBUG = False
@@ -254,6 +255,9 @@ class WDSPProcessor:
         # Buffers for WDSP processing (float64 - WDSP 库要求)
         self._in_buffer = np.zeros(buffer_size * 2, dtype=np.float64)
         self._out_buffer = np.zeros(buffer_size * 2, dtype=np.float64)
+        # H9: C 库访问锁。process() 在捕获线程，notch/setter 可能在 Tornado 线程并发调用；
+        # fexchange0 与 SetRXA* 并发会损坏 WDSP 内部状态。RLock 允许构造期嵌套调用。
+        self._lock = threading.RLock()
         
         # Initialize WDSP channel
         self._init_wdsp()
@@ -578,13 +582,15 @@ class WDSPProcessor:
             return
         
         try:
-            # 启用NBP (Notched BandPass) filter本身
-            _wdsp.RXANBPSetRun(ctypes.c_int(self.channel), ctypes.c_int(1 if enabled else 0))
-            
-            # 启用notches
-            _wdsp.RXANBPSetNotchesRun(ctypes.c_int(self.channel), ctypes.c_int(1 if enabled else 0))
-            
-            self._notches_enabled = enabled
+            # H9: 持锁，与 process() 的 fexchange0 互斥
+            with self._lock:
+                # 启用NBP (Notched BandPass) filter本身
+                _wdsp.RXANBPSetRun(ctypes.c_int(self.channel), ctypes.c_int(1 if enabled else 0))
+
+                # 启用notches
+                _wdsp.RXANBPSetNotchesRun(ctypes.c_int(self.channel), ctypes.c_int(1 if enabled else 0))
+
+                self._notches_enabled = enabled
             print(f"🔧 WDSP NF (Notched BandPass) {'enabled' if enabled else 'disabled'} (dynamic)")
         except Exception as e:
             print(f"⚠️ NF dynamic control error: {e}")
@@ -607,13 +613,15 @@ class WDSPProcessor:
             return -1
         
         try:
-            result = _wdsp.RXANBPAddNotch(
-                ctypes.c_int(self.channel),
-                ctypes.c_int(0),  # Add at next available position
-                ctypes.c_double(fcenter),
-                ctypes.c_double(fwidth),
-                ctypes.c_int(active)
-            )
+            # H9: 持锁，与 process() 的 fexchange0 互斥
+            with self._lock:
+                result = _wdsp.RXANBPAddNotch(
+                    ctypes.c_int(self.channel),
+                    ctypes.c_int(0),  # Add at next available position
+                    ctypes.c_double(fcenter),
+                    ctypes.c_double(fwidth),
+                    ctypes.c_int(active)
+                )
             if result >= 0:
                 print(f"🔧 WDSP NF: Added notch at {fcenter}Hz (width={fwidth}Hz, index={result})")
             return result
@@ -638,13 +646,15 @@ class WDSPProcessor:
             return False
         
         try:
-            result = _wdsp.RXANBPEditNotch(
-                ctypes.c_int(self.channel),
-                ctypes.c_int(notch),
-                ctypes.c_double(fcenter),
-                ctypes.c_double(fwidth),
-                ctypes.c_int(active)
-            )
+            # H9: 持锁，与 process() 的 fexchange0 互斥
+            with self._lock:
+                result = _wdsp.RXANBPEditNotch(
+                    ctypes.c_int(self.channel),
+                    ctypes.c_int(notch),
+                    ctypes.c_double(fcenter),
+                    ctypes.c_double(fwidth),
+                    ctypes.c_int(active)
+                )
             if result == 0:
                 print(f"🔧 WDSP NF: Edited notch {notch} at {fcenter}Hz (width={fwidth}Hz)")
             return result == 0
@@ -666,10 +676,12 @@ class WDSPProcessor:
             return False
         
         try:
-            result = _wdsp.RXANBPDeleteNotch(
-                ctypes.c_int(self.channel),
-                ctypes.c_int(notch)
-            )
+            # H9: 持锁，与 process() 的 fexchange0 互斥
+            with self._lock:
+                result = _wdsp.RXANBPDeleteNotch(
+                    ctypes.c_int(self.channel),
+                    ctypes.c_int(notch)
+                )
             if result == 0:
                 print(f"🔧 WDSP NF: Deleted notch {notch}")
             return result == 0
@@ -769,17 +781,22 @@ class WDSPProcessor:
             
             # WDSP expects interleaved I/Q data
             # For mono audio, I=audio, Q=0
-            self._in_buffer[0::2] = float_data  # I channel
-            self._in_buffer[1::2] = 0.0  # Q channel
-            
-            # Process through WDSP
-            error = ctypes.c_int(0)
-            _wdsp.fexchange0(
-                ctypes.c_int(self.channel),
-                self._in_buffer.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
-                self._out_buffer.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
-                ctypes.byref(error)
-            )
+            # H9: 持锁保护 fexchange0 与并发 SetRXA* 调用互斥
+            with self._lock:
+                self._in_buffer[0::2] = float_data  # I channel
+                self._in_buffer[1::2] = 0.0  # Q channel
+
+                # Process through WDSP
+                error = ctypes.c_int(0)
+                _wdsp.fexchange0(
+                    ctypes.c_int(self.channel),
+                    self._in_buffer.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
+                    self._out_buffer.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
+                    ctypes.byref(error)
+                )
+
+                # Extract output (I channel only for mono)
+                output = self._out_buffer[0::2].copy()
             
             # error -2 means "output samples not available" - this is normal during startup
             # WDSP uses ring buffers and needs time to fill them
@@ -788,10 +805,7 @@ class WDSPProcessor:
                 return audio_data
             elif error.value != 0:
                 print(f"⚠️ WDSP processing error: {error.value}")
-            
-            # Extract output (I channel only for mono)
-            output = self._out_buffer[0::2].copy()
-            
+
             # 软削波保护：当峰值超过 1.0 时进行软压缩
             out_peak = np.max(np.abs(output))
             if out_peak > 1.0:
@@ -945,7 +959,8 @@ class WDSPExternalNB:
         try:
             _wdsp.destroy_nobEXT(ctypes.c_int(self.id))
         except Exception as e:
-            pass
+            # L34: 清理失败不应完全静默，留 debug 痕迹
+            print(f"⚠️ WDSPExternalNB close error: {e}")
 
 
 def get_wdsp_version() -> int:
@@ -954,7 +969,7 @@ def get_wdsp_version() -> int:
         return 0
     try:
         return _wdsp.GetWDSPVersion()
-    except:
+    except Exception:
         return 0
 
 

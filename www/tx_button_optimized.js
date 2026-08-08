@@ -153,11 +153,21 @@ async function TXControl(action) {
                             }
                             if (encode && ap && ap.opusEncoder) {
                                 const packets = ap.opusEncoder.encode_float(warmup);
-                                for (let k = 0; k < packets.length; k++) { 
-                                    wsAudioTX.send(packets[k]); 
+                                // M1: 预热帧也必须前置 0x01 编解码标签，与正式编码器一致，
+                                // 否则后端按标签解析会误判帧类型/错位
+                                for (let k = 0; k < packets.length; k++) {
+                                    const tagged = new Uint8Array(packets[k].byteLength + 1);
+                                    tagged[0] = 0x01; // AUDIO_TAG_OPUS
+                                    tagged.set(new Uint8Array(packets[k]), 1);
+                                    wsAudioTX.send(tagged.buffer);
                                 }
                             } else if (ap && ap.i16arr) {
-                                wsAudioTX.send(new Int16Array(warmup.length));
+                                // M1: PCM 预热帧前置 0x00 标签
+                                const pcm = new Int16Array(warmup.length);
+                                const tagged = new Uint8Array(pcm.buffer.byteLength + 1);
+                                tagged[0] = 0x00; // AUDIO_TAG_PCM
+                                tagged.set(new Uint8Array(pcm.buffer), 1);
+                                wsAudioTX.send(tagged.buffer);
                             }
                         }
                     } catch(e) { 

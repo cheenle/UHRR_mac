@@ -3,9 +3,12 @@
 # MRRC 备份脚本
 # 将项目目录备份到 SSD 卷
 #
+# S9: 启用严格模式，旧路径已改为基于脚本位置自动解析
+set -euo pipefail
 
 # 配置
-SOURCE_DIR="/Users/cheenle/UHRR/MRRC"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SOURCE_DIR="$SCRIPT_DIR"
 BACKUP_DIR="/Volumes/SSD/MRRC_backup"
 TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
 BACKUP_NAME="MRRC_backup_${TIMESTAMP}"

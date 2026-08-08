@@ -112,8 +112,9 @@ function hapticFeedback(pattern) {
 // 移动端特定状态（不影响 controls.js 的全局变量）
 ////////////////////////////////////////////////////////////
 
-// RIG信号强度映射表（与controls.js保持一致）
-var RIG_LEVEL_STRENGTH = {0:-54,1:-48,2:-42,3:-36,4:-30,5:-24,6:-18,7:-12,8:-6,9:0,10:10,15:15,20:20,25:25,30:30,35:35,40:40,45:45,50:50,55:55,60:60};
+// RIG信号强度映射表：M6 — 不在此重复声明，直接使用 controls.js 中定义的
+// RIG_LEVEL_STRENGTH（controls.js 在本文件之前加载）。原 var 声明会覆盖
+// controls.js 的版本（后者多了 5:5 即 +5dB 档），违反 AGENTS.md 禁止重声明全局的规定。
 
 // 移动端 UI 状态
 var mobileState = {

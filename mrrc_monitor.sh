@@ -8,6 +8,15 @@ SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
 MRRC_DIR="$SCRIPT_DIR"
 SERVICE_NAME="com.user.mrrc"
 
+# M17: 从 MRRC.conf 读取实际端口，回退到默认 8877（原硬编码 8899 与默认端口不符，会误报未监听）
+MRRC_CONF="$SCRIPT_DIR/MRRC.conf"
+WEB_PORT=8877
+if [ -f "$MRRC_CONF" ]; then
+    # 兼容 configparser 风格 port = 8877（SERVER 段）
+    _conf_port=$(grep -E '^\s*port\s*=' "$MRRC_CONF" | head -1 | sed -E 's/.*=\s*([0-9]+).*/\1/')
+    [ -n "$_conf_port" ] && WEB_PORT="$_conf_port"
+fi
+
 # 颜色定义
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -57,7 +66,7 @@ check_basic_status() {
     fi
     
     # 检查端口
-    PORT=8899
+    PORT="$WEB_PORT"
     if lsof -i :$PORT > /dev/null 2>&1; then
         log_success "Web 服务器监听端口 $PORT"
         
@@ -98,10 +107,10 @@ check_network_status() {
     echo "=== 网络连接状态 ==="
     
     # 检查本地连接
-    if netstat -an | grep ".8899" | grep "LISTEN" > /dev/null; then
-        log_success "本地端口 8899 监听正常"
+    if netstat -an | grep ".$WEB_PORT" | grep "LISTEN" > /dev/null; then
+        log_success "本地端口 $WEB_PORT 监听正常"
     else
-        log_error "本地端口 8899 未监听"
+        log_error "本地端口 $WEB_PORT 未监听"
     fi
     
     # 检查 rigctld 连接
