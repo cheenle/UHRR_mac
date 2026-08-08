@@ -5,6 +5,46 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [V5.7.0] - 2026-08-08
+
+### 🎛️ RX 链路音质优化（参考 mrrc_ft710）
+
+- **Opus 码率经 `max_data_bytes` 按帧限幅**：修复 Apple Silicon 上 `opus_encoder_ctl`
+  变参 ABI 静默失效导致的码率不受控问题
+- **RX 编码器切 AUDIO(2049) 模式 + 固定 32kbps**：移除全局共享自适应比特率
+  （单客户端拥塞不再拖累全体）；码率控制 arm64 兼容
+- **线格式加 1 字节编解码标签**（0x00=PCM / 0x01=Opus）：客户端按标签确定性解码，
+  替换 `<500 字节` 猜帧启发式；ALSA 回退路径同步
+- **Opus 帧长 40ms → 20ms**：延迟减半，音质无损失
+- **客户端抖动缓冲重构为时间水印 + 迟滞**（prebuffer 200ms / recovery 80ms / max 600ms）：
+  修复帧数水印在 Opus 突发到达下的卡顿
+- **输入硬限幅与全范围 tanh 改为软膝限幅**（knee 0.95/0.97）：消除对正常语音的持续失真
+- **WDSP 采样率 16k → 48k**：EMNR(4096 点 FFT) 用粗 bin，噪声估计平滑，消除"水音"音乐噪声回归；
+  新增有状态窗口化-sinc 降采样器供 16k 路径使用
+- **NR2 AE 自动均衡参数化**（`nr2_ae_psi` / `nr2_ae_zeta_thresh`，默认 12/0.65）：
+  绑定 `SetRXAEMNRaePsi`/`SetRXAEMNRaeZetaThresh`，直接控制频谱减法音乐噪声
+
+### 🎙️ TX 链路高音质化（参考 mrrc_ft710）
+
+- **TX 编码 16k → 48kHz 全带宽**：去掉 3:1 降采样，编码 mic 原生率；44.1k mic 线性重采样
+- **64kbps CBR**（VBR 关，FEC/DTX 关）：稳定包大小，复杂语音码率不波动
+- **TX 线格式加标签**（m: 消息第 5 字段协商，旧客户端兼容）
+- **服务端 TX 电平硬削波 → 软膝限幅**：低失真
+- **修复 `frame_size` 缺 `/1000` 的过度分配 bug**（48k 下每帧 3.8MB → 1.9KB）及录音
+  `source_rate` 推导
+- **TX 保真收紧**：前置增益 +9.5dB → 0dB、压缩器透明旁路、DEFAULT EQ 调平 0/0/0，
+  动态交给电台 ALC
+
+### 🧹 Codebase 清理与发布基础设施
+
+- 移除 5 个嵌套 git 仓库（ft8×3、DSP/wdsp、ant_switch/eWeLink-API）
+- ft8 修复为 gitlink → gitignore(`ft8/*`) + 只跟踪 `base.json`
+- 移除 6 处含私钥文件的跟踪（key 备份/zip/`.orig`），.gitignore 加固
+- 客户端脚本缓存破：script 标签统一 `?v=` 版本号 + 静态 JS/CSS 强制 no-cache
+- 新增 `restart.sh` 单实例重启脚本
+
+---
+
 ## [V5.5.0] - 2026-06-06
 
 ### 🔧 ATR-1000 Tune 联动调谐

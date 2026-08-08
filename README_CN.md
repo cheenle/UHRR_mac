@@ -1,12 +1,19 @@
-# Mobile Remote Radio Control (MRRC) V5.5
+# Mobile Remote Radio Control (MRRC) V5.7
 
-[![English](https://img.shields.io/badge/lang-English-blue.svg)](README_en.md) [![中文](https://img.shields.io/badge/lang-中文-red.svg)](README_CN.md) [![版本](https://img.shields.io/badge/版本-V5.5-green.svg)](CHANGELOG.md)
+[![English](https://img.shields.io/badge/lang-English-blue.svg)](README_en.md) [![中文](https://img.shields.io/badge/lang-中文-red.svg)](README_CN.md) [![版本](https://img.shields.io/badge/版本-V5.7-green.svg)](CHANGELOG.md)
 
 **随时随地，畅享业余无线电。**
 
 MRRC 是一款专为移动端优化的业余电台远程控制系统。无论您身在何处，只需一部手机或平板，即可通过现代浏览器完整操控您的业余电台站。前端基于 HTML5/JS，后端基于 Tornado + PyAudio + rigctld（Hamlib）。
 
 > ✅ **核心优势**：移动端优先设计，TX→RX切换延迟<100ms，PWA支持离线访问，专为单手操作优化
+>
+> 🎉 **V5.7 更新亮点**（参考 mrrc_ft710）：
+> - 🎛️ **RX 音质**：Opus 码率 arm64 修复（`max_data_bytes`）、AUDIO 模式、标签帧、20ms 帧、
+>   时间水印抖动缓冲、软膝限幅、WDSP 恢复 48k（消"水音"）+ NR2 AE 调参
+> - 🎙️ **TX 高音质**：48kHz 全带宽、64kbps CBR、标签帧、服务端软膝、保真收紧
+>   （前置增益 0dB、压缩器透明、EQ 默认调平）
+> - 🧹 **清理与发布**：移除嵌套 git 仓库与私钥、脚本缓存破（版本号+no-cache）、restart.sh
 >
 > 🎉 **V5.4 更新亮点**：
 > - 🔧 **FT8 集成修复**：Python-JS 方法对齐、WebSocket 桥接稳定化、FT8 Ultron 前端优化
@@ -364,7 +371,7 @@ curl -X POST -H "Content-Type: application/json" \
 
 ---
 
-**最新版本: V5.4** (2026-06-06) | [查看更新日志](CHANGELOG.md)
+**最新版本: V5.7** (2026-08-08) | [查看更新日志](CHANGELOG.md)
 
 ## 🖥️ 多实例支持（Multi-Instance）⭐ 新功能
 
