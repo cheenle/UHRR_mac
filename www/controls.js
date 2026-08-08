@@ -1569,6 +1569,28 @@ function blikcritik(elemtID){
 //TX Audio routines///////////////////////////////////////////////////////////////////////////
 
 
+// 线性重采样到 48kHz（与 mrrc_ft710/ft710_main.js 一致）。
+// TX 编码固定 48kHz；麦克风 AudioContext 若为 44.1k 等其它率则重采样。
+function resampleFloat32To48k(input, inRate) {
+	if (!input || input.length === 0 || Math.abs(inRate - 48000) < 1) {
+		return input;
+	}
+	var outLen = Math.max(1, Math.round((input.length * 48000) / inRate));
+	var out = new Float32Array(outLen);
+	var step = inRate / 48000;
+	for (var i = 0; i < outLen; i++) {
+		var pos = i * step;
+		var idx = Math.floor(pos);
+		var frac = pos - idx;
+		var a = input[Math.min(idx, input.length - 1)];
+		var b = input[Math.min(idx + 1, input.length - 1)];
+		out[i] = a + (b - a) * frac;
+	}
+	return out;
+}
+
+
+
 // Opus WASM 运行时已提取到 modules/opus_wasm.js
 
 
@@ -1579,25 +1601,20 @@ var OpusEncoderProcessor = function( wsh )
 {
     this.wsh = wsh;
     this.bufferSize = 2048; // 优化：从4096减至2048，降低延迟约42ms
-    // ========== 关键修复：降采样系数 ==========
-    // AudioContext 通常是 48kHz，Opus 编码器使用 16kHz
-    // 降采样系数 = 输入采样率 / 目标采样率 = 48000 / 16000 = 3
-    this.downSample = 3;  // 修复：从2改为3，正确降采样 48kHz → 16kHz
-    // Opus 编码参数优化 - 基于 WebRTC 最佳实践
-    // 帧时长: 20ms（WebRTC 推荐，更快的处理周期）
-    // 采样率: 16kHz（优化移动端性能）
-    // 应用类型: 2048 = OPUS_APPLICATION_VOIP（优化语音质量）
-    // 编码复杂度: 5（平衡 CPU 和音质）
-    // DTX: 开启（静音时不编码，释放 CPU）
-    this.opusFrameDur = 20; // msec - WebRTC 推荐值
-    this.opusRate = 16000;  // Hz - 16kHz 优化移动端性能
-    // 计算正确的缓冲区大小：bufferSize / downSample = 2048 / 3 ≈ 682 samples
-    // Opus 帧大小 = 16000 * 40 / 1000 = 640 samples
-    // 682 > 640，足够一个完整帧，多余数据会在下一帧处理
+    // ========== 48kHz 全带宽 TX（对齐 mrrc_ft710）==========
+    // 不再 48k→16k 降采样，直接编码 mic 原生率，保留全带宽
+    this.downSample = 1;
+    // Opus 编码参数（对齐 ft710：高音质优先）
+    // 帧时长: 20ms（WebRTC 推荐）
+    // 采样率: 48kHz 全带宽
+    // 应用类型: 2048 = OPUS_APPLICATION_VOIP（语音优化）
+    // 码率/复杂度: 见 modules/opus_codec.js（64kbps CBR）
+    this.opusFrameDur = 20; // msec
+    this.opusRate = 48000;  // Hz - 48kHz 全带宽
     this.i16arr = new Int16Array( Math.floor(this.bufferSize / this.downSample) );
     this.f32arr = new Float32Array( Math.floor(this.bufferSize / this.downSample) );
     this.opusEncoder = new OpusEncoder( this.opusRate, 1, 2048, this.opusFrameDur );
-    console.log('🎵 TX Opus 编码器初始化: complexity=8, bitrate=28kbps, downSample=' + this.downSample + ', buffer=' + this.f32arr.length + ', frame=' + (this.opusRate * this.opusFrameDur / 1000));
+    console.log('🎵 TX Opus 编码器初始化: 48kHz/20ms, complexity=8, bitrate=64kbps CBR, frame=' + (this.opusRate * this.opusFrameDur / 1000));
 }
 
 
@@ -1641,36 +1658,28 @@ OpusEncoderProcessor.prototype.onAudioProcess = function( e )
 	    if( isRecording )
     {
 	var data = e.inputBuffer.getChannelData( 0 )
-	var ds = this.downSample;
-	
-	// ========== 降采样：48kHz → 16kHz (取平均法) ==========
-	var downsampledCount = Math.floor(data.length / ds);
-	var downsampledBuffer = new Float32Array(downsampledCount);
-	
-	for( var i = 0; i < downsampledCount; i++ )
-	{
-		// 简单降采样：取每第ds个样本
-		var sumDS = 0;
-		var base = i * ds;
-		for (var j = 0; j < ds; j++) {
-			sumDS += data[base + j];
-		}
-		downsampledBuffer[i] = sumDS / ds;
+
+	// ========== 48kHz 全带宽（对齐 ft710）==========
+	// 若 AudioContext 采样率非 48k（如 44.1k），线性重采样到 48k 再编码
+	var contextRate = mh && mh.context ? mh.context.sampleRate : 48000;
+	var sourceData = data;
+	if (Math.abs(contextRate - 48000) > 1) {
+		sourceData = resampleFloat32To48k(data, contextRate);
 	}
-	
+
 	// ========== 帧累积逻辑 ==========
-	// Opus 帧大小 = 16000Hz * 20ms / 1000 = 320 samples
-	var opusFrameSize = 320;
-	
+	// Opus 帧大小 = 48000Hz * 20ms / 1000 = 960 samples
+	var opusFrameSize = 960;
+
 	// 初始化累积缓冲区（如果不存在）
 	if (!this.frameAccumulator) {
 		this.frameAccumulator = new Float32Array(0);
 	}
-	
+
 	// 将新数据追加到累积缓冲区
-	var newAccumulator = new Float32Array(this.frameAccumulator.length + downsampledBuffer.length);
+	var newAccumulator = new Float32Array(this.frameAccumulator.length + sourceData.length);
 	newAccumulator.set(this.frameAccumulator);
-	newAccumulator.set(downsampledBuffer, this.frameAccumulator.length);
+	newAccumulator.set(sourceData, this.frameAccumulator.length);
 	this.frameAccumulator = newAccumulator;
 	
 	if( encode )
@@ -1695,7 +1704,11 @@ OpusEncoderProcessor.prototype.onAudioProcess = function( e )
 				// 码率统计：TX（编码后）
 				if (!window.__txBytes) { window.__txBytes = 0; }
 				if (res[idx] && res[idx].byteLength) { window.__txBytes += res[idx].byteLength; }
-				this.wsh.send( res[ idx ] );
+				// 线格式：1 字节标签 (0x01=Opus) + Opus 帧
+				var tagArr = new Uint8Array(res[idx].byteLength + 1);
+				tagArr[0] = 0x01;
+				tagArr.set(new Uint8Array(res[idx]), 1);
+				this.wsh.send(tagArr.buffer);
 			}
 		}
 	}
@@ -1706,13 +1719,13 @@ OpusEncoderProcessor.prototype.onAudioProcess = function( e )
 		{
 			var frame = this.frameAccumulator.slice(0, opusFrameSize);
 			this.frameAccumulator = this.frameAccumulator.slice(opusFrameSize);
-			
+
 			// 转换为 Int16
 			var int16Frame = new Int16Array(opusFrameSize);
 			for (var j = 0; j < opusFrameSize; j++) {
 				int16Frame[j] = frame[j] * 0x7FFF; // 使用0x7FFF避免溢出
 			}
-			
+
 			// V4.4.22: 检查 WebSocket 状态
 			if (this.wsh.readyState !== WebSocket.OPEN) {
 				return;
@@ -1721,7 +1734,11 @@ OpusEncoderProcessor.prototype.onAudioProcess = function( e )
 		    // 码率统计：TX（PCM直发）
 		    if (!window.__txBytes) { window.__txBytes = 0; }
 		    window.__txBytes += int16Frame.byteLength;
-		    this.wsh.send( int16Frame );
+		    // 线格式：1 字节标签 (0x00=PCM) + Int16 数据
+		    var tagPcm = new Uint8Array(int16Frame.byteLength + 1);
+		    tagPcm[0] = 0x00;
+		    tagPcm.set(new Uint8Array(int16Frame.buffer, int16Frame.byteOffset, int16Frame.byteLength), 1);
+		    this.wsh.send(tagPcm.buffer);
 		}
 	}
 	
@@ -2028,11 +2045,14 @@ function sendSettings()
     AudioRX_opusDecode = (encode === 1);
     console.log('📡 Opus 编码状态: TX=' + encode + ', RX解码=' + AudioRX_opusDecode);
 
-    var rate = String( mh.context.sampleRate / ap.downSample );
+    // TX 采样率 = mic 原生率（48k 全带宽），编码器 48k，两者一致；44.1k mic 由客户端重采样到 48k
+    var rate = String( mh.context.sampleRate );
     var opusRate = String( ap.opusRate );
-    var opusFrameDur = String( ap.opusFrameDur )
+    var opusFrameDur = String( ap.opusFrameDur );
+    // 第 5 字段 = 线格式标签模式（1= 每帧前加 1 字节 0x00 PCM / 0x01 Opus）
+    var tagged = 1;
 
-    var msg = "m:" + [ rate, encode, opusRate, opusFrameDur ].join( "," );
+    var msg = "m:" + [ rate, encode, opusRate, opusFrameDur, tagged ].join( "," );
     console.log( msg );
     if (wsAudioTX && wsAudioTX.readyState === WebSocket.OPEN) {
 		wsAudioTX.send( msg );

@@ -956,7 +956,10 @@ class PyAudioPlayback:
                 # 一阶平滑：attack(需减增益)快 release(需增增益)慢，防 pumping
                 alpha = 0.5 if target_gain < self._tx_gain_smooth else 0.05
                 self._tx_gain_smooth = self._tx_gain_smooth * (1 - alpha) + target_gain * alpha
-                tx_int16 = np.clip(tx_int16 * self._tx_gain_smooth, -32767, 32767).astype(np.int16)
+                # 低失真：软膝峰值限幅（仅>0.9 介入），替代硬削波，避免大声喊话削峰失真
+                f = (tx_int16 * self._tx_gain_smooth).astype(np.float32) / 32767.0
+                f = soft_peak_limiter(f, knee=0.9, ceiling=0.98)
+                tx_int16 = (f * 32767.0).astype(np.int16)
             pcm = tx_int16.tobytes()
         return pcm
 

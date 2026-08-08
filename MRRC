@@ -676,8 +676,11 @@ class WS_AudioTXHandler(AuthenticatedWebSocketHandler):
 
 	def TX_init(self, msg) :
 
-		itrate, is_encoded, op_rate, op_frm_dur = [int(i) for i in msg.split(',')]
+		parts = [int(i) for i in msg.split(',')]
+		itrate, is_encoded, op_rate, op_frm_dur = parts[0:4]
 		self.is_encoded = is_encoded
+		# 第 5 字段：线格式标签模式（1= 每帧前 1 字节 0x00 PCM / 0x01 Opus）；旧客户端无此字段
+		self.tagged = (len(parts) > 4 and parts[4] == 1)
 		if is_encoded:
 			self.decoder = OpusDecoder(op_rate, 1)
 			self.frame_size = op_frm_dur * op_rate
@@ -784,6 +787,9 @@ class WS_AudioTXHandler(AuthenticatedWebSocketHandler):
 				except Exception as e:
 					logger.error(f"Error broadcasting PTT status: {e}")
 		else :
+			# 线格式：tagged 模式下剥掉 1 字节编解码标签
+			if getattr(self, 'tagged', False) and hasattr(data, '__len__') and len(data) > 1:
+				data = data[1:]
 			if PYAUDIO_AVAILABLE:
 				# Use PyAudio
 				if hasattr(self, 'audio_playback') and self.audio_playback:
@@ -808,7 +814,7 @@ class WS_AudioTXHandler(AuthenticatedWebSocketHandler):
 						else:
 							tx_int16 = np.frombuffer(data, dtype=np.int16)
 						# Resample to 16kHz to match RX
-						source_rate = self.frame_size // 20 if hasattr(self, 'frame_size') else 16000
+						source_rate = self.op_rate if hasattr(self, 'op_rate') else 16000
 						if source_rate > 16000:
 							ratio = int(source_rate / 16000)
 							if ratio > 1:

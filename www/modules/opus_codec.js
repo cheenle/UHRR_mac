@@ -47,39 +47,34 @@ var OpusEncoder = (function () {
 
         // OPUS_SET_BITRATE_REQUEST = 4002
         // 目标比特率 (默认自动)
-        // 短波语音 24-32kbps 透明，兼顾带宽占用
+        // 48kHz 全带宽 TX：64kbps 近无损，对齐 mrrc_ft710
         var bitrate_ptr = allocate(4, 'i32', ALLOC_STACK);
-        setValue(bitrate_ptr, 28000, 'i32');  // 28kbps
+        setValue(bitrate_ptr, 64000, 'i32');  // 64kbps
         _opus_encoder_ctl(this.handle, 4002, bitrate_ptr);
 
         // OPUS_SET_VBR_REQUEST = 4004
-        // 可变比特率 (默认开启)
-        // 根据内容复杂度调整比特率，节省带宽
+        // 恒定比特率 (CBR, 默认 VBR)
+        // TX 发射优先稳定包间隔与大小，避免复杂语音段码率波动（对齐 ft710）
         var vbr_ptr = allocate(4, 'i32', ALLOC_STACK);
-        setValue(vbr_ptr, 1, 'i32');  // 1 = 开启 VBR
+        setValue(vbr_ptr, 0, 'i32');  // 0 = 关闭 VBR (CBR)
         _opus_encoder_ctl(this.handle, 4004, vbr_ptr);
 
         // OPUS_SET_INBAND_FEC_REQUEST = 4012
-        // 前向纠错 (默认关闭)
-        // 在当前帧中嵌入前一帧的低码率副本，丢包时可恢复
-        // 弱网环境关键，但会增加约 20% 码率
+        // TX 上传不启用 FEC（64kbps 已有大量余量；FEC 冗余无益）
         var fec_ptr = allocate(4, 'i32', ALLOC_STACK);
-        setValue(fec_ptr, 1, 'i32');  // 1 = 开启 FEC
+        setValue(fec_ptr, 0, 'i32');  // 0 = 关闭 FEC
         _opus_encoder_ctl(this.handle, 4012, fec_ptr);
 
         // OPUS_SET_PACKET_LOSS_PERC_REQUEST = 4014
-        // 预期丢包率 (默认 0%)
-        // 配合 FEC 使用，设置越高 FEC 冗余越多
-        // 短波/移动网络推荐 10-20%
+        // 无 FEC，丢包率预期置 0
         var loss_ptr = allocate(4, 'i32', ALLOC_STACK);
-        setValue(loss_ptr, 15, 'i32');  // 15% 丢包率预期
+        setValue(loss_ptr, 0, 'i32');  // 0%
         _opus_encoder_ctl(this.handle, 4014, loss_ptr);
 
         // OPUS_SET_DTX_REQUEST = 4016
-        // 静音检测传输 (默认关闭)
-        // 静音时只发送舒适噪声帧，节省 50-80% 带宽
+        // TX 关闭 DTX：说话期间必须连续发包，避免静音期丢字
         var dtx_ptr = allocate(4, 'i32', ALLOC_STACK);
-        setValue(dtx_ptr, 1, 'i32');  // 1 = 开启 DTX
+        setValue(dtx_ptr, 0, 'i32');  // 0 = 关闭 DTX
         _opus_encoder_ctl(this.handle, 4016, dtx_ptr);
 
         // OPUS_SET_SIGNAL_REQUEST = 4024
@@ -96,7 +91,7 @@ var OpusEncoder = (function () {
         setValue(hp_ptr, 0, 'i32');  // 0 = 禁用高通滤波器
         _opus_encoder_ctl(this.handle, 4030, hp_ptr);
 
-        console.log('🎵 Opus 编码器优化: complexity=8, bitrate=28kbps, VBR=ON, FEC=ON(15%), DTX=ON, HPF=OFF');
+        console.log('🎵 Opus 编码器优化: complexity=8, bitrate=64kbps, CBR, FEC=OFF, DTX=OFF, HPF=OFF');
     }
     OpusEncoder.prototype.encode = function (pcm) {
         var output = [];
