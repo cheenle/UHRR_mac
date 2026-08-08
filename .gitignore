@@ -62,3 +62,13 @@ website/stats/
 
 # Presentations (large binaries)
 *.pptx
+
+# FT8 ULTRON (independent automation project; only base.json needed by ft8_integration.py)
+ft8/*
+!ft8/base.json
+
+# Certificates: never track private keys (incl. subdirectory backups/legacy)
+certs/backup/
+certs/legacy/
+*.orig
+certs/*.zip
