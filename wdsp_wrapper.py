@@ -218,8 +218,8 @@ class WDSPProcessor:
                  enable_nb: bool = False,
                  enable_anf: bool = False,
                  agc_mode: int = WDSPAGCMode.MED,
-                 nr2_ae_psi: float = 20.0,
-                 nr2_ae_zeta_thresh: float = 0.5):
+                 nr2_ae_psi: float = 12.0,
+                 nr2_ae_zeta_thresh: float = 0.65):
         """
         Initialize WDSP processor.
 

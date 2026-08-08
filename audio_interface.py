@@ -256,8 +256,8 @@ class PyAudioCapture(threading.Thread):
                     'bandpass_low': config['WDSP'].getfloat('bandpass_low', 300.0),
                     'bandpass_high': config['WDSP'].getfloat('bandpass_high', 2700.0),
                     # AE 掩码平滑（抑制 NR2"水音"音乐噪声）：psi 越大越平滑，阈值越小越常触发
-                    'nr2_ae_psi': config['WDSP'].getfloat('nr2_ae_psi', 20.0),
-                    'nr2_ae_zeta_thresh': config['WDSP'].getfloat('nr2_ae_zeta_thresh', 0.5),
+                    'nr2_ae_psi': config['WDSP'].getfloat('nr2_ae_psi', 12.0),
+                    'nr2_ae_zeta_thresh': config['WDSP'].getfloat('nr2_ae_zeta_thresh', 0.65),
                 }
                 cfg = PyAudioCapture.wdsp_config
                 print(f"🔧 WDSP DSP 已启用（替代 RNNoise）")
@@ -418,8 +418,8 @@ class PyAudioCapture(threading.Thread):
                                 # 强信号：略微衰减，防止削波
                                 float32_data = float32_data * 0.85
                     
-                    # 3. 软膝峰值限幅（仅>0.9 介入，强信号不再硬切方波产生谐波）
-                    float32_data = soft_peak_limiter(float32_data, knee=0.9, ceiling=0.98)
+                    # 3. 软膝峰值限幅（仅>0.95 介入，强信号不再硬切方波产生谐波）
+                    float32_data = soft_peak_limiter(float32_data, knee=0.95, ceiling=0.99)
                     
                     int16_data = (float32_data * 32767).astype(np.int16)
                     
@@ -472,8 +472,8 @@ class PyAudioCapture(threading.Thread):
                                 cfg.get('agc_mode', 3),
                                 cfg.get('bandpass_low', 300.0),
                                 cfg.get('bandpass_high', 2700.0),
-                                cfg.get('nr2_ae_psi', 20.0),
-                                cfg.get('nr2_ae_zeta_thresh', 0.5),
+                                cfg.get('nr2_ae_psi', 12.0),
+                                cfg.get('nr2_ae_zeta_thresh', 0.65),
                             ))
                             
                             if new_hash != PyAudioCapture._wdsp_config_hash or self.wdsp_processor is None:
@@ -489,8 +489,8 @@ class PyAudioCapture(threading.Thread):
                                         enable_nb=cfg['nb_enabled'],
                                         enable_anf=cfg['anf_enabled'],
                                         agc_mode=cfg['agc_mode'],
-                                        nr2_ae_psi=cfg.get('nr2_ae_psi', 20.0),
-                                        nr2_ae_zeta_thresh=cfg.get('nr2_ae_zeta_thresh', 0.5),
+                                        nr2_ae_psi=cfg.get('nr2_ae_psi', 12.0),
+                                        nr2_ae_zeta_thresh=cfg.get('nr2_ae_zeta_thresh', 0.65),
                                     )
                                     self.wdsp_processor.set_bandpass(cfg['bandpass_low'], cfg['bandpass_high'])
                                     if cfg['nr2_enabled']:
@@ -541,9 +541,10 @@ class PyAudioCapture(threading.Thread):
                         if processed_frames:
                             int16_data = np.concatenate(processed_frames)
                             try:
-                                # 软膝峰值限幅（仅>0.9 介入），替代全范围 tanh——避免对正常语音持续失真
+                                # 软膝峰值限幅：knee=0.97 只在真正接近削顶时才介入，
+                                # 避免 AGC 归一化后的正常语音峰值被持续压缩失真
                                 float_output = int16_data.astype(np.float32) / 32767.0
-                                float_output = soft_peak_limiter(float_output, knee=0.9, ceiling=0.98)
+                                float_output = soft_peak_limiter(float_output, knee=0.97, ceiling=0.99)
                                 int16_data = (float_output * 32767.0).astype(np.int16)
                             except Exception:
                                 pass
