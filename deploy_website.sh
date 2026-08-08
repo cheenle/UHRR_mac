@@ -6,7 +6,9 @@ set -e
 
 REMOTE_HOST="${1:-cheenle@www.vlsc.net}"
 REMOTE_PATH="${2:-/var/www/vlsc.net/mrrc}"
-LOCAL_DIR="/Users/cheenle/UHRR/MRRC/website"
+# 部署源 = 本仓库的 website/（此前硬编码到旧克隆路径 UHRR/MRRC 导致版本滞后）
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+LOCAL_DIR="${SCRIPT_DIR}/website"
 
 # The production tree is owned by www-data. Use sudo on the remote rsync side so
 # deployments are repeatable without temporarily changing ownership to the SSH user.
