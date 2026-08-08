@@ -40,6 +40,41 @@ print_info() {
     echo -e "${CYAN}[${INSTANCE:-default}]${NC} $1"
 }
 
+# 检测可用的 Python 解释器（兼容 Python 升级后的环境）
+# 优先使用项目 venv（且其底层框架仍存在），否则查找包含 tornado/numpy/rtlsdr 依赖的解释器
+detect_python() {
+    if [ -n "$PYTHON" ] && [ -x "$PYTHON" ]; then
+        return 0
+    fi
+
+    local venv_python="$SCRIPT_DIR/venv/bin/python"
+    local candidates=(
+        "$venv_python"
+        "/opt/homebrew/bin/python3.11"
+        "/opt/homebrew/bin/python3"
+        "$(command -v python3 2>/dev/null)"
+        "/opt/local/bin/python3"
+    )
+    local cand
+    for cand in "${candidates[@]}"; do
+        [ -z "$cand" ] && continue
+        # 跳过损坏的 venv：直接尝试运行其解释器（底层 Python 框架被删除时 dyld 会失败，
+        # Python 升级后常见）。不能只检查 home 路径下是否存在 python3——
+        # Homebrew 的 opt 目录下只有 python3.11 并无 python3，会误报健康 venv 已失效。
+        if [ "$cand" = "$venv_python" ] && ! "$cand" -c "" >/dev/null 2>&1; then
+            print_warning "venv 已失效（$cand 无法执行），跳过并查找其他解释器"
+            continue
+        fi
+        if [ -x "$cand" ] && ( "$cand" -c "import tornado, numpy, rtlsdr" >/dev/null 2>&1 ); then
+            PYTHON="$cand"
+            print_info "Using Python: $PYTHON"
+            return 0
+        fi
+    done
+    print_error "未找到可用的 Python 解释器（需安装 tornado/numpy/rtlsdr）"
+    return 1
+}
+
 # 检查进程是否运行
 is_running() {
     pgrep -f "$1" > /dev/null 2>&1
@@ -85,7 +120,9 @@ load_instance_config() {
         print_error "Config file not found: $config_file"
         return 1
     fi
-    
+
+    detect_python || return 1
+
     # 使用 Python 解析配置文件获取实例参数
     local python_script=$(cat << 'PYEOF'
 import sys
@@ -139,27 +176,27 @@ PYEOF
 )
     
     # 调用 Python 解析配置
-    local config_values=($(python3 -c "$python_script" "$config_file" "$instance_name"))
+    local config_values=($("$PYTHON" -c "$python_script" "$config_file" "$instance_name"))
     
     # 设置实例变量
     INSTANCE="$instance_name"
     
     # 从配置文件中读取标准配置
-    INSTANCE_PORT=$(python3 -c "import configparser; c=configparser.ConfigParser(); c.read('$config_file'); print(c.get('SERVER', 'port', fallback='8877'))" 2>/dev/null)
-    INSTANCE_AUDIO_INPUT=$(python3 -c "import configparser; c=configparser.ConfigParser(); c.read('$config_file'); print(c.get('AUDIO', 'inputdevice', fallback=''))" 2>/dev/null)
-    INSTANCE_AUDIO_OUTPUT=$(python3 -c "import configparser; c=configparser.ConfigParser(); c.read('$config_file'); print(c.get('AUDIO', 'outputdevice', fallback=''))" 2>/dev/null)
-    INSTANCE_RIGCTL_DEVICE=$(python3 -c "import configparser; c=configparser.ConfigParser(); c.read('$config_file'); print(c.get('HAMLIB', 'rig_pathname', fallback=''))" 2>/dev/null)
-    
+    INSTANCE_PORT=$("$PYTHON" -c "import configparser; c=configparser.ConfigParser(); c.read('$config_file'); print(c.get('SERVER', 'port', fallback='8877'))" 2>/dev/null)
+    INSTANCE_AUDIO_INPUT=$("$PYTHON" -c "import configparser; c=configparser.ConfigParser(); c.read('$config_file'); print(c.get('AUDIO', 'inputdevice', fallback=''))" 2>/dev/null)
+    INSTANCE_AUDIO_OUTPUT=$("$PYTHON" -c "import configparser; c=configparser.ConfigParser(); c.read('$config_file'); print(c.get('AUDIO', 'outputdevice', fallback=''))" 2>/dev/null)
+    INSTANCE_RIGCTL_DEVICE=$("$PYTHON" -c "import configparser; c=configparser.ConfigParser(); c.read('$config_file'); print(c.get('HAMLIB', 'rig_pathname', fallback=''))" 2>/dev/null)
+
     # 从 INSTANCE_SETTINGS 节读取额外的实例配置
-    INSTANCE_RIGCTL_MODEL=$(python3 -c "import configparser; c=configparser.ConfigParser(); c.read('$config_file'); print(c.get('INSTANCE_SETTINGS', 'INSTANCE_RIGCTL_MODEL', fallback='30003'))" 2>/dev/null)
-    INSTANCE_RIGCTL_SPEED=$(python3 -c "import configparser; c=configparser.ConfigParser(); c.read('$config_file'); print(c.get('INSTANCE_SETTINGS', 'INSTANCE_RIGCTL_SPEED', fallback='4800'))" 2>/dev/null)
-    INSTANCE_RIGCTL_STOP_BITS=$(python3 -c "import configparser; c=configparser.ConfigParser(); c.read('$config_file'); print(c.get('INSTANCE_SETTINGS', 'INSTANCE_RIGCTL_STOP_BITS', fallback='2'))" 2>/dev/null)
-    INSTANCE_RIGCTL_HOST=$(python3 -c "import configparser; c=configparser.ConfigParser(); c.read('$config_file'); print(c.get('INSTANCE_SETTINGS', 'INSTANCE_RIGCTL_HOST', fallback='127.0.0.1'))" 2>/dev/null)
-    INSTANCE_RIGCTL_PORT=$(python3 -c "import configparser; c=configparser.ConfigParser(); c.read('$config_file'); print(c.get('INSTANCE_SETTINGS', 'INSTANCE_RIGCTL_PORT', fallback=''))" 2>/dev/null)
-    INSTANCE_ATR1000_DEVICE=$(python3 -c "import configparser; c=configparser.ConfigParser(); c.read('$config_file'); print(c.get('INSTANCE_SETTINGS', 'INSTANCE_ATR1000_DEVICE', fallback=''))" 2>/dev/null)
-    INSTANCE_ATR1000_PORT=$(python3 -c "import configparser; c=configparser.ConfigParser(); c.read('$config_file'); print(c.get('INSTANCE_SETTINGS', 'INSTANCE_ATR1000_PORT', fallback='60001'))" 2>/dev/null)
-    INSTANCE_LOG_DIR=$(python3 -c "import configparser; c=configparser.ConfigParser(); c.read('$config_file'); print(c.get('INSTANCE_SETTINGS', 'INSTANCE_LOG_DIR', fallback='$SCRIPT_DIR'))" 2>/dev/null)
-    INSTANCE_UNIX_SOCKET=$(python3 -c "import configparser; c=configparser.ConfigParser(); c.read('$config_file'); print(c.get('INSTANCE_SETTINGS', 'INSTANCE_UNIX_SOCKET', fallback='/tmp/mrrc_${instance_name}.sock'))" 2>/dev/null)
+    INSTANCE_RIGCTL_MODEL=$("$PYTHON" -c "import configparser; c=configparser.ConfigParser(); c.read('$config_file'); print(c.get('INSTANCE_SETTINGS', 'INSTANCE_RIGCTL_MODEL', fallback='30003'))" 2>/dev/null)
+    INSTANCE_RIGCTL_SPEED=$("$PYTHON" -c "import configparser; c=configparser.ConfigParser(); c.read('$config_file'); print(c.get('INSTANCE_SETTINGS', 'INSTANCE_RIGCTL_SPEED', fallback='4800'))" 2>/dev/null)
+    INSTANCE_RIGCTL_STOP_BITS=$("$PYTHON" -c "import configparser; c=configparser.ConfigParser(); c.read('$config_file'); print(c.get('INSTANCE_SETTINGS', 'INSTANCE_RIGCTL_STOP_BITS', fallback='2'))" 2>/dev/null)
+    INSTANCE_RIGCTL_HOST=$("$PYTHON" -c "import configparser; c=configparser.ConfigParser(); c.read('$config_file'); print(c.get('INSTANCE_SETTINGS', 'INSTANCE_RIGCTL_HOST', fallback='127.0.0.1'))" 2>/dev/null)
+    INSTANCE_RIGCTL_PORT=$("$PYTHON" -c "import configparser; c=configparser.ConfigParser(); c.read('$config_file'); print(c.get('INSTANCE_SETTINGS', 'INSTANCE_RIGCTL_PORT', fallback=''))" 2>/dev/null)
+    INSTANCE_ATR1000_DEVICE=$("$PYTHON" -c "import configparser; c=configparser.ConfigParser(); c.read('$config_file'); print(c.get('INSTANCE_SETTINGS', 'INSTANCE_ATR1000_DEVICE', fallback=''))" 2>/dev/null)
+    INSTANCE_ATR1000_PORT=$("$PYTHON" -c "import configparser; c=configparser.ConfigParser(); c.read('$config_file'); print(c.get('INSTANCE_SETTINGS', 'INSTANCE_ATR1000_PORT', fallback='60001'))" 2>/dev/null)
+    INSTANCE_LOG_DIR=$("$PYTHON" -c "import configparser; c=configparser.ConfigParser(); c.read('$config_file'); print(c.get('INSTANCE_SETTINGS', 'INSTANCE_LOG_DIR', fallback='$SCRIPT_DIR'))" 2>/dev/null)
+    INSTANCE_UNIX_SOCKET=$("$PYTHON" -c "import configparser; c=configparser.ConfigParser(); c.read('$config_file'); print(c.get('INSTANCE_SETTINGS', 'INSTANCE_UNIX_SOCKET', fallback='/tmp/mrrc_${instance_name}.sock'))" 2>/dev/null)
     
     # 设置默认值
     : ${INSTANCE_PORT:=8877}
@@ -259,7 +296,7 @@ start_mrrc() {
     > "$MRRC_LOG"
     
     # 启动 MRRC，传递配置文件路径
-    cd "$SCRIPT_DIR" && /opt/local/bin/python3.12 "$SCRIPT_DIR/MRRC" "$SCRIPT_DIR/MRRC.$INSTANCE.conf" > "$MRRC_LOG" 2>&1 &
+    cd "$SCRIPT_DIR" && "$PYTHON" "$SCRIPT_DIR/MRRC" "$SCRIPT_DIR/MRRC.$INSTANCE.conf" > "$MRRC_LOG" 2>&1 &
     
     local pid=$!
     sleep 3
@@ -298,7 +335,7 @@ start_atr1000() {
     
     > "$ATR1000_LOG"
     
-    /opt/local/bin/python3.12 "$SCRIPT_DIR/atr1000_proxy.py" \
+    "$PYTHON" "$SCRIPT_DIR/atr1000_proxy.py" \
         --device "$INSTANCE_ATR1000_DEVICE" \
         --port "$INSTANCE_ATR1000_PORT" \
         --unix-socket "$INSTANCE_UNIX_SOCKET" \
@@ -330,8 +367,10 @@ show_status() {
     echo -e "${MAGENTA}========== Instance: $INSTANCE ==========${NC}"
     echo ""
     
-    if is_running "rigctld"; then
-        local pid=$(get_pid "rigctld")
+    : ${INSTANCE_RIGCTL_PORT:=4532}
+    local rigctld_pattern="rigctld.*-t.*${INSTANCE_RIGCTL_PORT}"
+    if is_running "$rigctld_pattern"; then
+        local pid=$(get_pid "$rigctld_pattern")
         print_success "rigctld: running (PID: $pid)"
     else
         print_error "rigctld: not running"
@@ -483,9 +522,11 @@ create_instance() {
     
     # 复制默认配置并修改端口
     cp "$SCRIPT_DIR/MRRC.conf" "$config_file"
-    
+
+    detect_python || return 1
+
     # 使用 Python 修改端口
-    python3 -c "
+    "$PYTHON" -c "
 import configparser
 config = configparser.ConfigParser()
 config.read('$config_file')
