@@ -280,6 +280,11 @@ class AuthenticatedStaticFileHandler(tornado.web.StaticFileHandler):
 	def get_current_user(self):
 		return self.get_secure_cookie("user")
 
+	def set_extra_headers(self, path):
+		# JS/CSS/HTML 强制 no-cache，避免浏览器缓存旧版控件代码（曾导致 TX/RX 改动不生效）
+		if path.endswith(('.js', '.css', '.html', '.wasm')):
+			self.set_header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
+
 	def prepare(self):
 		if auth_enabled() and not self.current_user:
 			if self.request.method in ('GET', 'HEAD'):
