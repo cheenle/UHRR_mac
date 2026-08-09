@@ -174,6 +174,13 @@ LEARN_IGNORE_WINDOW = 1.0    # TX 开始/继电器变化后忽略时间 (s)
 LEARN_SWR_MIN = 1.0          # 学习 SWR 下限
 LEARN_SWR_MAX = 1.8          # 学习 SWR 上限
 
+# ========== SWR 过高自动完整调谐参数 ==========
+SWR_RETUNE_THRESHOLD     = 2.0   # SWR 严格大于此值视为过高
+SWR_RETUNE_MIN_POWER     = 10    # 实测功率 ≥10W 视为发射中（过滤空闲/调谐扫描的 1–2W）
+SWR_RETUNE_DEBOUNCE      = 1.5   # SWR>2 持续 ≥1.5s 才触发
+SWR_RETUNE_COOLDOWN      = 30    # 两次自动完整调谐最小间隔（秒）
+SWR_RETUNE_MAX_FAILS     = 3     # 同一频率连续失败次数上限
+
 
 class LearningBuffer:
     """稳定窗口学习缓冲器 - V5.6.0
@@ -300,6 +307,11 @@ last_swr_anomaly_log_time = 0  # 上次记录 SWR 异常缩放的时间（用于
 # key=(freq_key, sw, ind, cap) → {"swr": last_learned_swr, "time": timestamp}
 _last_learned_state = {}
 
+# SWR 过高自动调谐状态
+_swr_high_since   = 0      # 高 SWR 连续起点时间戳（0=不在连续段）
+_last_retune_time = 0      # 上次自动调谐时间戳（冷却）
+_retune_fail_count = {}    # freq_key → 连续失败次数
+
 def set_relay_with_throttle(atr1000, sw, ind, cap):
     """带节流的继电器设置 - V4.5.19 增强版
     
@@ -340,6 +352,84 @@ def set_relay_with_throttle(atr1000, sw, ind, cap):
     else:
         logger.debug(f"继电器命令被节流: SW={sw}, IND={ind}, CAP={cap} (时间差:{time_diff:.2f}s)")
     return False
+
+
+def check_swr_retune(atr1000, power, swr):
+    """SWR 过高自动完整调谐守卫 - V5.8.0
+
+    发射期间（实测功率 ≥ SWR_RETUNE_MIN_POWER）持续监测 SWR；当
+    SWR > SWR_RETUNE_THRESHOLD 且连续 ≥ SWR_RETUNE_DEBOUNCE 秒、不在
+    调谐/冷却期时，自动发送一次 ATR-1000 完整调谐（mode=2）。
+    同一频率连续 SWR_RETUNE_MAX_FAILS 次调谐仍不达标则放弃，直到频率
+    变化或 SWR 回落到阈值以下。按实测功率判定发射中，不依赖 is_tx。
+    """
+    global _swr_high_since, _last_retune_time
+
+    now = time.time()
+    # 先取 cache 快照（cache_lock 独立获取后立即释放）
+    with cache_lock:
+        tuning = cache.get("tuning", False)
+        freq = cache.get("freq", 0)
+        relay_changed = cache.get("relay_changed_at", 0)
+
+    # 快速跳过路径：各自独立取锁，不嵌套
+    if tuning or power < SWR_RETUNE_MIN_POWER or freq <= 0:
+        with state_lock:
+            _swr_high_since = 0
+        return
+
+    # SWR 可接受：重置连续段并清零失败计数
+    if swr <= SWR_RETUNE_THRESHOLD:
+        with state_lock:
+            _swr_high_since = 0
+            _retune_fail_count.pop(str(freq // 1000), None)
+        return
+
+    # 继电器变化后忽略窗口（复用学习忽略窗口）
+    if relay_changed > 0 and now - relay_changed < LEARN_IGNORE_WINDOW:
+        with state_lock:
+            _swr_high_since = 0
+        return
+
+    freq_key = str(freq // 1000)
+
+    # 失败保护：连续 N 次仍不达标 → 放弃该频率（每条连续段只公告一次）
+    with state_lock:
+        if _retune_fail_count.get(freq_key, 0) >= SWR_RETUNE_MAX_FAILS:
+            if _swr_high_since == 0:
+                logger.info(
+                    f"⚡ SWR={swr:.2f} 仍过高，已放弃自动调谐"
+                    f"（{SWR_RETUNE_MAX_FAILS}次）: {freq/1000:.1f}kHz"
+                )
+                _swr_high_since = now
+            return
+
+        # 进入/维持连续段
+        if _swr_high_since == 0:
+            _swr_high_since = now
+
+        # 去抖 + 冷却未满足：等待
+        if (now - _swr_high_since < SWR_RETUNE_DEBOUNCE or
+                now - _last_retune_time < SWR_RETUNE_COOLDOWN):
+            return
+
+        # 判定触发：更新守卫状态（state_lock）
+        _retune_fail_count[freq_key] = _retune_fail_count.get(freq_key, 0) + 1
+        _last_retune_time = now
+        _swr_high_since = 0
+
+    # 置位 tuning 标志（cache_lock 独立获取）
+    with cache_lock:
+        cache["tuning"] = True
+        cache["tuning_started_at"] = now
+        cache["tuning_relay_stable_since"] = 0
+
+    # 发送完整调谐命令（锁外网络 I/O）
+    atr1000.start_tune(2)
+    logger.info(
+        f"⚡ SWR={swr:.2f}>2 自动触发完整调谐: {freq/1000:.1f}kHz "
+        f"(第{_retune_fail_count[freq_key]}次)"
+    )
 
 
 clients = []  # Unix Socket 客户端列表
