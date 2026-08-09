@@ -86,29 +86,48 @@ get_pid() {
 }
 
 # 杀掉进程
+# V5.8.1: 遍历所有匹配 PID 逐个 kill（原实现把多 PID 拼成一个参数传给 kill → invalid pid，
+# 什么都没杀掉，旧进程残留 → restart 时 start 误判 already running 而跳过）。
+# 且 final 检查改用 ps -p 精确判定，不再依赖易被 tail 监控等误命中的模式匹配。
+# 返回 0 = 全部停止；1 = 仍有进程存活。
 kill_process() {
     local process_pattern="$1"
-    local pid=$(get_pid "$process_pattern")
-    
-    if [ -n "$pid" ]; then
-        print_status "Stopping $process_pattern (PID: $pid)..."
-        kill "$pid" 2>/dev/null
+    local pids
+    pids=$(get_pid "$process_pattern")
+
+    if [ -n "$pids" ]; then
+        print_status "Stopping $process_pattern (PID: $(echo "$pids" | tr '\n' ' '))..."
+        # 优雅终止所有匹配进程
+        for pid in $pids; do
+            kill "$pid" 2>/dev/null
+        done
         sleep 2
-        
-        if is_running "$process_pattern"; then
-            print_warning "Force killing..."
-            kill -9 "$pid" 2>/dev/null
-            sleep 1
+
+        # 逐个检查，仍在运行则强制杀
+        for pid in $pids; do
+            if ps -p "$pid" > /dev/null 2>&1; then
+                print_warning "Force killing $pid..."
+                kill -9 "$pid" 2>/dev/null
+            fi
+        done
+        sleep 1
+
+        # 最终确认
+        local alive=""
+        for pid in $pids; do
+            if ps -p "$pid" > /dev/null 2>&1; then
+                alive="$alive $pid"
+            fi
+        done
+        if [ -n "$alive" ]; then
+            print_error "Failed to stop (still alive:$alive)"
+            return 1
         fi
-        
-        if ! is_running "$process_pattern"; then
-            print_success "Stopped"
-        else
-            print_error "Failed to stop"
-        fi
+        print_success "Stopped"
     else
         print_status "Not running"
     fi
+    return 0
 }
 
 # 加载实例配置
@@ -287,12 +306,14 @@ stop_rigctld() {
     : ${INSTANCE_RIGCTL_PORT:=4532}
     local rigctld_pattern="rigctld.*-t.*${INSTANCE_RIGCTL_PORT}"
     kill_process "$rigctld_pattern"
+    local rc=$?
     rm -f "$PID_DIR/rigctld_${INSTANCE}.pid"
+    return $rc
 }
 
 # 启动 MRRC
 start_mrrc() {
-    if is_running "MRRC.*$INSTANCE"; then
+    if is_running "MRRC\.$INSTANCE\.conf"; then
         print_warning "MRRC already running"
         return 0
     fi
@@ -308,7 +329,7 @@ start_mrrc() {
     local pid=$!
     sleep 3
     
-    if is_running "MRRC.*$INSTANCE"; then
+    if is_running "MRRC\.$INSTANCE\.conf"; then
         print_success "MRRC started (PID: $pid)"
         echo "$pid" > "$PID_DIR/mrrc_${INSTANCE}.pid"
         print_success "Access at: https://localhost:$INSTANCE_PORT"
@@ -322,8 +343,10 @@ start_mrrc() {
 
 # 停止 MRRC
 stop_mrrc() {
-    kill_process "MRRC.*$INSTANCE"
+    kill_process "MRRC\.$INSTANCE\.conf"
+    local rc=$?
     rm -f "$PID_DIR/mrrc_${INSTANCE}.pid"
+    return $rc
 }
 
 # 启动 ATR-1000 代理
@@ -364,8 +387,10 @@ start_atr1000() {
 # 停止 ATR-1000 代理
 stop_atr1000() {
     kill_process "atr1000_proxy"
+    local rc=$?
     rm -f "$PID_DIR/atr1000_${INSTANCE}.pid"
     rm -f "$INSTANCE_UNIX_SOCKET"
+    return $rc
 }
 
 # 显示实例状态
@@ -383,8 +408,8 @@ show_status() {
         print_error "rigctld: not running"
     fi
     
-    if is_running "MRRC.*$INSTANCE"; then
-        local pid=$(get_pid "MRRC.*$INSTANCE")
+    if is_running "MRRC\.$INSTANCE\.conf"; then
+        local pid=$(get_pid "MRRC\.$INSTANCE\.conf")
         print_success "MRRC: running (PID: $pid)"
         print_success "  URL: https://localhost:$INSTANCE_PORT"
     else
@@ -453,7 +478,7 @@ start_instance() {
     sleep 1
     start_atr1000
     
-    if is_running "MRRC.*$INSTANCE"; then
+    if is_running "MRRC\.$INSTANCE\.conf"; then
         print_success "Instance '$instance_name' started successfully!"
         show_status
     else
@@ -476,11 +501,19 @@ stop_instance() {
     fi
     
     print_status "Stopping instance: $instance_name"
-    stop_atr1000
-    stop_mrrc
-    stop_rigctld
-    
-    print_success "Instance '$instance_name' stopped"
+    # V5.8.1: 聚合三个组件 stop 结果，任一残留则返回非零，
+    # 让 restart.sh 的 `if ! stop` 能真正中止（原实现末尾 print_success 恒返 0）
+    local rc=0
+    stop_atr1000 || rc=1
+    stop_mrrc || rc=1
+    stop_rigctld || rc=1
+
+    if [ $rc -eq 0 ]; then
+        print_success "Instance '$instance_name' stopped"
+    else
+        print_error "Instance '$instance_name' stop had failures"
+    fi
+    return $rc
 }
 
 # 重启实例
@@ -599,7 +632,7 @@ delete_instance() {
     
     # 先停止实例
     if load_instance_config "$instance_name" 2>/dev/null; then
-        if is_running "MRRC.*$INSTANCE"; then
+        if is_running "MRRC\.$INSTANCE\.conf"; then
             print_warning "Instance is running, stopping first..."
             stop_instance "$instance_name"
         fi
@@ -632,7 +665,7 @@ list_instances() {
     
     for inst in $instances; do
         if load_instance_config "$inst" 2>/dev/null; then
-            if is_running "MRRC.*$INSTANCE"; then
+            if is_running "MRRC\.$INSTANCE\.conf"; then
                 echo -e "  ${GREEN}●${NC} $inst (running) - Port $INSTANCE_PORT"
             else
                 echo -e "  ${YELLOW}○${NC} $inst (stopped) - Port $INSTANCE_PORT"

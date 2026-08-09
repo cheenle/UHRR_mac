@@ -25,6 +25,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   不再从 20ms 低水印回跳稳态值导致静音等待；上调仅由 flush/reset 显式重置
 - 前端缓存版本号 5.7.2 → 5.8.1
 
+### 🔄 restart.sh / mrrc_multi.sh 停不干净修复
+
+- **`kill_process` 遍历所有匹配 PID**：原实现把多 PID 拼成一个参数传给 `kill` → `invalid pid`
+  全部失败，旧进程残留 → 重启时 start 误判 already running 而跳过（新代码不生效）。现逐个
+  `kill` + `ps -p` 精确判定残留并强制 `kill -9`，返回真实结果
+- **MRRC 匹配模式改精确**：`MRRC.*$INSTANCE` → `MRRC\.$INSTANCE\.conf`。原模式会把
+  `tail -f .../MRRC/atr1000_radio1.log` 监控进程误判为 MRRC，导致 stop 杀不掉 / start 跳过
+- **stop 结果聚合**：`stop_instance` 聚合 atr1000/MRRC/rigctld 三路结果，任一残留即返回非零，
+  `restart.sh` 的 `if ! stop` 不再恒真（原末尾 `print_success` 恒返 0）
+
 ---
 
 ## [V5.8.0] - 2026-08-09
