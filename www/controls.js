@@ -468,8 +468,9 @@ function AudioRX_start(){
                 await AudioRX_context.audioWorklet.addModule('rx_worklet_processor.js');
                 const rxNode = new AudioWorkletNode(AudioRX_context, 'rx-player');
                 AudioRX_source_node = rxNode;
-                // 时间水印缓冲（rx_worklet_processor.js）: 冷启动200ms, 欠载恢复80ms(迟滞), 上限600ms
-                try { rxNode.port.postMessage({ type: 'config', prebufferMs: 200, recoveryMs: 80, maxMs: 600 }); } catch(_){}
+                // 时间水印缓冲（rx_worklet_processor.js）: LAN 调参 V5.8.1
+                // 冷启动100ms, 欠载恢复40ms(迟滞), 上限400ms —— 延迟减半，LAN 抖动余量仍充足
+                try { rxNode.port.postMessage({ type: 'config', prebufferMs: 100, recoveryMs: 40, maxMs: 400 }); } catch(_){}
                 window.__pushRxFrame = function(f32) {
                     rxNode.port.postMessage({ type: 'push', payload: f32 });
                 };

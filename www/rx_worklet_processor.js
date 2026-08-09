@@ -19,10 +19,10 @@ class RxPlayerProcessor extends AudioWorkletProcessor {
     this._underruns = 0;
     this._processCount = 0;
 
-    // 时间水印（毫秒）。默认针对 16kHz 远端链路调校，可经 config 覆盖。
-    this.prebufferMs = 200;   // 冷启动缓冲
-    this.recoveryMs = 80;     // 欠载后重新武装（迟滞，比 prebuffer 小）
-    this.maxMs = 600;         // 硬上限
+    // 时间水印（毫秒）。默认针对 16kHz LAN 链路调校（V5.8.1），可经 config 覆盖。
+    this.prebufferMs = 100;   // 冷启动缓冲
+    this.recoveryMs = 40;     // 欠载后重新武装（迟滞，比 prebuffer 小）
+    this.maxMs = 400;         // 硬上限
 
     this.priming = true;      // 开门标志：true 时累积缓冲
     this.gateMs = this.prebufferMs;  // 当前开门阈值
@@ -63,8 +63,11 @@ class RxPlayerProcessor extends AudioWorkletProcessor {
           this.recoveryMs = ms(data.min);
           this.maxMs = Math.max(ms(data.min) + 20, ms(data.max));
         }
-        // 若当前处于冷启动积累中，更新开门阈值
-        if (this.priming) {
+        // V5.8.1: 开门阈值在 priming 期间只允许"下调"，不允许上调。
+        // 否则 TX→RX 恢复时 config 从 20ms 低水印回跳稳态值，
+        // worklet 会静音等到攒满稳态缓冲，形成可闻长停顿（配合 tx_button_optimized.js）。
+        // 上调只应发生在 flush/reset（冷启动/PTT 释放清缓冲）显式重置 gateMs 时。
+        if (this.priming && data.prebufferMs < this.gateMs) {
           this.gateMs = this.prebufferMs;
         }
       }

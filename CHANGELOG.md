@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [V5.8.1] - 2026-08-09
+
+### ⚡ RX 时延分析与提升（LAN）
+
+- **修复 IOLoop 被 rigctld 阻塞（偶发 >100ms 网络时延 / 卡顿根因）**：
+  `sendPTINFOS` 每 5s/客户端在单线程 IOLoop 上同步调用 `getFreq()` → 新建 TCP 连
+  rigctld（3s 超时，IC-M710 4800 波特 CAT 缓存失效时偶发 50-200ms），卡住 IOLoop
+  → 控制通道 PONG 与 RX 音频投递一起延迟。现改为读 `CTRX.infos["FREQ"]` 缓存
+  （FrequencySyncThread 已在后台线程每 2s 刷新），仅在频率变化时同步 ATR-1000
+- **on_message 全部 rigctld 阻塞调用 offload 到线程执行器**：`getFreq` / `setFreq` /
+  `getMode` / `setMode` / `getPTT`（客户端每 5s 轮询）走 `run_in_executor`，
+  与 `setPTT`/`setRFGain`/`setAGC` 的既有 F3 修复一致
+- **RX 发送队列轮询延迟 10ms → 3ms**：`tailstream` 稳态 sleep 降至 3ms，
+  每帧在 `Wavframes` 平均等待从 ~5ms 降到 ~1.5ms
+- **客户端 worklet 水印 LAN 调参**：`prebufferMs 200→100`、`recoveryMs 80→40`、
+  `maxMs 600→400`，冷启动/TX→RX 感知延迟减半，LAN 抖动余量仍充足
+- **修复 TX→RX 长静音**：worklet `config` 在 priming 期间只允许下调开门阈值，
+  不再从 20ms 低水印回跳稳态值导致静音等待；上调仅由 flush/reset 显式重置
+- 前端缓存版本号 5.7.2 → 5.8.1
+
+---
+
 ## [V5.8.0] - 2026-08-09
 
 ### ⚡ ATR-1000 SWR>2 自动完整调谐

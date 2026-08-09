@@ -589,13 +589,16 @@ class WS_AudioRXHandler(AuthenticatedWebSocketHandler):
 					last_send_time = time.time()
 				
 				# 动态等待时间：队列长时少等待，队列短时多等待
+				# V5.8.1: 稳态 sleep 从 10ms 降到 3ms。原 10ms 轮询让每帧在 Wavframes
+				# 里平均多等 ~5ms，LAN 场景下累计贡献到 ~100ms 量级端到端延迟。
+				# 单客户端 3ms 轮询 ≈333 次/秒，IOLoop 开销可忽略。
 				if queue_len > 10:
 					# 队列积压，快速发送
 					yield tornado.gen.sleep(0.002)
 				elif queue_len > 5:
-					yield tornado.gen.sleep(0.005)
+					yield tornado.gen.sleep(0.003)
 				else:
-					yield tornado.gen.sleep(0.010)
+					yield tornado.gen.sleep(0.003)
 					
 			except tornado.websocket.WebSocketClosedError:
 				logger.info("音频流发送时客户端已断开")
@@ -2943,7 +2946,11 @@ class WS_ControlTRX(AuthenticatedWebSocketHandler):
 			# V4.5.18: 定期同步频率给 ATR-1000 代理（支持外部软件控制频率）
 			# 修复：只有频率变化时才同步，避免频繁触发自动调谐
 			try:
-				current_freq = CTRX.getFreq()
+				# V5.8.1: 读缓存而非 getFreq()。getFreq() 在 IOLoop 上同步阻塞 rigctld
+				#（新建 TCP + 3s 超时；IC-M710 4800 波特 CAT，缓存失效时偶发 50-200ms），
+				# 卡住单线程 IOLoop → 控制通道 PONG 与 RX 音频投递一起延迟（延迟表偶发 >100ms）。
+				# FrequencySyncThread 已在后台线程每 2s 刷新 CTRX.infos["FREQ"] 并同步 ATR。
+				current_freq = CTRX.infos.get("FREQ", 0)
 				if current_freq and current_freq > 0:
 					# 检查频率是否变化（只有变化时才同步）
 					if not hasattr(self, 'last_atr_freq') or self.last_atr_freq != current_freq:
@@ -3025,21 +3032,23 @@ class WS_ControlTRX(AuthenticatedWebSocketHandler):
 		if(action == "PING"):
 				self.write_message("PONG")
 		elif(action == "getFreq"):
-			freq = CTRX.getFreq()
+			# V5.8.1: 所有 rigctld 阻塞 I/O 一律走线程执行器（同 setPTT 的 F3 修复），
+			# 避免卡住单线程 IOLoop → 控制通道 PONG / RX 音频延迟
+			freq = yield tornado.ioloop.IOLoop.current().run_in_executor(None, CTRX.getFreq)
 			yield self.send_to_all_clients("getFreq:"+str(freq))
 			# 同步频率给 ATR-1000 代理
 			sync_freq_to_atr1000(freq)
-			pass
 		elif(action == "setFreq"):
-			freq = CTRX.setFreq(datato)
+			freq = yield tornado.ioloop.IOLoop.current().run_in_executor(None, CTRX.setFreq, datato)
 			yield self.send_to_all_clients("getFreq:"+str(freq))
 			# 同步频率给 ATR-1000 代理
 			sync_freq_to_atr1000(freq)
-			pass
 		elif(action == "getMode"):
-			yield self.send_to_all_clients("getMode:"+str(CTRX.getMode()))
+			mode = yield tornado.ioloop.IOLoop.current().run_in_executor(None, CTRX.getMode)
+			yield self.send_to_all_clients("getMode:"+str(mode))
 		elif(action == "setMode"):
-			yield self.send_to_all_clients("getMode:"+str(CTRX.setMode(datato)))
+			mode = yield tornado.ioloop.IOLoop.current().run_in_executor(None, CTRX.setMode, datato)
+			yield self.send_to_all_clients("getMode:"+str(mode))
 		elif(action == "getRFGain"):
 			yield self.send_to_all_clients("getRFGain:"+str(CTRX.infos.get("RFGAIN", 9)))
 		elif(action == "setRFGain"):
@@ -3053,7 +3062,9 @@ class WS_ControlTRX(AuthenticatedWebSocketHandler):
 			result = yield tornado.ioloop.IOLoop.current().run_in_executor(None, CTRX.setAGC, datato)
 			yield self.send_to_all_clients("getAGC:"+str(result).lower())
 		elif(action == "getPTT"):
-			yield self.send_to_all_clients("getPTT:"+str(CTRX.getPTT()).lower())
+			# 客户端每 5s 轮询 getPTT；rigctld 查询走线程执行器，防周期性卡 IOLoop
+			ptt = yield tornado.ioloop.IOLoop.current().run_in_executor(None, CTRX.getPTT)
+			yield self.send_to_all_clients("getPTT:"+str(ptt).lower())
 		elif(action == "tune"):
 			# 处理tune命令
 			if datato.lower() == "true":

@@ -306,7 +306,7 @@ async function TXControl(action) {
                         console.log(`[${timestamp}] ✅ AudioWorklet 缓冲区已清除并重置，最小缓冲临时设为20ms`);
                         setTimeout(() => {
                             if (AudioRX_source_node && AudioRX_source_node.port) {
-                                AudioRX_source_node.port.postMessage({type: 'config', prebufferMs: 200, recoveryMs: 80, maxMs: 600});
+                                AudioRX_source_node.port.postMessage({type: 'config', prebufferMs: 100, recoveryMs: 40, maxMs: 400});
                             }
                         }, 200);
                     } catch(e) {
