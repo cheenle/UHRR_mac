@@ -2942,8 +2942,8 @@ function showTXEQPanel() {
     const currentPreset = typeof getTX_EQ_Preset === 'function' ? getTX_EQ_Preset() : 'DEFAULT';
     const presets = typeof getTX_EQ_Presets === 'function' ? getTX_EQ_Presets() : {
         'DEFAULT': { name: '默认', low: 0, mid: 0, high: 0, desc: '无EQ处理' },
-        'MEDIUM': { name: '中', low: -15, mid: 10, high: -20, desc: '平衡清晰度与厚度' },
-        'STRONG': { name: '强', low: -20, mid: 12, high: -35, desc: 'iPhone/手机专用' }
+        'MEDIUM': { name: '中', low: 9, mid: 10, high: -12, desc: '适中调节：增强厚度与清晰度' },
+        'STRONG': { name: '强', low: 12, mid: 12, high: -18, desc: '最大发射功率：iPhone/手机专用' }
     };
     
     let html = '<div class="modal-panel"><h3>🎙️ 发射均衡器</h3>';

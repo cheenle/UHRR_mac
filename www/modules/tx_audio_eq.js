@@ -219,13 +219,13 @@ function setTX_EQ_Preset(presetName) {
         // 高切 3kHz — 在 presence 之后再加一级低通
         // 使用 AudioTX_highCut 串联 antiAlias2 实现: highCut(highpass @ 150) → midCut → presence → antiAlias2(lowpass @ 3k)
 
-        // 压缩器: 透明旁路（threshold=0/ratio=1 永不触发，保真优先）
+        // 压缩器: 温和 3:1（RagChew 平稳定位；默认链仍透明旁路）
         if (AudioTX_compressor) {
-            AudioTX_compressor.threshold.setValueAtTime(0, ctx.currentTime);
-            AudioTX_compressor.knee.setValueAtTime(0, ctx.currentTime);
-            AudioTX_compressor.ratio.setValueAtTime(1, ctx.currentTime);
+            AudioTX_compressor.threshold.setValueAtTime(-18, ctx.currentTime);  // -18dB
+            AudioTX_compressor.knee.setValueAtTime(6, ctx.currentTime);          // 软拐点
+            AudioTX_compressor.ratio.setValueAtTime(3, ctx.currentTime);         // 3:1
             AudioTX_compressor.attack.setValueAtTime(0.003, ctx.currentTime);
-            AudioTX_compressor.release.setValueAtTime(0.250, ctx.currentTime);
+            AudioTX_compressor.release.setValueAtTime(0.200, ctx.currentTime);   // 200ms(与噪声门 300ms 错开)
         }
 
         // 噪声门
@@ -233,7 +233,7 @@ function setTX_EQ_Preset(presetName) {
             AudioTX_noiseGate.gain.setValueAtTime(1, ctx.currentTime);
         }
 
-        console.log('🎛️ TX EQ RagChew: 低切=' + preset.lowCut + 'Hz, 500Hz=' + preset.midCutGain + 'dB, 2.4kHz=' + preset.presenceGain + 'dB, 高切=' + preset.highCut + 'Hz, 压缩比=3:1');
+        console.log('🎛️ TX EQ RagChew: 低切=' + preset.lowCut + 'Hz, 500Hz=' + preset.midCutGain + 'dB, 2.4kHz=' + preset.presenceGain + 'dB, 高切=' + preset.highCut + 'Hz, 压缩=3:1 knee6');
     } else {
         // ====== 标准模式 ======
         isRagchewMode = false;
