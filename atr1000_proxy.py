@@ -5,15 +5,16 @@ ATR-1000 天调代理程序 - V5.6.0 稳定窗口学习版
 
 设计理念：动态轮询 + 缓存广播 + 稳定窗口学习 + 通讯监控
 1. 动态轮询间隔，防止设备过载：
-   - 空闲时：30秒
-   - 有客户端：10秒
-   - TX期间：0.5秒
+   - 空闲时：600秒 SYNC
+   - 有客户端：300秒 SYNC
+   - TX期间：不主动 SYNC，依赖设备自发推送 METER（15s 静默看门狗补一次 SYNC，60s 自动退出 TX 模式）
 2. 数据缓存在本地
 3. 客户端请求时直接返回缓存数据（不再请求设备）
 4. V5.6.0: 稳定窗口学习 — 连续 N 样本 SWR 稳定才学习，防止瞬态污染
 5. 支持快速调谐到指定频率
 6. V4.5.18: 专门的通讯日志记录，分析设备压力
 7. V4.5.30: 连接定期刷新（~55分钟），避免设备每小时断连影响 TX
+8. V5.6.3: TX 结束(stop)即清零功率/SWR 缓存，消除 RX 期间幽灵读数
 
 使用方法：
     python3 atr1000_proxy.py --device 192.168.1.63 --port 60001
@@ -293,6 +294,7 @@ last_log_swr = 1.0
 last_log_relay = None
 last_learn_freq = 0  # 上次学习的频率（用于减少学习日志频率）
 last_zero_power_log_time = 0  # 上次记录功率为0的时间（用于节流）
+last_swr_anomaly_log_time = 0  # 上次记录 SWR 异常缩放的时间（用于节流）
 
 # V5.6.3: 学习去重 — 防止每个 METER 采样都触发 tuner.learn()+原子写盘
 # key=(freq_key, sw, ind, cap) → {"swr": last_learned_swr, "time": timestamp}
@@ -633,14 +635,21 @@ class ATR1000Client:
                 swr_raw = struct.unpack('<H', data[4:6])[0]
                 power = struct.unpack('<H', data[6:8])[0]
 
-                # SWR 处理：
+                # SWR 处理（协议文档约定 SWR×100 传输，如 110 = 1.10）：
                 # >= 100: 除以 100 (如 147 → 1.47)
-                # 1-99: 直接使用 (整数 SWR)
-                # 0: 功率>0 时设为 1.0 (完美匹配)，否则保持 1.0
+                # 1-99: 异常分支（物理上 SWR≥1.0 即 raw 应 ≥100），保留原样直显并告警
+                # 0: 功率>0 时设为 1.0 (完美匹配)，否则保持上一个有效值
                 if swr_raw >= 100:
                     cache["swr"] = swr_raw / 100.0
                 elif swr_raw > 0:
                     cache["swr"] = float(swr_raw)
+                    # V5.6.3: 异常缩放告警（节流 30s）— 若硬件实际发出此分支的数据，
+                    # 说明设备固件缩放约定与代码假设不符，需要重新核实协议
+                    global last_swr_anomaly_log_time
+                    _now = time.time()
+                    if _now - last_swr_anomaly_log_time > 30:
+                        logger.warning(f"⚠️ SWR 原始值异常: {swr_raw} (协议约定 SWR×100, 应≥100)，按原值显示")
+                        last_swr_anomaly_log_time = _now
                 else:
                     # swr_raw = 0：可能反射功率为 0（完美匹配），或设备未就绪。
                     # H11: 原 `1.0 if power > 0 else 1.0` 两分支相同（死代码），
@@ -911,245 +920,261 @@ def handle_unix_client(conn, addr, atr1000):
     client_count = len(clients)
     logger.info(f"新客户端连接，当前 {client_count} 个")
     
+    def dispatch(msg):
+        """处理单条 JSON 命令（逐行解析，避免 TCP 合并的多条命令被整体丢弃）"""
+        action = msg.get("action")
+
+        if action in ("sync", "get_data"):
+            # 直接返回缓存数据
+            with cache_lock:
+                if cache.get("tuning") and time.time() - cache.get("tuning_started_at", 0) > 45:
+                    cache["tuning"] = False
+                    cache["tuning_started_at"] = 0
+                response = json.dumps({
+                    "type": "atr1000_meter",
+                    "power": cache["power"],
+                    "swr": cache["swr"],
+                    "connected": cache["connected"],
+                    "sw": cache["sw"],
+                    "ind": cache["ind"],
+                    "cap": cache["cap"],
+                    "ind_uh": cache["ind_uh"],
+                    "cap_pf": cache["cap_pf"],
+                    "freq": cache.get("freq", 0),
+                    "tuning": cache.get("tuning", False)
+                }) + "\n"
+            conn.send(response.encode())
+
+        elif action == "set_freq":
+            # 设置当前频率并自动调谐（如果有匹配参数）
+            freq = msg.get("freq", 0)
+            with cache_lock:
+                cache["freq"] = freq
+
+            # 查找并应用天调参数
+            tune_result = None
+            if freq > 0:
+                tuner = get_storage()
+                params = tuner.get_tune_params(freq)
+                if params:
+                    sw, ind, cap = params
+                    # 统一参数顺序: (sw, ind, cap)
+                    if set_relay_with_throttle(atr1000, sw, ind, cap):
+                        # V5.6.0: 自动调谐改变了继电器，更新学习缓冲器
+                        with cache_lock:
+                            cache["relay_changed_at"] = time.time()
+                        learning_buffer.set_relay(sw, ind, cap)
+                    tune_result = {
+                        "sw": sw,
+                        "ind": ind,
+                        "cap": cap,
+                        "sw_name": "CL" if sw else "LC"
+                    }
+                    logger.info(f"🎯 自动调谐: {freq/1000:.1f}kHz -> {'CL' if sw else 'LC'}, L={ind}, C={cap}")
+
+            response = json.dumps({
+                "type": "ack",
+                "action": "set_freq",
+                "freq": freq,
+                "auto_tuned": tune_result is not None,
+                "tune_params": tune_result
+            }) + "\n"
+            conn.send(response.encode())
+
+        elif action == "quick_tune":
+            # V4.5.15: 快速调谐到指定频率
+            freq = msg.get("freq", 0)
+            if freq > 0:
+                tuner = get_storage()
+                params = tuner.get_tune_params(freq)
+                if params:
+                    sw, ind, cap = params
+                    # 统一参数顺序: (sw, ind, cap)
+                    if set_relay_with_throttle(atr1000, sw, ind, cap):
+                        # V5.6.0: 快速调谐改变了继电器，更新学习缓冲器
+                        with cache_lock:
+                            cache["relay_changed_at"] = time.time()
+                        learning_buffer.set_relay(sw, ind, cap)
+                    response = json.dumps({
+                        "type": "quick_tune_result",
+                        "success": True,
+                        "freq": freq,
+                        "sw": sw,
+                        "ind": ind,
+                        "cap": cap
+                    }) + "\n"
+                    logger.info(f"🎯 快速调谐: {freq/1000:.1f}kHz -> SW={'CL' if sw else 'LC'}, L={ind}, C={cap}")
+                else:
+                    response = json.dumps({
+                        "type": "quick_tune_result",
+                        "success": False,
+                        "freq": freq,
+                        "message": "未找到匹配的天调参数"
+                    }) + "\n"
+                    logger.info(f"快速调谐失败: {freq/1000:.1f}kHz 无匹配参数")
+            else:
+                response = json.dumps({
+                    "type": "quick_tune_result",
+                    "success": False,
+                    "message": "频率参数无效"
+                }) + "\n"
+            conn.send(response.encode())
+
+        elif action == "get_tune_records":
+            # 获取所有天调记录
+            tuner = get_storage()
+            records = tuner.get_all()
+            response = json.dumps({
+                "type": "tune_records",
+                "count": len(records),
+                "records": records
+            }) + "\n"
+            conn.send(response.encode())
+
+        elif action == "get_best_in_band":
+            # 获取波段内 SWR 最低的记录
+            band_start = msg.get("band_start", 0)
+            band_end = msg.get("band_end", 0)
+
+            tuner = get_storage()
+            records = tuner.get_all()
+
+            best_record = None
+            best_swr = 99.0
+
+            for record in records:
+                freq = record.get("freq", 0)
+                swr = record.get("swr_avg") or record.get("swr", 99.0)
+
+                if band_start <= freq <= band_end:
+                    if swr < best_swr:
+                        best_swr = swr
+                        best_record = record
+
+            if best_record:
+                response = json.dumps({
+                    "type": "best_in_band",
+                    "found": True,
+                    "freq": best_record.get("freq"),
+                    "sw": best_record.get("sw", 0),
+                    "ind": best_record.get("ind", 64),
+                    "cap": best_record.get("cap", 64),
+                    "swr": best_swr
+                }) + "\n"
+            else:
+                response = json.dumps({
+                    "type": "best_in_band",
+                    "found": False
+                }) + "\n"
+            conn.send(response.encode())
+
+        elif action == "delete_tune_record":
+            # 删除天调记录
+            freq = msg.get("freq", 0)
+            if freq > 0:
+                tuner = get_storage()
+                deleted = tuner.delete(freq)
+                response = json.dumps({
+                    "type": "delete_result",
+                    "success": deleted,
+                    "freq": freq
+                }) + "\n"
+                conn.send(response.encode())
+
+        elif action == "start":
+            is_tx = True
+            comm_stats['tx_count'] += 1
+            comm_stats['tx_start_time'] = time.time()
+            with cache_lock:
+                cache["tx_started_at"] = time.time()
+            learning_buffer.reset()  # V5.6.0: TX 开始重置学习窗口
+            log_comm('TX', 'STATUS', '', 'TX模式开始')
+            logger.info("客户端请求启动数据流 (TX开始)")
+
+        elif action == "stop":
+            is_tx = False
+            if comm_stats['tx_start_time'] > 0:
+                tx_duration = time.time() - comm_stats['tx_start_time']
+                comm_stats['tx_total_time'] += tx_duration
+                log_comm('RX', 'STATUS', '', f'TX模式结束 (持续{tx_duration:.1f}秒)')
+            learning_buffer.reset()  # V5.6.0: TX 结束重置学习窗口
+            with cache_lock:
+                # V5.6.1: TX 结束清除调谐标志 (设备不一定发送 TUNE_STATUS=0)
+                if cache.get("tuning"):
+                    cache["tuning"] = False
+                    cache["tuning_started_at"] = 0
+                    cache["tuning_relay_stable_since"] = 0
+                    logger.info("✅ 调谐标志已清除 (TX结束)")
+                # V5.6.3: TX 结束清零功率/SWR 缓存 — 原实现保留最后一次 TX 读数，
+                # 导致 RX 期间缓存持续返回幽灵功率（如 95W）：MRRC 的"近3秒>5W"
+                # 快速轮询被永久自维持，前端清零后 250ms 内又被刷回旧值。
+                # 若其他客户端仍在真实发射，设备会继续自发推送 METER，
+                # 缓存在下一个推送周期（≤1s）内恢复真实读数，影响可忽略。
+                cache["power"] = 0
+                cache["swr"] = 1.0
+            logger.info("客户端请求停止数据流 (TX结束)")
+
+        elif action == "set_relay":
+            # 设置继电器参数
+            sw = msg.get("sw", 0)
+            ind = msg.get("ind", 0)
+            cap = msg.get("cap", 0)
+            # 统一参数顺序: (sw, ind, cap)
+            set_relay_with_throttle(atr1000, sw, ind, cap)
+            with cache_lock:
+                cache["relay_changed_at"] = time.time()
+            learning_buffer.set_relay(sw, ind, cap)  # V5.6.0: 继电器变化重置学习窗口
+            logger.info(f"设置继电器: SW={sw}, IND={ind}, CAP={cap}")
+
+        elif action == "tune":
+            # 启动自动调谐
+            mode = msg.get("mode", 2)  # 默认完整调谐
+            with cache_lock:
+                cache["tuning"] = True
+                cache["tuning_started_at"] = time.time()
+                cache["tuning_relay_stable_since"] = 0  # V5.6.1: 等首个 RELAY 来初始化
+            atr1000.start_tune(mode)
+            logger.info(f"启动自动调谐: mode={mode}")
+
+        elif action == "learn":
+            # 手动学习（保存调谐结果）
+            freq = msg.get("freq", 0)
+            sw = msg.get("sw", 0)
+            ind = msg.get("ind", 0)
+            cap = msg.get("cap", 0)
+            swr = msg.get("swr", 99.0)
+            force_update = bool(msg.get("force_update", False))
+            if freq > 0:
+                tuner = get_storage()
+                if tuner.learn(freq=freq, sw=sw, ind=ind, cap=cap, swr=swr, force_update=force_update):
+                    if force_update:
+                        with cache_lock:
+                            cache["tuning"] = False
+                            cache["tuning_started_at"] = 0
+                    logger.info(f"📝 {'强制' if force_update else '手动'}学习: {freq/1000:.1f}kHz SWR={swr:.2f}, SW={'CL' if sw else 'LC'}, L={ind}, C={cap}")
+                else:
+                    logger.info(f"📝 学习被忽略: {freq/1000:.1f}kHz SWR={swr:.2f}, SW={'CL' if sw else 'LC'}, L={ind}, C={cap}")
+
+
+    buffer = b""  # 行缓冲：客户端可能一次发送多条命令（TCP 合并），逐行解析
     try:
         while running:
             try:
                 data = conn.recv(1024)
                 if not data:
                     break
-                
-                # 解析命令
-                try:
-                    msg = json.loads(data.decode())
-                    action = msg.get("action")
-                    
-                    if action in ("sync", "get_data"):
-                        # 直接返回缓存数据
-                        with cache_lock:
-                            if cache.get("tuning") and time.time() - cache.get("tuning_started_at", 0) > 45:
-                                cache["tuning"] = False
-                                cache["tuning_started_at"] = 0
-                            response = json.dumps({
-                                "type": "atr1000_meter",
-                                "power": cache["power"],
-                                "swr": cache["swr"],
-                                "connected": cache["connected"],
-                                "sw": cache["sw"],
-                                "ind": cache["ind"],
-                                "cap": cache["cap"],
-                                "ind_uh": cache["ind_uh"],
-                                "cap_pf": cache["cap_pf"],
-                                "freq": cache.get("freq", 0),
-                                "tuning": cache.get("tuning", False)
-                            }) + "\n"
-                        conn.send(response.encode())
-                    
-                    elif action == "set_freq":
-                        # 设置当前频率并自动调谐（如果有匹配参数）
-                        freq = msg.get("freq", 0)
-                        with cache_lock:
-                            cache["freq"] = freq
 
-                        # 查找并应用天调参数
-                        tune_result = None
-                        if freq > 0:
-                            tuner = get_storage()
-                            params = tuner.get_tune_params(freq)
-                            if params:
-                                sw, ind, cap = params
-                                # 统一参数顺序: (sw, ind, cap)
-                                if set_relay_with_throttle(atr1000, sw, ind, cap):
-                                    # V5.6.0: 自动调谐改变了继电器，更新学习缓冲器
-                                    with cache_lock:
-                                        cache["relay_changed_at"] = time.time()
-                                    learning_buffer.set_relay(sw, ind, cap)
-                                tune_result = {
-                                    "sw": sw,
-                                    "ind": ind,
-                                    "cap": cap,
-                                    "sw_name": "CL" if sw else "LC"
-                                }
-                                logger.info(f"🎯 自动调谐: {freq/1000:.1f}kHz -> {'CL' if sw else 'LC'}, L={ind}, C={cap}")
-                        
-                        response = json.dumps({
-                            "type": "ack",
-                            "action": "set_freq",
-                            "freq": freq,
-                            "auto_tuned": tune_result is not None,
-                            "tune_params": tune_result
-                        }) + "\n"
-                        conn.send(response.encode())
-                    
-                    elif action == "quick_tune":
-                        # V4.5.15: 快速调谐到指定频率
-                        freq = msg.get("freq", 0)
-                        if freq > 0:
-                            tuner = get_storage()
-                            params = tuner.get_tune_params(freq)
-                            if params:
-                                sw, ind, cap = params
-                                # 统一参数顺序: (sw, ind, cap)
-                                if set_relay_with_throttle(atr1000, sw, ind, cap):
-                                    # V5.6.0: 快速调谐改变了继电器，更新学习缓冲器
-                                    with cache_lock:
-                                        cache["relay_changed_at"] = time.time()
-                                    learning_buffer.set_relay(sw, ind, cap)
-                                response = json.dumps({
-                                    "type": "quick_tune_result",
-                                    "success": True,
-                                    "freq": freq,
-                                    "sw": sw,
-                                    "ind": ind,
-                                    "cap": cap
-                                }) + "\n"
-                                logger.info(f"🎯 快速调谐: {freq/1000:.1f}kHz -> SW={'CL' if sw else 'LC'}, L={ind}, C={cap}")
-                            else:
-                                response = json.dumps({
-                                    "type": "quick_tune_result",
-                                    "success": False,
-                                    "freq": freq,
-                                    "message": "未找到匹配的天调参数"
-                                }) + "\n"
-                                logger.info(f"快速调谐失败: {freq/1000:.1f}kHz 无匹配参数")
-                        else:
-                            response = json.dumps({
-                                "type": "quick_tune_result",
-                                "success": False,
-                                "message": "频率参数无效"
-                            }) + "\n"
-                        conn.send(response.encode())
-                    
-                    elif action == "get_tune_records":
-                        # 获取所有天调记录
-                        tuner = get_storage()
-                        records = tuner.get_all()
-                        response = json.dumps({
-                            "type": "tune_records",
-                            "count": len(records),
-                            "records": records
-                        }) + "\n"
-                        conn.send(response.encode())
-                    
-                    elif action == "get_best_in_band":
-                        # 获取波段内 SWR 最低的记录
-                        band_start = msg.get("band_start", 0)
-                        band_end = msg.get("band_end", 0)
-                        
-                        tuner = get_storage()
-                        records = tuner.get_all()
-                        
-                        best_record = None
-                        best_swr = 99.0
-                        
-                        for record in records:
-                            freq = record.get("freq", 0)
-                            swr = record.get("swr_avg") or record.get("swr", 99.0)
-                            
-                            if band_start <= freq <= band_end:
-                                if swr < best_swr:
-                                    best_swr = swr
-                                    best_record = record
-                        
-                        if best_record:
-                            response = json.dumps({
-                                "type": "best_in_band",
-                                "found": True,
-                                "freq": best_record.get("freq"),
-                                "sw": best_record.get("sw", 0),
-                                "ind": best_record.get("ind", 64),
-                                "cap": best_record.get("cap", 64),
-                                "swr": best_swr
-                            }) + "\n"
-                        else:
-                            response = json.dumps({
-                                "type": "best_in_band",
-                                "found": False
-                            }) + "\n"
-                        conn.send(response.encode())
-                    
-                    elif action == "delete_tune_record":
-                        # 删除天调记录
-                        freq = msg.get("freq", 0)
-                        if freq > 0:
-                            tuner = get_storage()
-                            deleted = tuner.delete(freq)
-                            response = json.dumps({
-                                "type": "delete_result",
-                                "success": deleted,
-                                "freq": freq
-                            }) + "\n"
-                            conn.send(response.encode())
-                    
-                    elif action == "start":
-                        is_tx = True
-                        comm_stats['tx_count'] += 1
-                        comm_stats['tx_start_time'] = time.time()
-                        with cache_lock:
-                            cache["tx_started_at"] = time.time()
-                        learning_buffer.reset()  # V5.6.0: TX 开始重置学习窗口
-                        log_comm('TX', 'STATUS', '', 'TX模式开始')
-                        logger.info("客户端请求启动数据流 (TX开始)")
+                buffer += data
+                while b"\n" in buffer:
+                    line, buffer = buffer.split(b"\n", 1)
+                    line = line.strip()
+                    if not line:
+                        continue
+                    try:
+                        dispatch(json.loads(line.decode()))
+                    except json.JSONDecodeError:
+                        logger.debug(f"客户端 JSON 解析失败: {line[:64]!r}")
 
-                    elif action == "stop":
-                        is_tx = False
-                        if comm_stats['tx_start_time'] > 0:
-                            tx_duration = time.time() - comm_stats['tx_start_time']
-                            comm_stats['tx_total_time'] += tx_duration
-                            log_comm('RX', 'STATUS', '', f'TX模式结束 (持续{tx_duration:.1f}秒)')
-                        learning_buffer.reset()  # V5.6.0: TX 结束重置学习窗口
-                        # V5.6.1: TX 结束清除调谐标志 (设备不一定发送 TUNE_STATUS=0)
-                        with cache_lock:
-                            if cache.get("tuning"):
-                                cache["tuning"] = False
-                                cache["tuning_started_at"] = 0
-                                cache["tuning_relay_stable_since"] = 0
-                                logger.info("✅ 调谐标志已清除 (TX结束)")
-                        logger.info("客户端请求停止数据流 (TX结束)")
-
-                    elif action == "set_relay":
-                        # 设置继电器参数
-                        sw = msg.get("sw", 0)
-                        ind = msg.get("ind", 0)
-                        cap = msg.get("cap", 0)
-                        # 统一参数顺序: (sw, ind, cap)
-                        set_relay_with_throttle(atr1000, sw, ind, cap)
-                        with cache_lock:
-                            cache["relay_changed_at"] = time.time()
-                        learning_buffer.set_relay(sw, ind, cap)  # V5.6.0: 继电器变化重置学习窗口
-                        logger.info(f"设置继电器: SW={sw}, IND={ind}, CAP={cap}")
-                    
-                    elif action == "tune":
-                        # 启动自动调谐
-                        mode = msg.get("mode", 2)  # 默认完整调谐
-                        with cache_lock:
-                            cache["tuning"] = True
-                            cache["tuning_started_at"] = time.time()
-                            cache["tuning_relay_stable_since"] = 0  # V5.6.1: 等首个 RELAY 来初始化
-                        atr1000.start_tune(mode)
-                        logger.info(f"启动自动调谐: mode={mode}")
-                    
-                    elif action == "learn":
-                        # 手动学习（保存调谐结果）
-                        freq = msg.get("freq", 0)
-                        sw = msg.get("sw", 0)
-                        ind = msg.get("ind", 0)
-                        cap = msg.get("cap", 0)
-                        swr = msg.get("swr", 99.0)
-                        force_update = bool(msg.get("force_update", False))
-                        if freq > 0:
-                            tuner = get_storage()
-                            if tuner.learn(freq=freq, sw=sw, ind=ind, cap=cap, swr=swr, force_update=force_update):
-                                if force_update:
-                                    with cache_lock:
-                                        cache["tuning"] = False
-                                        cache["tuning_started_at"] = 0
-                                logger.info(f"📝 {'强制' if force_update else '手动'}学习: {freq/1000:.1f}kHz SWR={swr:.2f}, SW={'CL' if sw else 'LC'}, L={ind}, C={cap}")
-                            else:
-                                logger.info(f"📝 学习被忽略: {freq/1000:.1f}kHz SWR={swr:.2f}, SW={'CL' if sw else 'LC'}, L={ind}, C={cap}")
-                        
-                except json.JSONDecodeError:
-                    logger.debug(f"客户端 JSON 解析失败: {data[:64]!r}")
-                
             except socket.timeout:
                 continue
             except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError) as e:
@@ -1160,7 +1185,17 @@ def handle_unix_client(conn, addr, atr1000):
                 # M8: 保留完整 traceback 便于排查编程错误，而非静默断开
                 logger.debug(f"客户端处理错误: {e}", exc_info=True)
                 break
-    
+
+        # 连接关闭前，flush 未以换行结尾的残余命令（短连接客户端可能不带 \n）
+        buffer = buffer.strip()
+        if buffer:
+            try:
+                dispatch(json.loads(buffer.decode()))
+            except json.JSONDecodeError:
+                logger.debug(f"客户端 JSON 解析失败(flush): {buffer[:64]!r}")
+            except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError, OSError) as e:
+                # 短连接客户端（如 sync_freq_to_atr1000）发完即关，响应发送会抛断连异常
+                logger.debug(f"客户端断开(flush): {type(e).__name__}")
     finally:
         clients.remove(conn)
         client_count = len(clients)

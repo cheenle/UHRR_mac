@@ -40,9 +40,7 @@ let appState = {
     waterfall: false,
     antTuner: false,
     digitalMode: null,
-    cwSpeed: 20,
     waterfallCenter: 1500,
-    ft8Cycle: 'RX',
     qsoLog: []
 };
 
@@ -1317,95 +1315,12 @@ function setDigitalMode(mode) {
         activeBtn.classList.add('active');
     }
     
-    // Show/hide mode-specific controls
-    document.querySelectorAll('.cw-controls, .ft8-controls').forEach(ctrl => {
-        ctrl.style.display = 'none';
-    });
-    
-    if (mode === 'CW') {
-        const cwControls = document.getElementById('cw-controls');
-        if (cwControls) cwControls.style.display = 'block';
-    } else if (mode === 'FT8' || mode === 'FT4') {
-        const ft8Controls = document.getElementById('ft8-controls');
-        if (ft8Controls) ft8Controls.style.display = 'block';
-        startFT8Cycle();
-    }
-    
     // Send command to radio
     if (wsControlTRX && wsControlTRX.readyState === WebSocket.OPEN) {
         wsControlTRX.send(`setDigitalMode:${mode}`);
     }
-    
+
     console.log(`Digital mode set to: ${mode}`);
-}
-
-function updateCWSpeed() {
-    const speed = document.getElementById('cw-speed').value;
-    appState.cwSpeed = speed;
-    document.getElementById('cw-speed-display').textContent = speed + ' WPM';
-    
-    if (wsControlTRX && wsControlTRX.readyState === WebSocket.OPEN) {
-        wsControlTRX.send(`setCWSpeed:${speed}`);
-    }
-}
-
-function sendCWMacro(macro) {
-    const macros = {
-        'CQ': 'CQ CQ CQ DE [MYCALL] [MYCALL] K',
-        '599': '599 599 [MYSTATE]',
-        'TU': 'TU 73 DE [MYCALL] K',
-        'AGN': 'AGN PSE AGN'
-    };
-    
-    const message = macros[macro] || macro;
-    
-    if (wsControlTRX && wsControlTRX.readyState === WebSocket.OPEN) {
-        wsControlTRX.send(`sendCW:${message}`);
-    }
-    
-    console.log(`Sending CW macro: ${message}`);
-}
-
-function startFT8Cycle() {
-    // FT8 operates on 15-second cycles
-    const updateFT8Time = () => {
-        const now = new Date();
-        const seconds = now.getUTCSeconds();
-        const cycleSecond = seconds % 15;
-        const isOddCycle = Math.floor(seconds / 15) % 2 === 1;
-        
-        appState.ft8Cycle = isOddCycle ? 'TX' : 'RX';
-        
-        const timeDisplay = document.getElementById('ft8-time');
-        const cycleDisplay = document.getElementById('ft8-cycle');
-        
-        if (timeDisplay) {
-            timeDisplay.textContent = String(cycleSecond).padStart(2, '0') + '/15';
-        }
-        if (cycleDisplay) {
-            cycleDisplay.textContent = `Cycle: ${appState.ft8Cycle}`;
-            cycleDisplay.style.color = appState.ft8Cycle === 'TX' ? '#ff4444' : '#00ff00';
-        }
-    };
-    
-    updateFT8Time();
-    setInterval(updateFT8Time, 1000);
-}
-
-function sendFT8(message) {
-    const ft8Messages = document.getElementById('ft8-messages');
-    const timestamp = new Date().toISOString().substr(11, 8);
-    
-    if (ft8Messages) {
-        ft8Messages.value += `${timestamp} TX: ${message}\n`;
-        ft8Messages.scrollTop = ft8Messages.scrollHeight;
-    }
-    
-    if (wsControlTRX && wsControlTRX.readyState === WebSocket.OPEN) {
-        wsControlTRX.send(`sendFT8:${message}`);
-    }
-    
-    console.log(`Sending FT8: ${message}`);
 }
 
 function updateWaterfallCenter() {
@@ -1640,7 +1555,7 @@ function runMobileInterfaceTest() {
         'powerToggle', 'setFrequency', 'setMode', 'setVFO', 'handlePTT',
         'toggleSplit', 'copyVFO', 'toggleRIT', 'toggleXIT', 'updateTuneStep',
         'toggleDualWatch', 'toggleBandScope', 'updateFilterWidth',
-        'setDigitalMode', 'sendCWMacro', 'sendFT8', 'saveQSO', 'toggleLogbookPanel'
+        'setDigitalMode', 'saveQSO', 'toggleLogbookPanel'
     ];
     
     console.log('Testing function definitions...');
@@ -1668,7 +1583,7 @@ function runMobileInterfaceTest() {
         { name: 'Step Controls', test: () => document.querySelector('.step-controls') !== null },
         { name: 'Digital Modes Panel', test: () => document.querySelector('.digital-modes-panel') !== null },
         { name: 'Waterfall Display', test: () => document.getElementById('waterfall-canvas') !== null },
-        { name: 'FT8/CW Controls', test: () => document.querySelectorAll('.digital-btn').length >= 6 },
+        { name: 'Digital Mode Buttons', test: () => document.querySelectorAll('.digital-btn').length >= 5 },
         { name: 'Logbook Panel', test: () => document.querySelector('.logbook-panel') !== null },
         { name: 'QSO Entry Form', test: () => document.getElementById('callsign') !== null }
     ];

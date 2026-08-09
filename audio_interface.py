@@ -382,7 +382,11 @@ class PyAudioCapture(threading.Thread):
         while not self._stop_event.is_set():
             try:
                 # 使用非阻塞读取，避免线程被阻塞
-                data = self.stream.read(320, exception_on_overflow=False)
+                # V5.4: 一次读取 960 样本（20ms@48kHz，对齐 frames_per_buffer）。
+                # 原 320 样本（6.7ms）会让每帧都完整跑一遍 numpy/AGC/WDSP/Opus 流水线，
+                # 且 48k→16k 降采样 320/3 不整除，每次丢弃 2 个样本产生周期性微爆音。
+                # 960/3=320，恰好一个 20ms Opus 帧 @16kHz。
+                data = self.stream.read(960, exception_on_overflow=False)
                 
                 if len(data) > 0:
                     frame_count += 1
@@ -474,51 +478,55 @@ class PyAudioCapture(threading.Thread):
 
                     if PyAudioCapture.wdsp_enabled and WDSP_AVAILABLE:
                         try:
-                            cfg = PyAudioCapture.wdsp_config
-                            # 快速哈希：只取最可能变更的键
-                            new_hash = hash((
-                                cfg.get('nr2_enabled', True),
-                                cfg.get('nr2_level', 1),
-                                cfg.get('nb_enabled', True),
-                                cfg.get('anf_enabled', False),
-                                cfg.get('agc_mode', 3),
-                                cfg.get('bandpass_low', 300.0),
-                                cfg.get('bandpass_high', 2700.0),
-                                cfg.get('nr2_ae_psi', 12.0),
-                                cfg.get('nr2_ae_zeta_thresh', 0.65),
-                            ))
-                            
-                            if new_hash != PyAudioCapture._wdsp_config_hash or self.wdsp_processor is None:
-                                PyAudioCapture._wdsp_config_hash = new_hash
-                                
-                                if self.wdsp_processor is None:
-                                    wdsp_sr = cfg.get('sample_rate', 48000)
-                                    wdsp_bs = cfg.get('buffer_size', 256)
-                                    self.wdsp_processor = WDSPProcessor(
-                                        sample_rate=wdsp_sr, buffer_size=wdsp_bs,
-                                        mode=WDSPMode.USB,
-                                        enable_nr2=cfg['nr2_enabled'],
-                                        enable_nb=cfg['nb_enabled'],
-                                        enable_anf=cfg['anf_enabled'],
-                                        agc_mode=cfg['agc_mode'],
-                                        nr2_ae_psi=cfg.get('nr2_ae_psi', 12.0),
-                                        nr2_ae_zeta_thresh=cfg.get('nr2_ae_zeta_thresh', 0.65),
-                                    )
-                                    self.wdsp_processor.set_bandpass(cfg['bandpass_low'], cfg['bandpass_high'])
-                                    if cfg['nr2_enabled']:
-                                        self.wdsp_processor.set_nr2_level(cfg.get('nr2_level', 2))
-                                    # WDSP 配置在低采样率（如 16k）时，输入需先做有状态 48k→16k 降采样
-                                    if wdsp_sr < 48000:
-                                        self._decimator = _StatefulDecimator(factor=48000 // wdsp_sr)
+                            # V5.4: 配置哈希检查节流 — 每 25 帧（≈0.5s @20ms 帧）或
+                            # 处理器尚未创建时才重算，避免每帧 9 次 dict 查询 + hash。
+                            # 配置变更最多延迟 0.5s 生效（用户操作无感知）。
+                            if self.wdsp_processor is None or (frame_count % 25) == 0:
+                                cfg = PyAudioCapture.wdsp_config
+                                # 快速哈希：只取最可能变更的键
+                                new_hash = hash((
+                                    cfg.get('nr2_enabled', True),
+                                    cfg.get('nr2_level', 1),
+                                    cfg.get('nb_enabled', True),
+                                    cfg.get('anf_enabled', False),
+                                    cfg.get('agc_mode', 3),
+                                    cfg.get('bandpass_low', 300.0),
+                                    cfg.get('bandpass_high', 2700.0),
+                                    cfg.get('nr2_ae_psi', 12.0),
+                                    cfg.get('nr2_ae_zeta_thresh', 0.65),
+                                ))
+
+                                if new_hash != PyAudioCapture._wdsp_config_hash or self.wdsp_processor is None:
+                                    PyAudioCapture._wdsp_config_hash = new_hash
+
+                                    if self.wdsp_processor is None:
+                                        wdsp_sr = cfg.get('sample_rate', 48000)
+                                        wdsp_bs = cfg.get('buffer_size', 256)
+                                        self.wdsp_processor = WDSPProcessor(
+                                            sample_rate=wdsp_sr, buffer_size=wdsp_bs,
+                                            mode=WDSPMode.USB,
+                                            enable_nr2=cfg['nr2_enabled'],
+                                            enable_nb=cfg['nb_enabled'],
+                                            enable_anf=cfg['anf_enabled'],
+                                            agc_mode=cfg['agc_mode'],
+                                            nr2_ae_psi=cfg.get('nr2_ae_psi', 12.0),
+                                            nr2_ae_zeta_thresh=cfg.get('nr2_ae_zeta_thresh', 0.65),
+                                        )
+                                        self.wdsp_processor.set_bandpass(cfg['bandpass_low'], cfg['bandpass_high'])
+                                        if cfg['nr2_enabled']:
+                                            self.wdsp_processor.set_nr2_level(cfg.get('nr2_level', 2))
+                                        # WDSP 配置在低采样率（如 16k）时，输入需先做有状态 48k→16k 降采样
+                                        if wdsp_sr < 48000:
+                                            self._decimator = _StatefulDecimator(factor=48000 // wdsp_sr)
+                                        else:
+                                            self._decimator = None
                                     else:
-                                        self._decimator = None
-                                else:
-                                    self.wdsp_processor.set_nr2_level(cfg.get('nr2_level', 2) if cfg['nr2_enabled'] else 0)
-                                    self.wdsp_processor.set_nb_enabled(cfg['nb_enabled'])
-                                    self.wdsp_processor.set_anf_enabled(cfg['anf_enabled'])
-                                    self.wdsp_processor.set_agc_mode(cfg['agc_mode'])
-                                    self.wdsp_processor.set_bandpass(cfg['bandpass_low'], cfg['bandpass_high'])
-                                    # nr2_ae_run 已由 set_nr2_level() 内置管理，无需额外设置
+                                        self.wdsp_processor.set_nr2_level(cfg.get('nr2_level', 2) if cfg['nr2_enabled'] else 0)
+                                        self.wdsp_processor.set_nb_enabled(cfg['nb_enabled'])
+                                        self.wdsp_processor.set_anf_enabled(cfg['anf_enabled'])
+                                        self.wdsp_processor.set_agc_mode(cfg['agc_mode'])
+                                        self.wdsp_processor.set_bandpass(cfg['bandpass_low'], cfg['bandpass_high'])
+                                        # nr2_ae_run 已由 set_nr2_level() 内置管理，无需额外设置
                         except Exception as e:
                             # H10: WDSP 配置异常不可静默吞掉，否则 DSP 静默不工作且无法排查
                             print(f"⚠️ WDSP config/初始化错误（降级直通）: {e}")
@@ -901,7 +909,12 @@ class PyAudioPlayback:
 
         if is_encoded:
             self.decoder = OpusDecoder(op_rate, 1)
-            self.frame_size = op_frm_dur * op_rate
+            # V5.4: 帧大小单位换算 — op_frm_dur 是毫秒，需 /1000。
+            # 原 op_frm_dur * op_rate（如 20*48000=960000）会让每次 decode
+            # 分配 ~3.8MB 临时 PCM 缓冲（50 次/秒 ≈ 190MB/s 分配抖动）。
+            self.frame_size = op_frm_dur * op_rate // 1000
+        # V5.4: 供录音/分析路径复用的原始解码 PCM（避免二次 Opus 解码）
+        self.last_decoded_pcm = None
         
         # ========== 关键修复：采样率匹配 ==========
         # 当 Opus 编码启用时，解码后的 PCM 数据采样率是 op_rate (16kHz)
@@ -923,6 +936,9 @@ class PyAudioPlayback:
         
         try:
             try:
+                # V5.4: frames_per_buffer 按播放采样率动态对齐 20ms，
+                # 不再硬编码 960（在 16kHz 下会是 60ms 而非注释所称的 20ms）
+                tx_frames_per_buffer = max(256, int(playback_rate * 0.02))
                 # Open output stream with optimized settings for low latency
                 self.stream = self.p.open(
                     format=pyaudio.paInt16,
@@ -930,9 +946,9 @@ class PyAudioPlayback:
                     rate=playback_rate,
                     output=True,
                     output_device_index=device_index,
-                    frames_per_buffer=960  # V5.2: 20ms@48kHz → 对齐Opus帧(320samples@16kHz)
+                    frames_per_buffer=tx_frames_per_buffer
                 )
-                print(f'PyAudio output stream opened successfully at {playback_rate}Hz (Opus: {is_encoded})')
+                print(f'PyAudio output stream opened successfully at {playback_rate}Hz (Opus: {is_encoded}, buf: {tx_frames_per_buffer})')
             except Exception as e:
                 print(f"Failed to open PyAudio output stream: {e}")
                 # Try with default device
@@ -942,7 +958,7 @@ class PyAudioPlayback:
                         channels=1,
                         rate=playback_rate,  # 使用正确的采样率
                         output=True,
-                        frames_per_buffer=960  # V5.2: 20ms@48kHz → 对齐Opus帧(320samples@16kHz)
+                        frames_per_buffer=tx_frames_per_buffer
                     )
                     print(f'Opened with default output device at {playback_rate}Hz')
                 except Exception as e2:
@@ -987,6 +1003,10 @@ class PyAudioPlayback:
             pcm = self.decoder.decode(data, self.frame_size, False)
         else:
             pcm = data
+
+        # V5.4: 暴露原始解码 PCM，供 MRRC 录音/TX分析路径复用，
+        # 避免同一 Opus 包被第二个 decoder 实例重复解码
+        self.last_decoded_pcm = pcm
 
         # TX 音频电平归一化：带 smoothing 的增益控制，防 pumping
         tx_int16 = np.frombuffer(pcm, dtype=np.int16)

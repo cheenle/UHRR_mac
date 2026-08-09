@@ -241,7 +241,6 @@
             </div>
             <div class="digital-content" id="digital-content">
                 <div class="mode-selection">
-                    <button class="digital-btn" onclick="setDigitalMode('FT8');">FT8</button>
                     <button class="digital-btn" onclick="setDigitalMode('FT4');">FT4</button>
                     <button class="digital-btn" onclick="setDigitalMode('JS8');">JS8</button>
                     <button class="digital-btn" onclick="setDigitalMode('PSK31');">PSK31</button>
@@ -258,32 +257,8 @@
                     </div>
                 </div>
                 
-                <!-- Digital Mode Controls -->
-                <div class="digital-controls">
-                    <div class="cw-controls" id="cw-controls" style="display: none;">
-                        <label>CW Speed: <span id="cw-speed-display">20 WPM</span></label>
-                        <input type="range" id="cw-speed" min="5" max="60" value="20" onchange="updateCWSpeed();">
-                        <div class="cw-macros">
-                            <button class="macro-btn" onclick="sendCWMacro('CQ');">CQ</button>
-                            <button class="macro-btn" onclick="sendCWMacro('599');">599</button>
-                            <button class="macro-btn" onclick="sendCWMacro('TU');">TU 73</button>
-                            <button class="macro-btn" onclick="sendCWMacro('AGN');">AGN</button>
-                        </div>
-                    </div>
-                    
-                    <div class="ft8-controls" id="ft8-controls" style="display: none;">
-                        <div class="ft8-status">
-                            <span id="ft8-cycle">Cycle: RX</span>
-                            <span id="ft8-time">00:00</span>
-                        </div>
-                        <textarea id="ft8-messages" rows="4" placeholder="FT8 messages will appear here..." readonly></textarea>
-                        <div class="ft8-quick-reply">
-                            <button class="ft8-btn" onclick="sendFT8('CQ');">CQ</button>
-                            <button class="ft8-btn" onclick="sendFT8('73');">73</button>
-                            <button class="ft8-btn" onclick="sendFT8('RRR');">RRR</button>
-                        </div>
-                    </div>
-                </div>
+                <!-- Digital Mode Controls（CW/FT8 控制区块已移除） -->
+
             </div>
         </div>
 

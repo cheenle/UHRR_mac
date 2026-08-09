@@ -84,21 +84,7 @@ tx_audio_analyzer = None
 #         print(f"⚠️ TX 音频分析器初始化失败: {e}")
 print("⚠️ TX 音频分析器已禁用（优化 TX→RX 延迟）")
 
-# Import FT8 decoder service
-try:
-    from ft8_decoder import get_ft8_service, PYFT8_AVAILABLE
-    FT8_SERVICE_AVAILABLE = PYFT8_AVAILABLE
-except ImportError:
-    FT8_SERVICE_AVAILABLE = False
-    print("FT8 decoder service not available")
-
-# Import FT8 Integration (ULTRON Python)
-try:
-    from ft8_integration import get_ft8_integration, FT8Integration
-    FT8_INTEGRATION_AVAILABLE = True
-except ImportError as e:
-    FT8_INTEGRATION_AVAILABLE = False
-    print(f"FT8 Integration (ULTRON) not available: {e}")
+# V5.7: FT8/CW 功能已移除（WS_FT8Handler、ft8_integration、ft8_decoder 一并删除）
 
 ############ Global variables ##################################
 CTRX=None
@@ -670,7 +656,7 @@ class WS_AudioTXHandler(AuthenticatedWebSocketHandler):
 				self.miss_count += 1
 				if self.miss_count >= 25 and self.ws_connection and CTRX.mrrc_ptt_active:
 					CTRX.setPTT("false")
-					print("stop ptt on timeout by miss_count (10x200ms)")
+					print("stop ptt on timeout by miss_count (25x200ms)")
 			else:
 				self.miss_count = 0
 		except:
@@ -684,11 +670,17 @@ class WS_AudioTXHandler(AuthenticatedWebSocketHandler):
 		parts = [int(i) for i in msg.split(',')]
 		itrate, is_encoded, op_rate, op_frm_dur = parts[0:4]
 		self.is_encoded = is_encoded
+		# V5.4: 记录 op_rate，TX 录音路径 48k→16k 重采样要用
+		# （原代码只存局部变量，录音路径 hasattr(self,'op_rate') 永远为 False，
+		#  导致 48kHz TX 音频未降采样直接写入 16kHz 录音缓冲，回放慢 3 倍）
+		self.op_rate = op_rate
 		# 第 5 字段：线格式标签模式（1= 每帧前 1 字节 0x00 PCM / 0x01 Opus）；旧客户端无此字段
 		self.tagged = (len(parts) > 4 and parts[4] == 1)
 		if is_encoded:
 			self.decoder = OpusDecoder(op_rate, 1)
-			self.frame_size = op_frm_dur * op_rate
+			# V5.4: 帧大小单位换算 — op_frm_dur 是毫秒，需 /1000。
+			# 原值（如 20*48000=960000）会让每次 decode 分配 ~3.8MB 临时缓冲。
+			self.frame_size = op_frm_dur * op_rate // 1000
 
 		if PYAUDIO_AVAILABLE:
 			# Use PyAudio
@@ -799,12 +791,15 @@ class WS_AudioTXHandler(AuthenticatedWebSocketHandler):
 				# Use PyAudio
 				if hasattr(self, 'audio_playback') and self.audio_playback:
 					self.audio_playback.write(data)
+					# V5.4: 复用 PyAudioPlayback._normalize() 已解码的原始 PCM，
+					# 不再用第二个 decoder 实例重复解码同一 Opus 包
+					shared_pcm = getattr(self.audio_playback, 'last_decoded_pcm', None)
 					# 🎙️ TX 音频分析：收集音频数据
 					# 注意：如果 Opus 编码开启，需要先解码再收集 PCM 数据
 					if tx_audio_analyzer and tx_audio_analyzer.is_recording:
 						if self.is_encoded and hasattr(self, 'decoder'):
 							# Opus 编码模式：解码后收集 PCM
-							pcm_data = self.decoder.decode(data, self.frame_size, False)
+							pcm_data = shared_pcm if shared_pcm is not None else self.decoder.decode(data, self.frame_size, False)
 							tx_audio_analyzer.add_audio_data(pcm_data)
 						else:
 							# Int16 模式：直接收集
@@ -814,7 +809,7 @@ class WS_AudioTXHandler(AuthenticatedWebSocketHandler):
 					# TX recording: capture browser mic for stereo right channel
 					if PyAudioCapture.recording_enabled:
 						if self.is_encoded and hasattr(self, 'decoder'):
-							pcm_data = self.decoder.decode(data, self.frame_size, False)
+							pcm_data = shared_pcm if shared_pcm is not None else self.decoder.decode(data, self.frame_size, False)
 							tx_int16 = np.frombuffer(pcm_data, dtype=np.int16)
 						else:
 							tx_int16 = np.frombuffer(data, dtype=np.int16)
@@ -1331,7 +1326,8 @@ def sync_freq_to_atr1000(freq):
         sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         sock.settimeout(0.5)  # 短超时，不阻塞主程序
         sock.connect(INSTANCE_UNIX_SOCKET)
-        sock.sendall(json.dumps({"action": "set_freq", "freq": freq}).encode())
+        # 必须以 \n 结尾：proxy 按行解析，避免命令与下一条合并被整体丢弃
+        sock.sendall((json.dumps({"action": "set_freq", "freq": freq}) + "\n").encode())
         logger.debug(f"📤 频率同步给ATR-1000: {freq/1000:.1f}kHz")
     except Exception as e:
         # 静默失败，不影响主程序
@@ -1570,6 +1566,7 @@ class ATR1000ProxyManager:
         self.last_data = None  # 缓存最新数据
         self.refresh_timer = None  # 定期获取数据的定时器
         self._reconnect_delay = 0.5  # 重连初始延迟
+        self._last_active_data_time = 0  # 最近一次收到正向功率(TX)的时间，驱动快速轮询
 
         logger.info("📡 ATR-1000 代理管理器已初始化")
     
@@ -1648,15 +1645,29 @@ class ATR1000ProxyManager:
                     self.unix_socket.send(b'{"action":"get_data"}\n')
                 except Exception:
                     pass  # 读取线程会检测到断连并重连
-            # 每2秒刷新一次
-            self.refresh_timer = threading.Timer(2.0, _refresh)
+            # TX 活跃判定：优先电台 PTT 状态（权威、立即生效），
+            # 其次"近3秒内收到 >5W 功率"（兼容无 rigctld 的部署）。
+            # 原实现只靠功率启发式：代理缓存在 TX 结束后保留旧功率时，
+            # 该条件被永久满足，250ms 快速轮询永不回落（V5.6.3 已同时
+            # 在代理 stop 时清零缓存，双保险）。
+            ptt_active = False
+            try:
+                ptt_active = bool(CTRX and getattr(CTRX, 'mrrc_ptt_active', False))
+            except Exception:
+                pass
+            # get_data 只读代理缓存(不触发设备 SYNC)，快速轮询不会压垮设备。
+            if ptt_active or (time.time() - self._last_active_data_time < 3.0):
+                interval = 0.25
+            else:
+                interval = 2.0
+            self.refresh_timer = threading.Timer(interval, _refresh)
             self.refresh_timer.daemon = True
             self.refresh_timer.start()
 
         self.refresh_timer = threading.Timer(0.5, _refresh)
         self.refresh_timer.daemon = True
         self.refresh_timer.start()
-        logger.info("🔄 ATR-1000 代理定期数据刷新已启动 (每2秒)")
+        logger.info("🔄 ATR-1000 代理定期数据刷新已启动 (TX活跃250ms / 空闲2s)")
 
     def _stop_data_refresh(self):
         """停止定期数据刷新"""
@@ -1714,10 +1725,14 @@ class ATR1000ProxyManager:
                                 if msg.get('type') == 'atr1000_meter':
                                     self.message_count += 1
                                     self.last_data = line
-                                        
+
                                     # 提取功率和SWR用于日志
                                     power = msg.get('power', 0)
                                     swr = msg.get('swr', 0)
+                                    # V5.6.6: 有正向功率(>5W)视为 TX 活跃，驱动 get_data 快速轮询(250ms)，
+                                    # 让前端不依赖自身心跳也能 ~250ms 内拿到最新功率/SWR
+                                    if power > 5:
+                                        self._last_active_data_time = time.time()
                                         
                                     # V4.5.6: 减少日志输出，每 10 次数据变化才打印一次
                                     if (power != last_power or abs(swr - last_swr) > 0.5) and power > 0:
@@ -1773,38 +1788,35 @@ class ATR1000ProxyManager:
     def _broadcast_batch(self, message_batch):
         """批量广播消息到所有前端客户端"""
         global ATR1000HandlerClients
-        
-        # 复制客户端列表以避免线程问题
-        clients_snapshot = ATR1000HandlerClients[:]
-        client_count = len(clients_snapshot)
-        # V4.5.6: 减少日志输出，仅在客户端数变化或有实际数据时打印
-        # logger.info(f"📢 _broadcast_batch: 客户端={client_count}, 批次={len(message_batch)}")
-        
-        if client_count == 0 or not message_batch:
+
+        if not ATR1000HandlerClients or not message_batch:
             return
-        
+
         # 只广播最后一条消息（最新的数据）
         latest_data = message_batch[-1]
-        
-        # 发送到所有客户端
-        sent_count = 0
+
+        # V5.6.3: write_message 非线程安全，必须编组到 Tornado IOLoop 线程执行。
+        # 原实现直接从 _read_loop 工作线程写，可能与其他 IOLoop 写入交错、
+        # 损坏 WebSocket 帧流（偶发前端断连/解析错误的根源之一）。
+        if self.main_ioloop:
+            self.main_ioloop.add_callback(self._write_to_clients, latest_data)
+
+    def _write_to_clients(self, latest_data):
+        """在 IOLoop 线程执行实际写入（由 _broadcast_batch 编组调用）"""
+        global ATR1000HandlerClients
+
+        clients_snapshot = ATR1000HandlerClients[:]
         failed_clients = []
-        
+
         for client in clients_snapshot:
             try:
                 client.write_message(latest_data, binary=False)
-                sent_count += 1
-            except Exception as e:
+            except Exception:
                 failed_clients.append(client)
-        
-        # 记录发送结果
-        if sent_count > 0:
-            logger.debug(f"📤 ATR-1000 广播成功: 发送={sent_count}/{client_count}")
-        
-        # 在主线程中清理失败的客户端
-        if failed_clients and self.main_ioloop:
-            from functools import partial
-            self.main_ioloop.add_callback(partial(self._cleanup_failed_clients, failed_clients))
+
+        # 已在主线程中，直接清理失败的客户端
+        if failed_clients:
+            self._cleanup_failed_clients(failed_clients)
     
     def _cleanup_failed_clients(self, failed_clients):
         """清理失败的客户端（在主线程中执行）"""
@@ -1929,6 +1941,9 @@ class ATR1000ProxyManager:
         """发送消息到代理"""
         if self.unix_socket:
             try:
+                # 必须以 \n 结尾：proxy 按行解析，前端 sync/set_relay 等命令本身不带换行
+                if not message.endswith('\n'):
+                    message += '\n'
                 self.unix_socket.send(message.encode())
                 return True
             except (BrokenPipeError, ConnectionError, OSError) as e:
@@ -2118,127 +2133,6 @@ class WS_ATUAutoTunerHandler(AuthenticatedWebSocketHandler):
                 pass
 
 
-# FT8 WebSocket 客户端列表
-FT8HandlerClients = []
-
-class WS_FT8Handler(AuthenticatedWebSocketHandler):
-    """
-    FT8/ULTRON WebSocket 处理器
-    
-    深度整合 ULTRON Python 后端与 Web 前端
-    
-    功能：
-    - UDP 监听 (2237): 接收 JTDX/WSJT-X/MSHV 数据
-    - WebSocket 桥接: 实时推送到前端
-    - 双向通信: 解码显示 + 控制命令
-    - QSO 状态管理 + DXCC 查询
-    
-    消息格式：
-    - 前端 → 后端: JSON 命令 {type: 'command', command: 'xxx', params: {}}
-    - 后端 → 前端: JSON 消息 {type: 'decode'|'status'|'qso_logged', data: {}}
-    """
-    
-    clients = []
-    ft8_integration = None
-
-    def open(self):
-        if self not in WS_FT8Handler.clients:
-            WS_FT8Handler.clients.append(self)
-        logger.info(f"🔌 FT8/ULTRON 客户端连接，当前 {len(WS_FT8Handler.clients)} 个")
-        
-        # 使用新的 FT8 Integration (ULTRON)
-        if FT8_INTEGRATION_AVAILABLE:
-            if WS_FT8Handler.ft8_integration is None:
-                WS_FT8Handler.ft8_integration = get_ft8_integration()
-                WS_FT8Handler.ft8_integration.start()
-                logger.info("✅ FT8 Integration (ULTRON) 已启动")
-            
-            # 添加客户端
-            WS_FT8Handler.ft8_integration.add_client(self)
-
-            # 发送欢迎消息 (含端口信息)
-            ft8 = WS_FT8Handler.ft8_integration
-            self.write_message(json.dumps({
-                'type': 'connected',
-                'message': 'FT8 integration connected',
-                'listen_port': ft8.listen_port,
-                'jtdx_port': ft8.jtdx_port
-            }))
-
-            # 发送当前状态
-            self.write_message(json.dumps({
-                'type': 'status',
-                'data': ft8.get_status()
-            }))
-
-            # 发送初始解码历史
-            self.write_message(json.dumps({
-                'type': 'decodes',
-                'data': ft8.get_decodes(100)
-            }))
-            
-        else:
-            # 服务不可用
-            self.write_message(json.dumps({
-                'type': 'error',
-                'message': 'FT8 Integration 服务不可用'
-            }))
-    
-    def on_message(self, message):
-        if not FT8_INTEGRATION_AVAILABLE or WS_FT8Handler.ft8_integration is None:
-            self.write_message(json.dumps({
-                'type': 'error',
-                'message': 'FT8 Integration 服务不可用'
-            }))
-            return
-        
-        try:
-            # 解析 JSON 消息
-            if isinstance(message, str):
-                msg = json.loads(message)
-                
-                if msg.get('type') == 'command':
-                    command = msg.get('command', '')
-                    params = msg.get('params', {})
-                    
-                    # 处理命令
-                    result = WS_FT8Handler.ft8_integration.handle_command(command, params)
-                    
-                    # 返回结果
-                    if isinstance(result, dict):
-                        self.write_message(json.dumps({
-                            'type': 'command_ack',
-                            'data': result
-                        }))
-                
-                else:
-                    # 处理其他消息类型
-                    logger.warning(f"未知的 FT8 消息类型: {msg.get('type')}")
-            else:
-                logger.warning(f"收到非文本 FT8 消息")
-                
-        except json.JSONDecodeError as e:
-            logger.error(f"FT8 JSON 解析错误: {e}")
-            self.write_message(json.dumps({
-                'type': 'error',
-                'message': '无效的 JSON 格式'
-            }))
-        except Exception as e:
-            logger.error(f"FT8 消息处理错误: {e}")
-            self.write_message(json.dumps({
-                'type': 'error',
-                'message': str(e)
-            }))
-    
-    def on_close(self):
-        if self in WS_FT8Handler.clients:
-            WS_FT8Handler.clients.remove(self)
-        logger.info(f"🔌 FT8/ULTRON 客户端断开，剩余 {len(WS_FT8Handler.clients)} 个")
-        
-        if FT8_INTEGRATION_AVAILABLE and WS_FT8Handler.ft8_integration:
-            WS_FT8Handler.ft8_integration.remove_client(self)
-
-
 class TRXRIG:
 	def __init__(self):
 		global HAMLIB_AVAILABLE
@@ -2403,6 +2297,44 @@ class TRXRIG:
 			"RTTY": 2200
 		}
 		return passbands.get(mode.upper(), 2400)
+
+	def setRFGain(self, level):
+		"""IC-M710 RF 增益 1-9 档（hamlib L RF → icm710 NMEA RFG 命令）"""
+		try:
+			level = int(float(level))
+		except (TypeError, ValueError):
+			level = self.infos.get("RFGAIN", 9)
+		level = max(1, min(9, level))
+		if self.rig == "rigctld_daemon":
+			# hamlib set_level RF 是 0.0-1.0 浮点，icm710 后端做 (unsigned)(val.f*9)
+			# 截断取整 → 映射到档位中点避免浮点误差（如 1/9*9=0.999→0 的坑）；
+			# 9 档特例取 1.0（1.0*9 精确等于 9，且不能超过 1.0）
+			val = 1.0 if level >= 9 else (level + 0.5) / 9.0
+			if self._rigctld_set_command("L", f"RF {val:.4f}"):
+				self.infos["RFGAIN"] = level
+				logger.info(f"✓ RF gain set to {level}/9 via rigctld")
+			else:
+				logger.error(f"✗ Failed to set RF gain {level} via rigctld")
+		else:
+			# 无电台/仿真模式：仅记录状态
+			self.infos["RFGAIN"] = level
+			logger.info(f"Simulated: RF gain set to {level}/9")
+		return self.infos.get("RFGAIN", 9)
+
+	def setAGC(self, onoff):
+		"""IC-M710 AGC 开关（hamlib L AGC → icm710 NMEA AGC ON/OFF）"""
+		on = str(onoff).lower() in ("1", "true", "on")
+		if self.rig == "rigctld_daemon":
+			# hamlib set_level AGC 是整数：0=RIG_AGC_OFF→OFF，非 0→ON
+			if self._rigctld_set_command("L", f"AGC {1 if on else 0}"):
+				self.infos["AGC"] = on
+				logger.info(f"✓ AGC set to {'ON' if on else 'OFF'} via rigctld")
+			else:
+				logger.error("✗ Failed to set AGC via rigctld")
+		else:
+			self.infos["AGC"] = on
+			logger.info(f"Simulated: AGC {'ON' if on else 'OFF'}")
+		return self.infos.get("AGC", True)
 		
 	def test_radio_communication(self):
 		"""Test basic communication with the radio"""
@@ -3104,6 +3036,18 @@ class WS_ControlTRX(AuthenticatedWebSocketHandler):
 			yield self.send_to_all_clients("getMode:"+str(CTRX.getMode()))
 		elif(action == "setMode"):
 			yield self.send_to_all_clients("getMode:"+str(CTRX.setMode(datato)))
+		elif(action == "getRFGain"):
+			yield self.send_to_all_clients("getRFGain:"+str(CTRX.infos.get("RFGAIN", 9)))
+		elif(action == "setRFGain"):
+			# IC-M710 RF 增益 1-9 档；rigctld 阻塞 I/O 放到线程执行器（同 setPTT 的 F3 修复）
+			result = yield tornado.ioloop.IOLoop.current().run_in_executor(None, CTRX.setRFGain, datato)
+			yield self.send_to_all_clients("getRFGain:"+str(result))
+		elif(action == "getAGC"):
+			yield self.send_to_all_clients("getAGC:"+str(CTRX.infos.get("AGC", True)).lower())
+		elif(action == "setAGC"):
+			# IC-M710 AGC 开关；同样走线程执行器避免阻塞 IOLoop
+			result = yield tornado.ioloop.IOLoop.current().run_in_executor(None, CTRX.setAGC, datato)
+			yield self.send_to_all_clients("getAGC:"+str(result).lower())
 		elif(action == "getPTT"):
 			yield self.send_to_all_clients("getPTT:"+str(CTRX.getPTT()).lower())
 		elif(action == "tune"):
@@ -4047,8 +3991,7 @@ if __name__ == "__main__":
 			(r'/WSpanFFT', WS_panFFTHandler),
 			(r'/WSATR1000', WS_ATR1000Handler),  # ATR-1000 天调 WebSocket
 			(r'/WSATU', WS_ATUAutoTunerHandler),  # ATU 自动调谐 WebSocket
-			(r'/WSFT8', WS_FT8Handler),  # FT8 数字模式 WebSocket
-			
+
 			(r'/(panfft.*)', AuthenticatedStaticFileHandler, { 'path' : './www/panadapter' }),
 					(r'/CONFIG', ConfigHandler),
 					(r'/test', TestRadioHandler),

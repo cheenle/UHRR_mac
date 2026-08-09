@@ -621,31 +621,7 @@ body {
     color: var(--accent-primary);
 }
 
-/* CW按钮样式 - 统一蓝色风格 */
-.quick-btn.cw-btn {
-    background: linear-gradient(135deg, rgba(245, 158, 11, 0.2), rgba(245, 158, 11, 0.1));
-    border-color: rgba(245, 158, 11, 0.4);
-    color: var(--accent-secondary);
-    font-weight: 600;
-}
-
-.quick-btn.cw-btn:active {
-    background: linear-gradient(135deg, rgba(245, 158, 11, 0.3), rgba(245, 158, 11, 0.2));
-    border-color: var(--accent-secondary);
-}
-
-/* FT8按钮样式 - 橙色数字模式风格 */
-.quick-btn.ft8-btn {
-    background: linear-gradient(135deg, rgba(245, 158, 11, 0.2), rgba(245, 158, 11, 0.1));
-    border-color: rgba(245, 158, 11, 0.4);
-    color: var(--accent-warning);
-    font-weight: 600;
-}
-
-.quick-btn.ft8-btn:active {
-    background: linear-gradient(135deg, rgba(245, 158, 11, 0.3), rgba(245, 158, 11, 0.2));
-    border-color: var(--accent-warning);
-}
+/* AGC 按钮激活态使用通用 .quick-btn.active；RF 按钮纯文本档位显示，无特殊样式 */
 
 /* PTT Section */
 .ptt-section {

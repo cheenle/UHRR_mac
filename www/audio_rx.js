@@ -1,3 +1,10 @@
+// ============================================================================
+// ⚠️ DEPRECATED / 已废弃（V5.4 标记）
+// 本文件是 legacy RX 播放引擎，与当前 wire format 不兼容：
+// 它对裸 Opus/PCM 标签帧调用 decodeAudioData()（见 _doDecode），必然解码失败。
+// 当前活跃 RX 引擎在 controls.js（rx_worklet_processor.js 水印缓冲）。
+// 任何页面都不应再加载本文件（modern.html H17 已移除）；保留仅为历史参考。
+// ============================================================================
 // Audio RX functions - Audio reception and processing
 // V5.2: 重写播放引擎 — 多 BufferSourceNode 调度，消除帧间间隙
 

@@ -1133,10 +1133,6 @@ class SDRModern {
             this.closeMenu();
             window.location.href = 'atu_tuner.html';
         });
-        document.getElementById('menu-cw').addEventListener('click', () => {
-            this.closeMenu();
-            window.location.href = 'cw_simple.html';
-        });
         document.getElementById('menu-ptt-macros').addEventListener('click', () => {
             this.closeMenu();
             this.openPanel('ptt-macros-panel');

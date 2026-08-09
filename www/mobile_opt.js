@@ -43,11 +43,11 @@ const CONFIG = {
         '6m': [50000000, 54000000]
     },
     
-    // 模式
-    MODES: ['USB', 'LSB', 'CW', 'FM', 'AM', 'FT8'],
-    
-    // 滤波器带宽
-    FILTERS: ['1.8k', '2.4k', '3.0k', '4.0k', '6.0k']
+    // 模式（IC-M710 海用机：CW/FT8 入口已移除；RTTY=FSK 如有需要再加）
+    MODES: ['USB', 'LSB', 'FM', 'AM'],
+
+    // IC-M710 RF 增益档位（9-1，hamlib icm710 后端 RFG 命令）
+    RF_LEVELS: [9, 8, 7, 6, 5, 4, 3, 2, 1]
 };
 
 // ========== 环形缓冲区 ==========
@@ -656,8 +656,9 @@ class WebSocketManager {
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
         const baseUrl = `${protocol}//${host}`;
         
-        // 控制通道
-        this.wsControl = new WebSocket(`${baseUrl}/WSControlTRX`);
+        // 控制通道（V5.4: 修正端点路径 — 原 /WSControlTRX 未注册会 404，
+        // 导致本页控制通道一直连不上；MRRC 注册的路由是 /WSCTRX）
+        this.wsControl = new WebSocket(`${baseUrl}/WSCTRX`);
         this.wsControl.binaryType = 'arraybuffer';
         
         this.wsControl.onopen = () => {
@@ -714,6 +715,8 @@ class WebSocketManager {
     _syncState() {
         this.send('getFreq');
         this.send('getMode');
+        this.send('getRFGain');
+        this.send('getAGC');
     }
     
     // 发送命令
@@ -764,7 +767,8 @@ class MRRCApp {
             frequency: 7053000,
             mode: 'USB',
             band: '40m',
-            filter: '2.4k',
+            agc: true,      // IC-M710 AGC 开关（默认开）
+            rfGain: 9,      // IC-M710 RF 增益 9-1（默认最大）
             tuneStepIndex: CONFIG.DEFAULT_STEP_INDEX,
             volume: 50,
             dspEnabled: false,
@@ -815,7 +819,8 @@ class MRRCApp {
             btnRecord: document.getElementById('btn-record'),
             btnMode: document.getElementById('btn-mode'),
             btnBand: document.getElementById('btn-band'),
-            btnFilter: document.getElementById('btn-filter'),
+            btnAgc: document.getElementById('btn-agc'),
+            btnRf: document.getElementById('btn-rf'),
             btnDsp: document.getElementById('btn-dsp'),
             
             freqDisplay: document.getElementById('freq-display'),
@@ -833,7 +838,7 @@ class MRRCApp {
             overlay: document.getElementById('overlay'),
             bandGrid: document.getElementById('band-grid'),
             modeGrid: document.getElementById('mode-grid'),
-            filterGrid: document.getElementById('filter-grid'),
+            rfGrid: document.getElementById('rf-grid'),
             dspOptions: document.getElementById('dsp-options'),
             
             statusMode: document.getElementById('status-mode')
@@ -869,7 +874,8 @@ class MRRCApp {
         // 快捷按钮
         this.dom.btnMode?.addEventListener('click', () => this._cycleMode());
         this.dom.btnBand?.addEventListener('click', () => this._cycleBand());
-        this.dom.btnFilter?.addEventListener('click', () => this._cycleFilter());
+        this.dom.btnAgc?.addEventListener('click', () => this._toggleAgc());
+        this.dom.btnRf?.addEventListener('click', () => this._cycleRfGain());
         this.dom.btnDsp?.addEventListener('click', () => this._toggleDsp());
         
         // 音量
@@ -994,6 +1000,16 @@ class MRRCApp {
             } else if (data.startsWith('getMode:')) {
                 this.state.mode = data.split(':')[1];
                 this._updateModeDisplay();
+            } else if (data.startsWith('getRFGain:')) {
+                // 其他客户端改了 RF 增益时同步本机显示
+                const lv = parseInt(data.split(':')[1], 10);
+                if (CONFIG.RF_LEVELS.includes(lv)) {
+                    this.state.rfGain = lv;
+                    this._updateRfDisplay();
+                }
+            } else if (data.startsWith('getAGC:')) {
+                this.state.agc = data.split(':')[1] === 'true';
+                this._updateAgcDisplay();
             }
         }
     }
@@ -1129,13 +1145,30 @@ class MRRCApp {
         }
     }
     
-    // 循环滤波器
-    _cycleFilter() {
-        const idx = CONFIG.FILTERS.indexOf(this.state.filter);
-        this.state.filter = CONFIG.FILTERS[(idx + 1) % CONFIG.FILTERS.length];
-        
-        if (this.dom.btnFilter) {
-            this.dom.btnFilter.textContent = this.state.filter;
+    // AGC 开关（IC-M710：hamlib L AGC 0/1 → NMEA AGC OFF/ON）
+    _toggleAgc() {
+        this.state.agc = !this.state.agc;
+        this._updateAgcDisplay();
+        this.ws.send('setAGC', this.state.agc ? 'on' : 'off');
+        this._saveSettings();
+    }
+
+    _updateAgcDisplay() {
+        this.dom.btnAgc?.classList.toggle('active', this.state.agc);
+    }
+
+    // 循环 RF 增益档位 9→1→9（IC-M710：hamlib L RF → NMEA RFG 命令）
+    _cycleRfGain() {
+        const idx = CONFIG.RF_LEVELS.indexOf(this.state.rfGain);
+        this.state.rfGain = CONFIG.RF_LEVELS[(idx + 1) % CONFIG.RF_LEVELS.length];
+        this._updateRfDisplay();
+        this.ws.send('setRFGain', this.state.rfGain.toString());
+        this._saveSettings();
+    }
+
+    _updateRfDisplay() {
+        if (this.dom.btnRf) {
+            this.dom.btnRf.textContent = `RF${this.state.rfGain}`;
         }
     }
     
@@ -1209,18 +1242,18 @@ class MRRCApp {
             });
         }
         
-        // 滤波器
-        if (this.dom.filterGrid) {
-            this.dom.filterGrid.innerHTML = CONFIG.FILTERS.map(f => 
-                `<button>${f}</button>`
+        // RF 增益档位（IC-M710，9-1）
+        if (this.dom.rfGrid) {
+            this.dom.rfGrid.innerHTML = CONFIG.RF_LEVELS.map(lv =>
+                `<button>RF${lv}</button>`
             ).join('');
-            
-            this.dom.filterGrid.querySelectorAll('button').forEach(btn => {
+
+            this.dom.rfGrid.querySelectorAll('button').forEach(btn => {
                 btn.addEventListener('click', () => {
-                    this.state.filter = btn.textContent;
-                    if (this.dom.btnFilter) {
-                        this.dom.btnFilter.textContent = this.state.filter;
-                    }
+                    this.state.rfGain = parseInt(btn.textContent.replace('RF', ''), 10);
+                    this._updateRfDisplay();
+                    this.ws.send('setRFGain', this.state.rfGain.toString());
+                    this._saveSettings();
                     this._closeMenu();
                 });
             });
@@ -1284,9 +1317,8 @@ class MRRCApp {
         if (this.dom.btnBand) {
             this.dom.btnBand.textContent = this.state.band;
         }
-        if (this.dom.btnFilter) {
-            this.dom.btnFilter.textContent = this.state.filter;
-        }
+        this._updateAgcDisplay();
+        this._updateRfDisplay();
         if (this.dom.volumeSlider) {
             this.dom.volumeSlider.value = this.state.volume;
         }
@@ -1300,7 +1332,8 @@ class MRRCApp {
         const settings = {
             volume: this.state.volume,
             mode: this.state.mode,
-            filter: this.state.filter,
+            agc: this.state.agc,
+            rfGain: this.state.rfGain,
             tuneStepIndex: this.state.tuneStepIndex
         };
         localStorage.setItem('mrrc_opt_settings', JSON.stringify(settings));
@@ -1312,6 +1345,14 @@ class MRRCApp {
             if (saved) {
                 const settings = JSON.parse(saved);
                 Object.assign(this.state, settings);
+                // 旧版本可能存了 CW/FT8 等已移除的模式，兜底回 USB
+                if (!CONFIG.MODES.includes(this.state.mode)) {
+                    this.state.mode = 'USB';
+                }
+                // RF 增益限幅到有效档位
+                if (!CONFIG.RF_LEVELS.includes(this.state.rfGain)) {
+                    this.state.rfGain = 9;
+                }
             }
         } catch (e) {
             console.warn('加载设置失败:', e);

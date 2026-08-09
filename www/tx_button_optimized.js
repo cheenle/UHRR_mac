@@ -147,7 +147,10 @@ async function TXControl(action) {
                 setTimeout(() => {
                     try {
                         if (wsAudioTX && wsAudioTX.readyState === WebSocket.OPEN && typeof ap === 'object') {
-                            const warmup = new Float32Array(160);
+                            // V5.4: warmup 必须是完整 Opus 帧（960 样本 @48kHz/20ms）。
+                            // 原 160 样本 < 一帧，encode_float 只入内部缓冲不产出包，
+                            // warmup 实际空转，且残留样本会污染第一帧真实语音。
+                            const warmup = new Float32Array(960);
                             for(let j = 0; j < warmup.length; j++) {
                                 warmup[j] = Math.sin(j * 0.2) * 0.05;
                             }

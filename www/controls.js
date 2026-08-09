@@ -356,7 +356,7 @@ function AudioRX_start(){
 				console.log('✅ RX Opus 解码器已初始化 (' + opusDecodeRate + 'Hz), AudioContext: ' + contextRate + 'Hz');
 			}
 			
-			// 解码得到 Int16 数据（24kHz）
+			// 解码得到 Int16 数据（16kHz）
 			const int16Data = AudioRX_OpusDecoder.decode(data);
 			
 			// 如果采样率匹配，直接转换
@@ -370,7 +370,7 @@ function AudioRX_start(){
 			}
 			
 			// 采样率不匹配时进行线性重采样
-			// 24kHz → 44.1kHz 或 48kHz
+			// 16kHz → 44.1kHz 或 48kHz
 			const ratio = opusDecodeRate / contextRate;
 			const outputLength = Math.floor(int16Data.length / ratio);
 			const float32Data = new Float32Array(outputLength);
@@ -404,6 +404,12 @@ function AudioRX_start(){
 		}
 		if (tag === AUDIO_TAG_PCM) {
 			return decodeInt16Audio(data.slice(1));
+		}
+		// 旧服务端无标签回退：当前服务端总是带 1 字节标签，此路径不应触发。
+		// 保留仅为兼容旧服务端；触发时告警一次以便排查
+		if (!window.__rxUntaggedWarned) {
+			window.__rxUntaggedWarned = true;
+			console.warn('⚠️ 收到无标签 RX 帧（旧服务端？），回退到大小启发式解码, 长度:', data.byteLength);
 		}
 		// 旧服务端：<500B 视为 Opus
 		if (AudioRX_opusDecode && data.byteLength < 500) {
@@ -554,9 +560,10 @@ function AudioRX_start(){
                     window.__rxTotalSamples += float32Data.length;
                     
                     // 缓冲区管理：保持在目标范围内
-                    // 最大保留约 200ms 音频（9600 样本 @ 48kHz）
-                    // 提供足够的缓冲应对网络抖动，同时保持低延迟
-                    var maxSamples = 9600;
+                    // V5.4: 按 AudioContext 实际采样率计算 200ms 上限。
+                    // 原硬编码 9600 假设 48kHz，但 RX 上下文请求 16kHz —
+                    // 若浏览器按 16kHz 运行，9600 样本实际是 600ms 缓冲
+                    var maxSamples = Math.floor(AudioRX_context.sampleRate * 0.2);
                     while (window.__rxTotalSamples > maxSamples && window.__rxAccumulatedBuffer.length > 1) {
                         var removed = window.__rxAccumulatedBuffer.shift();
                         window.__rxTotalSamples -= removed.length;
@@ -927,6 +934,8 @@ function wsControlTRXcrtol( msg ){
 	}
 	else if(action == "getFreq"){showTRXfreq(param);TRXfrequency=parseInt(param);if (typeof panfft !== 'undefined') {panfft.setcenterfrequency(param);}}
 	else if(action == "getMode"){showTRXmode(param);}
+	else if(action == "getRFGain"){if (typeof window.updateRFGainUI === 'function') window.updateRFGainUI(param);}
+	else if(action == "getAGC"){if (typeof window.updateAGCUI === 'function') window.updateAGCUI(param === "true");}
 	else if(action == "getSignalLevel"){SignalLevel=param;drawRXSmeter();}
 	else if(action == "getPTT"){updatePTTStatus(param === "true");}
 	else if(action == "pttError"){
@@ -1663,13 +1672,21 @@ var OpusEncoderProcessor = function( wsh )
 
 OpusEncoderProcessor.prototype.onAudioProcess = function( e )
 {
+	// ScriptProcessor 回退路径入口；核心逻辑在 pushSamples（与 AudioWorklet 共用）
+	this.pushSamples(e.inputBuffer.getChannelData(0));
+}
+
+// V5.4: TX 采集核心 — 从 AudioWorklet（首选）或 ScriptProcessor（回退）接收
+// AudioContext 原生采样率的单声道 Float32Array，做噪声门/重采样/Opus 编码发送。
+OpusEncoderProcessor.prototype.pushSamples = function( data )
+{
 	this.instant = 0.0;
 	const that = this;
 
 	// ====== Noise Gate (RagChew 模式) ======
 	// 在音频链末端，基于信号电平控制噪声门增益
 	if (isRagchewMode && AudioTX_noiseGate) {
-		var gateData = e.inputBuffer.getChannelData(0);
+		var gateData = data;
 		var rms = 0;
 		for (var g = 0; g < gateData.length; g++) {
 			rms += gateData[g] * gateData[g];
@@ -1700,7 +1717,6 @@ OpusEncoderProcessor.prototype.onAudioProcess = function( e )
 
 	    if( isRecording )
     {
-	var data = e.inputBuffer.getChannelData( 0 )
 
 	// ========== 48kHz 全带宽（对齐 ft710）==========
 	// 若 AudioContext 采样率非 48k（如 44.1k），线性重采样到 48k 再编码
@@ -1886,11 +1902,14 @@ MediaHandler.prototype.callback = function( stream )
             });
         }
 
+        // V5.4: 保存 MediaStream 引用，AudioTX_stop 时释放麦克风硬件
+        this.stream = stream;
+
         AudioTX_analyser = this.context.createAnalyser();
         this.gain_node = this.context.createGain();
         this.micSource = this.context.createMediaStreamSource( stream );
-        this.processor = this.context.createScriptProcessor( this.audioProcessor.bufferSize, 1, 1 );
-        this.processor.onaudioprocess = this.audioProcessor.onAudioProcess.bind( this.audioProcessor );
+        // V5.4: 采集节点（AudioWorklet 优先 / ScriptProcessor 回退）在音频链
+        // 搭建完成后异步接入，见下方 connectTxProcessor
 
         // 初始化 TX EQ
         initTX_EQ(this.context);
@@ -1908,18 +1927,45 @@ MediaHandler.prototype.callback = function( stream )
         AudioTX_presence.connect(AudioTX_compressor);
         AudioTX_compressor.connect(AudioTX_noiseGate);
         AudioTX_noiseGate.connect(this.gain_node);
-        this.gain_node.connect( this.processor );
 
-        // 关键：ScriptProcessorNode 需要连接到输出才能触发 onaudioprocess
+        // 关键：采集节点（AudioWorklet/ScriptProcessor）需要连接到输出才会被音频图拉动
         // 但直接连接 destination 会导致回声自激
         // 解决方案：连接到静音节点（gain=0），再连接到 destination
         // 这样处理器能工作，但不会有声音输出到扬声器
         this.muteNode = this.context.createGain();
         this.muteNode.gain.value = 0;  // 静音
-        this.processor.connect(this.muteNode);
         this.muteNode.connect(this.context.destination);
 
         this.gain_node.connect( AudioTX_analyser );
+
+        // V5.4: 优先 AudioWorklet（渲染线程采集，主线程零回调开销，
+        // PTT 期间不再阻塞 ATR-1000 消息/UI）；iOS Safari / 旧浏览器 /
+        // 模块加载失败时回退 ScriptProcessorNode
+        var self = this;
+        var isIOSSafariTX = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+        var useTxWorklet = !isIOSSafariTX && !!this.context.audioWorklet && (typeof AudioWorkletNode !== 'undefined');
+        var connectTxProcessor = function(proc) {
+            self.processor = proc;
+            self.gain_node.connect(proc);
+            proc.connect(self.muteNode);
+        };
+        if (useTxWorklet) {
+            this.context.audioWorklet.addModule('tx_worklet_processor.js').then(function() {
+                var node = new AudioWorkletNode(self.context, 'tx-capture');
+                node.port.onmessage = function(ev) {
+                    if (ev.data && ev.data.type === 'audioFrame' && self.audioProcessor) {
+                        self.audioProcessor.pushSamples(ev.data.frame);
+                    }
+                };
+                connectTxProcessor(node);
+                console.log('✅ TX AudioWorklet 采集已启用');
+            }).catch(function(err) {
+                console.warn('⚠️ TX AudioWorklet 加载失败，回退 ScriptProcessor:', err);
+                self._setupScriptProcessor(connectTxProcessor);
+            });
+        } else {
+            this._setupScriptProcessor(connectTxProcessor);
+        }
     } catch (e) {
         console.error('❌ TX 音频链初始化失败:', e);
         this.error(e);
@@ -1958,6 +2004,15 @@ MediaHandler.prototype.callback = function( stream )
 
     console.log( '✅ MediaHandler.callback: 麦克风设置完成 (含TX EQ)' );
 }
+
+
+// V5.4: ScriptProcessor 回退路径（iOS Safari / AudioWorklet 不可用时）
+MediaHandler.prototype._setupScriptProcessor = function( connectTxProcessor ) {
+    var proc = this.context.createScriptProcessor( this.audioProcessor.bufferSize, 1, 1 );
+    proc.onaudioprocess = this.audioProcessor.onAudioProcess.bind( this.audioProcessor );
+    connectTxProcessor(proc);
+    console.log('✅ TX ScriptProcessor 采集已启用（回退模式）');
+};
 
 
 MediaHandler.prototype.error = function( err ) {
@@ -2073,7 +2128,20 @@ function AudioTX_stop()
 {
 isRecording = false;
 encode = false;
-wsAudioTX.close();
+try { if (wsAudioTX && wsAudioTX.readyState !== WebSocket.CLOSED) wsAudioTX.close(); } catch(e) {}
+// V5.4: 释放麦克风硬件与音频图 — 原实现只关 WebSocket、清空引用，
+// 浏览器麦克风指示灯会一直亮，且每次开关机泄漏一个 AudioContext。
+// 注意：兼容 mobile_high.js 的 HQ_MediaHandler（字段可能缺失，逐一防御）
+try {
+    if (mh) {
+        if (mh.stream && mh.stream.getTracks) {
+            mh.stream.getTracks().forEach(function(t){ try { t.stop(); } catch(e){} });
+        }
+        if (mh.processor && mh.processor.disconnect) { try { mh.processor.disconnect(); } catch(e){} }
+        if (mh.micSource && mh.micSource.disconnect) { try { mh.micSource.disconnect(); } catch(e){} }
+        if (mh.context && mh.context.state !== 'closed') { mh.context.close().catch(function(){}); }
+    }
+} catch(e) { console.warn('AudioTX_stop 清理异常:', e); }
 ap = "";
 mh = "";
 }
@@ -2132,6 +2200,35 @@ function stopRecord()
 	if (encodeBtn) encodeBtn.disabled = false;
     console.log( 'ended recording' ); 
 
+    // V5.4: flush 编码器尾部不完整帧 — 原实现直接丢弃 frameAccumulator 残余
+    // 和编码器内部缓冲，每次 PTT 结束最多丢失 20ms 语音（断字）。
+    // 残余样本送入编码器 → encode_float_final 零填充补齐 → 带标签发出，
+    // 必须在 "s:" 停止标记之前发送。
+    if (encode && ap && ap.opusEncoder) {
+        try {
+            var tailPackets = [];
+            if (ap.frameAccumulator && ap.frameAccumulator.length > 0) {
+                var encRes = ap.opusEncoder.encode_float(ap.frameAccumulator);
+                if (encRes && encRes.length) tailPackets = encRes;
+                ap.frameAccumulator = new Float32Array(0);
+            }
+            var finalPacket = ap.opusEncoder.encode_float_final();
+            if (finalPacket && finalPacket.byteLength > 0) {
+                tailPackets.push(finalPacket);
+            }
+            if (wsAudioTX && wsAudioTX.readyState === WebSocket.OPEN) {
+                for (var ti = 0; ti < tailPackets.length; ti++) {
+                    var tagTail = new Uint8Array(tailPackets[ti].byteLength + 1);
+                    tagTail[0] = 0x01; // AUDIO_TAG_OPUS
+                    tagTail.set(new Uint8Array(tailPackets[ti]), 1);
+                    wsAudioTX.send(tagTail.buffer);
+                }
+            }
+        } catch(e) {
+            console.warn('TX 尾帧 flush 失败（忽略）:', e);
+        }
+    }
+
     // 立即停止音频播放，不播放录制的音频
     var msg = "s:";
     console.log( msg );
@@ -2144,7 +2241,7 @@ function stopRecord()
 }
 
 function AudioTX_SetGAIN( vol ){
-	if(poweron)mh.gain_node.gain.setValueAtTime(vol, mh.context.currentTime);
+	if(poweron && mh && mh.gain_node)mh.gain_node.gain.setValueAtTime(vol, mh.context.currentTime);
 }
 
 function toggleRecord(sendit = false)

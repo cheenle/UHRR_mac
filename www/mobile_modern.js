@@ -32,8 +32,73 @@ function sendCommand(action, data) {
 }
 
 ////////////////////////////////////////////////////////////
-// Wake Lock - 防止屏幕休眠
+// IC-M710 AGC / RF 增益控制（V5.7，取代原 CW/FT8 快捷入口）
+// 链路: 按钮 → sendCommand('setAGC'/'setRFGain') → /WSCTRX
+//       → rigctld L AGC / L RF → icm710 NMEA AGC ON/OFF、RFG 0-9
+// 多端同步: controls.js 收到 getRFGain/getAGC 广播后调用下方钩子
 ////////////////////////////////////////////////////////////
+const RigAgcRf = {
+    agc: true,       // 电台 AGC 默认开
+    rfGain: 9,       // RF 增益默认 9（最大灵敏度）
+    RF_LEVELS: [9, 8, 7, 6, 5, 4, 3, 2, 1],
+
+    init() {
+        const agcBtn = document.getElementById('agc-btn');
+        const rfBtn = document.getElementById('rf-btn');
+        if (agcBtn) agcBtn.addEventListener('click', () => this.toggleAgc());
+        if (rfBtn) rfBtn.addEventListener('click', () => this.cycleRf());
+        this.updateUI();
+        // WS 连接后同步服务端缓存的真实状态（参照 memLoadAll 的轮询等 OPEN 模式）
+        const check = setInterval(() => {
+            if (typeof wsControlTRX !== 'undefined' && wsControlTRX && wsControlTRX.readyState === WebSocket.OPEN) {
+                clearInterval(check);
+                wsControlTRX.send('getRFGain');
+                wsControlTRX.send('getAGC');
+            }
+        }, 500);
+        setTimeout(() => clearInterval(check), 30000);
+    },
+
+    toggleAgc() {
+        this.agc = !this.agc;
+        this.updateUI();
+        sendCommand('setAGC', this.agc ? 'on' : 'off');
+    },
+
+    // RF 档位 9→1→9 循环
+    cycleRf() {
+        const idx = this.RF_LEVELS.indexOf(this.rfGain);
+        this.rfGain = this.RF_LEVELS[(idx + 1) % this.RF_LEVELS.length];
+        this.updateUI();
+        sendCommand('setRFGain', String(this.rfGain));
+    },
+
+    updateUI() {
+        const agcBtn = document.getElementById('agc-btn');
+        const rfBtn = document.getElementById('rf-btn');
+        if (agcBtn) agcBtn.classList.toggle('active', this.agc);
+        if (rfBtn) rfBtn.textContent = 'RF' + this.rfGain;
+    }
+};
+
+// 广播同步钩子（controls.js wsControlTRXcrtol 调用）
+window.updateRFGainUI = function(level) {
+    const lv = parseInt(level, 10);
+    if (RigAgcRf.RF_LEVELS.includes(lv)) {
+        RigAgcRf.rfGain = lv;
+        RigAgcRf.updateUI();
+    }
+};
+window.updateAGCUI = function(on) {
+    RigAgcRf.agc = !!on;
+    RigAgcRf.updateUI();
+};
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => RigAgcRf.init());
+} else {
+    RigAgcRf.init();
+}
 let wakeLock = null;
 let wakeLockSupported = null; // null = 未检测, true = 支持, false = 不支持
 
@@ -3326,6 +3391,8 @@ const ATR1000 = {
                 if (this._msgCount % 100 === 0) {
                     console.log(`📊 ATR-1000 #${this._msgCount}: power=${msg.power}W`);
                 }
+            } else if (['ack', 'quick_tune_result', 'tune_records', 'best_in_band', 'delete_result'].indexOf(msg.type) >= 0) {
+                // V5.6.3: 命令响应类消息（set_freq ack 等），本页面无消费方，不再刷"未知类型"日志
             } else {
                 console.log('📊 ATR-1000 收到未知消息类型:', msg.type, msg);
             }
@@ -3343,24 +3410,25 @@ const ATR1000 = {
         
         // V4.5.10: 更新数据时间和设备状态
         this._lastDataTime = Date.now();
-        if (!this._deviceOnline) {
+        // V5.6.3: 优先使用代理上报的设备连接状态 — msg.connected 反映
+        // 代理↔设备链路。原实现只要 MRRC↔代理链路活着（哪怕设备已断电、
+        // 纯缓存应答），状态点也永远显示在线
+        if (msg.connected === false) {
+            if (this._deviceOnline) {
+                this._deviceOnline = false;
+                this._updateDeviceStatus(false);
+            }
+        } else if (!this._deviceOnline) {
             this._deviceOnline = true;
             this._updateDeviceStatus(true);
         }
-        
+
         // V4.5.22: 直接显示原始数据，不平滑（减少滞后）
+        // V5.6.3: 移除 if/else 两分支完全相同的死代码（原"抖动过滤"空壳）
         const rawPower = msg.power || 0;
         const rawSWR = msg.swr || 1.0;
-        
-        // 只在数据变化较大时更新，减少抖动但保持响应速度
-        if (Math.abs(rawPower - this.lastPower) > 1 || Math.abs(rawSWR - this.lastSWR) > 0.1) {
-            this.lastPower = Math.round(rawPower);
-            this.lastSWR = Math.round(rawSWR * 100) / 100;
-        } else {
-            // 小变化时直接显示
-            this.lastPower = Math.round(rawPower);
-            this.lastSWR = Math.round(rawSWR * 100) / 100;
-        }
+        this.lastPower = Math.round(rawPower);
+        this.lastSWR = Math.round(rawSWR * 100) / 100;
         
         // 更新继电器状态
         if (msg.sw !== undefined) {
@@ -4063,9 +4131,10 @@ const ATR1000 = {
         // V4.5.23: 保护期 100ms，仅用于排空管道残留数据
         this._ignoreDataUntil = Date.now() + 100;
         
-        // 清零内部状态
+        // 清零内部状态（V5.6.3: lastSWR 与 DOM 显示保持一致，
+        // 原写 0 会导致清零后 100ms 内若来消息，SWR 短暂显示 0.00）
         this.lastPower = 0;
-        this.lastSWR = 0;
+        this.lastSWR = 1.0;
         this._smoothPower = 0;  // V4.5.10: 重置平滑值
         this._smoothSWR = 1.0;  // V4.5.10: 重置平滑值
         
