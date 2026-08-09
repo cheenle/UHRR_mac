@@ -44,6 +44,14 @@ try:
 except RuntimeError:
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
+
+# 主 IOLoop 引用 — 必须在主线程固定。
+# tornado 6.5 中 IOLoop.instance() 是 IOLoop.current() 的别名（线程相关！）：
+# 后台线程（ATR-1000 重连 Timer、rigctld executor、PTTSafetyMonitor）调用它时，
+# Python 3.11 会为各线程创建并捕获独立的 asyncio 事件循环，add_callback 排队的
+# 回调（ATR 电表广播、PTT 状态广播）永不执行 → 前端 ATR 面板只收到初始快照后
+# 数据超时/设备离线。所有后台线程必须使用这个主线程固定的引用。
+MAIN_IOLOOP = tornado.ioloop.IOLoop.instance()
 # Use cross-platform Hamlib wrapper instead of direct import
 try:
     from hamlib_wrapper import HamlibWrapper
@@ -1600,13 +1608,12 @@ class ATR1000ProxyManager:
                 self._need_reconnect = False
             self._reconnect_delay = 0.5  # 重置重连延迟
 
-            # 保存主事件循环引用 — 必须用进程级单例 IOLoop.instance()，
-            # 与 MRRC 主循环（tornado.ioloop.IOLoop.instance().start()）一致。
-            # 若用 IOLoop.current()，当首次连接失败、经重连 Timer 后台线程
-            # 成功重连时，会捕获后台线程的 IOLoop，add_callback 排队的广播
-            # 永远不会执行 → 前端 ATR 面板只收到初始快照后"数据超时/设备离线"。
-            from tornado.ioloop import IOLoop
-            self.main_ioloop = IOLoop.instance()
+            # 保存主事件循环引用 — 必须用主线程固定的 MAIN_IOLOOP。
+            # tornado 6.5 中 IOLoop.instance()==current() 是线程相关的：若 _connect 经
+            # 重连 Timer 后台线程执行，IOLoop.instance() 会创建并捕获后台线程自己的
+            # asyncio 事件循环，add_callback 排队的电表广播永不执行（前端 ATR 面板
+            # 只收到初始快照后数据超时/设备离线）。
+            self.main_ioloop = MAIN_IOLOOP
 
             # 连接成功后立即发送 get_data，触发代理返回缓存的功率/SWR 数据
             # 代理是请求-响应模式，不主动推送数据，必须主动请求
@@ -2691,7 +2698,7 @@ class TRXRIG:
 						except Exception:
 							pass
 				try:
-					tornado.ioloop.IOLoop.instance().add_callback(_broadcast_ptt_alarm)
+					MAIN_IOLOOP.add_callback(_broadcast_ptt_alarm)
 				except Exception as e:
 					logger.error(f"Error scheduling PTT alarm broadcast: {e}")
 		else:
@@ -2725,7 +2732,7 @@ class TRXRIG:
 					if client in ControlTRXHandlerClients:
 						ControlTRXHandlerClients.remove(client)
 			try:
-				tornado.ioloop.IOLoop.instance().add_callback(_broadcast_ptt)
+				MAIN_IOLOOP.add_callback(_broadcast_ptt)
 			except Exception as e:
 				logger.error(f"Error scheduling PTT broadcast: {e}")
 
@@ -2891,7 +2898,7 @@ class PTTSafetyMonitor(threading.Thread):
 								except Exception:
 									pass
 						try:
-							tornado.ioloop.IOLoop.instance().add_callback(_broadcast_tot)
+							MAIN_IOLOOP.add_callback(_broadcast_tot)
 						except Exception:
 							pass
 

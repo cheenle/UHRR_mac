@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [V5.8.2] - 2026-08-09
+
+### 🔧 ATR-1000 功率/SWR 前端不显示修复（IOLoop 线程错位）
+
+- **根因**：tornado 6.5 中 `IOLoop.instance()` 是 `IOLoop.current()` 的别名，**线程相关**。
+  ATR-1000 代理连接管理器在重连 Timer 后台线程执行 `_connect()` 时调用 `IOLoop.instance()`，
+  Python 3.11 会为后台线程创建并捕获**独立的 asyncio 事件循环**（主线程另有自己的 loop）——
+  `add_callback` 排队的电表广播回调被投递到后台线程的 loop，主线程永远不运行它 →
+  前端 ATR 面板只收到 open() 的初始快照后无任何实时数据（功率/SWR 不显示、设备状态卡死）。
+  典型触发：MRRC 启动时 ATR-1000 代理尚未就绪（如 mrrc_control.sh 先启 MRRC 再启代理，
+  或代理崩溃后 MRRC 自动重连）——只要 `_connect` 经后台 Timer 线程成功，广播即永久失效。
+- **修复**：模块顶部在主线程固定全局 `MAIN_IOLOOP = IOLoop.instance()`（与主循环 start() 同一对象），
+  `ATR1000ProxyManager.main_ioloop` 及所有后台线程的 `add_callback` 一律改用 `MAIN_IOLOOP`：
+  - `ATR1000ProxyManager._connect`（重连 Timer 线程）
+  - `TRXRIG.setPTT` 内 `_broadcast_ptt` / `_broadcast_ptt_alarm`（rigctld executor 线程）
+  - `PTTSafetyMonitor` 内 `_broadcast_tot`（独立监管线程）
+- **验证**：复现原始故障场景（先启 MRRC、代理后启动）——修复前 WSATR1000 只收到 1 条初始快照、
+  sync 全部无响应；修复后 5/5 广播正常，`start` 后功率/SWR 持续实时推送
+
+---
+
 ## [V5.8.1] - 2026-08-09
 
 ### ⚡ RX 时延分析与提升（LAN）
