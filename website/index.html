@@ -52,7 +52,7 @@
     <div class="hero-content">
         <div class="hero-badge">
             <i class="fas fa-satellite-dish"></i>
-            <span>V5.7.0 · Production Ready</span>
+            <span>V5.7.1 · Production Ready</span>
         </div>
         <h1 class="hero-title">
             Amateur Radio<br>
@@ -60,8 +60,9 @@
         </h1>
         <p class="hero-subtitle">
             MRRC is the universal HF route in the VLSC remote radio ecosystem. Control your HF radio from phone, tablet, or computer.
-            V5.7 high-fidelity audio: 48kHz full-band TX (64kbps CBR) + clean-RX Opus (arm64-fixed bitrate), WDSP 48kHz NR2 with
-            musical-noise AE tuning, tagged codec frames, and fidelity-first TX (0dB preamp, transparent compressor).
+            V5.7.1 audio: TX capture on an AudioWorklet (960-sample/20 ms frames, 48kHz Opus CBR), clean-RX 20 ms aligned
+            playback with watermark buffering, WDSP 48kHz NR2 with musical-noise AE tuning, and fidelity-first TX
+            (0dB preamp, transparent compressor).
         </p>
         <div class="hero-actions">
             <a href="/#selector" class="btn btn-secondary btn-large">
@@ -79,7 +80,7 @@
             <div class="stat-item"><span class="stat-value">99%+</span><span class="stat-label">PTT Reliability</span></div>
             <div class="stat-item"><span class="stat-value">48kHz</span><span class="stat-label">TX Full-Band</span></div>
             <div class="stat-item"><span class="stat-value">64kbps</span><span class="stat-label">TX Opus CBR</span></div>
-            <div class="stat-item"><span class="stat-value">V5.7.0</span><span class="stat-label">280+ Commits</span></div>
+            <div class="stat-item"><span class="stat-value">V5.7.1</span><span class="stat-label">290+ Commits</span></div>
         </div>
     </div>
 </section>
@@ -88,37 +89,37 @@
     <div class="container">
         <div class="section-header">
             <span class="section-label">What's New</span>
-            <h2 class="section-title">V5.7.0 · High-Fidelity Audio</h2>
+            <h2 class="section-title">V5.7.1 · RX/TX Audio Overhaul</h2>
         </div>
         <div class="features-grid">
             <div class="feature-card animate">
                 <div class="icon"><i class="fas fa-microphone-alt"></i></div>
-                <h3>TX 48kHz Full-Band</h3>
-                <p>TX upgraded 16k → 48kHz full-bandwidth with 64kbps CBR Opus. Removed 3:1 downsample, 44.1k mic auto-resample, tagged frames, and a soft-knee server limiter replacing hard clip.</p>
+                <h3>TX AudioWorklet Capture</h3>
+                <p>TX capture moved to a dedicated AudioWorklet (960 samples/20 ms frames → 48kHz Opus CBR). PTT tail-loss fixed by flushing encoder partial frames; warmup frames aligned; mic tracks properly released.</p>
                 <ul>
+                    <li>tx-capture worklet · ScriptProcessor fallback (iOS)</li>
+                    <li>PTT tail / warmup / mic-leak fixes</li>
                     <li>48kHz encode · 64kbps CBR</li>
-                    <li>Fidelity-first: 0dB preamp, transparent compressor</li>
-                    <li>Fixed frame_size overallocation bug</li>
                 </ul>
             </div>
             <div class="feature-card animate">
                 <div class="icon"><i class="fas fa-headphones-alt"></i></div>
                 <h3>Clean-RX Audio</h3>
-                <p>Opus bitrate control fixed on Apple Silicon (max_data_bytes cap), AUDIO-mode codec, 20ms frames, tagged decode, and a time-watermark jitter buffer replacing frame-count buffering.</p>
+                <p>RX capture aligned to 20 ms at 48kHz (320 → 960 samples/read, 1/3 the per-frame pipeline overhead), 48kHz→16kHz decimation fixed in the TX recording path, and playback frame size aligned to 20 ms.</p>
                 <ul>
-                    <li>arm64-safe bitrate control · 32kbps</li>
+                    <li>20 ms aligned capture · time-watermark buffer</li>
+                    <li>No Opus double-decode on TX record/analyze</li>
                     <li>WDSP @48kHz + NR2 AE tuning</li>
-                    <li>Soft-knee limiting (knee 0.97)</li>
                 </ul>
             </div>
             <div class="feature-card animate">
-                <div class="icon"><i class="fas fa-rocket"></i></div>
-                <h3>Release Infrastructure</h3>
-                <p>Client script cache-busting (version params + no-cache headers), repo cleanup (nested git repos, private keys removed), restart.sh, and docs to V5.7.0.</p>
+                <div class="icon"><i class="fas fa-tachometer-alt"></i></div>
+                <h3>ATR-1000 + AGC/RF Gain</h3>
+                <p>Ghost power/SWR readings after TX eliminated (proxy stop zeroes cache; MRRC fast-polls off PTT state, thread-safe IOLoop broadcasts). New IC-M710 AGC + RF gain (9-1) controls in the quick row.</p>
                 <ul>
-                    <li>?v= cache bust · no-store JS/CSS</li>
-                    <li>Private keys &amp; nested repos removed</li>
-                    <li>CHANGELOG / README / website synced</li>
+                    <li>No ghost power after TX · PTT-driven polling</li>
+                    <li>setAGC / setRFGain via /WSCTRX</li>
+                    <li>FT8/CW features removed (V5.7.1)</li>
                 </ul>
             </div>
         </div>
@@ -195,17 +196,6 @@
             </div>
 
             <div class="feature-card animate">
-                <div class="icon"><i class="fas fa-wave-square"></i></div>
-                <h3>CW + FT8 Digital Modes</h3>
-                <p>Browser-first AI CW decode (&lt;2MB ONNX, &lt;50ms). FT8 ULTRON Console: JTDX/WSJT-X/MSHV integration with live waterfall, auto-sequencer, DXCC tracking.</p>
-                <ul>
-                    <li>ONNX AI CW decode · QSO state machine</li>
-                    <li>FT8 ULTRON: JTDX/WSJT-X/MSHV bridge</li>
-                    <li>Auto-sequencer · DXCC tracking</li>
-                </ul>
-            </div>
-
-            <div class="feature-card animate">
                 <div class="icon"><i class="fas fa-shield-alt"></i></div>
                 <h3>3-Layer PTT Safety</h3>
                 <p>Release ACK protocol with 3× retry + redundant audio-path fallback, 120s TOT hard limit, touch-move auto-release, visibility-change forced stop — prevents stuck transmissions.</p>
@@ -235,7 +225,7 @@
         <div class="section-header">
             <span class="section-label">Live Demo</span>
             <h2 class="section-title">Experience It Yourself</h2>
-            <p class="section-subtitle">All demos connect to a live FT-710 station. Try each interface — mobile, voice, CW, SDR, FT8, recordings.</p>
+            <p class="section-subtitle">All demos connect to a live FT-710 station. Try each interface — mobile, voice, SDR, recordings.</p>
         </div>
 
         <div class="perf-grid">
@@ -246,14 +236,6 @@
             <a href="https://radio.vlsc.net:8877/mobile_voice_text.html" target="_blank" class="perf-card" style="text-decoration:none;">
                 <div class="metric"><i class="fas fa-microphone"></i></div>
                 <div class="metric-label">Voice Assistant<br><small>AI speech recognition & synthesis</small></div>
-            </a>
-            <a href="https://radio.vlsc.net:8877/cw_live.html" target="_blank" class="perf-card" style="text-decoration:none;">
-                <div class="metric"><i class="fas fa-wave-square"></i></div>
-                <div class="metric-label">CW Decode<br><small>Real-time Morse code AI</small></div>
-            </a>
-            <a href="https://radio.vlsc.net:8877/ft8_ultron.html" target="_blank" class="perf-card" style="text-decoration:none;">
-                <div class="metric"><i class="fas fa-broadcast-tower"></i></div>
-                <div class="metric-label">FT8 Console<br><small>ULTRON automation tool</small></div>
             </a>
             <a href="https://radio.vlsc.net:8877/sdr_modern.html" target="_blank" class="perf-card" style="text-decoration:none;">
                 <div class="metric"><i class="fas fa-signal"></i></div>
@@ -313,7 +295,7 @@
                 <p>
                     Mobile Remote Radio Control<br>
                     Amateur Radio, Anytime, Anywhere<br>
-                    V5.7.0 · GPLv3 License
+                    V5.7.1 · GPLv3 License
                 </p>
             </div>
             <div class="footer-section">

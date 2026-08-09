@@ -1,6 +1,6 @@
-# Mobile Remote Radio Control (MRRC) V5.5
+# Mobile Remote Radio Control (MRRC) V5.7
 
-[![English](https://img.shields.io/badge/lang-English-blue.svg)](README_en.md) [![中文](https://img.shields.io/badge/lang-中文-red.svg)](README_CN.md) [![Version](https://img.shields.io/badge/version-V5.5-green.svg)](CHANGELOG.md)
+[![English](https://img.shields.io/badge/lang-English-blue.svg)](README_en.md) [![中文](https://img.shields.io/badge/lang-中文-red.svg)](README_CN.md) [![Version](https://img.shields.io/badge/version-V5.7-green.svg)](CHANGELOG.md)
 
 **Amateur Radio, Anytime, Anywhere.**
 
@@ -8,8 +8,11 @@ MRRC is a modern web-based remote control system optimized for mobile devices, e
 
 > ✅ **Core Advantage**: Mobile-first design, TX→RX switching latency <100ms, PWA support for offline access, optimized for one-hand operation
 >
-> 🎉 **V5.4 Highlights**:
-> - 🔧 **FT8 Integration Fix**: Python-JS method alignment, WebSocket bridge stabilization, FT8 Ultron frontend optimization
+> 🎉 **V5.7 Highlights**:
+> - 🎙️ **RX/TX audio overhaul**: 48kHz Opus TX with AudioWorklet capture, watermark-buffered RX, soft-knee limiting, WDSP 48k + NR2 AE tuning
+> - 🎛️ **IC-M710 AGC/RF-gain controls**: quick-row AGC toggle + RF gain (9-1 steps) via CAT
+> - 📡 **ATR-1000 meter fixes**: no more ghost power readings after TX, thread-safe broadcasts
+> - 🗑️ **FT8/CW features removed** (V5.7.1)
 >
 > > Previous: V5.3 Network Monitor & UI Polish | V5.2.0 WDSP Hash Cache Opt | V5.0.0 Mobile UI Modernization
 
@@ -113,7 +116,7 @@ MRRC is a modern web-based remote control system optimized for mobile devices, e
 - **Antenna Tuner Support**: Long-press TUNE button to transmit 1kHz tone
 
 ### Audio System
-- **Bidirectional Audio**: TX with Int16 encoding, RX with low-jitter AudioWorklet playback, 16kHz sample rate
+- **Bidirectional Audio**: TX 48kHz Opus (AudioWorklet capture), RX 16kHz low-jitter AudioWorklet playback
 - **Real-time S-Meter**: Accurate S0-S9+60dB signal strength display
 - **Audio Filters**: Multiple filter configurations available
 - **TX Equalizer**: 3-band EQ for TX audio, supports SSB voice/weak signal/contest modes
@@ -314,7 +317,7 @@ Based on [F4HTB/Universal_HamRadio_Remote_HTML5](https://github.com/F4HTB/Univer
 
 ---
 
-**Latest Version: V5.4** (2026-06-06) | [View Changelog](CHANGELOG.md)
+**Latest Version: V5.7.1** (2026-08-09) | [View Changelog](CHANGELOG.md)
 
 **MRRC - Mobile Remote Radio Control**  
 *Amateur Radio, Anytime, Anywhere.*

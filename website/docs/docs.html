@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Technical Documentation - MRRC Mobile Remote Radio Control</title>
-    <meta name="description" content="MRRC complete technical documentation: system architecture, DSP processing, CW decoding, ATR-1000 integration">
+    <meta name="description" content="MRRC complete technical documentation: system architecture, DSP processing, audio pipeline, ATR-1000 integration">
     <link rel="stylesheet" href="../css/style.css">
     <link rel="stylesheet" href="../css/octen.css?v=2">
     <link rel="stylesheet" href="../css/sunsdrmobile.css?v=1">
@@ -74,7 +74,7 @@
 
   <!-- Title banner -->
   <rect x="20" y="8" width="1040" height="36" rx="6" fill="#0d1117" stroke="#22d3ee" stroke-width="1.5"/>
-  <text x="540" y="32" text-anchor="middle" fill="#22d3ee" font-family="Inter, -apple-system, sans-serif" font-size="16" font-weight="700">MRRC System Architecture V5.6.5</text>
+  <text x="540" y="32" text-anchor="middle" fill="#22d3ee" font-family="Inter, -apple-system, sans-serif" font-size="16" font-weight="700">MRRC System Architecture V5.7.1</text>
 
   <!-- ==== CLIENT LAYER ==== -->
   <rect x="20" y="52" width="1040" height="162" rx="6" fill="none" stroke="#22d3ee" stroke-width="1.2" stroke-dasharray="6,3"/>
@@ -92,17 +92,6 @@
   <text x="266" y="112" text-anchor="middle" fill="#22d3ee" font-family="Inter, -apple-system, sans-serif" font-size="12" font-weight="700">Desktop UI</text>
   <text x="266" y="132" text-anchor="middle" fill="#8899aa" font-family="JetBrains Mono, monospace" font-size="9">modern.html</text>
 
-  <!-- CW Decode -->
-  <rect x="352" y="88" width="140" height="64" rx="6" fill="#0d1117" stroke="#22d3ee" stroke-width="1.5"/>
-  <text x="422" y="112" text-anchor="middle" fill="#22d3ee" font-family="Inter, -apple-system, sans-serif" font-size="12" font-weight="700">CW Decode</text>
-  <text x="422" y="132" text-anchor="middle" fill="#8899aa" font-family="JetBrains Mono, monospace" font-size="9">cw_live.html</text>
-  <text x="422" y="144" text-anchor="middle" fill="#8899aa" font-family="JetBrains Mono, monospace" font-size="8">(ONNX Runtime)</text>
-
-  <!-- FT8 Ultron -->
-  <rect x="508" y="88" width="140" height="64" rx="6" fill="#0d1117" stroke="#22d3ee" stroke-width="1.5"/>
-  <text x="578" y="112" text-anchor="middle" fill="#22d3ee" font-family="Inter, -apple-system, sans-serif" font-size="12" font-weight="700">FT8 Ultron</text>
-  <text x="578" y="132" text-anchor="middle" fill="#8899aa" font-family="JetBrains Mono, monospace" font-size="9">ft8_ultron.html</text>
-
   <!-- Voice Asst -->
   <rect x="664" y="88" width="140" height="64" rx="6" fill="#0d1117" stroke="#22d3ee" stroke-width="1.5"/>
   <text x="734" y="112" text-anchor="middle" fill="#22d3ee" font-family="Inter, -apple-system, sans-serif" font-size="12" font-weight="700">Voice Asst</text>
@@ -117,8 +106,6 @@
   <line x1="110" y1="154" x2="890" y2="154" stroke="#22d3ee" stroke-width="0.8"/>
   <line x1="110" y1="154" x2="110" y2="160" stroke="#22d3ee" stroke-width="0.8"/>
   <line x1="266" y1="154" x2="266" y2="160" stroke="#22d3ee" stroke-width="0.8"/>
-  <line x1="422" y1="154" x2="422" y2="160" stroke="#22d3ee" stroke-width="0.8"/>
-  <line x1="578" y1="154" x2="578" y2="160" stroke="#22d3ee" stroke-width="0.8"/>
   <line x1="734" y1="154" x2="734" y2="160" stroke="#22d3ee" stroke-width="0.8"/>
   <line x1="890" y1="154" x2="890" y2="160" stroke="#22d3ee" stroke-width="0.8"/>
   <line x1="110" y1="160" x2="890" y2="160" stroke="#22d3ee" stroke-width="0.8"/>
@@ -150,12 +137,6 @@
   <text x="60" y="386" fill="#ffffff" font-family="JetBrains Mono, monospace" font-size="11">/WSATR1000</text>
   <text x="190" y="386" fill="#8899aa" font-family="Inter, -apple-system, sans-serif" font-size="10">Tuner power/SWR real-time, learning buffer</text>
 
-  <text x="60" y="408" fill="#ffffff" font-family="JetBrains Mono, monospace" font-size="11">/WSFT8</text>
-  <text x="190" y="408" fill="#8899aa" font-family="Inter, -apple-system, sans-serif" font-size="10">FT8 WebSocket bridge (UDP 2238)</text>
-
-  <text x="60" y="430" fill="#ffffff" font-family="JetBrains Mono, monospace" font-size="11">/WSCW</text>
-  <text x="190" y="430" fill="#8899aa" font-family="Inter, -apple-system, sans-serif" font-size="10">CW backend decode (PyTorch, optional)</text>
-
   <!-- Branch arrows from MRRC Main -->
   <line x1="400" y1="455" x2="400" y2="475" stroke="#22d3ee" stroke-width="1.2" marker-end="url(#aC)"/>
   <line x1="680" y1="455" x2="680" y2="475" stroke="#22d3ee" stroke-width="1.2" marker-end="url(#aC)"/>
@@ -182,19 +163,12 @@
   <text x="680" y="577" text-anchor="middle" fill="#ffffff" font-family="Inter, -apple-system, sans-serif" font-size="12" font-weight="700">ATR-1000 Tuner</text>
   <text x="680" y="593" text-anchor="middle" fill="#ffffff" font-family="Inter, -apple-system, sans-serif" font-size="10">Power / SWR Meter</text>
 
-  <!-- FT8/ULTRON Remote Console box -->
-  <rect x="40" y="620" width="1000" height="88" rx="6" fill="#0d1117" stroke="#22d3ee" stroke-width="1.5"/>
-  <text x="540" y="642" text-anchor="middle" fill="#22d3ee" font-family="Inter, -apple-system, sans-serif" font-size="13" font-weight="700">FT8 / ULTRON Remote Console (V5.6+)</text>
-  <line x1="40" y1="652" x2="1040" y2="652" stroke="#22d3ee" stroke-width="0.4"/>
-  <text x="60" y="672" fill="#ffffff" font-family="Inter, -apple-system, sans-serif" font-size="10">Browser UI: waterfall, 6 TX slots, auto-sequencer, DXCC tracking</text>
-  <text x="60" y="690" fill="#8899aa" font-family="Inter, -apple-system, sans-serif" font-size="10">Server: QSOSequencer, ADIF logging, DXCC DB lookup  |  Bridge: JTDX/WSJT-X/MSHV via UDP 2237 to WS Bridge 2238</text>
-
   <!-- PTT Safety System box -->
-  <rect x="40" y="720" width="1000" height="80" rx="6" fill="#0d1117" stroke="#22d3ee" stroke-width="1.5"/>
-  <text x="540" y="742" text-anchor="middle" fill="#22d3ee" font-family="Inter, -apple-system, sans-serif" font-size="13" font-weight="700">PTT Safety System (V5.6+)</text>
-  <line x1="40" y1="752" x2="1040" y2="752" stroke="#22d3ee" stroke-width="0.4"/>
-  <text x="60" y="770" fill="#ffffff" font-family="Inter, -apple-system, sans-serif" font-size="10">L1 Browser: touch-move release, visibility-change stop, 30s watchdog</text>
-  <text x="60" y="786" fill="#8899aa" font-family="Inter, -apple-system, sans-serif" font-size="10">L2 Protocol: ACK retry x3 + redundant audio-path fallback  |  L3 Server: 120s TOT hard limit, persistent 2s retry</text>
+  <rect x="40" y="620" width="1000" height="80" rx="6" fill="#0d1117" stroke="#22d3ee" stroke-width="1.5"/>
+  <text x="540" y="642" text-anchor="middle" fill="#22d3ee" font-family="Inter, -apple-system, sans-serif" font-size="13" font-weight="700">PTT Safety System (V5.6+)</text>
+  <line x1="40" y1="652" x2="1040" y2="652" stroke="#22d3ee" stroke-width="0.4"/>
+  <text x="60" y="670" fill="#ffffff" font-family="Inter, -apple-system, sans-serif" font-size="10">L1 Browser: touch-move release, visibility-change stop, 30s watchdog</text>
+  <text x="60" y="686" fill="#8899aa" font-family="Inter, -apple-system, sans-serif" font-size="10">L2 Protocol: ACK retry x3 + redundant audio-path fallback  |  L3 Server: 120s TOT hard limit, persistent 2s retry</text>
 </svg>
                 </div>
 
@@ -234,11 +208,6 @@
                         <td>Voice Assistant</td>
                         <td><code>voice_assistant_service.py</code></td>
                         <td>Whisper ASR + Qwen3-TTS</td>
-                    </tr>
-                    <tr>
-                        <td>FT8 Integration</td>
-                        <td><code>ft8/ultron.py</code></td>
-                        <td>ULTRON automation tool, DXCC tracking</td>
                     </tr>
                 </table>
             </div>
@@ -404,130 +373,6 @@
                 </ul>
             </div>
 
-            <!-- CW System -->
-            <div class="doc-section" id="cw">
-                <h2><span class="feature-icon">📡</span> CW Decoding System Architecture</h2>
-                
-                <p>MRRC V4.9 introduces a complete CW real-time decoding system with a Browser-First AI design philosophy.</p>
-
-                <h3>Dual-Mode Decoding Architecture</h3>
-                <div class="svg-diagram" style="overflow-x:auto;margin:1em 0;">
-<svg viewBox="0 0 880 520" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:880px;">
-  <defs>    <marker id="aC" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
-      <polygon points="0 0, 8 3, 0 6" fill="#22d3ee"/>
-    </marker>
-    <marker id="aG" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
-      <polygon points="0 0, 8 3, 0 6" fill="#22d3ee"/>
-    </marker>
-  </defs>
-  
-  <text x="440" y="22" text-anchor="middle" fill="#ffffff" font-family="Inter, -apple-system, sans-serif" font-size="14" font-weight="700">CW Decoding Dual-Mode Architecture</text>
-
-  <!-- Outer containing box -->
-  <rect x="20" y="36" width="840" height="468" rx="6" fill="none" stroke="#22d3ee" stroke-width="1.2"/>
-
-  <!-- ==== Frontend Mode ==== -->
-  <rect x="40" y="52" width="800" height="195" rx="4" fill="#0d1117" stroke="#22d3ee" stroke-width="1"/>
-  <text x="440" y="72" text-anchor="middle" fill="#22d3ee" font-family="Inter, -apple-system, sans-serif" font-size="13" font-weight="700">Frontend Mode (Recommended)</text>
-
-  <!-- Frontend flow boxes -->
-  <rect x="60" y="88" width="170" height="46" rx="6" fill="#0d1117" stroke="#22d3ee" stroke-width="1.5"/>
-  <text x="145" y="108" text-anchor="middle" fill="#22d3ee" font-family="Inter, -apple-system, sans-serif" font-size="12" font-weight="700">Audio Stream</text>
-  <text x="145" y="126" text-anchor="middle" fill="#8899aa" font-family="JetBrains Mono, monospace" font-size="10">16kHz</text>
-
-  <line x1="232" y1="111" x2="258" y2="111" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#aC)"/>
-
-  <rect x="268" y="88" width="170" height="46" rx="6" fill="#0d1117" stroke="#22d3ee" stroke-width="1.5"/>
-  <text x="353" y="108" text-anchor="middle" fill="#22d3ee" font-family="Inter, -apple-system, sans-serif" font-size="12" font-weight="700">ONNX Runtime</text>
-  <text x="353" y="126" text-anchor="middle" fill="#8899aa" font-family="JetBrains Mono, monospace" font-size="10">2MB model</text>
-
-  <line x1="440" y1="111" x2="466" y2="111" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#aC)"/>
-
-  <rect x="476" y="88" width="170" height="46" rx="6" fill="#0d1117" stroke="#22d3ee" stroke-width="1.5"/>
-  <text x="561" y="108" text-anchor="middle" fill="#22d3ee" font-family="Inter, -apple-system, sans-serif" font-size="12" font-weight="700">CTC Decode</text>
-
-  <!-- Branch from CTC Decode to QSO State Machine -->
-  <line x1="561" y1="136" x2="561" y2="158" stroke="#22d3ee" stroke-width="1.2" marker-end="url(#aC)"/>
-
-  <rect x="450" y="164" width="222" height="54" rx="6" fill="#0d1117" stroke="#22d3ee" stroke-width="1.5"/>
-  <text x="561" y="184" text-anchor="middle" fill="#22d3ee" font-family="Inter, -apple-system, sans-serif" font-size="11" font-weight="700">QSO State Machine</text>
-  <text x="561" y="204" text-anchor="middle" fill="#8899aa" font-family="Inter, -apple-system, sans-serif" font-size="9">Smart Reply</text>
-
-  <!-- Side branch: Audio Stream to QSO -->
-  <line x1="145" y1="136" x2="145" y2="190" stroke="#22d3ee" stroke-width="0.6" stroke-dasharray="3,2"/>
-  <line x1="145" y1="190" x2="448" y2="190" stroke="#22d3ee" stroke-width="0.6" stroke-dasharray="3,2"/>
-
-  <!-- Frontend stats -->
-  <text x="440" y="238" text-anchor="middle" fill="#8899aa" font-family="Inter, -apple-system, sans-serif" font-size="10">Latency: &lt;50ms  |  Dependencies: None (pure browser)</text>
-
-  <!-- Separator -->
-  <line x1="60" y1="255" x2="820" y2="255" stroke="#22d3ee" stroke-width="0.6" stroke-dasharray="6,4"/>
-
-  <!-- ==== Backend Mode ==== -->
-  <rect x="40" y="268" width="800" height="130" rx="4" fill="#0d1117" stroke="#22d3ee" stroke-width="1"/>
-  <text x="440" y="288" text-anchor="middle" fill="#22d3ee" font-family="Inter, -apple-system, sans-serif" font-size="13" font-weight="700">Backend Mode (Alternative)</text>
-
-  <!-- Backend flow boxes -->
-  <rect x="60" y="304" width="170" height="46" rx="6" fill="#0d1117" stroke="#22d3ee" stroke-width="1.5"/>
-  <text x="145" y="324" text-anchor="middle" fill="#22d3ee" font-family="Inter, -apple-system, sans-serif" font-size="12" font-weight="700">WebSocket Client</text>
-  <text x="145" y="342" text-anchor="middle" fill="#8899aa" font-family="JetBrains Mono, monospace" font-size="10">/WSCW</text>
-
-  <line x1="232" y1="327" x2="258" y2="327" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#aC)"/>
-
-  <rect x="268" y="304" width="170" height="46" rx="6" fill="#0d1117" stroke="#22d3ee" stroke-width="1.5"/>
-  <text x="353" y="324" text-anchor="middle" fill="#22d3ee" font-family="Inter, -apple-system, sans-serif" font-size="12" font-weight="700">morseangel</text>
-  <text x="353" y="342" text-anchor="middle" fill="#8899aa" font-family="JetBrains Mono, monospace" font-size="10">PyTorch backend</text>
-
-  <line x1="440" y1="327" x2="466" y2="327" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#aC)"/>
-
-  <rect x="476" y="304" width="170" height="46" rx="6" fill="#0d1117" stroke="#22d3ee" stroke-width="1.5"/>
-  <text x="561" y="324" text-anchor="middle" fill="#22d3ee" font-family="Inter, -apple-system, sans-serif" font-size="12" font-weight="700">Text Output</text>
-
-  <!-- Backend stats -->
-  <text x="440" y="388" text-anchor="middle" fill="#8899aa" font-family="Inter, -apple-system, sans-serif" font-size="10">Latency: &lt;100ms  |  Dependencies: PyTorch + CUDA</text>
-</svg>
-                </div>
-
-                <h3>Technical Specifications</h3>
-                <table class="comparison-table">
-                    <tr>
-                        <th>Metric</th>
-                        <th>Frontend Mode</th>
-                        <th>Backend Mode</th>
-                    </tr>
-                    <tr>
-                        <td>Model Size</td>
-                        <td>2MB (ONNX)</td>
-                        <td>160MB (PyTorch)</td>
-                    </tr>
-                    <tr>
-                        <td>Inference Latency</td>
-                        <td>&lt;50ms</td>
-                        <td>&lt;100ms</td>
-                    </tr>
-                    <tr>
-                        <td>Character Error Rate</td>
-                        <td>&lt;3%</td>
-                        <td>&lt;2%</td>
-                    </tr>
-                    <tr>
-                        <td>Network Dependency</td>
-                        <td>None</td>
-                        <td>Required</td>
-                    </tr>
-                </table>
-
-                <h3>Try It Live</h3>
-                <div class="demo-links">
-                    <a href="https://radio.vlsc.net:8877/cw_live.html" class="btn btn-primary">
-                        <i class="fas fa-satellite-dish"></i> CW Real-time Decode
-                    </a>
-                    <a href="https://radio.vlsc.net:8877/cw_test.html" class="btn btn-secondary">
-                        <i class="fas fa-vial"></i> CW Test Page
-                    </a>
-                </div>
-            </div>
-
             <!-- ATR-1000 -->
             <div class="doc-section" id="atr1000">
                 <h2><span class="feature-icon">📊</span> ATR-1000 Integration</h2>
@@ -602,61 +447,6 @@
                 </ul>
             </div>
 
-            <!-- FT8/ULTRON -->
-            <div class="doc-section" id="ft8">
-                <h2><span class="feature-icon">📻</span> FT8/ULTRON Integration</h2>
-                
-                <p>ULTRON is MRRC's FT8 digital mode remote console (introduced V4.9, overhauled V5.6), providing a full-featured browser-based interface to JTDX/WSJT-X/MSHV via WebSocket bridge.</p>
-
-                <h3>Core Features</h3>
-                <table class="comparison-table">
-                    <tr>
-                        <th>Feature</th>
-                        <th>Description</th>
-                    </tr>
-                    <tr>
-                        <td>Auto CQ</td>
-                        <td>Automatically call CQ when idle</td>
-                    </tr>
-                    <tr>
-                        <td>Smart Response</td>
-                        <td>Automatically respond to incoming calls</td>
-                    </tr>
-                    <tr>
-                        <td>DXCC Tracking</td>
-                        <td>Entity whitelist, intelligent selection</td>
-                    </tr>
-                    <tr>
-                        <td>Band Strategy</td>
-                        <td>Different targets per band</td>
-                    </tr>
-                    <tr>
-                        <td>Log Analysis</td>
-                        <td>Automatically analyze worked entities</td>
-                    </tr>
-                </table>
-
-                <h3>Run Commands</h3>
-                <pre class="code-block"><code># Enter FT8 directory
-cd ft8
-
-# Run ULTRON (Python version)
-python run_ultron.py
-
-# DXCC enhanced mode
-python ultron_dxcc.py
-
-# Analyze DXCC status
-python dxcc_analyzer.py</code></pre>
-
-                <h3>Try It Live</h3>
-                <div class="demo-links">
-                    <a href="https://radio.vlsc.net:8877/ft8_ultron.html" class="btn btn-primary">
-                        <i class="fas fa-broadcast-tower"></i> FT8 Console
-                    </a>
-                </div>
-            </div>
-
             <!-- Protocols -->
             <div class="doc-section" id="protocols">
                 <h2><span class="feature-icon">📝</span> Communication Protocols</h2>
@@ -700,17 +490,13 @@ python dxcc_analyzer.py</code></pre>
                     <li><a href="https://github.com/cheenle/UHRR_mac/blob/main/CHANGELOG.md" target="_blank">Changelog</a></li>
                     <li><a href="https://github.com/cheenle/UHRR_mac/blob/main/IFLOW.md" target="_blank">System Architecture (IFLOW)</a></li>
                     <li><a href="https://github.com/cheenle/UHRR_mac/blob/main/DSP.md" target="_blank">DSP Documentation</a></li>
-                    <li><a href="https://github.com/cheenle/UHRR_mac/blob/main/CW.md" target="_blank">CW System Design</a></li>
                     <li><a href="https://github.com/cheenle/UHRR_mac/blob/main/VOICE_ASSISTANT_SETUP_en.md" target="_blank">Voice Assistant Setup</a></li>
-                    <li><a href="https://github.com/cheenle/UHRR_mac/blob/main/ft8/README.md" target="_blank">ULTRON FT8 Tool</a></li>
                     <li><a href="https://github.com/cheenle/UHRR_mac/blob/main/DOCKER_DEPLOYMENT.md" target="_blank">Docker Deployment Guide</a></li>
                 </ul>
 
                 <h3>External Resources</h3>
                 <ul>
                     <li><a href="https://github.com/g0orx/wdsp" target="_blank">WDSP Library</a></li>
-                    <li><a href="https://github.com/e04/web-deep-cw-decoder" target="_blank">web-deep-cw-decoder</a></li>
-                    <li><a href="https://github.com/f4exb/morseangel" target="_blank">morseangel</a></li>
                     <li><a href="https://www.hamlib.org/" target="_blank">Hamlib</a></li>
                     <li><a href="https://github.com/openai/whisper" target="_blank">OpenAI Whisper</a></li>
                 </ul>
@@ -736,7 +522,7 @@ python dxcc_analyzer.py</code></pre>
             <div class="footer-grid">
                 <div class="footer-section">
                     <h4>MRRC</h4>
-                    <p>Mobile Remote Radio Control<br>V5.6.5 | Amateur Radio, Anytime, Anywhere</p>
+                    <p>Mobile Remote Radio Control<br>V5.7.1 | Amateur Radio, Anytime, Anywhere</p>
                 </div>
                 <div class="footer-section">
                     <h4>Quick Links</h4>

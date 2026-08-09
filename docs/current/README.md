@@ -42,7 +42,7 @@ The original SDD is a special case: `docs/legacy/sdd/original-sdd/` is preserved
 - Mobile entry: `/mobile` serves `www/mobile_modern.html`; static direct access to `/mobile_modern.html` also works through static routing.
 - Static assets: `www/`.
 - Auth: `FILE` by default through `MRRC_users.db`.
-- Key backends: `audio_interface.py`, `hamlib_wrapper.py`, `wdsp_wrapper.py`, `atr1000_proxy.py`, `atr1000_tuner.py`, `ft8_integration.py`.
+- Key backends: `audio_interface.py`, `hamlib_wrapper.py`, `wdsp_wrapper.py`, `atr1000_proxy.py`, `atr1000_tuner.py`.
 
 ## Migration Policy
 

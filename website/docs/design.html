@@ -152,7 +152,7 @@
                         <p class="doc-card-desc">Vibe-SDD based project specification document, defining project overview, business background, target success criteria, technical constraints, milestones and other core content.</p>
                         <div class="doc-card-meta">
                             <span><i class="fas fa-bullseye"></i> 8 Chapters</span>
-                            <span><i class="fas fa-vihara"></i> V5.6.5</span>
+                            <span><i class="fas fa-vihara"></i> V5.7.1</span>
                         </div>
                     </a>
                     <a href="design/REQUIREMENTS.html" class="doc-card">
@@ -183,7 +183,7 @@
                         <div class="doc-card-header">
                             <div class="doc-card-icon">🏗️</div>
                             <span class="doc-card-title">Architecture Diagram</span>
-                            <span class="doc-card-badge">V5.6.5</span>
+                            <span class="doc-card-badge">V5.7.1</span>
                         </div>
                         <p class="doc-card-desc">Interactive 4-layer architecture diagram: Client → Service → Control → Device. Full component model, 8 AD decisions, data flow visualization, and key performance metrics.</p>
                         <div class="doc-card-meta">
@@ -231,8 +231,6 @@
                         <tr><td>Control</td><td>Hamlib/rigctld</td><td>Transceiver control standard</td></tr>
                         <tr><td>Speech Recognition</td><td>Whisper (OpenAI)</td><td>Local processing, multi-language</td></tr>
                         <tr><td>Speech Synthesis</td><td>Qwen3-TTS</td><td>Natural voice, phonetic alphabet</td></tr>
-                        <tr><td>CW Decoding</td><td>ONNX Runtime</td><td>Browser-first AI, &lt;2MB model</td></tr>
-                        <tr><td>FT8 Integration</td><td>ULTRON / JTDX</td><td>DXCC tracking, auto QSO</td></tr>
                     </tbody>
                 </table>
 
@@ -244,7 +242,6 @@
                         <tr><td>PTT Response Time</td><td>&lt; 50ms</td><td>Achieved</td></tr>
                         <tr><td>PTT Reliability</td><td>≥ 99%</td><td>Achieved</td></tr>
                         <tr><td>WDSP NR Depth</td><td>15-20 dB</td><td>Achieved</td></tr>
-                        <tr><td>CW Decode Latency</td><td>&lt; 50ms (frontend)</td><td>Achieved</td></tr>
                         <tr><td>Speech Recognition Latency</td><td>&lt; 200ms</td><td>Achieved</td></tr>
                         <tr><td>System Availability</td><td>≥ 99.5%</td><td>Achieved</td></tr>
                     </tbody>
@@ -255,10 +252,10 @@
                     <thead><tr><th>Parameter</th><th>Value</th><th>Description</th></tr></thead>
                     <tbody>
                         <tr><td>Sample Rate (Processing)</td><td>48kHz</td><td>WDSP processing</td></tr>
-                        <tr><td>Sample Rate (Transport)</td><td>16kHz</td><td>Network transmission</td></tr>
-                        <tr><td>Audio Format</td><td>Int16 PCM</td><td>50% bandwidth savings</td></tr>
-                        <tr><td>Frame Size</td><td>320 samples (20ms)</td><td>WebRTC recommended</td></tr>
-                        <tr><td>Encoder</td><td>Opus</td><td>Complexity 5, DTX enabled</td></tr>
+                        <tr><td>Sample Rate (Transport)</td><td>TX 48kHz / RX 16kHz</td><td>TX full-band Opus CBR; RX clean low-jitter</td></tr>
+                        <tr><td>Audio Format</td><td>1-byte tagged frames</td><td>0x00 = PCM / 0x01 = Opus</td></tr>
+                        <tr><td>Frame Size</td><td>960 samples (20ms @48kHz)</td><td>One Opus frame per read</td></tr>
+                        <tr><td>Encoder</td><td>Opus</td><td>64kbps CBR TX; arm64-fixed RX bitrate</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -274,9 +271,7 @@
                         <tr><td>AD-004</td><td>WDSP NR2 Noise Reduction Integration</td><td>Approved</td></tr>
                         <tr><td>AD-005</td><td>Multi-Instance Deployment Architecture</td><td>Approved</td></tr>
                         <tr><td>AD-006</td><td>Voice Assistant Architecture (Whisper + Qwen3-TTS)</td><td>Approved</td></tr>
-                        <tr><td>AD-007</td><td>CW Real-time Decoding Architecture (ONNX)</td><td>Approved</td></tr>
                         <tr><td>AD-008</td><td>PTT Three-Layer Safety System (V5.6+)</td><td><span class="new-badge">NEW</span> Approved</td></tr>
-                        <tr><td>AD-009</td><td>FT8/ULTRON Remote Console Architecture (V5.6+)</td><td><span class="new-badge">NEW</span> Approved</td></tr>
                     </tbody>
                 </table>
             </div>

@@ -52,7 +52,7 @@
     <div class="hero-content">
         <div class="hero-badge">
             <i class="fas fa-satellite-dish"></i>
-            <span>V5.6.5 · 生产就绪</span>
+            <span>V5.7.1 · 生产就绪</span>
         </div>
         <h1 class="hero-title">
             业余无线电<br>
@@ -60,7 +60,8 @@
         </h1>
         <p class="hero-subtitle">
             MRRC 是 VLSC 远程无线电生态中的通用 HF 路线。手机、平板、电脑随时操控您的短波电台。
-            Opus 优化音频传输、WDSP 专业降噪、AI 语音助手、CW/FT8 数字模式、录音室级 TX 音频处理、三层 PTT 安全防护体系。
+            V5.7.1：TX AudioWorklet 采集（48kHz Opus CBR）、RX 20ms 对齐播放、WDSP 专业降噪、AI 语音助手、
+            ATR-1000 功率/SWR 实时监测、IC-M710 AGC/RF 增益控制、三层 PTT 安全防护体系。
         </p>
         <div class="hero-actions">
             <a href="/zh/index.html#selector" class="btn btn-secondary btn-large">
@@ -77,7 +78,7 @@
             <div class="stat-item"><span class="stat-value">&lt;100ms</span><span class="stat-label">TX/RX 切换</span></div>
             <div class="stat-item"><span class="stat-value">99%+</span><span class="stat-label">PTT 可靠性</span></div>
             <div class="stat-item"><span class="stat-value">15-20dB</span><span class="stat-label">WDSP 降噪</span></div>
-            <div class="stat-item"><span class="stat-value">V5.6.5</span><span class="stat-label">280+ 提交</span></div>
+            <div class="stat-item"><span class="stat-value">V5.7.1</span><span class="stat-label">290+ 提交</span></div>
         </div>
     </div>
 </section>
@@ -152,17 +153,6 @@
             </div>
 
             <div class="feature-card animate">
-                <div class="icon"><i class="fas fa-wave-square"></i></div>
-                <h3>CW + FT8 数字模式</h3>
-                <p>浏览器端 AI CW 解码（&lt;2MB ONNX，&lt;50ms）。FT8 ULTRON 控制台：JTDX/WSJT-X/MSHV 全兼容，实时瀑布图，自动序列器，DXCC 追踪。</p>
-                <ul>
-                    <li>ONNX AI CW 解码 · QSO 状态机</li>
-                    <li>FT8 ULTRON: JTDX/WSJT-X/MSHV 桥接</li>
-                    <li>自动序列器 · DXCC 追踪</li>
-                </ul>
-            </div>
-
-            <div class="feature-card animate">
                 <div class="icon"><i class="fas fa-shield-alt"></i></div>
                 <h3>三层 PTT 安全防护</h3>
                 <p>释放 ACK 协议含 3 次重试 + 冗余音频通路回退，120s TOT 硬限制，触屏滑动自动释放，页面隐藏强制停发 — 杜绝电台卡发射。</p>
@@ -192,7 +182,7 @@
         <div class="section-header">
             <span class="section-label">在线演示</span>
             <h2 class="section-title">亲身体验</h2>
-            <p class="section-subtitle">所有演示连接到实际运行的 FT-710 电台。尝试每种界面——移动端、语音、CW、SDR、FT8、录音。</p>
+            <p class="section-subtitle">所有演示连接到实际运行的 FT-710 电台。尝试每种界面——移动端、语音、SDR、录音。</p>
         </div>
 
         <div class="perf-grid">
@@ -203,14 +193,6 @@
             <a href="https://radio.vlsc.net:8877/mobile_voice_text.html" target="_blank" class="perf-card" style="text-decoration:none;">
                 <div class="metric"><i class="fas fa-microphone"></i></div>
                 <div class="metric-label">语音助手<br><small>AI 语音识别与合成</small></div>
-            </a>
-            <a href="https://radio.vlsc.net:8877/cw_live.html" target="_blank" class="perf-card" style="text-decoration:none;">
-                <div class="metric"><i class="fas fa-wave-square"></i></div>
-                <div class="metric-label">CW 解码<br><small>实时摩尔斯电码 AI</small></div>
-            </a>
-            <a href="https://radio.vlsc.net:8877/ft8_ultron.html" target="_blank" class="perf-card" style="text-decoration:none;">
-                <div class="metric"><i class="fas fa-broadcast-tower"></i></div>
-                <div class="metric-label">FT8 控制台<br><small>ULTRON 自动化工具</small></div>
             </a>
             <a href="https://radio.vlsc.net:8877/sdr_modern.html" target="_blank" class="perf-card" style="text-decoration:none;">
                 <div class="metric"><i class="fas fa-signal"></i></div>
@@ -270,7 +252,7 @@
                 <p>
                     Mobile Remote Radio Control<br>
                     业余无线电，随时随地<br>
-                    V5.6.5 · GPLv3 协议
+                    V5.7.1 · GPLv3 协议
                 </p>
             </div>
             <div class="footer-section">

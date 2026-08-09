@@ -14,9 +14,9 @@ A modern web-based remote control system optimized for mobile devices, enabling 
 
 基于现代Web技术的远程电台控制系统，专为移动端优化，让您随时随地灵活操控业余电台。
 
-> 🎉 **V5.7 更新**: RX/TX 音质全面优化（参考 mrrc_ft710）— Opus 码率 arm64 修复、标签帧、时间水印缓冲、软膝限幅、WDSP 48k + NR2 AE 调参、TX 48k/64kbps CBR、codebase 清理
+> 🎉 **V5.7.1 更新**: TX 采集迁移 AudioWorklet、PTT 尾音/预热帧修复、ATR-1000 幽灵功率修复、IC-M710 AGC/RF 增益控制（9-1 档）、FT8/CW 功能整体移除
 >
-> 🎉 **V5.4 更新**: FT8 集成修复 — Python-JS 方法对齐、WebSocket 桥接稳定化、FT8 Ultron 前端优化
+> 🎉 **V5.7 更新**: RX/TX 音质全面优化（参考 mrrc_ft710）— Opus 码率 arm64 修复、标签帧、时间水印缓冲、软膝限幅、WDSP 48k + NR2 AE 调参、TX 48k/64kbps CBR、codebase 清理
 >
 > 历史版本: V5.3 网络监控与UI打磨 | V5.2.0 WDSP 哈希缓存优化 | V5.0.0 移动端UI现代化
 
@@ -105,9 +105,8 @@ A modern web-based remote control system optimized for mobile devices, enabling 
 |---------|-------------|
 | 📱 **Mobile First** | Optimized for iPhone/Android with touch-friendly UI |
 | 🎛️ **Full Control** | Frequency, mode, PTT - complete station control |
-| 🎤 **Real-time Audio** | Bidirectional TX/RX streaming (16kHz) |
+| 🎤 **Real-time Audio** | Bidirectional streaming — TX 48kHz Opus, RX 16kHz low-jitter |
 | 🎙️ **AI Voice Assistant** | Whisper ASR + Qwen3-TTS synthesis |
-| 📡 **CW Decoder** | ONNX real-time decoding, QSO state machine |
 | 🎙️ **Audio Recording** | Record QSOs directly in browser (WAV/MP3) |
 | 🌍 **Remote Anywhere** | Access your station from anywhere with internet |
 | 🔒 **Secure Connection** | TLS encrypted HTTPS/WSS |
@@ -227,7 +226,6 @@ MRRC/
 │   ├── mobile_modern.js    # Mobile UI logic
 │   ├── controls.js         # Audio & control (V4.8.0: WDSP sync)
 │   ├── recordings.html     # Audio recording page (V4.8.0: New)
-│   ├── ft8_ultron.html     # FT8 remote UI
 │   └── panadapter/         # FFT/panadapter UI
 ├── certs/                  # TLS certificates
 ├── docs/current/           # Code-verified current documentation

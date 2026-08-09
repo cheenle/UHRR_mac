@@ -5,6 +5,56 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [V5.7.1] - 2026-08-09
+
+### 🎙️ RX/TX 链路第二轮优化
+
+- **TX 采集迁移 AudioWorklet**：新增 `tx-capture` worklet（`tx_worklet_processor.js` 重写），
+  渲染线程按 960 样本/20ms 组帧回传，替代主线程 ScriptProcessorNode；
+  iOS Safari/旧浏览器自动回退，两路共用 `OpusEncoderProcessor.pushSamples()`
+- **修复 PTT 尾音丢失**：`stopRecord()` 现在 `encode_float_final()` 补发编码器尾部不完整帧
+  （原每次 PTT 结尾最多丢 20ms 语音）
+- **修复 TX warmup 空转**：预热帧 160 → 960 样本（原不足一帧，Opus 编码器不产出包）
+- **修复麦克风资源泄漏**：`AudioTX_stop()` 现在停止 MediaStream tracks 并关闭 AudioContext
+- **RX 采集 320 → 960 样本/次**（20ms@48kHz 对齐 Opus 帧）：消除 320/3 不整除的周期微爆音，
+  每帧流水线开销降为 1/3；WDSP 配置哈希改为每 25 帧节流检查
+- **消除 TX 录音/分析路径 Opus 双解码**：复用 `PyAudioPlayback._normalize()` 的解码结果；
+  修复 TX 录音 48kHz 未降采样写入 16kHz 缓冲导致回放慢 3 倍的 bug
+- **TX playback `frames_per_buffer` 按采样率动态对齐 20ms**（不再硬编码 960）
+
+### 📡 ATR-1000 功率/驻波链路修复
+
+- **幽灵功率读数根因修复**：代理 `stop` 动作清零功率/SWR 缓存（原 RX 期间持续显示最后
+  一次 TX 功率，且让 MRRC 250ms 快速轮询永久自维持）
+- **MRRC 快速轮询改由 CTRX PTT 状态驱动**（功率启发式降为回退）
+- **修复 `_broadcast_batch` 从工作线程直接 `write_message` 的线程安全 bug**：
+  广播编组到 Tornado IOLoop 执行
+- 前端设备状态点改用代理上报的 `connected` 字段（原设备断电也显示在线）；
+  SWR 1-99 异常分支加节流告警；`clearDisplay` SWR 内部状态与 DOM 一致化
+
+### 🎛️ IC-M710 AGC / RF 增益控制
+
+- 新增 `/WSCTRX` 命令 `setAGC`/`getAGC`/`setRFGain`/`getRFGain`
+  （rigctld `L AGC`/`L RF` → icm710 NMEA `AGC ON/OFF`、`RFG 0-9`；RF 9 档浮点映射取档位
+  中点避开 hamlib 截断取整误差）
+- 手机端快捷行原 CW/FT8 链接位替换为 AGC 开关 + RF 档位（9-1）按钮，多端广播同步
+
+### 🗑️ FT8/CW 功能整体移除
+
+- 删除 `/WSFT8`、`WS_FT8Handler`、`ft8_integration.py`（JTDX UDP 桥）、`ft8_decoder.py`、
+  `www/ft8*`/`www/cw_*` 全部页面、`models/` 与 `www/models/`（cw_decoder.onnx）、
+  `dev_tools/test_ft8_packets.py` 及整个 `ft8/` ULTRON 目录
+- `mobile.html` 数字模式面板移除 FT8/CW 控件；`sdr_modern` 菜单 CW 项移除
+- 电台侧 CW **模式**（`setMode:CW`）不受影响
+
+### 🐛 其他修复
+
+- 修复 `mobile_opt.html` 控制通道 WebSocket 路径错误（`/WSControlTRX` → `/WSCTRX`，
+  原路径未注册导致该页控制通道必然 404）
+- `mobile_opt` 模式列表移除 CW/FT8，滤波器死代码按钮替换为 AGC/RF 控件
+
+---
+
 ## [V5.7.0] - 2026-08-08
 
 ### 🎛️ RX 链路音质优化（参考 mrrc_ft710）

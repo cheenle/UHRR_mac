@@ -10,6 +10,7 @@ This map lists capabilities that are implemented in the current codebase and ide
 | Mobile radio control | Implemented | `MRRC`, `www/mobile_modern.html`, `www/mobile_modern.js`, `www/controls.js` | `/mobile`, static `/mobile_modern.html`, same WebSockets |
 | Authentication | Implemented | `MRRC`, `MRRC.conf`, `MRRC_users.db` | `FILE` auth by default; redirects to `/login` |
 | Frequency/mode/PTT | Implemented | `TRXRIG` in `MRRC`, `hamlib_wrapper.py` | `WSCTRX` commands: `setFreq`, `getFreq`, `setMode`, `getMode`, `setPTT`, `getPTT` |
+| Rig AGC/RF gain (IC-M710) | Implemented | `TRXRIG` in `MRRC` → rigctld `L AGC`/`L RF` → icm710 NMEA | `WSCTRX` commands: `setAGC`, `getAGC`, `setRFGain`, `getRFGain` (RF gain 9 steps) |
 | TX/RX audio | Implemented | `audio_interface.py`, `www/controls.js`, `www/modules/opus_*` | `/WSaudioRX`, `/WSaudioTX` |
 | PTT safety and release recovery | Implemented | `www/modules/ptt_manager.js`, `www/tx_button_optimized.js`, `MRRC`, `audio_interface.py` | release ACK retry, queue flush, Opus accumulator flush, server TOT monitor |
 | WDSP DSP controls | Implemented when library exists | `audio_interface.py`, `wdsp_wrapper.py`, `www/mobile_modern.js`, `www/controls.js` | `WSCTRX` `setWDSP*` commands |
@@ -19,8 +20,6 @@ This map lists capabilities that are implemented in the current codebase and ide
 | Tune and CQ | Implemented | `MRRC`, `www/modules/tune_cq.js`, `www/tx_button_optimized.js` | `WSCTRX` actions `tune`, `cq`, `cq_complete` |
 | Channel memory | Implemented | `MRRC`, `memory_channels.json`, `www/mobile_modern.js` | `/api/mem_channels` |
 | Recording | Implemented | `audio_interface.py`, `MRRC`, `www/mobile_modern.js`, `www/recordings.html` | `WSCTRX` `startRecording/stopRecording`, `/api/recordings`, `/recordings/<file>` |
-| FT8 browser bridge | Implemented | `MRRC`, `ft8_integration.py`, `www/ft8_ultron.html`, `www/ft8_ultron.js` | `/WSFT8`; JTDX/WSJT-X UDP 2238/2237 |
-| CW live page | Browser page present | `www/cw_live.html`, `models/cw_decoder.onnx` | linked from mobile UI; uses CDN ONNX runtime |
 | Multi-instance operation | Implemented in scripts/config convention | `mrrc_multi.sh`, `MRRC.radio*.conf`, `MRRC` | separate web/rigctld ports and Unix sockets |
 | Docker single instance | Implemented | `Dockerfile`, `docker-compose.yml` | maps host `8877:8877`, mounts config/certs/data |
 

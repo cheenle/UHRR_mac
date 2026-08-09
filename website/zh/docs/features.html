@@ -370,54 +370,6 @@
                 </ul>
             </div>
 
-            <!-- CW 解码 -->
-            <div class="doc-section" id="cw">
-                <h2><span class="feature-icon">📡</span> CW 实时解码系统</h2>
-                <p>基于深度学习的摩尔斯电码实时解码，支持前端 ONNX 推理和后端 PyTorch 解码双模式。</p>
-                
-                <h3>技术架构</h3>
-                <ul>
-                    <li><strong>Browser-First AI</strong>：AI 能力下沉到浏览器端，零后端依赖</li>
-                    <li><strong>双模式解码</strong>：前端 ONNX (2MB) + 后端 morse-deep-learning</li>
-                    <li><strong>超低延迟</strong>：前端推理 &lt;50ms，端到端 &lt;100ms</li>
-                    <li><strong>高准确率</strong>：字符错误率 (CER) &lt;3% @ SNR&gt;-5dB</li>
-                </ul>
-
-                <h3>核心功能</h3>
-                <div class="feature-grid">
-                    <div class="feature-card">
-                        <div class="feature-icon-large">🧠</div>
-                        <h4>AI 解码引擎</h4>
-                        <p>web-deep-cw-decoder 轻量模型，CRNN + CTC 架构，浏览器端直接运行</p>
-                    </div>
-                    <div class="feature-card">
-                        <div class="feature-icon-large">📱</div>
-                        <h4>QSO 状态机</h4>
-                        <p>智能识别呼号/RST/QTH/NAME，自动生成回复建议，符合 HAM Radio 规范</p>
-                    </div>
-                    <div class="feature-card">
-                        <div class="feature-icon-large">📤</div>
-                        <h4>CW 发送</h4>
-                        <p>文本转摩尔斯码，支持 10-40 WPM 速度可调，侧音频率可配置</p>
-                    </div>
-                    <div class="feature-card">
-                        <div class="feature-icon-large">🎚️</div>
-                        <h4>滤波器控制</h4>
-                        <p>支持 500Hz / 1KHz / 2.4KHz 带宽切换，专用 CW 窄带优化</p>
-                    </div>
-                </div>
-
-                <h3>在线体验</h3>
-                <div class="demo-links">
-                    <a href="https://radio.vlsc.net:8877/cw_live.html" target="_blank" class="btn btn-primary">
-                        <i class="fas fa-satellite-dish"></i> CW 实时解码
-                    </a>
-                    <a href="https://radio.vlsc.net:8877/cw_test.html" target="_blank" class="btn btn-secondary">
-                        <i class="fas fa-vial"></i> CW 测试
-                    </a>
-                </div>
-            </div>
-
             <!-- NanoVNA -->
             <div class="doc-section" id="nanovna">
                 <h2><span class="feature-icon">📉</span> NanoVNA矢量网络分析仪</h2>
@@ -427,67 +379,6 @@
                     <li><strong>实时测量</strong>：S11、S21参数实时显示</li>
                     <li><strong>史密斯圆图</strong>：支持史密斯圆图显示</li>
                 </ul>
-            </div>
-
-            <!-- FT8/ULTRON -->
-            <div class="doc-section" id="ft8">
-                <h2><span class="feature-icon">📻</span> FT8/ULTRON 远程控制台 (V5.6+)</h2>
-                <p>ULTRON 是 MRRC 的 FT8 数字模式远程控制台 (V4.9 引入，V5.6 全面升级)，通过 WebSocket 桥接为 JTDX/WSJT-X/MSHV 提供全功能浏览器界面。无需本地安装任何软件 — 手机、平板即可操作 FT8。</p>
-                
-                <h3>远程控制台功能</h3>
-                <div class="feature-grid">
-                    <div class="feature-card">
-                        <div class="feature-icon-large">🌊</div>
-                        <h4>实时瀑布图</h4>
-                        <p>基于 Opus/PCM 音频流的客户端瀑布图，1024px Canvas 渲染，含频率刻度与 Rx/Tx 光标线</p>
-                    </div>
-                    <div class="feature-card">
-                        <div class="feature-icon-large">📋</div>
-                        <h4>6 个可定制 TX 消息槽</h4>
-                        <p>宏消息模板支持 {DxCall}、{MyCall}、{Report} 占位符 — 一键自动填充并发送</p>
-                    </div>
-                    <div class="feature-card">
-                        <div class="feature-icon-large">🔄</div>
-                        <h4>服务端自动序列器</h4>
-                        <p>完整 QSO 状态机：IDLE → CALLING → REPORTED → ROGERED → DONE，6 周期超时。使用 Reply 数据包确保可靠 TX 触发</p>
-                    </div>
-                    <div class="feature-card">
-                        <div class="feature-icon-large">🌍</div>
-                        <h4>DXCC 与网格追踪</h4>
-                        <p>每条解码 DXCC 实体查询 + 旗帜，新 DXCC/新网格高亮，已通联灰显，CQ 专属过滤，未通联台站桌面通知</p>
-                    </div>
-                </div>
-
-                <h3>支持的软件</h3>
-                <table class="comparison-table">
-                    <tr>
-                        <th>软件</th>
-                        <th>协议</th>
-                        <th>状态</th>
-                    </tr>
-                    <tr>
-                        <td>JTDX</td>
-                        <td>UDP 2237 → WS 桥接 2238</td>
-                        <td class="highlight">✓ 完全支持</td>
-                    </tr>
-                    <tr>
-                        <td>WSJT-X</td>
-                        <td>UDP 2237 → WS 桥接 2238</td>
-                        <td class="highlight">✓ 完全支持</td>
-                    </tr>
-                    <tr>
-                        <td>MSHV</td>
-                        <td>UDP 2237 → WS 桥接 2238</td>
-                        <td class="highlight">✓ 完全支持</td>
-                    </tr>
-                </table>
-
-                <h3>在线体验</h3>
-                <div class="demo-links">
-                    <a href="https://radio.vlsc.net:8877/ft8_ultron.html" target="_blank" class="btn btn-primary">
-                        <i class="fas fa-broadcast-tower"></i> FT8 控制台
-                    </a>
-                </div>
             </div>
 
             <!-- PTT 安全防护系统 -->

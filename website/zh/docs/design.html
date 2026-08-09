@@ -109,7 +109,7 @@
                         <p class="doc-card-desc">基于Vibe-SDD的项目规格文档，定义项目概述、业务背景、目标成功标准、技术约束、里程碑等核心内容。</p>
                         <div class="doc-card-meta">
                             <span><i class="fas fa-bullseye"></i> 8个章节</span>
-                            <span><i class="fas fa-vihara"></i> V5.6.5</span>
+                            <span><i class="fas fa-vihara"></i> V5.7.1</span>
                         </div>
                     </a>
                     <a href="../../docs/design/REQUIREMENTS.html" class="doc-card">
@@ -140,7 +140,7 @@
                         <div class="doc-card-header">
                             <div class="doc-card-icon">🏗️</div>
                             <span class="doc-card-title">架构总图</span>
-                            <span class="doc-card-badge">V5.6.5</span>
+                            <span class="doc-card-badge">V5.7.1</span>
                         </div>
                         <p class="doc-card-desc">交互式四层架构图：Client → Service → Control → Device。完整组件模型、8项AD决策、数据流可视化及关键性能指标。</p>
                         <div class="doc-card-meta">
@@ -188,8 +188,6 @@
                         <tr><td>控制</td><td>Hamlib/rigctld</td><td>收发信机控制标准</td></tr>
                         <tr><td>语音识别</td><td>Whisper (OpenAI)</td><td>本地处理，多语言支持</td></tr>
                         <tr><td>语音合成</td><td>Qwen3-TTS</td><td>自然语音，支持字母解释法</td></tr>
-                        <tr><td>CW解码</td><td>ONNX Runtime</td><td>浏览器端AI，&lt;2MB模型</td></tr>
-                        <tr><td>FT8集成</td><td>ULTRON / JTDX</td><td>DXCC实体追踪，自动QSO</td></tr>
                     </tbody>
                 </table>
 
@@ -201,7 +199,6 @@
                         <tr><td>PTT响应时间</td><td>&lt; 50ms</td><td>✅ 已达标</td></tr>
                         <tr><td>PTT可靠性</td><td>≥ 99%</td><td>✅ 已达标</td></tr>
                         <tr><td>WDSP降噪深度</td><td>15-20 dB</td><td>✅ 已达标</td></tr>
-                        <tr><td>CW解码延迟</td><td>&lt; 50ms (前端)</td><td>✅ 已达标</td></tr>
                         <tr><td>语音识别延迟</td><td>&lt; 200ms</td><td>✅ 已达标</td></tr>
                         <tr><td>系统可用性</td><td>≥ 99.5%</td><td>✅ 已达标</td></tr>
                     </tbody>
@@ -212,10 +209,10 @@
                     <thead><tr><th>参数</th><th>值</th><th>说明</th></tr></thead>
                     <tbody>
                         <tr><td>采样率 (处理)</td><td>48kHz</td><td>WDSP处理</td></tr>
-                        <tr><td>采样率 (传输)</td><td>16kHz</td><td>网络传输</td></tr>
-                        <tr><td>音频格式</td><td>Int16 PCM</td><td>节省50%带宽</td></tr>
-                        <tr><td>帧大小</td><td>320采样 (20ms)</td><td>WebRTC推荐</td></tr>
-                        <tr><td>编码器</td><td>Opus</td><td>复杂度5，DTX启用</td></tr>
+                        <tr><td>采样率 (传输)</td><td>TX 48kHz / RX 16kHz</td><td>TX 全带宽 Opus CBR；RX 干净低抖动</td></tr>
+                        <tr><td>音频格式</td><td>1 字节标签帧</td><td>0x00 = PCM / 0x01 = Opus</td></tr>
+                        <tr><td>帧大小</td><td>960采样 (20ms @48kHz)</td><td>每次读取一个 Opus 帧</td></tr>
+                        <tr><td>编码器</td><td>Opus</td><td>TX 64kbps CBR；RX arm64 码率修复</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -231,9 +228,7 @@
                         <tr><td>AD-004</td><td>WDSP NR2降噪集成</td><td>✅ 已批准</td></tr>
                         <tr><td>AD-005</td><td>多实例部署架构</td><td>✅ 已批准</td></tr>
                         <tr><td>AD-006</td><td>语音助手架构 (Whisper + Qwen3-TTS)</td><td>✅ 已批准</td></tr>
-                        <tr><td>AD-007</td><td>CW实时解码架构 (ONNX)</td><td>✅ 已批准</td></tr>
                         <tr><td>AD-008</td><td>PTT三层安全防护系统 (V5.6+)</td><td><span class="new-badge">NEW</span> ✅ 已批准</td></tr>
-<tr><td>AD-009</td><td>FT8/ULTRON远程控制台架构 (V5.6+)</td><td><span class="new-badge">NEW</span> ✅ 已批准</td></tr>
                     </tbody>
                 </table>
             </div>

@@ -28,7 +28,6 @@ This document describes the currently implemented MRRC runtime, based on the mai
 | ATR-1000 bridge | `ATR1000ProxyManager` in `MRRC` | Unix Socket client, bridges proxy data to `/WSATR1000` |
 | ATR-1000 proxy | `atr1000_proxy.py` | Single device connection to ATR-1000, dynamic polling, learning, quick tune |
 | ATR-1000 storage/API | `atr1000_tuner.py`, `atr1000_api_server.py` | JSON learning records and optional REST API through proxy socket |
-| FT8 bridge | `ft8_integration.py`, `/WSFT8` | UDP bridge for JTDX/WSJT-X; listens on 2238, sends to 2237 |
 | Recording | `audio_interface.py`, `www/recordings.html` | RX/TX recording buffers, `/api/recordings`, `/recordings/<file>` download |
 | Channel memory | `memory_channels.json`, `/api/mem_channels` | Per-user 6-channel memory storage |
 | Voice assistant | `voice_assistant_service.py` | Separate optional service, not part of the main `MRRC` Tornado routes |
@@ -58,7 +57,8 @@ This document describes the currently implemented MRRC runtime, based on the mai
 | `/WSpanFFT` | `WS_panFFTHandler` | FFT spectrum data from RTL-SDR when available |
 | `/WSATR1000` | `WS_ATR1000Handler` | ATR-1000 meter/relay/tune bridge |
 | `/WSATU` | `WS_ATUAutoTunerHandler` | ATU automatic tuning command surface |
-| `/WSFT8` | `WS_FT8Handler` | FT8/JTDX/WSJT-X bridge to browser |
+
+Note: `/WSFT8` and the FT8/CW decoder features were removed in V5.7.1.
 
 ## Main Data Flows
 
@@ -71,7 +71,7 @@ radio audio input -> PyAudioCapture -> optional WDSP/RNNoise -> Int16/Opus frame
 ### TX Audio
 
 ```text
-browser microphone -> Web Audio API -> TX EQ/RagChew chain -> Int16/Opus frames -> /WSaudioTX -> PyAudioPlayback -> radio audio output
+browser microphone -> Web Audio API -> TX EQ/RagChew chain -> tx-capture AudioWorklet (ScriptProcessor fallback on iOS) -> 48kHz Opus tagged frames -> /WSaudioTX -> PyAudioPlayback -> radio audio output
 ```
 
 ### Radio Control
@@ -80,18 +80,15 @@ browser microphone -> Web Audio API -> TX EQ/RagChew chain -> Int16/Opus frames 
 browser controls -> /WSCTRX -> TRXRIG -> rigctld TCP -> radio CAT/PTT
 ```
 
+`/WSCTRX` also carries the IC-M710 `setAGC`/`setRFGain` level commands (rigctld `L AGC`/`L RF` → icm710 NMEA `AGC ON/OFF`, `RFG 0-9`).
+
 ### ATR-1000
 
 ```text
 ATR-1000 device -> WebSocket device protocol -> atr1000_proxy.py -> Unix Socket -> MRRC ATR1000ProxyManager -> /WSATR1000 -> mobile_modern.js display and tune hooks
 ```
 
-### FT8
-
-```text
-JTDX/WSJT-X UDP secondary port -> ft8_integration.py listens on 2238 -> /WSFT8 -> www/ft8_ultron.js
-browser commands -> /WSFT8 -> ft8_integration.py -> UDP 2237 back to JTDX/WSJT-X
-```
+The proxy answers from cache only; TX `stop` zeroes the cached power/SWR (no ghost readings during RX), and `MRRC` fast-polls (250 ms) off the CTRX PTT state, broadcasting on the IOLoop thread.
 
 ## Runtime Boundaries
 
@@ -101,4 +98,3 @@ The main `MRRC` process owns the HTTPS/WSS web application and direct radio/audi
 - `atr1000_api_server.py`: optional REST API process for external tools.
 - `voice_assistant_service.py`: separate voice assistant process, default port `8878`.
 - `website/`: static marketing/documentation site, not served by the MRRC app.
-- `ft8/`: broader ULTRON automation project; `MRRC` directly uses `ft8_integration.py` and `ft8/base.json`.

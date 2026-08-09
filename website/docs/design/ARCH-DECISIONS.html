@@ -675,89 +675,6 @@
 <p><strong>负面影响</strong>:
 - 本地资源需求高</p>
 <hr />
-<h2>AD-007: CW实时解码架构</h2>
-<table>
-<thead>
-<tr>
-<th>属性</th>
-<th>值</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>ID</td>
-<td>AD-007</td>
-</tr>
-<tr>
-<td>日期</td>
-<td>2026-03-13</td>
-</tr>
-<tr>
-<td>状态</td>
-<td>已批准</td>
-</tr>
-<tr>
-<td>决策者</td>
-<td>MRRC Team</td>
-</tr>
-<tr>
-<td>影响范围</td>
-<td>CW模块</td>
-</tr>
-</tbody>
-</table>
-<h4>问题</h4>
-<p>如何实现CW实时解码？</p>
-<h4>背景</h4>
-<ul>
-<li>CW通信需要实时解码</li>
-<li>需要低延迟</li>
-<li>需要离线运行</li>
-</ul>
-<h4>决定</h4>
-<p>采用ONNX Runtime前端推理架构。</p>
-<h4>理由</h4>
-<ol>
-<li><strong>ONNX格式</strong>: 跨平台模型格式</li>
-<li><strong>Web运行</strong>: 浏览器可直接运行</li>
-<li><strong>低延迟</strong>: 实时推理</li>
-<li><strong>模型成熟</strong>: cw_decoder.onnx可用</li>
-</ol>
-<h4>替代方案</h4>
-<table>
-<thead>
-<tr>
-<th>方案</th>
-<th>描述</th>
-<th>被排除原因</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Fldigi</td>
-<td>桌面软件</td>
-<td>无法集成</td>
-</tr>
-<tr>
-<td>CWGet</td>
-<td>Windows软件</td>
-<td>闭源</td>
-</tr>
-<tr>
-<td>Cloud API</td>
-<td>云服务</td>
-<td>延迟高</td>
-</tr>
-</tbody>
-</table>
-<h4>影响</h4>
-<p><strong>正面影响</strong>:
-- 实时解码
-- 浏览器集成
-- 离线可用</p>
-<p><strong>负面影响</strong>:
-- 模型精度依赖</p>
-<hr />
 <h2>决策清单</h2>
 <p>使用此清单确保决策完整：</p>
 <ul>
@@ -785,19 +702,6 @@
 </tbody>
 </table>
 <hr />
-<h2>AD-009: FT8/ULTRON 远程控制台架构 (V5.6+)</h2>
-<table>
-<thead><tr><th>属性</th><th>值</th></tr></thead>
-<tbody>
-<tr><td>编号</td><td>AD-009</td></tr>
-<tr><td>标题</td><td>FT8/ULTRON WebSocket 远程控制台</td></tr>
-<tr><td>日期</td><td>2026-06-12</td></tr>
-<tr><td>状态</td><td>已实现</td></tr>
-<tr><td>决策</td><td>采用浏览器全功能远程控制台替代本地Python脚本：UDP→WebSocket桥接 (ft8_integration.py监听2238)，服务端QSOSequencer状态机，客户端Canvas瀑布图+6 TX消息槽+DXCC实体查询。JTDX/WSJT-X/MSHV UDP 2237 ⇄ WS桥接2238</td></tr>
-<tr><td>理由</td><td>纯浏览器方案无需本地安装，手机/平板可操作FT8。服务端序列器使用Reply数据包可靠触发TX。WebSocket广播实现多客户端同步显示解码结果</td></tr>
-<tr><td>影响</td><td>ft8_integration.py (UDP监听+QSOSequencer+ADIF日志), ft8_ultron.js (完整UI+瀑布图+DXCC查询), ft8_ultron.html (SPA界面)</td></tr>
-</tbody>
-</table>
 <hr />
 <p><strong>文档信息</strong>
 - 版本: 1.1

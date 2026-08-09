@@ -360,54 +360,6 @@ Response Example: ff050701031b1e000e01
                 </ul>
             </div>
 
-            <!-- CW Decoding -->
-            <div class="doc-section" id="cw">
-                <h2><span class="feature-icon">📡</span> CW Real-time Decoding System</h2>
-                <p>Deep learning based Morse code real-time decoding, supports frontend ONNX inference and backend PyTorch decoding dual modes.</p>
-                
-                <h3>Technical Architecture</h3>
-                <ul>
-                    <li><strong>Browser-First AI</strong>: AI capability pushed to browser side, zero backend dependency</li>
-                    <li><strong>Dual-Mode Decoding</strong>: Frontend ONNX (2MB) + backend morse-deep-learning</li>
-                    <li><strong>Ultra-Low Latency</strong>: Frontend inference &lt;50ms, end-to-end &lt;100ms</li>
-                    <li><strong>High Accuracy</strong>: Character Error Rate (CER) &lt;3% @ SNR&gt;-5dB</li>
-                </ul>
-
-                <h3>Core Features</h3>
-                <div class="feature-grid">
-                    <div class="feature-card">
-                        <div class="feature-icon-large">🧠</div>
-                        <h4>AI Decode Engine</h4>
-                        <p>web-deep-cw-decoder lightweight model, CRNN + CTC architecture, runs directly in browser</p>
-                    </div>
-                    <div class="feature-card">
-                        <div class="feature-icon-large">📱</div>
-                        <h4>QSO State Machine</h4>
-                        <p>Smart recognition of callsign/RST/QTH/NAME, auto-generates reply suggestions, follows HAM Radio conventions</p>
-                    </div>
-                    <div class="feature-card">
-                        <div class="feature-icon-large">📤</div>
-                        <h4>CW Transmit</h4>
-                        <p>Text to Morse code, supports 10-40 WPM speed adjustment, side tone frequency configurable</p>
-                    </div>
-                    <div class="feature-card">
-                        <div class="feature-icon-large">🎚️</div>
-                        <h4>Filter Control</h4>
-                        <p>Supports 500Hz / 1KHz / 2.4KHz bandwidth switching, dedicated CW narrowband optimization</p>
-                    </div>
-                </div>
-
-                <h3>Try It Live</h3>
-                <div class="demo-links">
-                    <a href="https://radio.vlsc.net:8877/cw_live.html" target="_blank" class="btn btn-primary">
-                        <i class="fas fa-satellite-dish"></i> CW Real-time Decode
-                    </a>
-                    <a href="https://radio.vlsc.net:8877/cw_test.html" target="_blank" class="btn btn-secondary">
-                        <i class="fas fa-vial"></i> CW Test
-                    </a>
-                </div>
-            </div>
-
             <!-- NanoVNA -->
             <div class="doc-section" id="nanovna">
                 <h2><span class="feature-icon">📉</span> NanoVNA Vector Network Analyzer</h2>
@@ -417,67 +369,6 @@ Response Example: ff050701031b1e000e01
                     <li><strong>Real-time Measurement</strong>: S11, S21 parameters real-time display</li>
                     <li><strong>Smith Chart</strong>: Supports Smith chart display</li>
                 </ul>
-            </div>
-
-            <!-- FT8/ULTRON -->
-            <div class="doc-section" id="ft8">
-                <h2><span class="feature-icon">📻</span> FT8/ULTRON Remote Console (V5.6+)</h2>
-                <p>ULTRON is MRRC's FT8 digital mode remote console (introduced V4.9, overhauled V5.6), providing a full-featured browser-based interface to JTDX/WSJT-X/MSHV via WebSocket bridge. No local software needed — operate FT8 entirely from your phone or tablet.</p>
-                
-                <h3>Remote Console Features</h3>
-                <div class="feature-grid">
-                    <div class="feature-card">
-                        <div class="feature-icon-large">🌊</div>
-                        <h4>Live Waterfall</h4>
-                        <p>Client-side waterfall spectrogram from Opus/PCM audio stream, 1024px canvas with frequency scale and Rx/Tx cursor lines</p>
-                    </div>
-                    <div class="feature-card">
-                        <div class="feature-icon-large">📋</div>
-                        <h4>6 Customizable TX Slots</h4>
-                        <p>Macro message templates with {DxCall}, {MyCall}, {Report} placeholders — auto-populated and sent with one tap</p>
-                    </div>
-                    <div class="feature-card">
-                        <div class="feature-icon-large">🔄</div>
-                        <h4>Server-Side Auto-Sequencer</h4>
-                        <p>Full QSO state machine: IDLE → CALLING → REPORTED → ROGERED → DONE, with 6-cycle timeout. Uses Reply packets for reliable TX keying</p>
-                    </div>
-                    <div class="feature-card">
-                        <div class="feature-icon-large">🌍</div>
-                        <h4>DXCC & Grid Tracking</h4>
-                        <p>Per-decode DXCC entity lookup + flag, new DXCC/new grid highlighting, worked-before dimming, CQ-only filter, desktop notifications for unworked stations</p>
-                    </div>
-                </div>
-
-                <h3>Supported Software</h3>
-                <table class="comparison-table">
-                    <tr>
-                        <th>Software</th>
-                        <th>Protocol</th>
-                        <th>Status</th>
-                    </tr>
-                    <tr>
-                        <td>JTDX</td>
-                        <td>UDP 2237 → WS Bridge 2238</td>
-                        <td class="highlight">✓ Fully Supported</td>
-                    </tr>
-                    <tr>
-                        <td>WSJT-X</td>
-                        <td>UDP 2237 → WS Bridge 2238</td>
-                        <td class="highlight">✓ Fully Supported</td>
-                    </tr>
-                    <tr>
-                        <td>MSHV</td>
-                        <td>UDP 2237 → WS Bridge 2238</td>
-                        <td class="highlight">✓ Fully Supported</td>
-                    </tr>
-                </table>
-
-                <h3>Try It Live</h3>
-                <div class="demo-links">
-                    <a href="https://radio.vlsc.net:8877/ft8_ultron.html" target="_blank" class="btn btn-primary">
-                        <i class="fas fa-broadcast-tower"></i> FT8 Console
-                    </a>
-                </div>
             </div>
 
             <!-- PTT Safety System -->

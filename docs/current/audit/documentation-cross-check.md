@@ -6,7 +6,7 @@ This audit compares current code behavior against existing documentation. It is 
 
 | File | Status | Notes |
 | --- | --- | --- |
-| `AGENTS.md` | current | Best compact operational guidance: port `8877`, `/` and `/mobile` behavior, Docker mounts, FT8 gotchas, PTT guardrails |
+| `AGENTS.md` | current | Best compact operational guidance: port `8877`, `/` and `/mobile` behavior, Docker mounts, PTT guardrails, FT8/CW removal notes |
 | `docs/legacy/architecture/Component_Detailed_Analysis.md` | mostly-current | Good component-level description; check individual line references before relying on them |
 | `docs/legacy/architecture/Comprehensive_Architecture_Analysis.md` | mostly-current | Good current architecture overview; still needs boundary labels for optional services |
 | `docs/legacy/atr/ATR1000_Tuner_Auto_Learning.md` | mostly-current | Matches proxy-based ATR-1000 architecture and learning/tune concepts |
@@ -36,7 +36,7 @@ This audit compares current code behavior against existing documentation. It is 
 | `docs/legacy/sdd/original-sdd/` | SDD-style documentation | Preserve as historical/reference until reconciled |
 | `docs/legacy/methodology/aldv2/` | Methodology reference | Keep as reference, link from methodology when needed |
 | `website/` | Public static website source | Keep separate from runtime docs; not served by `MRRC` |
-| `ft8/` docs | ULTRON-specific docs | Keep under `ft8/`; only MRRC bridge facts belong in `docs/current/` |
+| `ft8/` docs (deleted V5.7.1) | ULTRON automation was removed with the FT8 feature | Historical FT8/ULTRON facts live only in `docs/legacy/` and the website archives |
 | `www/VOICE_ASSISTANT_README.md` | Voice assistant UI notes | Move/update only with voice assistant service docs |
 
 ## Cleanup Guidance From Documentation Audit
