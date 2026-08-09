@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** 在 `atr1000_proxy.py` 中实现 SWR 守卫：发射期间（实测功率≥10W）SWR 严格 >2.0 持续 ≥1.5s 时自动发送 ATR-1000 完整调谐（mode=2），30s 冷却，同一频率连续 3 次失败后放弃。
+**Goal:** 在 `atr1000_proxy.py` 中实现 SWR 守卫：发射期间（实测功率≥5W）SWR 严格 >2.0 持续 ≥1.5s 时自动发送 ATR-1000 完整调谐（mode=2），30s 冷却，同一频率连续 3 次失败后放弃。
 
 **Architecture:** 在代理的 `_parse_data` METER 处理路径（现有「锁外学习区」旁）追加一个独立的模块级函数 `check_swr_retune(atr1000, power, swr)`。它按实测功率判定发射中（不依赖 `is_tx`，覆盖非 MRRC 路径发射），复用 `cache["tuning"]` 标志避免调谐期间重复触发，用新模块全局状态 `_swr_high_since` / `_last_retune_time` / `_retune_fail_count` 维护去抖、冷却与失败保护。全部改动集中在一个文件加一个测试脚本。
 
@@ -169,7 +169,7 @@ Expected: 首行报 `AttributeError: module 'atr1000_proxy' has no attribute 'ch
 ```python
 # ========== SWR 过高自动完整调谐参数 ==========
 SWR_RETUNE_THRESHOLD     = 2.0   # SWR 严格大于此值视为过高
-SWR_RETUNE_MIN_POWER     = 10    # 实测功率 ≥10W 视为发射中（过滤空闲/调谐扫描的 1–2W）
+SWR_RETUNE_MIN_POWER     = 5     # 实测功率 ≥5W 视为发射中（过滤空闲/调谐扫描的 1–2W）
 SWR_RETUNE_DEBOUNCE      = 1.5   # SWR>2 持续 ≥1.5s 才触发
 SWR_RETUNE_COOLDOWN      = 30    # 两次自动完整调谐最小间隔（秒）
 SWR_RETUNE_MAX_FAILS     = 3     # 同一频率连续失败次数上限
@@ -431,7 +431,7 @@ git commit -m "feat: ATR-1000 SWR 守卫接入 _parse_data / set_freq / quick_tu
 
 ### ⚡ ATR-1000 SWR>2 自动完整调谐
 
-- **新增 SWR 守卫**：发射期间（实测功率 ≥10W）SWR 严格大于 2.0 持续 ≥1.5s 时，
+- **新增 SWR 守卫**：发射期间（实测功率 ≥5W）SWR 严格大于 2.0 持续 ≥1.5s 时，
   自动发送 ATR-1000 完整调谐（mode=2）；30s 冷却；同一频率连续 3 次失败后放弃，
   直到频率变化或 SWR 回落
 - **按实测功率判定发射中**：不依赖前端 TX start 信号，覆盖电台直接 PTT / 外部软件发射场景

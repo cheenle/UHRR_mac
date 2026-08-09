@@ -169,14 +169,14 @@ SCMD_MEMORY_INFO = 7       # 存储信息
 # ========== 稳定窗口学习参数 ==========
 LEARN_WINDOW_SIZE = 4        # 连续稳定样本数（3-5）
 LEARN_SWR_STABILITY = 0.08   # 窗口内 SWR 最大波动
-LEARN_MIN_POWER = 5          # 最小功率 (W)
+LEARN_MIN_POWER = 3          # 最小功率 (W) — QRP 友好：>=3W 即可学习（idle 漏读约 2W 不会误学）
 LEARN_IGNORE_WINDOW = 1.0    # TX 开始/继电器变化后忽略时间 (s)
 LEARN_SWR_MIN = 1.0          # 学习 SWR 下限
 LEARN_SWR_MAX = 1.8          # 学习 SWR 上限
 
 # ========== SWR 过高自动完整调谐参数 ==========
 SWR_RETUNE_THRESHOLD     = 2.0   # SWR 严格大于此值视为过高
-SWR_RETUNE_MIN_POWER     = 10    # 实测功率 ≥10W 视为发射中（过滤空闲/调谐扫描的 1–2W）
+SWR_RETUNE_MIN_POWER     = 5     # 实测功率 ≥5W 视为发射中（过滤空闲/调谐扫描的 1–2W）
 SWR_RETUNE_DEBOUNCE      = 1.5   # SWR>2 持续 ≥1.5s 才触发
 SWR_RETUNE_COOLDOWN      = 30    # 两次自动完整调谐最小间隔（秒）
 SWR_RETUNE_MAX_FAILS     = 3     # 同一频率连续失败次数上限

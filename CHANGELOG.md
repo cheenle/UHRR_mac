@@ -9,12 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### ⚡ ATR-1000 SWR>2 自动完整调谐
 
-- **新增 SWR 守卫**：发射期间（实测功率 ≥10W）SWR 严格大于 2.0 持续 ≥1.5s 时，
+- **新增 SWR 守卫**：发射期间（实测功率 ≥5W）SWR 严格大于 2.0 持续 ≥1.5s 时，
   自动发送 ATR-1000 完整调谐（mode=2）；30s 冷却；同一频率连续 3 次失败后放弃，
   直到频率变化或 SWR 回落
 - **按实测功率判定发射中**：不依赖前端 TX start 信号，覆盖电台直接 PTT / 外部软件发射场景
 - **状态重置**：频率变化 >1kHz 或 TX 结束自动重置守卫状态；调谐期间复用 `tuning`
   标志避免重复触发，与自动学习互不干扰
+- **学习阈值下调**：`LEARN_MIN_POWER` 5W→3W、`SWR_RETUNE_MIN_POWER` 10W→5W，
+  QRP（低功率）操作也能触发学习与自动调谐
 
 ---
 
