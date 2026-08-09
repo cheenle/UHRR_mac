@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [V5.7.2] - 2026-08-09
+
+### 🎛️ RagChew TX 预设修复与优化
+
+- **修复低切 150Hz 失效**：`AudioTX_highCut` 节点此前已初始化并配置为 highpass@150Hz，
+  但从未接入音频链（死节点）；现已接入 `preamp → highCut → antiAlias`，低切真正生效
+- **启用 3kHz 高切**：RagChew 分支的 `antiAlias2` 由 22kHz 直通改为 3kHz 低通，
+  与预设宣称的 3kHz 高切一致（标准预设仍为 4.5kHz）
+- **真正启用压缩器**：RagChew 分支压缩器由透明旁路（threshold=0/ratio=1 永不触发）
+  改为温和 3:1（-18dB / 3:1 / knee 6 / release 200ms），实现"平稳舒适"定位；
+  DEFAULT/MEDIUM/STRONG 仍保持旁路，严格遵循 V5.7 保真哲学
+- **修复 UI 预设值脱节**：`mobile_modern.js` TX EQ 面板 fallback 硬编码
+  （MEDIUM low:-15 / STRONG low:-20）与实际预设（9 / 12）不符，已对齐
+- 噪声门（-50dB / attack 10ms / release 300ms）保持现状，与压缩器 release 200ms 错开，
+  无叠加拖尾；缓存版本号 5.7.1 → 5.7.2
+
+---
+
 ## [V5.7.1] - 2026-08-09
 
 ### 🎙️ RX/TX 链路第二轮优化
