@@ -1914,10 +1914,11 @@ MediaHandler.prototype.callback = function( stream )
         // 初始化 TX EQ
         initTX_EQ(this.context);
 
-        // 音频链: micSource → preamp → antiAlias → antiAlias2 → eqLow → eqMid → eqHigh → midCut → presence → compressor → noiseGate → gain_node → processor
+        // 音频链: micSource → preamp → highCut → antiAlias → antiAlias2 → eqLow → eqMid → eqHigh → midCut → presence → compressor → noiseGate → gain_node → processor
         // RagChew 专用节点在标准模式下设为直通（flat gain / bypass），不影响信号
         this.micSource.connect(AudioTX_preamp);
-        AudioTX_preamp.connect(AudioTX_antiAlias);
+        AudioTX_preamp.connect(AudioTX_highCut);
+        AudioTX_highCut.connect(AudioTX_antiAlias);
         AudioTX_antiAlias.connect(AudioTX_antiAlias2);
         AudioTX_antiAlias2.connect(AudioTX_eqLow);
         AudioTX_eqLow.connect(AudioTX_eqMid);

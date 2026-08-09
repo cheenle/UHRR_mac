@@ -188,12 +188,12 @@ function setTX_EQ_Preset(presetName) {
         AudioTX_eqMid.gain.setValueAtTime(0, ctx.currentTime);
         AudioTX_eqHigh.gain.setValueAtTime(0, ctx.currentTime);
 
-        // antiAlias / antiAlias2 设为直通（极高截止频率的低通 = 直通）
+        // antiAlias 直通（极高截止频率的低通 = 直通），antiAlias2 承担 3kHz 高切
         AudioTX_antiAlias.type = 'lowpass';
         AudioTX_antiAlias.frequency.setValueAtTime(22000, ctx.currentTime);
         AudioTX_antiAlias.Q.setValueAtTime(0.707, ctx.currentTime);
         AudioTX_antiAlias2.type = 'lowpass';
-        AudioTX_antiAlias2.frequency.setValueAtTime(22000, ctx.currentTime);
+        AudioTX_antiAlias2.frequency.setValueAtTime(3000, ctx.currentTime);
         AudioTX_antiAlias2.Q.setValueAtTime(0.707, ctx.currentTime);
 
         // 低切 150Hz — 使用 AudioTX_highCut 节点（不动态改变 filter type）
