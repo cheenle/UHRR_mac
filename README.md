@@ -1,8 +1,8 @@
-# Mobile Remote Radio Control (MRRC) V5.7
+# Mobile Remote Radio Control (MRRC) V5.8.2
 
 [![English](https://img.shields.io/badge/lang-English-blue.svg)](README_en.md)
 [![中文](https://img.shields.io/badge/lang-中文-red.svg)](README_CN.md)
-[![Version](https://img.shields.io/badge/version-V5.7-green.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-V5.8.2-green.svg)](CHANGELOG.md)
 
 ---
 
@@ -14,6 +14,12 @@ A modern web-based remote control system optimized for mobile devices, enabling 
 
 基于现代Web技术的远程电台控制系统，专为移动端优化，让您随时随地灵活操控业余电台。
 
+> 🎉 **V5.8.2 更新**: ATR-1000 功率/SWR 前端不显示修复（IOLoop 线程错位 — 主线程固定 MAIN_IOLOOP）、PTT 状态广播同根因修复
+>
+> 🎉 **V5.8.1 更新**: RX 时延/卡顿提升（IOLoop 去 rigctld 阻塞）、客户端水印 LAN 调参（200→100ms）、restart.sh 停不干净修复
+>
+> 🎉 **V5.8.0 更新**: ATR-1000 SWR>2 自动完整调谐守卫、学习/守卫功率阈值下调（LEARN 5→3W, 守卫 10→5W）
+>
 > 🎉 **V5.7.1 更新**: TX 采集迁移 AudioWorklet、PTT 尾音/预热帧修复、ATR-1000 幽灵功率修复、IC-M710 AGC/RF 增益控制（9-1 档）、FT8/CW 功能整体移除
 >
 > 🎉 **V5.7 更新**: RX/TX 音质全面优化（参考 mrrc_ft710）— Opus 码率 arm64 修复、标签帧、时间水印缓冲、软膝限幅、WDSP 48k + NR2 AE 调参、TX 48k/64kbps CBR、codebase 清理

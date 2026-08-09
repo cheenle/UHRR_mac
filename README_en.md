@@ -1,6 +1,6 @@
-# Mobile Remote Radio Control (MRRC) V5.7
+# Mobile Remote Radio Control (MRRC) V5.8.2
 
-[![English](https://img.shields.io/badge/lang-English-blue.svg)](README_en.md) [![中文](https://img.shields.io/badge/lang-中文-red.svg)](README_CN.md) [![Version](https://img.shields.io/badge/version-V5.7-green.svg)](CHANGELOG.md)
+[![English](https://img.shields.io/badge/lang-English-blue.svg)](README_en.md) [![中文](https://img.shields.io/badge/lang-中文-red.svg)](README_CN.md) [![Version](https://img.shields.io/badge/version-V5.8.2-green.svg)](CHANGELOG.md)
 
 **Amateur Radio, Anytime, Anywhere.**
 
@@ -8,6 +8,10 @@ MRRC is a modern web-based remote control system optimized for mobile devices, e
 
 > ✅ **Core Advantage**: Mobile-first design, TX→RX switching latency <100ms, PWA support for offline access, optimized for one-hand operation
 >
+> 🎉 **V5.8 Highlights**:
+> - 🔧 **ATR-1000 meter display fix (V5.8.2)**: power/SWR no longer stuck on initial snapshot — main-thread-pinned `MAIN_IOLOOP` replaces thread-dependent `IOLoop.instance()` calls in background threads (reconnect timer, rigctld executor, PTTSafetyMonitor)
+> - ⚡ **RX latency improvements (V5.8.1)**: IOLoop de-blocked from rigctld, client watermark tuned for LAN (prebuffer 200→100ms)
+> - 📡 **ATR-1000 SWR>2 auto full-tune guard (V5.8.0)**: automatic complete tuning when SWR exceeds threshold, lower learn/guard power thresholds
 > 🎉 **V5.7 Highlights**:
 > - 🎙️ **RX/TX audio overhaul**: 48kHz Opus TX with AudioWorklet capture, watermark-buffered RX, soft-knee limiting, WDSP 48k + NR2 AE tuning
 > - 🎛️ **IC-M710 AGC/RF-gain controls**: quick-row AGC toggle + RF gain (9-1 steps) via CAT
@@ -317,7 +321,7 @@ Based on [F4HTB/Universal_HamRadio_Remote_HTML5](https://github.com/F4HTB/Univer
 
 ---
 
-**Latest Version: V5.7.1** (2026-08-09) | [View Changelog](CHANGELOG.md)
+**Latest Version: V5.8.2** (2026-08-09) | [View Changelog](CHANGELOG.md)
 
 **MRRC - Mobile Remote Radio Control**  
 *Amateur Radio, Anytime, Anywhere.*
