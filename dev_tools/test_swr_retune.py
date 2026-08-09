@@ -115,10 +115,30 @@ def test_skips_when_not_conditions():
     print("✓ 功率不足/SWR达标/调谐中/继电器忽略窗口均不触发")
 
 
+def test_parse_data_integration():
+    """通过 _parse_data 喂连续高 SWR METER 包，验证触发完整调谐。"""
+    import struct
+    _reset(swr=1.0, power=0)
+    ap.is_tx = True
+    fake = FakeATR()
+    ap._parse_data = ap.ATR1000Client._parse_data.__get__(fake, FakeATR)
+    ap.learning_buffer.set_relay(0, 0, 15)
+    ap.learning_buffer.set_freq(21074000)
+    for _ in range(10):                      # 10 个 SWR=2.5, P=40W 的 METER
+        FakeClock.now += 0.2
+        raw = struct.pack('<H', 250) + struct.pack('<H', 40)
+        ap._parse_data(bytes([0xFF, 0x02, 0x07, 0x00]) + raw)
+    assert fake.tune_calls, "高 SWR METER 流应触发完整调谐"
+    assert fake.tune_calls[-1][0] == 2, "应为完整调谐 mode=2"
+    assert ap.cache["tuning"] is True, "触发后应置 tuning 标志"
+    print("✓ _parse_data 集成：高 SWR METER 流触发完整调谐并置 tuning")
+
+
 def main():
     ap.time.time = FakeClock.time      # 打桩模块级 time.time
     tests = [test_triggers_once_after_debounce, test_cooldown_blocks_repeat,
-             test_gives_up_after_max_fails, test_skips_when_not_conditions]
+             test_gives_up_after_max_fails, test_skips_when_not_conditions,
+             test_parse_data_integration]
     for t in tests:
         FakeClock.now = 1000.0
         t()

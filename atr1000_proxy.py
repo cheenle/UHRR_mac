@@ -921,6 +921,10 @@ class ATR1000Client:
                         except Exception as e:
                             logger.error(f"学习天调参数失败: {e}")
 
+        # ===== SWR 过高自动完整调谐守卫 (V5.8.0) =====
+        if cmd == SCMD_METER_STATUS and len(data) >= 8:
+            check_swr_retune(self, power, cache["swr"])
+
     def close(self):
         """关闭连接"""
         if self.ws:
@@ -1004,7 +1008,7 @@ def handle_unix_client(conn, addr, atr1000):
     - set_relay: 设置继电器参数
     - tune: 启动自动调谐
     """
-    global clients, cache, client_count, is_tx
+    global clients, cache, client_count, is_tx, _swr_high_since
     
     clients.append(conn)
     client_count = len(clients)
@@ -1039,7 +1043,13 @@ def handle_unix_client(conn, addr, atr1000):
             # 设置当前频率并自动调谐（如果有匹配参数）
             freq = msg.get("freq", 0)
             with cache_lock:
+                old_freq = cache.get("freq", 0)
                 cache["freq"] = freq
+            # V5.8.0: 频率显著变化 → 重置 SWR 守卫连续段与失败计数
+            if abs(freq - old_freq) > 1000:
+                with state_lock:
+                    _swr_high_since = 0
+                    _retune_fail_count.clear()
 
             # 查找并应用天调参数
             tune_result = None
@@ -1074,6 +1084,10 @@ def handle_unix_client(conn, addr, atr1000):
         elif action == "quick_tune":
             # V4.5.15: 快速调谐到指定频率
             freq = msg.get("freq", 0)
+            # V5.8.0: 手动快速调谐视为一次全新尝试 → 重置守卫失败保护
+            with state_lock:
+                _swr_high_since = 0
+                _retune_fail_count.clear()
             if freq > 0:
                 tuner = get_storage()
                 params = tuner.get_tune_params(freq)
@@ -1188,6 +1202,7 @@ def handle_unix_client(conn, addr, atr1000):
                 comm_stats['tx_total_time'] += tx_duration
                 log_comm('RX', 'STATUS', '', f'TX模式结束 (持续{tx_duration:.1f}秒)')
             learning_buffer.reset()  # V5.6.0: TX 结束重置学习窗口
+            _swr_high_since = 0  # V5.8.0: TX 结束重置 SWR 连续段
             with cache_lock:
                 # V5.6.1: TX 结束清除调谐标志 (设备不一定发送 TUNE_STATUS=0)
                 if cache.get("tuning"):
