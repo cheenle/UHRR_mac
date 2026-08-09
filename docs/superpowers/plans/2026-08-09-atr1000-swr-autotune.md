@@ -11,7 +11,7 @@
 ## Global Constraints
 
 - 只修改 `atr1000_proxy.py` 与 `dev_tools/`（新增测试脚本）；不改 MRRC 主进程、前端、其他设备模块。
-- 锁顺序约束：`check_swr_retune` 内先 `cache_lock` 快照、后 `state_lock`；不得出现 `state_lock` 内再取 `cache_lock`，避免与既有代码死锁。
+- 锁约束：`check_swr_retune` 内 `cache_lock` 与 `state_lock` **独立获取、互不嵌套**（无锁内取锁）；已核实全文件不存在「持 `cache_lock` 再取 `state_lock`」的路径，避免死锁。
 - `handle_unix_client` 内改 `_swr_high_since` 需在函数顶部 `global` 声明中加入该名字。
 - 运行测试：`venv/bin/python dev_tools/test_swr_retune.py`（已验证 `atr1000_proxy` 可在 venv 下无网络导入）。
 - 不重命名/移动现有函数；新增代码风格与文件一致（中文注释、具名常量、INFO 日志）。
@@ -201,41 +201,35 @@ def check_swr_retune(atr1000, power, swr):
     global _swr_high_since, _last_retune_time
 
     now = time.time()
-    # 先取 cache 快照（cache_lock），再操作守卫状态（state_lock），
-    # 严格保持该锁顺序，避免与既有代码死锁。
+    # 先取 cache 快照（cache_lock 独立获取后立即释放）
     with cache_lock:
         tuning = cache.get("tuning", False)
         freq = cache.get("freq", 0)
         relay_changed = cache.get("relay_changed_at", 0)
 
+    # 快速跳过路径：各自独立取锁，不嵌套
+    if tuning or power < SWR_RETUNE_MIN_POWER or freq <= 0:
+        with state_lock:
+            _swr_high_since = 0
+        return
+
+    # SWR 可接受：重置连续段并清零失败计数
+    if swr <= SWR_RETUNE_THRESHOLD:
+        with state_lock:
+            _swr_high_since = 0
+            _retune_fail_count.pop(str(freq // 1000), None)
+        return
+
+    # 继电器变化后忽略窗口（复用学习忽略窗口）
+    if relay_changed > 0 and now - relay_changed < LEARN_IGNORE_WINDOW:
+        with state_lock:
+            _swr_high_since = 0
+        return
+
+    freq_key = str(freq // 1000)
+
+    # 失败保护：连续 N 次仍不达标 → 放弃该频率（每条连续段只公告一次）
     with state_lock:
-        # 调谐中：SWR 无意义，重置连续段
-        if tuning:
-            _swr_high_since = 0
-            return
-        # 功率不足：过滤空闲/调谐扫描期
-        if power < SWR_RETUNE_MIN_POWER:
-            _swr_high_since = 0
-            return
-        # SWR 可接受：重置连续段并清零失败计数
-        if swr <= SWR_RETUNE_THRESHOLD:
-            _swr_high_since = 0
-            freq_key = str(freq // 1000)
-            if freq_key in _retune_fail_count:
-                del _retune_fail_count[freq_key]
-            return
-        # 继电器变化后忽略窗口（复用学习忽略窗口）
-        if relay_changed > 0 and now - relay_changed < LEARN_IGNORE_WINDOW:
-            _swr_high_since = 0
-            return
-        # 频率无效：不评估
-        if freq <= 0:
-            _swr_high_since = 0
-            return
-
-        freq_key = str(freq // 1000)
-
-        # 失败保护：连续 N 次仍不达标 → 放弃该频率（每条连续段只公告一次）
         if _retune_fail_count.get(freq_key, 0) >= SWR_RETUNE_MAX_FAILS:
             if _swr_high_since == 0:
                 logger.info(
@@ -254,19 +248,23 @@ def check_swr_retune(atr1000, power, swr):
                 now - _last_retune_time < SWR_RETUNE_COOLDOWN):
             return
 
-        # 触发完整调谐（标志在锁内置位，命令在锁外发送）
-        with cache_lock:
-            cache["tuning"] = True
-            cache["tuning_started_at"] = now
-            cache["tuning_relay_stable_since"] = 0
-            _retune_fail_count[freq_key] = _retune_fail_count.get(freq_key, 0) + 1
+        # 判定触发：更新守卫状态（state_lock）
+        _retune_fail_count[freq_key] = _retune_fail_count.get(freq_key, 0) + 1
         _last_retune_time = now
         _swr_high_since = 0
-        atr1000.start_tune(2)
-        logger.info(
-            f"⚡ SWR={swr:.2f}>2 自动触发完整调谐: {freq/1000:.1f}kHz "
-            f"(第{_retune_fail_count[freq_key]}次)"
-        )
+
+    # 置位 tuning 标志（cache_lock 独立获取）
+    with cache_lock:
+        cache["tuning"] = True
+        cache["tuning_started_at"] = now
+        cache["tuning_relay_stable_since"] = 0
+
+    # 发送完整调谐命令（锁外网络 I/O）
+    atr1000.start_tune(2)
+    logger.info(
+        f"⚡ SWR={swr:.2f}>2 自动触发完整调谐: {freq/1000:.1f}kHz "
+        f"(第{_retune_fail_count[freq_key]}次)"
+    )
 ```
 
 - [ ] **Step 5: 运行测试确认通过**
@@ -447,8 +445,8 @@ Run: `venv/bin/python dev_tools/test_swr_retune.py`
 Expected: 全部通过。
 Run: `venv/bin/python -m py_compile atr1000_proxy.py`
 Expected: 无输出。
-Run: `git diff --stat HEAD~2 -- atr1000_proxy.py dev_tools/test_swr_retune.py CHANGELOG.md`
-Expected: 仅这 3 个文件有改动。
+Run: `git status` 与 `git log --oneline -4`
+Expected: 工作树干净；最近 4 个 commit 为本计划的 docs/feat 提交，仅 `atr1000_proxy.py`、`dev_tools/test_swr_retune.py`、`CHANGELOG.md` 三个业务文件在改动范围内。
 
 - [ ] **Step 3: 实机验证清单（需要用户配合，涉及重启线上代理）**
 
