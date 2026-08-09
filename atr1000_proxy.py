@@ -354,14 +354,15 @@ def set_relay_with_throttle(atr1000, sw, ind, cap):
     return False
 
 
-def check_swr_retune(atr1000, power, swr):
+def check_swr_retune(atr1000, power):
     """SWR 过高自动完整调谐守卫 - V5.8.0
 
-    发射期间（实测功率 ≥ SWR_RETUNE_MIN_POWER）持续监测 SWR；当
+    发射期间（实测功率 ≥ SWR_RETUNE_MIN_POWER）持续监测 cache 中的 SWR；当
     SWR > SWR_RETUNE_THRESHOLD 且连续 ≥ SWR_RETUNE_DEBOUNCE 秒、不在
     调谐/冷却期时，自动发送一次 ATR-1000 完整调谐（mode=2）。
     同一频率连续 SWR_RETUNE_MAX_FAILS 次调谐仍不达标则放弃，直到频率
     变化或 SWR 回落到阈值以下。按实测功率判定发射中，不依赖 is_tx。
+    SWR 在函数内自 cache_lock 快照中读取，调用方无需（也不应）预取传入。
     """
     global _swr_high_since, _last_retune_time
 
@@ -371,6 +372,7 @@ def check_swr_retune(atr1000, power, swr):
         tuning = cache.get("tuning", False)
         freq = cache.get("freq", 0)
         relay_changed = cache.get("relay_changed_at", 0)
+        swr = cache.get("swr", 0.0)
 
     # 快速跳过路径：各自独立取锁，不嵌套
     if tuning or power < SWR_RETUNE_MIN_POWER or freq <= 0:
@@ -414,7 +416,9 @@ def check_swr_retune(atr1000, power, swr):
             return
 
         # 判定触发：更新守卫状态（state_lock）
-        _retune_fail_count[freq_key] = _retune_fail_count.get(freq_key, 0) + 1
+        # fail_num 在锁内捕获，锁外日志复用，避免并发 clear() 后再次读取触发 KeyError
+        fail_num = _retune_fail_count.get(freq_key, 0) + 1
+        _retune_fail_count[freq_key] = fail_num
         _last_retune_time = now
         _swr_high_since = 0
 
@@ -428,7 +432,7 @@ def check_swr_retune(atr1000, power, swr):
     atr1000.start_tune(2)
     logger.info(
         f"⚡ SWR={swr:.2f}>2 自动触发完整调谐: {freq/1000:.1f}kHz "
-        f"(第{_retune_fail_count[freq_key]}次)"
+        f"(第{fail_num}次)"
     )
 
 
@@ -923,7 +927,7 @@ class ATR1000Client:
 
         # ===== SWR 过高自动完整调谐守卫 (V5.8.0) =====
         if cmd == SCMD_METER_STATUS and len(data) >= 8:
-            check_swr_retune(self, power, cache["swr"])
+            check_swr_retune(self, power)
 
     def close(self):
         """关闭连接"""

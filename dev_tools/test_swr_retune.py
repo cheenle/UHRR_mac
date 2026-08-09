@@ -42,7 +42,7 @@ def _reset(freq=21074000, swr=1.0, power=0, tuning=False, relay_changed=0):
 def _feed(fake_atr, swr, power, n=1, dt=0.2):
     for _ in range(n):
         FakeClock.now += dt
-        ap.check_swr_retune(fake_atr, power, swr)
+        ap.check_swr_retune(fake_atr, power)
 
 
 def test_triggers_once_after_debounce():
