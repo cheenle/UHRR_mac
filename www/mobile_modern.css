@@ -232,7 +232,7 @@ body {
     gap: 1px;
     font-family: var(--font-mono);
     font-weight: 700;
-    font-size: 56px;
+    font-size: 48px;
     letter-spacing: 1px;
     font-variant-numeric: tabular-nums;
     color: var(--accent-primary);
@@ -307,7 +307,7 @@ body {
 
 /* Hz位（100Hz精度）- FT-710: 18px 弱色 #666 */
 .freq-digit.freq-hz {
-    font-size: 36px;
+    font-size: 30px;
     color: var(--text-muted);
     opacity: 1;
 }
@@ -1130,7 +1130,7 @@ body {
 /* 小屏幕纵向适配 - 确保一屏显示 */
 @media (max-height: 700px) {
     .freq-main {
-        font-size: 44px;
+        font-size: 36px;
     }
 
     .s-meter-labels {
@@ -1194,7 +1194,7 @@ body {
     }
     
     .freq-main {
-        font-size: 48px;
+        font-size: 40px;
     }
     
     .freq-sub {
@@ -2275,10 +2275,10 @@ body {
 /* 大屏频率字号 - FT-710 桌面 38px */
 @media (min-width: 768px) {
     .freq-main {
-        font-size: 76px;
+        font-size: 64px;
     }
 
     .freq-digit.freq-hz {
-        font-size: 48px;
+        font-size: 40px;
     }
 }
