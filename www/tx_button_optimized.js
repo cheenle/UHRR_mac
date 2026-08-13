@@ -318,6 +318,9 @@ async function TXControl(action) {
                     if (typeof window.__rxAccumulatedBuffer !== 'undefined') {
                         window.__rxAccumulatedBuffer = [];
                         window.__rxTotalSamples = 0;
+                        // V5.8.3: 同步重置水印门控，冷启动重新积累
+                        window.__rxPriming = true;
+                        window.__rxGateMs = window.__rxPrebufferMs;
                         console.log(`[${timestamp}] ✅ ScriptProcessor 累积缓冲区已清空`);
                     }
                 }

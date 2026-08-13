@@ -502,8 +502,18 @@ function AudioRX_start(){
             
             // 累积缓冲区 - 用于平滑播放
             // 关键修复：暴露到 window 对象，确保 TX 释放时能正确清除
+            // V5.8.3: 加入毫秒水印门控（对齐 rx_worklet_processor.js）。
+            // iOS 的 WS 解码 + ScriptProcessor 渲染共用主线程：Opus 20ms 帧突发到达
+            // + GC/解码抖动会让缓冲瞬间耗尽 → 补静音 = 可闻卡顿。200ms 冷启动缓冲
+            // 覆盖 ~4.7 个 2048 量子（42.7ms@48kHz），欠载后只需补到 80ms 即恢复
+            // （迟滞），上限 500ms 约束端到端延迟。
             window.__rxAccumulatedBuffer = [];
             window.__rxTotalSamples = 0;
+            window.__rxPrebufferMs = 200;   // 冷启动缓冲
+            window.__rxRecoveryMs = 80;     // 欠载后重新武装（迟滞）
+            window.__rxMaxMs = 500;         // 硬上限
+            window.__rxPriming = true;      // 开门标志：true 时积累缓冲
+            window.__rxGateMs = window.__rxPrebufferMs; // 当前开门阈值
             var underrunCount = 0;
             
             AudioRX_source_node.onaudioprocess = function(event) {
@@ -514,6 +524,16 @@ function AudioRX_start(){
                 // 从累积缓冲区填充输出（使用 window 暴露的变量）
                 var accBuf = window.__rxAccumulatedBuffer;
                 var totSamples = window.__rxTotalSamples;
+                
+                // 开门积累中：缓冲不足则输出静音（不消耗数据）
+                if (window.__rxPriming) {
+                    var gateSamples = Math.round((window.__rxGateMs / 1000) * AudioRX_context.sampleRate);
+                    if (totSamples < gateSamples) {
+                        out.fill(0);
+                        return;
+                    }
+                    window.__rxPriming = false;
+                }
                 
                 while (samplesWritten < samplesNeeded && accBuf.length > 0) {
                     var cur = accBuf[0];
@@ -539,6 +559,10 @@ function AudioRX_start(){
                     for (var k = samplesWritten; k < samplesNeeded; k++) {
                         out[k] = 0;
                     }
+                    // 欠载：重新武装到 recovery 水位（迟滞，避免每次欠载都重新
+                    // 攒满完整 prebuffer，快速恢复播放）
+                    window.__rxPriming = true;
+                    window.__rxGateMs = window.__rxRecoveryMs;
                     underrunCount++;
                     // 每 50 次欠载打印一次日志
                     if (underrunCount % 50 === 0) {
@@ -561,10 +585,9 @@ function AudioRX_start(){
                     window.__rxTotalSamples += float32Data.length;
                     
                     // 缓冲区管理：保持在目标范围内
-                    // V5.4: 按 AudioContext 实际采样率计算 200ms 上限。
-                    // 原硬编码 9600 假设 48kHz，但 RX 上下文请求 16kHz —
-                    // 若浏览器按 16kHz 运行，9600 样本实际是 600ms 缓冲
-                    var maxSamples = Math.floor(AudioRX_context.sampleRate * 0.2);
+                    // V5.8.3: 上限改用毫秒水印 __rxMaxMs（默认 500ms），
+                    // 替代原硬编码 0.2s；按 AudioContext 实际采样率换算样本数
+                    var maxSamples = Math.floor(AudioRX_context.sampleRate * (window.__rxMaxMs / 1000));
                     while (window.__rxTotalSamples > maxSamples && window.__rxAccumulatedBuffer.length > 1) {
                         var removed = window.__rxAccumulatedBuffer.shift();
                         window.__rxTotalSamples -= removed.length;
@@ -751,6 +774,9 @@ function toggleaudioRX(stat="None"){
 		if (typeof window.__rxAccumulatedBuffer !== 'undefined') {
 			window.__rxAccumulatedBuffer = [];
 			window.__rxTotalSamples = 0;
+			// V5.8.3: 同步重置水印门控，冷启动重新积累
+			window.__rxPriming = true;
+			window.__rxGateMs = window.__rxPrebufferMs;
 		}
 	}
 }

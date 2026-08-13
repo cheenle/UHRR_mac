@@ -474,9 +474,11 @@ start_instance() {
     
     start_rigctld
     sleep 2
-    start_mrrc
-    sleep 1
+    # V5.8.3: 代理先于 MRRC 启动，避免 MRRC 启动时 Unix Socket 尚不存在
+    # 导致的 ATR-1000 代理连接失败告警（原顺序 MRRC 在前会连刷 4-5 条 WARNING）
     start_atr1000
+    sleep 1
+    start_mrrc
     
     if is_running "MRRC\.$INSTANCE\.conf"; then
         print_success "Instance '$instance_name' started successfully!"

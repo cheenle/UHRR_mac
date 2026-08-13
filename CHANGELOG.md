@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [V5.8.3] - 2026-08-13
+
+### ⚙️ 启动顺序与 iOS RX 缓冲优化
+
+- **启动顺序调整（mrrc_control.sh / mrrc_multi.sh）**：ATR-1000 代理先于 MRRC 启动，
+  避免 MRRC 启动时 Unix Socket 尚不存在导致的连接失败告警刷屏（原顺序 MRRC 在前会连刷 4-5 条 WARNING）
+- **iOS RX 毫秒水印门控（controls.js / tx_button_optimized.js）**：ScriptProcessor 路径
+  对齐 `rx_worklet_processor.js` 的毫秒水印机制 — `__rxPrebufferMs 200 / __rxRecoveryMs 80 / __rxMaxMs 500`，
+  冷启动积累缓冲后输出、欠载后按迟滞水位重新武装，替代原硬编码 0.2s 样本上限；
+  TX 释放/音频开关同步重置门控，消除 iOS 解码抖动导致的欠载补静音卡顿
+- 前端缓存版本号 5.8.1 → 5.8.3（controls.js / tx_button_optimized.js）
+
+---
+
 ## [V5.8.2] - 2026-08-09
 
 ### 🔧 ATR-1000 功率/SWR 前端不显示修复（IOLoop 线程错位）
