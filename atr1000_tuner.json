@@ -1,6 +1,6 @@
 {
   "version": "2.0",
-  "updated": "2026-08-09T13:57:57.242859",
+  "updated": "2026-08-12T08:37:13.840061",
   "records": [
     {
       "freq": 7050000,
@@ -40,14 +40,14 @@
     },
     {
       "freq": 14270000,
-      "sw": 0,
-      "ind": 0,
-      "cap": 8,
-      "swr_avg": 1.183598130841121,
+      "sw": 1,
+      "ind": 3,
+      "cap": 16,
+      "swr_avg": 1.1818981481481476,
       "swr_min": 1.0,
       "swr_max": 1.75,
-      "sample_count": 107,
-      "last_update": 1786164596.688714,
+      "sample_count": 108,
+      "last_update": 1786495033.839993,
       "needs_verify": false
     },
     {
@@ -138,12 +138,12 @@
       "freq": 28450000,
       "sw": 0,
       "ind": 2,
-      "cap": 7,
-      "swr_avg": 1.5400000000000007,
-      "swr_min": 1.54,
+      "cap": 9,
+      "swr_avg": 1.5296153846153853,
+      "swr_min": 1,
       "swr_max": 1.54,
-      "sample_count": 51,
-      "last_update": 1780741312.195199,
+      "sample_count": 52,
+      "last_update": 1786268009.680593,
       "needs_verify": false
     },
     {
@@ -162,12 +162,12 @@
       "freq": 3850000,
       "sw": 0,
       "ind": 32,
-      "cap": 111,
-      "swr_avg": 1.3025157894736852,
+      "cap": 118,
+      "swr_avg": 1.3018802521008415,
       "swr_min": 1.0,
       "swr_max": 1.61,
-      "sample_count": 475,
-      "last_update": 1781958355.2994208,
+      "sample_count": 476,
+      "last_update": 1786317662.661736,
       "needs_verify": false
     },
     {
@@ -257,13 +257,13 @@
     {
       "freq": 28074000,
       "sw": 0,
-      "ind": 3,
-      "cap": 6,
-      "swr_avg": 1.35,
-      "swr_min": 1.35,
+      "ind": 2,
+      "cap": 11,
+      "swr_avg": 1.175,
+      "swr_min": 1,
       "swr_max": 1.35,
-      "sample_count": 1,
-      "last_update": 1781841539.6068301,
+      "sample_count": 2,
+      "last_update": 1786422219.265356,
       "needs_verify": false
     },
     {
