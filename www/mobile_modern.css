@@ -106,7 +106,7 @@ body {
 .mobile-modern-container {
     display: flex;
     flex-direction: column;
-    height: 100dvh;
+    height: calc(100dvh - env(safe-area-inset-top, 0px));
     padding: 0 env(safe-area-inset-right) 0 env(safe-area-inset-left);
     background-color: var(--bg-primary);
 }
@@ -628,7 +628,7 @@ body {
     flex-shrink: 0;
     background-color: var(--bg-secondary);
     border-top: 1px solid var(--border-color);
-    padding-top: clamp(4px, 1vh, 8px);
+    padding-top: clamp(2px, 0.5vh, 4px);
 }
 
 /* Off-canvas Menu */
@@ -2004,7 +2004,7 @@ body {
     justify-content: center;
     align-items: stretch;
     padding: 0 clamp(8px, 2vw, 12px);
-    padding-bottom: clamp(4px, 1vh, 8px);
+    padding-bottom: clamp(2px, 0.5vh, 4px);
 }
 
 /* 右侧控制区域 - 录音/TUNE/CQCQCQ 垂直排列 */
@@ -2031,8 +2031,8 @@ body {
 /* PTT 按钮 - FT-710 大红按钮，TX 发光 */
 .ptt-button {
     flex: 1.4;
-    height: clamp(60px, 12vh, 94px);
-    min-height: 72px;
+    height: clamp(54px, 10.8vh, 85px);
+    min-height: 64px;
     border: none;
     border-radius: var(--radius-lg);
     background: var(--accent-danger);
