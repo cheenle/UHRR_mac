@@ -787,11 +787,21 @@ document.addEventListener('DOMContentLoaded', function() {
     // iOS Safari 需要用户交互才能初始化音频
     document.addEventListener('touchstart', initAudioOnFirstTouch, { once: true });
     document.addEventListener('mousedown', initAudioOnFirstTouch, { once: true });
+    // V5.8.4: 切后台回来时 AudioContext 会被 iOS Safari suspend，且 visibilitychange
+    // 里的 resume() 因非用户手势可能被拒绝。注册持久触摸监听：每次触摸都尝试恢复
+    // suspended 的 AudioContext（幂等，已 running 时无副作用），保证切回后任意点击即恢复。
+    document.addEventListener('touchstart', resumeAudioContextOnTouch, { passive: true });
+    document.addEventListener('mousedown', resumeAudioContextOnTouch, { passive: true });
     
     // 页面可见性变化时重新请求 Wake Lock
     document.addEventListener('visibilitychange', async () => {
         if (document.visibilityState === 'visible' && mobileState.isConnected) {
             await requestWakeLock();
+            // V5.8.4: 切后台回来恢复 AudioContext + 重连半开 WebSocket
+            // （iOS Safari 会 suspend AudioContext；RX socket 可能半开无 onclose）
+            if (typeof window.resumeAudioAfterBackground === 'function') {
+                try { await window.resumeAudioAfterBackground(); } catch(e) { console.warn('后台恢复失败:', e); }
+            }
         }
     });
     
@@ -1403,6 +1413,33 @@ function initAudioOnFirstTouch() {
         console.log('✅ 音频上下文初始化完成');
     } catch (e) {
         console.error('❌ 音频上下文初始化失败:', e);
+    }
+}
+
+// V5.8.4: 持久触摸恢复（非 once）。切后台回来 AudioContext 被 iOS Safari suspend
+// 后，visibilitychange 中的 resume() 属于非用户手势可能被拒绝；用户在页面上任意
+// 一次触摸/点击都属于用户手势，此时 resume 必然被允许。此函数幂等：仅当
+// suspended 时才尝试恢复，running 时直接返回，不影响正常操作。
+function resumeAudioContextOnTouch() {
+    if (typeof poweron === 'undefined' || !poweron) return;
+    try {
+        if (typeof AudioRX_context !== 'undefined' && AudioRX_context && AudioRX_context.state === 'suspended') {
+            AudioRX_context.resume().then(() => {
+                console.log('✅ AudioContext 已通过触摸恢复');
+            }).catch(err => {
+                console.warn('触摸恢复 AudioContext 失败:', err);
+            });
+        }
+        // TX 侧 AudioContext（MediaHandler）同样可能被 suspend
+        if (typeof mh !== 'undefined' && mh && mh.context && mh.context.state === 'suspended') {
+            mh.context.resume().then(() => {
+                console.log('✅ TX AudioContext 已通过触摸恢复');
+            }).catch(err => {
+                console.warn('触摸恢复 TX AudioContext 失败:', err);
+            });
+        }
+    } catch (e) {
+        console.warn('触摸恢复音频上下文异常:', e);
     }
 }
 
