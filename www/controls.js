@@ -246,8 +246,19 @@ var AudioRX_OpusDecoder = null;
 var AudioRX_opusDecode = false;  // 是否启用 Opus 解码
 
 function AudioRX_start(){
-	// V4.9.4 修复：重连时先清理旧的 AudioContext
-	// 避免旧的 AudioContext 阻塞新连接
+	// 只有 WebSocket 和 AudioContext 同时可用时才复用当前 RX 链路。
+	// 必须在关闭上下文之前判断；旧 socket 的延迟重连若先关闭当前上下文，
+	// 再因新 socket 已 OPEN 而返回，会留下“socket 正常、音频已关闭”的假健康状态。
+	var rxSocketUsable = wsAudioRX &&
+		(wsAudioRX.readyState === WebSocket.OPEN || wsAudioRX.readyState === WebSocket.CONNECTING);
+	var rxContextUsable = AudioRX_context && AudioRX_context.state !== 'closed';
+	if (rxSocketUsable && rxContextUsable) {
+		console.log('⏭️ AudioRX 链路已在连接中或已连接，跳过重复创建');
+		return;
+	}
+	if (rxSocketUsable && !rxContextUsable) {
+		try { wsAudioRX.close(); } catch(e) {}
+	}
 	if (AudioRX_context && AudioRX_context.state !== 'closed') {
 		console.log('🔄 关闭旧的 AudioContext...');
 		try {
@@ -255,18 +266,9 @@ function AudioRX_start(){
 		} catch(e) {
 			console.warn('关闭旧 AudioContext 失败:', e);
 		}
-		AudioRX_context = null;
-		AudioRX_source_node = null;
 	}
-	
-	// 避免重复创建连接：仅 OPEN/CONNECTING 跳过；CLOSING/CLOSED 都重建。
-	// 原因：ws.close() 后先进入 CLOSING(2)，若用 `!== CLOSED` 判断会误判
-	// "已在连接中"而跳过重建 → AudioContext 已被 stop() 关闭、socket 已断，
-	// 音频链彻底断裂（电源开关/切后台恢复失效的关键根因之一）。
-	if (wsAudioRX && (wsAudioRX.readyState === WebSocket.OPEN || wsAudioRX.readyState === WebSocket.CONNECTING)) {
-		console.log('⏭️ AudioRX WebSocket已在连接中或已连接，跳过重复创建');
-		return;
-	}
+	AudioRX_context = null;
+	AudioRX_source_node = null;
 	
 	setWSStatus('status-rx', 'connecting');
 	AudioRX_audiobuffer = [];var lenglitchbuf = 2;
@@ -278,11 +280,12 @@ function AudioRX_start(){
 		console.log('📡 RX Opus 解码已启用');
 	}
 
-	wsAudioRX = new WebSocket( __wsURL('/WSaudioRX') );
-	wsAudioRX.binaryType = 'arraybuffer';
-	wsAudioRX.onopen = wsAudioRXopen;
-	wsAudioRX.onclose = wsAudioRXclose;
-	wsAudioRX.onerror = wsAudioRXerror;
+	var rxSocket = new WebSocket( __wsURL('/WSaudioRX') );
+	wsAudioRX = rxSocket;
+	rxSocket.binaryType = 'arraybuffer';
+	rxSocket.onopen = function() { wsAudioRXopen(rxSocket); };
+	rxSocket.onclose = function() { wsAudioRXclose(rxSocket); };
+	rxSocket.onerror = function(err) { wsAudioRXerror(err, rxSocket); };
 	// onmessage 将在下方根据 iOS Safari/桌面端分支设置
 
 	// 每秒更新一次码率显示（RX/TX）
@@ -425,7 +428,8 @@ function AudioRX_start(){
     // 原"显式使用 48kHz"注释与实际 AudioRX_sampleRate=16000 不符，易误导维护者。
     // iOS Safari 注意：AudioContext 创建后可能处于 suspended 状态
     // 需要在用户交互后调用 resume()
-    AudioRX_context = new AudioContext({ latencyHint: "interactive", sampleRate: AudioRX_sampleRate });
+    var rxContext = new AudioContext({ latencyHint: "interactive", sampleRate: AudioRX_sampleRate });
+    AudioRX_context = rxContext;
     
     // iOS Safari 关键：记录 AudioContext 初始状态和实际采样率
     console.log('🔊 AudioContext 创建完成, 初始状态:', AudioRX_context.state, ', 实际采样率:', AudioRX_context.sampleRate);
@@ -468,8 +472,10 @@ function AudioRX_start(){
     (async () => {
         if (useAudioWorklet) {
             try {
-                await AudioRX_context.audioWorklet.addModule('rx_worklet_processor.js');
-                const rxNode = new AudioWorkletNode(AudioRX_context, 'rx-player');
+                await rxContext.audioWorklet.addModule('rx_worklet_processor.js');
+                // addModule 是异步的；若期间已重建链路，旧初始化结果必须丢弃。
+                if (rxSocket !== wsAudioRX || rxContext !== AudioRX_context) return;
+                const rxNode = new AudioWorkletNode(rxContext, 'rx-player');
                 AudioRX_source_node = rxNode;
                 // 时间水印缓冲（rx_worklet_processor.js）: LAN 调参 V5.8.1
                 // 冷启动100ms, 欠载恢复40ms(迟滞), 上限400ms —— 延迟减半，LAN 抖动余量仍充足
@@ -478,7 +484,8 @@ function AudioRX_start(){
                     rxNode.port.postMessage({ type: 'push', payload: f32 });
                 };
                 // 桌面端：设置 WebSocket 消息处理器
-                wsAudioRX.onmessage = function(msg){
+                rxSocket.onmessage = function(msg){
+                    if (rxSocket !== wsAudioRX || rxContext !== AudioRX_context) return;
                     if (!window.__rxBytes) window.__rxBytes = 0;
                     if (msg && msg.data && msg.data.byteLength) window.__rxBytes += msg.data.byteLength;
                     // V5.8.4: 记录最后收到 RX 数据的时间（切后台回来半开检测用）
@@ -499,6 +506,7 @@ function AudioRX_start(){
         }
         
         if (!useAudioWorklet) {
+            if (rxSocket !== wsAudioRX || rxContext !== AudioRX_context) return;
             // ScriptProcessor 模式（iOS Safari 兼容）
             // 使用 2048 帧缓冲区（约 42ms @ 48kHz），匹配 Opus 40ms 帧长
             // iOS Safari 要求缓冲区大小必须是 2 的幂次方
@@ -578,7 +586,8 @@ function AudioRX_start(){
             AudioRX_source_node.connect(AudioRX_biquadFilter_node);
             
             // iOS Safari: 设置 WebSocket 消息处理器
-            wsAudioRX.onmessage = function(msg){
+            rxSocket.onmessage = function(msg){
+                if (rxSocket !== wsAudioRX || rxContext !== AudioRX_context) return;
                 if (!window.__rxBytes) window.__rxBytes = 0;
                 if (msg && msg.data && msg.data.byteLength) window.__rxBytes += msg.data.byteLength;
                 // V5.8.4: 记录最后收到 RX 数据的时间（切后台回来半开检测用）
@@ -626,89 +635,115 @@ function AudioRX_start(){
 	
 	AudioRX_SetGAIN();
     
-    // iOS Safari 关键：导出恢复函数供移动端调用
-    window.resumeAudioContext = async function() {
-        if (AudioRX_context && AudioRX_context.state === 'suspended') {
-            try {
-                await AudioRX_context.resume();
-                console.log('✅ AudioContext 已恢复 (iOS Safari)');
-                window.__audioContextNeedsResume = false;
-                return true;
-            } catch(e) {
-                console.error('❌ AudioContext 恢复失败:', e);
-                return false;
-            }
-        }
-        return true;
-    };
+    // 导出统一恢复入口；iOS WebKit 还会使用非标准 interrupted 状态。
+    window.resumeAudioContext = resumeWebAudioContexts;
     
 }
 
-// V5.8.4: 页面从后台切回前台时的整体恢复。
-// 切后台时浏览器（尤其 iOS Safari）会 suspend AudioContext、冻结 JS，
-// WebSocket 可能变成半开（readyState 仍 OPEN 但数据进黑洞，onclose 不触发）。
-// 回来时若无人恢复 → 频谱/声音/S表全停 = “全部卡死”。此函数在
-// visibilitychange(visible) 时调用：恢复 AudioContext + 按数据新鲜度重连。
-var __RX_STALE_MS = 3000;  // RX 数据超过 3s 未到 → 判定半开/断流
-window.resumeAudioAfterBackground = async function() {
-    if (typeof poweron === 'undefined' || !poweron) {
-        return;  // 关机状态无需恢复
-    }
-    console.log('🔄 页面回到前台，执行链路恢复...');
-    
-    // 1) 恢复 RX AudioContext（iOS Safari 切后台必 suspend）
-    if (typeof window.resumeAudioContext === 'function') {
-        try { await window.resumeAudioContext(); } catch(e) { console.warn('恢复 AudioContext 失败:', e); }
-    }
-    
-    // 2) RX 数据通道：半开/断流检测
-    var rxAlive = false;
-    if (wsAudioRX && wsAudioRX.readyState === WebSocket.OPEN) {
-        if (typeof window.__rxLastDataTime === 'number') {
-            rxAlive = (Date.now() - window.__rxLastDataTime) < __RX_STALE_MS;
-        } else {
-            rxAlive = true;  // 尚无时间戳，视为健康（可能刚开机会话）
+async function resumeWebAudioContexts() {
+    var contexts = [
+        {name: 'RX', value: (typeof AudioRX_context !== 'undefined' ? AudioRX_context : null)},
+        {name: 'TX', value: (typeof mh !== 'undefined' && mh ? mh.context : null)}
+    ];
+    var success = true;
+    for (var index = 0; index < contexts.length; index++) {
+        var entry = contexts[index];
+        var context = entry.value;
+        if (!context || context.state === 'running' || context.state === 'closed') continue;
+        try {
+            await context.resume();
+            console.log('✅ ' + entry.name + ' AudioContext 已恢复');
+        } catch(e) {
+            success = false;
+            window.__audioContextNeedsResume = true;
+            console.warn('⚠️ ' + entry.name + ' AudioContext 恢复失败，等待用户触摸:', e);
         }
     }
-    if (!rxAlive) {
-        console.warn('🔄 wsAudioRX 判定断流/半开，重建 RX 链路...');
-        try {
-            if (wsAudioRX && wsAudioRX.readyState !== WebSocket.CLOSED) { wsAudioRX.close(); }
-            if (AudioRX_context && AudioRX_context.state !== 'closed') {
-                try { AudioRX_context.close(); } catch(e) {}
-            }
+    if (success) window.__audioContextNeedsResume = false;
+    return success;
+}
+
+// 页面从后台切回前台时的整体恢复。共享 Promise 防止 visibilitychange、
+// pageshow 和 online 在同一时刻重复重建连接。
+var __RX_STALE_MS = 3000;
+function resumeAudioAfterBackground(reason, forceTxReconnect) {
+    if (typeof poweron === 'undefined' || !poweron) return Promise.resolve(false);
+    if (forceTxReconnect) window.__foregroundRecoveryForceTx = true;
+    if (window.__foregroundRecoveryPromise) return window.__foregroundRecoveryPromise;
+
+    var recovery = (async function() {
+        console.log('🔄 页面回到前台，执行链路恢复:', reason || 'unknown');
+        await resumeWebAudioContexts();
+
+        var rxContextUsable = AudioRX_context && AudioRX_context.state !== 'closed';
+        var rxAlive = false;
+        if (rxContextUsable && wsAudioRX && wsAudioRX.readyState === WebSocket.OPEN) {
+            rxAlive = typeof window.__rxLastDataTime !== 'number' ||
+                (Date.now() - window.__rxLastDataTime) < __RX_STALE_MS;
+        }
+        if (!rxAlive) {
+            console.warn('🔄 RX 上下文或数据流失效，重建 RX 链路...');
+            var oldRxSocket = wsAudioRX;
+            var oldRxContext = AudioRX_context;
+            wsAudioRX = null;
             AudioRX_context = null;
             AudioRX_source_node = null;
-        } catch(e) { console.warn('清理旧 RX 链路失败:', e); }
-        AudioRX_start();
-    }
-    
-    // 3) 控制通道：非 OPEN 则重建
-    if (!wsControlTRX || wsControlTRX.readyState !== WebSocket.OPEN) {
-        console.log('🔄 wsControlTRX 非 OPEN，重建...');
-        ControlTRX_start();
-    }
-    
-    // 4) TX 音频通道：非 OPEN 则重建
-    if (!wsAudioTX || wsAudioTX.readyState !== WebSocket.OPEN) {
-        console.log('🔄 wsAudioTX 非 OPEN，重建...');
-        // 先清理旧 MediaHandler（释放麦克风/旧 AudioContext），再重建
-        try { if (typeof AudioTX_stop === 'function') AudioTX_stop(); } catch(e) { console.warn('清理 TX 失败:', e); }
-        AudioTX_start();
-    }
-    
-    // 5) 清理 RX 缓冲（防止切回瞬间旧数据突涌造成卡顿/延迟）
-    if (typeof AudioRX_audiobuffer !== 'undefined') { AudioRX_audiobuffer = []; }
-    if (typeof window.__rxAccumulatedBuffer !== 'undefined') {
-        window.__rxAccumulatedBuffer = [];
-        window.__rxTotalSamples = 0;
-        window.__rxPriming = true;
-        window.__rxGateMs = window.__rxPrebufferMs;
-    }
-    if (typeof AudioRX_source_node !== 'undefined' && AudioRX_source_node && AudioRX_source_node.port) {
-        try { AudioRX_source_node.port.postMessage({type: 'flush'}); } catch(e) {}
-    }
-};
+            try {
+                if (oldRxSocket && oldRxSocket.readyState !== WebSocket.CLOSED) oldRxSocket.close();
+                if (oldRxContext && oldRxContext.state !== 'closed') oldRxContext.close();
+            } catch(e) { console.warn('清理旧 RX 链路失败:', e); }
+            AudioRX_start();
+        }
+
+        if (!wsControlTRX || wsControlTRX.readyState !== WebSocket.OPEN) {
+            console.log('🔄 wsControlTRX 非 OPEN，重建...');
+            ControlTRX_start();
+        } else {
+            sendControlPing(wsControlTRX);
+        }
+
+        var txContext = (typeof mh !== 'undefined' && mh) ? mh.context : null;
+        var txTracks = (typeof mh !== 'undefined' && mh && mh.stream && mh.stream.getTracks) ?
+            mh.stream.getTracks() : [];
+        var txNeedsFullRebuild = !txContext || txContext.state === 'closed' ||
+            (txTracks.length > 0 && txTracks.every(function(track) { return track.readyState === 'ended'; }));
+        if (txNeedsFullRebuild) {
+            console.warn('🔄 TX 音频图失效，完整重建...');
+            try { AudioTX_stop(); } catch(e) { console.warn('清理 TX 失败:', e); }
+            AudioTX_start();
+        } else {
+            var txActive = typeof TXState !== 'undefined' && TXState && TXState.isPressed;
+            var txSocketNeedsReconnect = window.__foregroundRecoveryForceTx ||
+                !wsAudioTX || wsAudioTX.readyState !== WebSocket.OPEN;
+            if (txSocketNeedsReconnect && !txActive) {
+                console.log('🔄 重建 TX WebSocket，保留麦克风音频图...');
+                AudioTX_reconnectSocket();
+            }
+        }
+
+        window.__foregroundRecoveryForceTx = false;
+        if (typeof AudioRX_audiobuffer !== 'undefined') AudioRX_audiobuffer = [];
+        if (typeof window.__rxAccumulatedBuffer !== 'undefined') {
+            window.__rxAccumulatedBuffer = [];
+            window.__rxTotalSamples = 0;
+            window.__rxPriming = true;
+            window.__rxGateMs = window.__rxPrebufferMs;
+        }
+        if (AudioRX_source_node && AudioRX_source_node.port) {
+            try { AudioRX_source_node.port.postMessage({type: 'flush'}); } catch(e) {}
+        }
+        return true;
+    })();
+
+    window.__foregroundRecoveryPromise = recovery;
+    recovery.then(function() {
+        if (window.__foregroundRecoveryPromise === recovery) window.__foregroundRecoveryPromise = null;
+    }, function() {
+        if (window.__foregroundRecoveryPromise === recovery) window.__foregroundRecoveryPromise = null;
+    });
+    return recovery;
+}
+window.resumeAudioAfterBackground = resumeAudioAfterBackground;
 
 
 function setaudiofilter(evt){
@@ -742,7 +777,9 @@ function AudioRX_SetGAIN( vol="None" ){
 	}
 }
 
-function wsAudioRXopen(){
+function wsAudioRXopen(openedSocket){
+	if (openedSocket && openedSocket !== wsAudioRX) return;
+	var socket = openedSocket || wsAudioRX;
 	console.log('DEBUG: WebSocket audio RX connection opened');
 	setWSStatus('status-rx', 'connected');
 	// V5.8.4: 连接建立即初始化数据时间戳（半开检测基准）
@@ -750,19 +787,24 @@ function wsAudioRXopen(){
 	
 	// 发送 Opus 编码请求到后端
 	var encodeElement = document.getElementById("encode");
-	if (encodeElement && encodeElement.checked && wsAudioRX && wsAudioRX.readyState === WebSocket.OPEN) {
+	if (encodeElement && encodeElement.checked && socket && socket.readyState === WebSocket.OPEN) {
 		var opusRequest = JSON.stringify({
 			action: "set_opus_encode",
 			enabled: true,
 			rate: 16000,  // 16kHz：对 2.7kHz SSB 语音近无损且带宽最低
 			frame_dur: 20   // 20ms：Opus 甜点位，延迟减半、音质无损失
 		});
-		wsAudioRX.send(opusRequest);
+		socket.send(opusRequest);
 		console.log('📡 已请求后端启用 RX Opus 编码 (16kHz / 20ms - 移动端优化)');
 	}
 }
 
-function wsAudioRXclose(){
+function wsAudioRXclose(closedSocket){
+	if (closedSocket && closedSocket !== wsAudioRX) {
+		console.log('⏭️ 忽略旧 RX WebSocket 的关闭回调');
+		return;
+	}
+	var socket = closedSocket || wsAudioRX;
 	console.log('🔌 WebSocket RX连接已关闭');
 	setWSStatus('status-rx', 'error');
 	// 自动重连：如果电源仍开启，尝试重连
@@ -772,7 +814,7 @@ function wsAudioRXclose(){
 			clearTimeout(window._audioRXReconnectTimer);
 		}
 		window._audioRXReconnectTimer = setTimeout(function() {
-			if (typeof poweron !== 'undefined' && poweron) {
+			if (typeof poweron !== 'undefined' && poweron && wsAudioRX === socket) {
 				// V4.9.4 修复：总是调用 AudioRX_start() 重建完整音频链
 				// 原因：onmessage 是异步设置的，保存 oldOnMessage 可能是 null
 				// 而且 window.__pushRxFrame 引用的 AudioWorklet 可能已失效
@@ -783,7 +825,9 @@ function wsAudioRXclose(){
 	}
 }
 
-function wsAudioRXerror(err){
+function wsAudioRXerror(err, failedSocket){
+	if (failedSocket && failedSocket !== wsAudioRX) return;
+	var socket = failedSocket || wsAudioRX;
 	console.error('❌ WebSocket RX连接错误:', err);
 	setWSStatus('status-rx', 'error');
 	// 防抖重连：避免频繁重连
@@ -792,7 +836,7 @@ function wsAudioRXerror(err){
 			clearTimeout(window._audioRXErrorReconnectTimer);
 		}
 		window._audioRXErrorReconnectTimer = setTimeout(function() {
-			if (typeof poweron !== 'undefined' && poweron) {
+			if (typeof poweron !== 'undefined' && poweron && wsAudioRX === socket) {
 				// V4.9.4 修复：总是调用 AudioRX_start() 重建完整音频链
 				console.log('🔄 错误后重建完整音频链...');
 				AudioRX_start();
@@ -1004,21 +1048,14 @@ function ControlTRX_start(){
 	setWSStatus('status-ctrl', 'connecting');
 	const wsUrl = __wsURL('/WSCTRX');
 	console.log('🔌 尝试连接WebSocket:', wsUrl);
-	wsControlTRX = new WebSocket( wsUrl );
-	wsControlTRX.onopen = wsControlTRXopen;
-	wsControlTRX.onclose = wsControlTRXclose;
-	wsControlTRX.onerror = wsControlTRXerror;
-	wsControlTRX.onmessage = wsControlTRXcrtol;
-	
-	// 定期查询PTT状态，确保同步
-	if (window.pttQueryInterval) {
-		clearInterval(window.pttQueryInterval);
-	}
-	window.pttQueryInterval = setInterval(() => {
-		if (wsControlTRX && wsControlTRX.readyState === WebSocket.OPEN) {
-			wsControlTRX.send("getPTT");
-		}
-	}, 5000); // 每5秒查询一次，避免过于频繁
+	var controlSocket = new WebSocket( wsUrl );
+	wsControlTRX = controlSocket;
+	controlSocket.onopen = function() { wsControlTRXopen(controlSocket); };
+	controlSocket.onclose = function() { wsControlTRXclose(controlSocket); };
+	controlSocket.onerror = function(err) { wsControlTRXerror(err, controlSocket); };
+	controlSocket.onmessage = function(msg) {
+		if (controlSocket === wsControlTRX) wsControlTRXcrtol(msg);
+	};
 }
 
 var SignalLevel=0;
@@ -1163,29 +1200,36 @@ function ControlTRX_getFreq(){
 	if (wsControlTRX.readyState === WebSocket.OPEN) {wsControlTRX.send("getFreq");}
 }
 
-function wsControlTRXopen(){
+function wsControlTRXopen(openedSocket){
+	if (openedSocket && openedSocket !== wsControlTRX) return;
+	var socket = openedSocket || wsControlTRX;
 	console.log('✅ WebSocket控制连接成功建立');
 	setWSStatus('status-ctrl', 'connected');
-	wsControlTRX.send("getFreq:");
-	wsControlTRX.send("getMode:");
+	socket.send("getFreq:");
+	socket.send("getMode:");
 	// 连接建立后立即查询PTT状态
-	wsControlTRX.send("getPTT:");
+	socket.send("getPTT:");
 	updatePTTStatus(false);
 	// 查询 WDSP 状态以同步当前设置
-	wsControlTRX.send("getWDSPStatus:");
+	socket.send("getWDSPStatus:");
 	
 	// 启动定期PTT状态检查（每5秒一次，确保状态准确性）
 	if (window.pttStatusCheckInterval) {
 		clearInterval(window.pttStatusCheckInterval);
 	}
 	window.pttStatusCheckInterval = setInterval(() => {
-		if (poweron && wsControlTRX && wsControlTRX.readyState === WebSocket.OPEN) {
-			wsControlTRX.send("getPTT:");
+		if (poweron && wsControlTRX === socket && socket.readyState === WebSocket.OPEN) {
+			socket.send("getPTT:");
 		}
 	}, 5000); // 每5秒检查一次PTT状态
 }
 
-function wsControlTRXclose(){
+function wsControlTRXclose(closedSocket){
+	if (closedSocket && closedSocket !== wsControlTRX) {
+		console.log('⏭️ 忽略旧控制 WebSocket 的关闭回调');
+		return;
+	}
+	var socket = closedSocket || wsControlTRX;
 	console.log('🔌 WebSocket控制连接已关闭');
 	setWSStatus('status-ctrl', 'error');
 	// 清理PTT状态查询定时器
@@ -1208,7 +1252,7 @@ function wsControlTRXclose(){
 			clearTimeout(window._controlReconnectTimer);
 		}
 		window._controlReconnectTimer = setTimeout(function() {
-			if (typeof poweron !== 'undefined' && poweron) {
+			if (typeof poweron !== 'undefined' && poweron && wsControlTRX === socket) {
 				console.log('🔄 正在重连控制WebSocket...');
 				ControlTRX_start();
 			}
@@ -1216,7 +1260,9 @@ function wsControlTRXclose(){
 	}
 }
 
-function wsControlTRXerror(err){
+function wsControlTRXerror(err, failedSocket){
+	if (failedSocket && failedSocket !== wsControlTRX) return;
+	var socket = failedSocket || wsControlTRX;
 	console.error('❌ WebSocket控制连接错误:', err);
 	setWSStatus('status-ctrl', 'error');
 	// 防抖重连：避免频繁重连
@@ -1225,7 +1271,7 @@ function wsControlTRXerror(err){
 			clearTimeout(window._controlErrorReconnectTimer);
 		}
 		window._controlErrorReconnectTimer = setTimeout(function() {
-			if (typeof poweron !== 'undefined' && poweron) {
+			if (typeof poweron !== 'undefined' && poweron && wsControlTRX === socket) {
 				if (!wsControlTRX || wsControlTRX.readyState === WebSocket.CLOSED) {
 					console.log('🔄 错误后重连控制WebSocket...');
 					ControlTRX_start();
@@ -1241,6 +1287,20 @@ var startTime;
 // 这是"按了释放后还在发射"的根因防护：半开时 setPTT:false 会静默丢失。
 var PONG_TIMEOUT_MS = 6000;
 window._pongTimer = null;
+
+function sendControlPing(socket) {
+	if (!socket || socket !== wsControlTRX || socket.readyState !== WebSocket.OPEN) return false;
+	startTime = Date.now();
+	socket.send("PING");
+	if (window._pongTimer) clearTimeout(window._pongTimer);
+	window._pongTimer = setTimeout(function () {
+		window._pongTimer = null;
+		if (poweron && wsControlTRX === socket && socket.readyState === WebSocket.OPEN) {
+			onControlConnectionDead('PONG 超时 ' + PONG_TIMEOUT_MS + 'ms');
+		}
+	}, PONG_TIMEOUT_MS);
+	return true;
+}
 
 // 半开连接确诊后的安全处理：强制关闭控制通道触发重连，并尽力通过 TX
 // 音频通道（独立 socket，可能仍通）补发 s: 命令收回发射。
@@ -1267,22 +1327,15 @@ function onControlConnectionDead(reason) {
 }
 
 function checklatency() {
-	setTimeout(function () {
+	// 电源开启流程和前台恢复都可能调用本函数；保持唯一心跳循环。
+	if (window._latencyTimer) return;
+	window._latencyTimer = setTimeout(function () {
+		window._latencyTimer = null;
 		// 检查 WebSocket 状态，断开时自动重连
 		if (typeof poweron !== 'undefined' && poweron) {
 			if (wsControlTRX) {
 				if (wsControlTRX.readyState === WebSocket.OPEN) {
-					startTime = Date.now();
-					wsControlTRX.send("PING");
-					// 启动 PONG 超时计时器：到点仍未收到 PONG → 半开死连接
-					if (window._pongTimer) { clearTimeout(window._pongTimer); }
-					window._pongTimer = setTimeout(function () {
-						window._pongTimer = null;
-						// 二次确认：若期间连接已被关闭/重连则忽略
-						if (poweron && wsControlTRX && wsControlTRX.readyState === WebSocket.OPEN) {
-							onControlConnectionDead('PONG 超时 ' + PONG_TIMEOUT_MS + 'ms');
-						}
-					}, PONG_TIMEOUT_MS);
+					sendControlPing(wsControlTRX);
 				} else if (wsControlTRX.readyState === WebSocket.CLOSED) {
 					// WebSocket 已关闭但电源仍开启，尝试重连
 					console.log('🔄 心跳检测：WebSocket已关闭，尝试重连...');
@@ -2156,10 +2209,30 @@ var mh = "";
 
 const TXinstantMeter = document.querySelector('#Txinstant meter');
 
+function bindAudioTXSocket(socket) {
+	socket.onopen = function() { appendwsAudioTXOpen(socket); };
+	socket.onerror = function(err) { appendwsAudioTXError(err, socket); };
+	socket.onclose = function() { appendwsAudioTXclose(socket); };
+}
+
+// 只替换 TX WebSocket，保留麦克风 MediaStream 和 AudioContext。
+// 前台恢复时用它排除 OPEN 半开连接，避免反复请求麦克风权限。
+function AudioTX_reconnectSocket() {
+	var oldSocket = wsAudioTX;
+	setWSStatus('status-tx', 'connecting');
+	var socket = new WebSocket(__wsURL('/WSaudioTX'));
+	wsAudioTX = socket;
+	bindAudioTXSocket(socket);
+	if (ap) ap.wsh = socket;
+	if (oldSocket && oldSocket !== socket && oldSocket.readyState !== WebSocket.CLOSED) {
+		try { oldSocket.close(); } catch(e) {}
+	}
+	return socket;
+}
+
 function AudioTX_start()
 {
 	// 避免重复创建连接：仅 OPEN/CONNECTING 跳过；CLOSING/CLOSED 都重建。
-	// （同 AudioRX_start：close() 后的 CLOSING 态不得误判为"已连接"）
 	if (wsAudioTX && (wsAudioTX.readyState === WebSocket.OPEN || wsAudioTX.readyState === WebSocket.CONNECTING)) {
 		console.log('⏭️ AudioTX WebSocket已在连接中或已连接，跳过重复创建');
 		return;
@@ -2168,15 +2241,19 @@ function AudioTX_start()
 	isRecording = false;
 	encode = false;
 	setWSStatus('status-tx', 'connecting');
-	wsAudioTX = new WebSocket( __wsURL('/WSaudioTX') );
-	wsAudioTX.onopen = appendwsAudioTXOpen;
-	wsAudioTX.onerror = appendwsAudioTXError;
-	wsAudioTX.onclose = appendwsAudioTXclose;
-	ap = new OpusEncoderProcessor( wsAudioTX );
-	mh = new MediaHandler( ap );
+	var txSocket = new WebSocket( __wsURL('/WSaudioTX') );
+	wsAudioTX = txSocket;
+	bindAudioTXSocket(txSocket);
+	ap = new OpusEncoderProcessor(txSocket);
+	mh = new MediaHandler(ap);
 }
 
-function appendwsAudioTXclose(){
+function appendwsAudioTXclose(closedSocket){
+	if (closedSocket && closedSocket !== wsAudioTX) {
+		console.log('⏭️ 忽略旧 TX WebSocket 的关闭回调');
+		return;
+	}
+	var socket = closedSocket || wsAudioTX;
 	console.log('🔌 WebSocket TX连接已关闭');
 	setWSStatus('status-tx', 'error');
 	// 自动重连：如果电源仍开启，尝试重连
@@ -2186,34 +2263,23 @@ function appendwsAudioTXclose(){
 			clearTimeout(window._audioTXReconnectTimer);
 		}
 		window._audioTXReconnectTimer = setTimeout(function() {
-			if (typeof poweron !== 'undefined' && poweron) {
-				if (!wsAudioTX || wsAudioTX.readyState === WebSocket.CLOSED) {
-					console.log('🔄 正在重连TX WebSocket...');
-					// 保存旧的引用
-					var oldOnOpen = wsAudioTX ? wsAudioTX.onopen : null;
-					var oldOnError = wsAudioTX ? wsAudioTX.onerror : null;
-					var oldOnClose = wsAudioTX ? wsAudioTX.onclose : null;
-					wsAudioTX = new WebSocket(__wsURL('/WSaudioTX'));
-					wsAudioTX.onopen = appendwsAudioTXOpen;
-					wsAudioTX.onerror = appendwsAudioTXError;
-					wsAudioTX.onclose = appendwsAudioTXclose;
-					// 重新绑定编码器
-					if (typeof ap !== 'undefined' && ap) {
-						// H15: 编码器使用 this.wsh（见 OpusEncoderProcessor.onAudioProcess），
-						// 原代码写 ap.ws 导致重连后仍向已关闭的旧 socket 发数据、发射期间无音频上行。
-						ap.wsh = wsAudioTX;
-					}
-				}
+			if (typeof poweron !== 'undefined' && poweron && wsAudioTX === socket &&
+				(!wsAudioTX || wsAudioTX.readyState === WebSocket.CLOSED)) {
+				console.log('🔄 正在重连TX WebSocket...');
+				AudioTX_reconnectSocket();
 			}
 		}, 3000);
 	}
 }
 
-function appendwsAudioTXOpen(){
+function appendwsAudioTXOpen(openedSocket){
+	if (openedSocket && openedSocket !== wsAudioTX) return;
 	setWSStatus('status-tx', 'connected');
 }
 
-function appendwsAudioTXError(err){
+function appendwsAudioTXError(err, failedSocket){
+	if (failedSocket && failedSocket !== wsAudioTX) return;
+	var socket = failedSocket || wsAudioTX;
 	console.error('❌ WebSocket TX连接错误:', err);
 	setWSStatus('status-tx', 'error');
 	// 防抖重连：避免频繁重连
@@ -2222,9 +2288,10 @@ function appendwsAudioTXError(err){
 			clearTimeout(window._audioTXErrorReconnectTimer);
 		}
 		window._audioTXErrorReconnectTimer = setTimeout(function() {
-			if (typeof poweron !== 'undefined' && poweron && (!wsAudioTX || wsAudioTX.readyState === WebSocket.CLOSED)) {
+			if (typeof poweron !== 'undefined' && poweron && wsAudioTX === socket &&
+				(!wsAudioTX || wsAudioTX.readyState === WebSocket.CLOSED)) {
 				console.log('🔄 错误后重连TX WebSocket...');
-				AudioTX_start();
+				AudioTX_reconnectSocket();
 			}
 		}, 1000);
 	}
