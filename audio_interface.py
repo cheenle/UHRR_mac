@@ -29,11 +29,37 @@ import logging
 from datetime import datetime
 from opus.decoder import Decoder as OpusDecoder
 from opus.encoder import Encoder as OpusEncoder
+from recording_session import RecordingSession
 
 # Module logger (F4 fix: `logger` was referenced but never defined,
 # causing a NameError inside the recording lock that silently defeated
 # the RECORDING_MAX_CHUNKS growth guard).
 logger = logging.getLogger(__name__)
+_recording_session = RecordingSession(sample_rate=16000, max_seconds=3600)
+
+
+def _encode_recording_mp3(pcm, filepath, sample_rate=16000):
+    """Encode mono Int16 PCM to a high-quality MP3 file."""
+    ffmpeg_cmd = [
+        'ffmpeg', '-y',
+        '-f', 's16le',
+        '-ar', str(sample_rate),
+        '-ac', '1',
+        '-i', 'pipe:0',
+        '-c:a', 'libmp3lame',
+        '-q:a', '0',
+        filepath,
+    ]
+    proc = subprocess.run(
+        ffmpeg_cmd,
+        input=np.asarray(pcm, dtype=np.int16).tobytes(),
+        capture_output=True,
+        timeout=30,
+    )
+    if proc.returncode != 0:
+        error = proc.stderr.decode(errors='replace')
+        raise RuntimeError(f"ffmpeg 编码失败: {error}")
+
 
 # RNNoise 可选导入（需要 pip install pyrnnoise）
 RNNOISE_AVAILABLE = False
@@ -201,20 +227,10 @@ class PyAudioCapture(threading.Thread):
     _frame_sequence = 0
     _sequence_lock = threading.Lock()
     
-    # 录音功能设置
-    recording_enabled = False  # 是否启用录音
-    recording_buffer = []  # RX 录音数据缓冲区（左声道）
-    tx_recording_buffer = []  # TX 录音数据缓冲区（右声道）
-    # WARNING: recording_buffer and tx_recording_buffer are unbounded lists.
-    # At 8 kHz mono, ~1 hour of audio ≈ 220 MB RAM.  A very long recording
-    # session without stop_recording() will grow memory indefinitely.
-    # If this becomes a problem, enforce a maximum duration or switch to
-    # writing chunks directly to disk (e.g. via a WAV file writer).
-    RECORDING_MAX_CHUNKS = 36000  # ~1 h at 8 kHz / 800-sample frames
-    recording_lock = threading.Lock()  # 录音缓冲区锁
-    recording_start_time = None  # 录音开始时间
-    recording_freq = 0  # 录音时的频率
-    recording_dir = "recordings"  # 录音文件保存目录
+    # 录音功能设置。recording_enabled 暂留作旧 TX 路径的兼容镜像；
+    # 真实状态和音频数据由模块级 RecordingSession 管理。
+    recording_enabled = False
+    recording_dir = "recordings"
     
     def __init__(self, config):
         threading.Thread.__init__(self)
@@ -366,7 +382,7 @@ class PyAudioCapture(threading.Thread):
     
     def run(self):
         # Import globals at runtime to avoid circular imports
-        import __main__
+        import __main__ as main_module
         
         print("🎵 PyAudioCapture线程已启动，开始音频捕获...")
         frame_count = 0
@@ -387,6 +403,7 @@ class PyAudioCapture(threading.Thread):
                 # 且 48k→16k 降采样 320/3 不整除，每次丢弃 2 个样本产生周期性微爆音。
                 # 960/3=320，恰好一个 20ms Opus 帧 @16kHz。
                 data = self.stream.read(960, exception_on_overflow=False)
+                capture_end_ns = time.monotonic_ns()
                 
                 if len(data) > 0:
                     frame_count += 1
@@ -438,24 +455,9 @@ class PyAudioCapture(threading.Thread):
                     float32_data = soft_peak_limiter(float32_data, knee=0.95, ceiling=0.99)
                     
                     int16_data = (float32_data * 32767).astype(np.int16)
-                    
-                    # ========== 录音功能：保存原始音频数据（48kHz，未经WDSP处理）==========
-                    if PyAudioCapture.recording_enabled:
-                        with PyAudioCapture.recording_lock:
-                            # 将48kHz数据降采样到16kHz（与输出一致）
-                            # 先 3 样本平均低通防混叠，再抽取
-                            samples_len = len(int16_data)
-                            trimmed_len = (samples_len // 3) * 3
-                            if trimmed_len >= 3:
-                                reshaped = int16_data[:trimmed_len].reshape(-1, 3)
-                                downsampled = reshaped.mean(axis=1).astype(np.int16)
-                            else:
-                                downsampled = int16_data
-                            PyAudioCapture.recording_buffer.append(downsampled)
-                            # Guard against unbounded growth
-                            if len(PyAudioCapture.recording_buffer) >= PyAudioCapture.RECORDING_MAX_CHUNKS:
-                                logger.warning("录音缓冲区已满 (RECORDING_MAX_CHUNKS), 自动停止录音")
-                                PyAudioCapture.recording_enabled = False
+                    recording_pcm = int16_data
+                    recording_rate = 48000
+                    recording_buffered_samples = 0
                     
                     # ========== WDSP 数字信号处理 ==========
                     # 在 Int16 转换后、Opus编码前进行 WDSP 处理
@@ -477,6 +479,8 @@ class PyAudioCapture(threading.Thread):
                     stream_rate = 48000
 
                     if PyAudioCapture.wdsp_enabled and WDSP_AVAILABLE:
+                        # 只有 WDSP 产出完整处理块时才录制，绝不回退录入原始 RX。
+                        recording_pcm = None
                         try:
                             # V5.4: 配置哈希检查节流 — 每 25 帧（≈0.5s @20ms 帧）或
                             # 处理器尚未创建时才重算，避免每帧 9 次 dict 查询 + hash。
@@ -571,6 +575,28 @@ class PyAudioCapture(threading.Thread):
                                 pass
                             # WDSP 输出采样率即 DSP 配置率（16k）
                             stream_rate = wdsp_sr
+                            recording_pcm = int16_data
+                            recording_rate = stream_rate
+                            recording_buffered_samples = len(self.wdsp_resample_buffer)
+
+                    # 录制用户实际听到的 WDSP 后 RX。音频块的时间位置按捕获结束时间
+                    # 回推，并包含 WDSP 尚未处理的残留样本，避免 256 样本分块造成漂移。
+                    try:
+                        is_ptt_on = bool(
+                            hasattr(main_module, 'CTRX')
+                            and main_module.CTRX
+                            and getattr(main_module.CTRX, 'mrrc_ptt_active', False)
+                        )
+                    except Exception:
+                        is_ptt_on = False
+                    if recording_pcm is not None and not is_ptt_on:
+                        covered_samples = len(recording_pcm) + recording_buffered_samples
+                        recording_timestamp_ns = capture_end_ns - (
+                            covered_samples * 1_000_000_000 // recording_rate
+                        )
+                        _recording_session.add_audio(
+                            'rx', recording_pcm, recording_rate, recording_timestamp_ns
+                        )
 
                     # 发送到客户端队列
                     try:
@@ -765,129 +791,56 @@ class PyAudioCapture(threading.Thread):
     
     @staticmethod
     def start_recording(freq=0):
-        """
-        开始录音
-        
-        Args:
-            freq: 当前频率（Hz），用于文件名
-        
-        Returns:
-            bool: 是否成功开始录音
-        """
+        """Start a time-aligned mono recording session."""
         try:
-            # 确保录音目录存在
-            if not os.path.exists(PyAudioCapture.recording_dir):
-                os.makedirs(PyAudioCapture.recording_dir)
-            
-            with PyAudioCapture.recording_lock:
-                PyAudioCapture.recording_buffer = []
-                PyAudioCapture.tx_recording_buffer = []
-                PyAudioCapture.recording_start_time = datetime.now()
-                PyAudioCapture.recording_freq = freq
-                PyAudioCapture.recording_enabled = True
-            
+            os.makedirs(PyAudioCapture.recording_dir, exist_ok=True)
+            started = _recording_session.start(freq)
+            PyAudioCapture.recording_enabled = started or _recording_session.status()['recording']
+            if not started:
+                print("⚠️ 录音已在进行中，忽略重复开始请求")
+                return False
             freq_khz = freq / 1000 if freq > 0 else 0
             print(f"🔴 开始录音: 频率 {freq_khz:.1f}kHz")
             return True
-            
         except Exception as e:
             print(f"❌ 开始录音失败: {e}")
             return False
-    
+
     @staticmethod
     def stop_recording():
-        """
-        停止录音并保存文件
-        
-        Returns:
-            str: 保存的文件路径，如果失败返回None
-        """
+        """Stop the active session and encode it as a mono MP3."""
         try:
-            with PyAudioCapture.recording_lock:
-                PyAudioCapture.recording_enabled = False
+            result = _recording_session.stop()
+            PyAudioCapture.recording_enabled = False
+            if result is None:
+                print("⚠️ 没有正在进行的录音")
+                return None
 
-                rx_data = np.concatenate(PyAudioCapture.recording_buffer) if PyAudioCapture.recording_buffer else None
-                tx_data = np.concatenate(PyAudioCapture.tx_recording_buffer) if PyAudioCapture.tx_recording_buffer else None
-                PyAudioCapture.recording_buffer = []
-                PyAudioCapture.tx_recording_buffer = []
-
-                if rx_data is None and tx_data is None:
-                    print("⚠️ 录音缓冲区为空")
-                    return None
-
-                # 对齐 RX 和 TX 数据长度，填充较短的声道
-                max_len = max(len(rx_data) if rx_data is not None else 0,
-                              len(tx_data) if tx_data is not None else 0)
-                if rx_data is not None and len(rx_data) < max_len:
-                    rx_data = np.pad(rx_data, (0, max_len - len(rx_data)), mode='constant')
-                if tx_data is not None and len(tx_data) < max_len:
-                    tx_data = np.pad(tx_data, (0, max_len - len(tx_data)), mode='constant')
-                if rx_data is None:
-                    rx_data = np.zeros(max_len, dtype=np.int16)
-                if tx_data is None:
-                    tx_data = np.zeros(max_len, dtype=np.int16)
-
-                # 交错合并为立体声: [L0, R0, L1, R1, ...]
-                stereo_data = np.column_stack((rx_data, tx_data)).reshape(-1).astype(np.int16)
-
-                # 生成文件名: 频率(kHz)_日期_时间.mp3
-                freq_khz = int(PyAudioCapture.recording_freq / 1000) if PyAudioCapture.recording_freq > 0 else 0
-                now = datetime.now()
-                date_str = now.strftime('%Y%m%d')
-                time_str = now.strftime('%H%M%S')
-                filename = f"{freq_khz:05d}kHz_{date_str}_{time_str}.mp3"
-                filepath = os.path.join(PyAudioCapture.recording_dir, filename)
-
-                # 使用 ffmpeg 编码为高质量 MP3 (LAME VBR q:0, 16kHz stereo PCM -> MP3)
-                ffmpeg_cmd = [
-                    'ffmpeg', '-y',                    # 覆盖已存在的输出文件
-                    '-f', 's16le',                      # 输入格式: 16-bit signed little-endian
-                    '-ar', '16000',                     # 输入采样率: 16kHz
-                    '-ac', '2',                         # 输入声道: stereo
-                    '-i', 'pipe:0',                    # 从 stdin 读取
-                    '-c:a', 'libmp3lame',              # LAME MP3 编码器
-                    '-q:a', '0',                       # 最高质量 VBR (0=best, 9=worst)
-                    filepath
-                ]
-                proc = subprocess.run(
-                    ffmpeg_cmd,
-                    input=stereo_data.tobytes(),
-                    capture_output=True,
-                    timeout=30
-                )
-                if proc.returncode != 0:
-                    raise RuntimeError(f"ffmpeg 编码失败: {proc.stderr.decode()}")
-
-                duration = max_len / 16000
-                print(f"✅ 录音已保存 (MP3高质量): {filename} ({duration:.1f}秒, L={len(rx_data)} R={len(tx_data)}, {os.path.getsize(filepath)} bytes)")
-                return filepath
-                
+            freq_khz = int(result.freq / 1000) if result.freq > 0 else 0
+            now = datetime.now()
+            filename = (
+                f"{freq_khz:05d}kHz_{now.strftime('%Y%m%d')}_"
+                f"{now.strftime('%H%M%S')}.mp3"
+            )
+            filepath = os.path.join(PyAudioCapture.recording_dir, filename)
+            _encode_recording_mp3(result.pcm, filepath)
+            print(
+                f"✅ 录音已保存 (MP3高质量单声道): {filename} "
+                f"({result.duration:.1f}秒, {len(result.pcm)} samples, "
+                f"{os.path.getsize(filepath)} bytes)"
+            )
+            return filepath
         except Exception as e:
+            PyAudioCapture.recording_enabled = False
             print(f"❌ 停止录音失败: {e}")
             import traceback
             traceback.print_exc()
             return None
-    
+
     @staticmethod
     def get_recording_status():
-        """
-        获取录音状态
-        
-        Returns:
-            dict: 包含录音状态、频率、开始时间等信息
-        """
-        with PyAudioCapture.recording_lock:
-            duration = 0
-            if PyAudioCapture.recording_enabled and PyAudioCapture.recording_start_time:
-                duration = (datetime.now() - PyAudioCapture.recording_start_time).total_seconds()
-            
-            return {
-                'recording': PyAudioCapture.recording_enabled,
-                'freq': PyAudioCapture.recording_freq,
-                'start_time': PyAudioCapture.recording_start_time.isoformat() if PyAudioCapture.recording_start_time else None,
-                'duration': duration,
-                'buffer_size': sum(len(buf) for buf in PyAudioCapture.recording_buffer) if PyAudioCapture.recording_buffer else 0
-            }
+        """Return a snapshot of the active recording session."""
+        return _recording_session.status()
 
 class PyAudioPlayback:
     """PyAudio-based replacement for ALSA playback"""

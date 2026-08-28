@@ -2,9 +2,11 @@
 """Tests for the time-aligned mono conversation recorder."""
 
 import unittest
+from unittest import mock
 
 import numpy as np
 
+import audio_interface
 from recording_session import RecordingSession
 
 
@@ -65,6 +67,21 @@ class RecordingSessionTests(unittest.TestCase):
         assert result is not None
         self.assertEqual(result.freq, 7_050_000)
         self.assertIsNone(self.session.stop(now_ns=self.t0 + 200_000_000))
+
+    def test_mp3_encoder_receives_mono_16k_pcm(self):
+        pcm = np.array([1, -1, 2, -2], dtype=np.int16)
+        completed = type(
+            "Completed", (), {"returncode": 0, "stderr": b""}
+        )()
+        with mock.patch(
+            "audio_interface.subprocess.run", return_value=completed
+        ) as run:
+            audio_interface._encode_recording_mp3(pcm, "/tmp/test.mp3")
+
+        command = run.call_args.args[0]
+        self.assertEqual(command[command.index("-ar") + 1], "16000")
+        self.assertEqual(command[command.index("-ac") + 1], "1")
+        self.assertEqual(run.call_args.kwargs["input"], pcm.tobytes())
 
 
 if __name__ == "__main__":
