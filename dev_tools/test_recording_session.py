@@ -45,6 +45,18 @@ class RecordingSessionTests(unittest.TestCase):
         self.assertTrue(np.all(result.pcm[:800] == 1000))
         self.assertTrue(np.all(result.pcm[800:1600] == 2000))
 
+    def test_accepts_little_endian_int16_bytes_from_tx_playback(self):
+        tx = np.array([100, -200, 300, -400], dtype='<i2')
+
+        added = self.session.add_audio(
+            "tx", tx.tobytes(), 16000, self.t0
+        )
+        result = self.session.stop(now_ns=self.t0 + 1_000_000)
+
+        self.assertTrue(added)
+        assert result is not None
+        np.testing.assert_array_equal(result.pcm[:4], tx)
+
     def test_48k_chunked_resampling_keeps_16k_duration(self):
         tone = (
             np.sin(2 * np.pi * 1000 * np.arange(4800) / 48000) * 12000
@@ -58,6 +70,33 @@ class RecordingSessionTests(unittest.TestCase):
         assert result is not None
         self.assertEqual(len(result.pcm), 1600)
         self.assertGreater(np.max(np.abs(result.pcm)), 5000)
+
+    def test_small_scheduler_jitter_does_not_create_chunk_gaps(self):
+        first = np.full(160, 1000, dtype=np.int16)
+        second = np.full(160, 2000, dtype=np.int16)
+        third = np.full(160, 3000, dtype=np.int16)
+        self.session.add_audio("rx", first, 16000, self.t0)
+        self.session.add_audio("rx", second, 16000, self.t0 + 12_000_000)
+        self.session.add_audio("rx", third, 16000, self.t0 + 19_000_000)
+
+        result = self.session.stop(now_ns=self.t0 + 30_000_000)
+
+        assert result is not None
+        np.testing.assert_array_equal(result.pcm[:160], first)
+        np.testing.assert_array_equal(result.pcm[160:320], second)
+        np.testing.assert_array_equal(result.pcm[320:480], third)
+
+    def test_real_source_gap_is_preserved_as_silence(self):
+        first = np.full(160, 1000, dtype=np.int16)
+        second = np.full(160, 2000, dtype=np.int16)
+        self.session.add_audio("rx", first, 16000, self.t0)
+        self.session.add_audio("rx", second, 16000, self.t0 + 200_000_000)
+
+        result = self.session.stop(now_ns=self.t0 + 210_000_000)
+
+        assert result is not None
+        self.assertTrue(np.all(result.pcm[160:3200] == 0))
+        np.testing.assert_array_equal(result.pcm[3200:3360], second)
 
     def test_duplicate_start_and_empty_stop_are_safe(self):
         self.assertFalse(

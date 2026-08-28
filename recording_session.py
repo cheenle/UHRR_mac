@@ -69,6 +69,9 @@ class RecordingSession:
         self._freq = 0
         self._events = []
         self._resamplers = {}
+        self._source_cursors = {}
+        self._last_source = None
+        self._continuity_tolerance_samples = int(self.sample_rate * 0.05)
 
     def start(self, freq=0, now_ns=None):
         """Start a new session; return False if one is already active."""
@@ -82,6 +85,8 @@ class RecordingSession:
             self._freq = int(freq)
             self._events = []
             self._resamplers = {}
+            self._source_cursors = {}
+            self._last_source = None
             return True
 
     def add_audio(self, source, pcm, source_rate, timestamp_ns=None):
@@ -91,7 +96,12 @@ class RecordingSession:
         if int(source_rate) <= 0:
             raise ValueError("source_rate must be positive")
 
-        samples = np.asarray(pcm, dtype=np.int16).reshape(-1).copy()
+        if isinstance(pcm, (bytes, bytearray, memoryview)):
+            if len(pcm) % np.dtype(np.int16).itemsize:
+                raise ValueError("PCM byte length must be aligned to Int16 samples")
+            samples = np.frombuffer(pcm, dtype='<i2').copy()
+        else:
+            samples = np.asarray(pcm, dtype=np.int16).reshape(-1).copy()
         timestamp_ns = time.monotonic_ns() if timestamp_ns is None else int(timestamp_ns)
         with self._lock:
             if not self._active or samples.size == 0:
@@ -107,14 +117,30 @@ class RecordingSession:
                     resampler = _StreamingDecimator(source_rate, self.sample_rate)
                     self._resamplers[resampler_key] = resampler
                 samples = resampler.process(samples)
-            sample_offset = max(
+            observed_offset = max(
                 0,
                 (timestamp_ns - start_ns) * self.sample_rate // 1_000_000_000,
             )
+            expected_offset = self._source_cursors.get(source)
+            if (
+                expected_offset is not None
+                and source == self._last_source
+                and abs(observed_offset - expected_offset)
+                <= self._continuity_tolerance_samples
+            ):
+                sample_offset = expected_offset
+            else:
+                # A source switch or a real pause starts a new talk-spurt and
+                # re-anchors it to the monotonic session timeline.
+                sample_offset = observed_offset
             if sample_offset >= self._max_samples:
                 return False
             samples = samples[: self._max_samples - sample_offset]
+            if samples.size == 0:
+                return False
             self._events.append((source, sample_offset, samples))
+            self._source_cursors[source] = sample_offset + len(samples)
+            self._last_source = source
             return True
 
     def stop(self, now_ns=None):
@@ -137,6 +163,8 @@ class RecordingSession:
             self._active = False
             self._events = []
             self._resamplers = {}
+            self._source_cursors = {}
+            self._last_source = None
             self._start_ns = None
             self._started_at = None
             self._freq = 0
