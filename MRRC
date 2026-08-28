@@ -67,6 +67,7 @@ import math
 try:
     import pyaudio
     from audio_interface import PyAudioCapture, PyAudioPlayback, enumerate_audio_devices
+    from audio_interface import add_recording_audio, is_recording
     from audio_interface import start_recording, stop_recording, get_recording_status, get_recordings_list
     PYAUDIO_AVAILABLE = True
 except ImportError:
@@ -685,6 +686,7 @@ class WS_AudioTXHandler(AuthenticatedWebSocketHandler):
 		# （原代码只存局部变量，录音路径 hasattr(self,'op_rate') 永远为 False，
 		#  导致 48kHz TX 音频未降采样直接写入 16kHz 录音缓冲，回放慢 3 倍）
 		self.op_rate = op_rate
+		self.tx_input_rate = op_rate if is_encoded else itrate
 		# 第 5 字段：线格式标签模式（1= 每帧前 1 字节 0x00 PCM / 0x01 Opus）；旧客户端无此字段
 		self.tagged = (len(parts) > 4 and parts[4] == 1)
 		if is_encoded:
@@ -795,13 +797,14 @@ class WS_AudioTXHandler(AuthenticatedWebSocketHandler):
 				except Exception as e:
 					logger.error(f"Error broadcasting PTT status: {e}")
 		else :
+			tx_timestamp_ns = time.monotonic_ns()
 			# 线格式：tagged 模式下剥掉 1 字节编解码标签
 			if getattr(self, 'tagged', False) and hasattr(data, '__len__') and len(data) > 1:
 				data = data[1:]
 			if PYAUDIO_AVAILABLE:
 				# Use PyAudio
 				if hasattr(self, 'audio_playback') and self.audio_playback:
-					self.audio_playback.write(data)
+					played_pcm = self.audio_playback.write(data)
 					# V5.4: 复用 PyAudioPlayback._normalize() 已解码的原始 PCM，
 					# 不再用第二个 decoder 实例重复解码同一 Opus 包
 					shared_pcm = getattr(self.audio_playback, 'last_decoded_pcm', None)
@@ -817,22 +820,13 @@ class WS_AudioTXHandler(AuthenticatedWebSocketHandler):
 							tx_audio_analyzer.add_audio_data(data)
 					# V4.5.7: 移除 gc.collect() - 每秒50次gc导致CPU从12%飙升到30%
 					# Python 的 gc 会自动管理，不需要手动调用
-					# TX recording: capture browser mic for stereo right channel
-					if PyAudioCapture.recording_enabled:
-						if self.is_encoded and hasattr(self, 'decoder'):
-							pcm_data = shared_pcm if shared_pcm is not None else self.decoder.decode(data, self.frame_size, False)
-							tx_int16 = np.frombuffer(pcm_data, dtype=np.int16)
-						else:
-							tx_int16 = np.frombuffer(data, dtype=np.int16)
-						# Resample to 16kHz to match RX
-						source_rate = self.op_rate if hasattr(self, 'op_rate') else 16000
-						if source_rate > 16000:
-							ratio = int(source_rate / 16000)
-							if ratio > 1:
-								tx_int16 = tx_int16[::ratio]
-						with PyAudioCapture.recording_lock:
-							if PyAudioCapture.recording_enabled:
-								PyAudioCapture.tx_recording_buffer.append(tx_int16.copy())
+					# 录制真正进入播放队列的归一化 TX PCM；RecordingSession
+					# 负责高质量降采样和按单调时钟放入统一时间轴。
+					if (played_pcm and is_recording() and CTRX
+							and CTRX.mrrc_ptt_active):
+						add_recording_audio(
+							"tx", played_pcm, self.tx_input_rate, tx_timestamp_ns
+						)
 			else:
 				# Fallback to ALSA
 				if hasattr(self, 'inp') and self.inp:

@@ -83,6 +83,20 @@ class RecordingSessionTests(unittest.TestCase):
         self.assertEqual(command[command.index("-ac") + 1], "1")
         self.assertEqual(run.call_args.kwargs["input"], pcm.tobytes())
 
+    def test_playback_write_returns_pcm_accepted_by_queue(self):
+        playback = audio_interface.PyAudioPlayback.__new__(
+            audio_interface.PyAudioPlayback
+        )
+        playback._tx_queue = audio_interface.queue.Queue(maxsize=2)
+        playback._normalize = lambda data: b"normalized-" + data
+
+        actual = playback.write(b"input")
+
+        self.assertEqual(actual, b"normalized-input")
+        self.assertEqual(
+            playback._tx_queue.get_nowait(), b"normalized-input"
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

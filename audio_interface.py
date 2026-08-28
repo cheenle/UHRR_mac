@@ -227,9 +227,7 @@ class PyAudioCapture(threading.Thread):
     _frame_sequence = 0
     _sequence_lock = threading.Lock()
     
-    # 录音功能设置。recording_enabled 暂留作旧 TX 路径的兼容镜像；
-    # 真实状态和音频数据由模块级 RecordingSession 管理。
-    recording_enabled = False
+    # 录音音频和状态由模块级 RecordingSession 统一管理。
     recording_dir = "recordings"
     
     def __init__(self, config):
@@ -795,7 +793,6 @@ class PyAudioCapture(threading.Thread):
         try:
             os.makedirs(PyAudioCapture.recording_dir, exist_ok=True)
             started = _recording_session.start(freq)
-            PyAudioCapture.recording_enabled = started or _recording_session.status()['recording']
             if not started:
                 print("⚠️ 录音已在进行中，忽略重复开始请求")
                 return False
@@ -811,7 +808,6 @@ class PyAudioCapture(threading.Thread):
         """Stop the active session and encode it as a mono MP3."""
         try:
             result = _recording_session.stop()
-            PyAudioCapture.recording_enabled = False
             if result is None:
                 print("⚠️ 没有正在进行的录音")
                 return None
@@ -831,7 +827,6 @@ class PyAudioCapture(threading.Thread):
             )
             return filepath
         except Exception as e:
-            PyAudioCapture.recording_enabled = False
             print(f"❌ 停止录音失败: {e}")
             import traceback
             traceback.print_exc()
@@ -999,6 +994,7 @@ class PyAudioPlayback:
 
         try:
             self._tx_queue.put_nowait(pcm)
+            return pcm
         except queue.Full:
             # Drop oldest frame to make room — never block the IOLoop
             try:
@@ -1007,8 +1003,9 @@ class PyAudioPlayback:
                 pass
             try:
                 self._tx_queue.put_nowait(pcm)
+                return pcm
             except queue.Full:
-                pass
+                return None
 
     def _writer_loop(self):
         """Dedicated thread: drains the TX queue into the blocking PyAudio stream."""
@@ -1044,6 +1041,16 @@ class PyAudioPlayback:
 
 
 # ========== 录音控制函数 ==========
+
+def add_recording_audio(source, pcm, source_rate, timestamp_ns=None):
+    """Add one RX or TX PCM block to the active recording timeline."""
+    return _recording_session.add_audio(source, pcm, source_rate, timestamp_ns)
+
+
+def is_recording():
+    """Return whether the shared recording session is active."""
+    return _recording_session.status()['recording']
+
 
 def start_recording(freq=0):
     """
