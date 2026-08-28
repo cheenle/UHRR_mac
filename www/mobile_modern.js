@@ -4851,6 +4851,8 @@ function startRecording() {
 function stopRecording() {
     if (typeof wsControlTRX === 'undefined' || !wsControlTRX || wsControlTRX.readyState !== WebSocket.OPEN) {
         console.error('❌ WebSocket未连接，无法停止录音');
+        updateRecordingUI(false);
+        showRecordingStatus('连接失败', 'error');
         return;
     }
     
@@ -4930,6 +4932,9 @@ function handleRecordingStatus(status) {
         updateRecordingUI(true);
     } else if (status === 'stopped' || status === 'stopped:true') {
         updateRecordingUI(false);
+    } else if (status === 'failed') {
+        updateRecordingUI(false);
+        showRecordingStatus('录音失败', 'error');
     } else {
         // 尝试解析JSON
         try {
