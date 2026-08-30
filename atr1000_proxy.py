@@ -787,7 +787,10 @@ class ATR1000Client:
                 last_log_swr = cache["swr"]
 
                 # V5.6.0: 稳定窗口学习 — 捕获所需值，实际学习在锁外进行
-                _should_check_learn = (is_tx and not cache.get("tuning") and power > 0)
+                # V5.8.5: 学习入口改为按实测功率判定发射中（power ≥ LEARN_MIN_POWER），
+                # 与 SWR 守卫一致，覆盖非前端路径发射（面板直发/外部软件）——原 is_tx
+                # 依赖前端 start 信号，面板直发时永远收不到，学习静默失效。
+                _should_check_learn = (not cache.get("tuning") and power >= LEARN_MIN_POWER)
                 if _should_check_learn:
                     _learn_freq = cache.get("freq", 0)
                     _learn_power = power
@@ -1020,6 +1023,10 @@ def handle_unix_client(conn, addr, atr1000):
     
     def dispatch(msg):
         """处理单条 JSON 命令（逐行解析，避免 TCP 合并的多条命令被整体丢弃）"""
+        # 嵌套函数必须自行声明 global：外层 handle_unix_client 的 global 声明
+        # 不会传递给 dispatch，否则 is_tx/_swr_high_since 的赋值会写成函数局部变量，
+        # 导致模块级 is_tx 永远为 False（学习/TX 轮询静默失效）——V5.7.1 回归。
+        global is_tx, _swr_high_since
         action = msg.get("action")
 
         if action in ("sync", "get_data"):

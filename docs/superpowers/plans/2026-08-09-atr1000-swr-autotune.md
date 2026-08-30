@@ -4,6 +4,10 @@
 
 **Goal:** 在 `atr1000_proxy.py` 中实现 SWR 守卫：发射期间（实测功率≥5W）SWR 严格 >2.0 持续 ≥1.5s 时自动发送 ATR-1000 完整调谐（mode=2），30s 冷却，同一频率连续 3 次失败后放弃。
 
+> **V5.8.5 更新（2026-08-30）**：本计划中「学习依赖 is_tx start 信号、非 MRRC 路径发射
+> 静默失效」的诊断已修复——`dispatch()` 嵌套函数补上 `global is_tx`，且学习入口改为
+> 按实测功率判定发射（`power >= LEARN_MIN_POWER`），与本文 SWR 守卫同思路。
+
 **Architecture:** 在代理的 `_parse_data` METER 处理路径（现有「锁外学习区」旁）追加一个独立的模块级函数 `check_swr_retune(atr1000, power, swr)`。它按实测功率判定发射中（不依赖 `is_tx`，覆盖非 MRRC 路径发射），复用 `cache["tuning"]` 标志避免调谐期间重复触发，用新模块全局状态 `_swr_high_since` / `_last_retune_time` / `_retune_fail_count` 维护去抖、冷却与失败保护。全部改动集中在一个文件加一个测试脚本。
 
 **Tech Stack:** Python 3.11、websocket-client、`atr1000_proxy.py` 现有模块级全局模式、`dev_tools/` 独立断言脚本（无 pytest，遵循 AGENTS.md「use focused dev tools」）。
@@ -458,9 +462,9 @@ pgrep -f "atr1000_proxy.py.*radio1" | xargs kill
 sleep 1
 rm -f /tmp/mrrc_radio1.sock
 # 2) 用与启动时相同的参数重新拉起（输出追加到实例日志）
-python3 /Users/cheenle/HAM/mrrc/atr1000_proxy.py \
+python3 ./atr1000_proxy.py \
     --device 192.168.1.63 --port 60001 --unix-socket /tmp/mrrc_radio1.sock \
-    >> /Users/cheenle/UHRR/MRRC/atr1000_radio1.log 2>&1 &
+    >> ./atr1000_radio1.log 2>&1 &
 ```
 
 重启后向用户提交验证清单，等待用户操作/确认后再继续：

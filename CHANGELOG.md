@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [V5.8.5] - 2026-08-30
+
+### 🔧 ATR-1000 天调自动学习修复
+
+- **根因 1（回归）**：`handle_unix_client` 内嵌套的 `dispatch()` 未自行声明 `global is_tx`，
+  `start`/`stop` 的赋值只改写了函数局部变量，模块级 `is_tx` 永远为 False →
+  自动学习（依赖 is_tx）与 TX 模式轮询静默失效。由 V5.7.1「逐行解析」重构引入。
+- **根因 2（设计局限）**：学习入口仍以 `is_tx`（前端 start 信号）判定发射，
+  面板直发/外部软件路径永远收不到 start。改为与 SWR 守卫一致的按实测功率判定
+  （`power >= LEARN_MIN_POWER`，默认 3W），覆盖所有发射路径。
+- 同步修复 `dispatch` 内 `_swr_high_since` 赋值（set_freq/quick_tune/stop 的守卫复位此前同样失效）。
+
+---
+
 ## [V5.8.3] - 2026-08-13
 
 ### ⚙️ 启动顺序与 iOS RX 缓冲优化
