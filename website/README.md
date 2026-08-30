@@ -24,7 +24,7 @@ website/
 ### 方法1: 使用部署脚本
 
 ```bash
-cd /Users/cheenle/UHRR/MRRC/website
+cd website
 ./deploy.sh
 ```
 
@@ -32,7 +32,7 @@ cd /Users/cheenle/UHRR/MRRC/website
 
 ```bash
 # 打包网站
-cd /Users/cheenle/UHRR/MRRC/website
+cd website
 tar -czf /tmp/mrrc_website.tar.gz .
 
 # 上传到服务器
@@ -52,7 +52,7 @@ sudo systemctl reload apache2
 
 ```bash
 rsync -avz --delete \
-  /Users/cheenle/UHRR/MRRC/website/ \
+  ./website/ \
   vlsc@www.vlsc.net:/var/www/html/mrrc/
 ```
 

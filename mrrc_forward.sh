@@ -2,9 +2,10 @@
 # MRRC 端口转发脚本
 # 将 radio1/radio2 端口转发到 www.vlsc.net
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SOCAT_PATH="/opt/homebrew/bin/socat"
-LOG_DIR="/Users/cheenle/UHRR/MRRC"
-PID_DIR="/Users/cheenle/UHRR/MRRC"
+LOG_DIR="$SCRIPT_DIR"
+PID_DIR="$SCRIPT_DIR"
 
 log() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1"

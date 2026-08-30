@@ -23,7 +23,7 @@ MRRC supports running multiple independent instances on the same server, each in
 
 ```bash
 # Use multi-instance management script to create
-cd /Users/cheenle/UHRR/MRRC
+cd <project root>
 ./mrrc_multi.sh create radio2
 ```
 
@@ -83,7 +83,7 @@ MRRC/
 | `instance_atr1000_device` | ATR-1000 device IP | `192.168.1.63` |
 | `instance_atr1000_port` | ATR-1000 port | `60001` |
 | `instance_unix_socket` | Unix Socket path, must be unique | `/tmp/mrrc_radio2.sock` |
-| `instance_log_dir` | Log directory | `/Users/cheenle/UHRR/MRRC` |
+| `instance_log_dir` | Log directory | `.` (defaults to script directory) |
 
 ### Port Allocation Principle
 
@@ -343,7 +343,7 @@ Or use launchd (macOS):
     <string>com.user.mrrc.radio1</string>
     <key>ProgramArguments</key>
     <array>
-        <string>/Users/cheenle/UHRR/MRRC/mrrc_multi.sh</string>
+        <string>{{INSTALL_DIR}}/mrrc_multi.sh</string>
         <string>start</string>
         <string>radio1</string>
     </array>

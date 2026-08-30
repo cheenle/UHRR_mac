@@ -38,7 +38,7 @@ The voice text assistant uses a **backend processing** architecture:
 ### 1. Install Python Dependencies
 
 ```bash
-cd /Users/cheenle/UHRR/MRRC
+cd <MRRC project root>
 
 # Install Whisper and other dependencies
 pip3 install openai-whisper sounddevice soundfile tornado numpy

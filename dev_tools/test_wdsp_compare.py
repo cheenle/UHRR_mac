@@ -21,7 +21,7 @@ CHANNELS = 2  # USB Audio CODEC 是立体声
 RATE = 48000
 DURATION = 10
 
-OUTPUT_DIR = "/Users/cheenle/UHRR/MRRC/dev_tools"
+OUTPUT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 def get_default_input_device():
     p = pyaudio.PyAudio()

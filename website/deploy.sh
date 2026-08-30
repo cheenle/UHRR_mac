@@ -5,7 +5,8 @@
 set -e
 
 # Configuration
-LOCAL_WEBSITE_DIR="/Users/cheenle/UHRR/MRRC/website"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+LOCAL_WEBSITE_DIR="$SCRIPT_DIR"
 REMOTE_HOST="www.vlsc.net"
 REMOTE_USER="cheenle"
 REMOTE_WEBROOT="/var/www/vlsc.net/mrrc"

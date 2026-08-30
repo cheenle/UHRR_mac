@@ -38,7 +38,7 @@
 ### 1. 安装Python依赖
 
 ```bash
-cd /Users/cheenle/UHRR/MRRC
+cd <项目根目录>
 
 # 安装Whisper和其他依赖
 pip3 install openai-whisper sounddevice soundfile tornado numpy

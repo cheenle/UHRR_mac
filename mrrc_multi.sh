@@ -233,6 +233,12 @@ PYEOF
     : ${INSTANCE_ATR1000_PORT:=60001}
     : ${INSTANCE_LOG_DIR:=$SCRIPT_DIR}
     : ${INSTANCE_UNIX_SOCKET:="/tmp/mrrc_${instance_name}.sock"}
+
+    # 日志目录支持相对路径（相对 SCRIPT_DIR 解析），兼容部署目录变更
+    case "$INSTANCE_LOG_DIR" in
+        /*) : ;;
+        *) INSTANCE_LOG_DIR="$SCRIPT_DIR/$INSTANCE_LOG_DIR" ;;
+    esac
     
     # 设置日志文件路径
     RIGCTLD_LOG="${INSTANCE_LOG_DIR}/rigctld_${instance_name}.log"
@@ -597,7 +603,7 @@ config['INSTANCE_SETTINGS'] = {
     'INSTANCE_AUDIO_OUTPUT': 'USB Audio CODEC',
     'INSTANCE_ATR1000_DEVICE': '',
     'INSTANCE_ATR1000_PORT': '60001',
-    'INSTANCE_LOG_DIR': '$SCRIPT_DIR',
+    'INSTANCE_LOG_DIR': '.',
     'INSTANCE_UNIX_SOCKET': '/tmp/mrrc_${instance_name}.sock'
 }
 

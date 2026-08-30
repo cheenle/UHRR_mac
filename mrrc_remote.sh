@@ -1,8 +1,7 @@
 #!/bin/bash
 # MRRC 远程控制脚本
 # 用法: ./mrrc_remote.sh start|stop|restart|status
-# S9: 旧硬编码路径(/Users/cheenle/UHRR/MRRC)与解释器(/opt/local/bin/python3)已改为
-# 基于脚本位置自动解析 + 探测可用 python3
+# S9: 部署目录与解释器不再硬编码——目录基于脚本位置自动解析，解释器自动探测
 set -euo pipefail
 
 MRRC_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

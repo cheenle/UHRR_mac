@@ -24,7 +24,7 @@ MRRC 支持在同一台服务器上运行多个独立实例，每个实例可以
 
 ```bash
 # 使用多实例管理脚本创建
-cd /Users/cheenle/UHRR/MRRC
+cd <项目根目录>
 ./mrrc_multi.sh create radio2
 ```
 
@@ -84,7 +84,7 @@ MRRC/
 | `instance_atr1000_device` | ATR-1000设备IP | `192.168.1.63` |
 | `instance_atr1000_port` | ATR-1000端口 | `60001` |
 | `instance_unix_socket` | Unix Socket路径，必须唯一 | `/tmp/mrrc_radio2.sock` |
-| `instance_log_dir` | 日志目录 | `/Users/cheenle/UHRR/MRRC` |
+| `instance_log_dir` | 日志目录 | `.`（默认解析到脚本所在目录） |
 
 ### 端口分配原则
 
@@ -344,7 +344,7 @@ grep "set_freq" atr1000_radio2.log
     <string>com.user.mrrc.radio1</string>
     <key>ProgramArguments</key>
     <array>
-        <string>/Users/cheenle/UHRR/MRRC/mrrc_multi.sh</string>
+        <string>{{INSTALL_DIR}}/mrrc_multi.sh</string>
         <string>start</string>
         <string>radio1</string>
     </array>

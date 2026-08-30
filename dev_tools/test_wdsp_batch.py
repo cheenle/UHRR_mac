@@ -24,7 +24,7 @@ CHANNELS = 1
 RATE = 48000
 DURATION = 10  # 每次测试10秒
 
-OUTPUT_DIR = "/Users/cheenle/UHRR/MRRC/dev_tools"
+OUTPUT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 def get_default_input_device():
     """获取默认输入设备"""

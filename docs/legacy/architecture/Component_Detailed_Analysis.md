@@ -9,7 +9,7 @@
 
 ### 1.1 主服务器 (`MRRC`)
 
-**文件位置**: `/Users/cheenle/UHRR/MRRC/MRRC`
+**文件位置**: `./MRRC`（仓库根目录）
 **代码行数**: ~3900 行（单文件 Tornado 应用）
 
 **WebSocket 端点路由**:

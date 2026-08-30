@@ -49,7 +49,7 @@ auto-efhw-tuner/
 └── README.md                    ← MODIFIED: full V3.0 update
 ```
 
-**MRRC side (files in /Users/cheenle/UHRR/MRRC/):**
+**MRRC side (files in MRRC 仓库根目录):**
 ```
 MRRC (Tornado server root)
 ├── www/
@@ -2005,7 +2005,7 @@ git commit -m "docs: FDE V3.0 — servo/MOSFET/WiFi fault model, 3-phase POST"
 ### Task 14: atu_fuchs_handler.py — MRRC WebSocket handler for ATU
 
 **Files:**
-- Create: `/Users/cheenle/UHRR/MRRC/atu_fuchs_handler.py`
+- Create: `./atu_fuchs_handler.py`
 
 - [ ] **Step 1: Write atu_fuchs_handler.py**
 
@@ -2163,8 +2163,8 @@ git commit -m "feat: Fuchs ATU WebSocket handler — /atu endpoint, ATR1000 brid
 ### Task 15: Web UI — ATU sub-panel in index.html
 
 **Files:**
-- Modify: `/Users/cheenle/UHRR/MRRC/www/index.html`
-- Modify: `/Users/cheenle/UHRR/MRRC/www/controls.js`
+- Modify: `./www/index.html`
+- Modify: `./www/controls.js`
 
 - [ ] **Step 1: Add ATU panel HTML to index.html**
 
@@ -2435,7 +2435,7 @@ git commit -m "feat: Fuchs ATU web panel — WebSocket client, servo display, SW
 ### Task 16: Mobile ATU controls
 
 **Files:**
-- Modify: `/Users/cheenle/UHRR/MRRC/www/mobile_modern.html`
+- Modify: `./www/mobile_modern.html`
 
 - [ ] **Step 1: Add minimal ATU controls to mobile UI**
 

@@ -2,7 +2,8 @@
 # SSL 证书到期检查脚本
 # 用于手动 DNS 模式的证书到期提醒
 
-CERT_FILE="/Users/cheenle/UHRR/MRRC/certs/radio.vlsc.net.pem"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+CERT_FILE="$SCRIPT_DIR/radio.vlsc.net.pem"
 DOMAIN="radio.vlsc.net"
 DAYS_WARNING=14
 
@@ -13,13 +14,13 @@ if [ ! -f "$CERT_FILE" ]; then
 fi
 
 # 获取到期日期并使用Python计算剩余天数
-EXPIRY_INFO=$(python3 << 'EOF'
+EXPIRY_INFO=$(python3 << EOF
 import datetime
 import sys
 
 # 从openssl输出解析日期
 import subprocess
-result = subprocess.run(['openssl', 'x509', '-in', '/Users/cheenle/UHRR/MRRC/certs/radio.vlsc.net.pem', '-noout', '-enddate'], capture_output=True, text=True)
+result = subprocess.run(['openssl', 'x509', '-in', '$CERT_FILE', '-noout', '-enddate'], capture_output=True, text=True)
 expiry_str = result.stdout.strip().split('=')[1]
 
 # 解析日期
@@ -48,7 +49,7 @@ echo "[INFO] 剩余天数: $DAYS_REMAINING"
 # 检查是否需要续期
 if [ "$DAYS_REMAINING" -le 0 ]; then
     echo "[CRITICAL] 证书已过期！请立即续期！"
-    echo "           运行: cd /Users/cheenle/UHRR/MRRC && ./setup_ssl_manual.sh"
+    echo "           运行: cd $SCRIPT_DIR && ./setup_ssl_manual.sh"
     
     # 发送系统通知（macOS）
     if command -v osascript &> /dev/null; then
@@ -57,7 +58,7 @@ if [ "$DAYS_REMAINING" -le 0 ]; then
     exit 2
 elif [ "$DAYS_REMAINING" -le $DAYS_WARNING ]; then
     echo "[WARNING] 证书将在 $DAYS_REMAINING 天后到期，请尽快续期！"
-    echo "          运行: cd /Users/cheenle/UHRR/MRRC && ./setup_ssl_manual.sh"
+    echo "          运行: cd $SCRIPT_DIR && ./setup_ssl_manual.sh"
     
     # 发送系统通知（macOS）
     if command -v osascript &> /dev/null; then

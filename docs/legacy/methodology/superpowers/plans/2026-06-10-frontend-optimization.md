@@ -783,7 +783,7 @@ Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>"
 
 - [ ] **Step 1: 测试服务端启动**
 
-Run: `cd /Users/cheenle/UHRR/MRRC && python3 MRRC MRRC.conf 2>&1 | head -30`
+Run: `cd <项目根目录> && python3 MRRC MRRC.conf 2>&1 | head -30`
 Expected: 无错误，memory_lock 已初始化
 
 - [ ] **Step 2: 测试 API 端点**

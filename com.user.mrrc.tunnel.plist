@@ -7,12 +7,12 @@
     
     <key>ProgramArguments</key>
     <array>
-        <string>/Users/cheenle/UHRR/MRRC/mrrc_tunnel.sh</string>
+        <string>{{INSTALL_DIR}}/mrrc_tunnel.sh</string>
         <string>monitor</string>
     </array>
     
     <key>WorkingDirectory</key>
-    <string>/Users/cheenle/UHRR/MRRC</string>
+    <string>{{INSTALL_DIR}}</string>
     
     <key>RunAtLoad</key>
     <true/>
@@ -29,10 +29,10 @@
     <integer>30</integer>
     
     <key>StandardOutPath</key>
-    <string>/Users/cheenle/UHRR/MRRC/tunnel_service.log</string>
+    <string>{{INSTALL_DIR}}/tunnel_service.log</string>
     
     <key>StandardErrorPath</key>
-    <string>/Users/cheenle/UHRR/MRRC/tunnel_service_error.log</string>
+    <string>{{INSTALL_DIR}}/tunnel_service_error.log</string>
     
     <key>EnvironmentVariables</key>
     <dict>
