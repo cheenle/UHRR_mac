@@ -37,8 +37,8 @@ from typing import Optional, Dict, List, Tuple
 
 logger = logging.getLogger('ATR1000-Tuner')
 
-# 存储文件路径
-STORAGE_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'atr1000_tuner.json')
+# 存储文件路径（启动器可通过 MRRC_ATR1000_STORE 覆盖到用户配置目录）
+STORAGE_FILE = os.environ.get("MRRC_ATR1000_STORE") or os.path.join(os.path.dirname(os.path.abspath(__file__)), 'atr1000_tuner.json')
 
 # SWR 学习阈值
 SWR_LEARN_MIN = 1.0   # 最小 SWR 阈值

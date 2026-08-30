@@ -1,0 +1,100 @@
+[SERVER]
+port = 8877
+certfile = {certfile}
+keyfile = {keyfile}
+auth = FILE
+cookie_secret = L8LwECiNRxq2N0N2eGxx9MZlrpmuMEimlydNX/vt1LM=
+db_users_file = {db_users_file}
+pam_account = pi
+log_file = {log_file}
+debug = False
+
+[CTRL]
+interval_smeter_update = 5.0
+debug = False
+# PTT 绝对最大发射时长（秒）。发射持续超过此值，服务端 PTTSafetyMonitor
+# 强制收回 PTT，与客户端/音频流/浏览器状态无关。防止远程发射卡死。
+ptt_tot_seconds = 120
+
+[AUDIO]
+outputdevice = USB Audio CODEC
+inputdevice = USB Audio CODEC
+
+[HAMLIB]
+rig_pathname = COM3
+retry = 5
+rig_model = IC_M710
+trxautopower = True
+rig_rate = 4800
+data_bits = 
+stop_bits = 2
+serial_parity = 
+serial_handshake = 
+dtr_state = 
+rts_state = 
+
+[RNNOISE]
+# RNNoise 神经网络降噪（RX 接收端）
+# 注意: 已弃用，推荐使用 WDSP 的 NR2 频谱降噪
+# 需要安装: pip install pyrnnoise
+enabled = False
+# 降噪强度 0-100，0=仅降噪不静音，100=无语音时静音
+suppress_level = 50
+
+[WDSP]
+# WDSP 数字信号处理（Warren Pratt's DSP Library）
+# 编译安装: https://github.com/g0orx/wdsp
+enabled = True
+# 48kHz: EMNR(4096点FFT)用粗bin, 噪声估计平滑, 避免16k时的"水音"音乐噪声
+sample_rate = 48000
+buffer_size = 256
+
+# 降噪级别: 0=关, 1=极温和, 2=温和(推荐), 3=中等, 4=强力
+nr2_level = 2
+# AE 掩码平滑（抑制 NR2 频谱减法"水音"/音乐噪声）
+# psi: 平滑宽度系数（越大越平滑, WDSP默认10, 推荐20）
+# zeta_thresh: 触发阈值（越小越常触发, WDSP默认0.75, 推荐0.5）
+nr2_ae_psi = 12.0
+nr2_ae_zeta_thresh = 0.65
+
+# 噪声抑制器（脉冲干扰: 电器火花、雷电等）
+nb_enabled = True
+
+# 自动陷波器（CW 干扰音）
+anf_enabled = False
+
+# AGC 模式: 0=关, 1=长, 2=慢, 3=中(推荐), 4=快
+agc_mode = 3
+
+# 带通滤波器 (Hz) - SSB 语音核心频段
+bandpass_low = 300.0
+bandpass_high = 2700.0
+
+# ===== 音频均衡器（TX发射端） =====
+# 启用 TX EQ
+tx_eq_enabled = False
+# 低频增益 (dB, -12 到 12)
+tx_eq_low = 4.0
+# 中频增益 (dB)
+tx_eq_mid = 6.0
+# 高频增益 (dB)
+tx_eq_high = -3.0
+
+# ===== RagChew TX 配置（本地强信号，浏览器端 Web Audio API 实现） =====
+# EQ: 低切150Hz | 500Hz -2dB | 2.4kHz +3dB | 高切3kHz
+# Compressor: Ratio 3:1, 温和压缩
+# Noise Gate: 静音背景
+ragchew_tx_eq_low_cut = 150
+ragchew_tx_mid_cut_freq = 500
+ragchew_tx_mid_cut_gain = -2
+ragchew_tx_presence_freq = 2400
+ragchew_tx_presence_gain = 3
+ragchew_tx_high_cut = 3000
+ragchew_tx_compressor_ratio = 3
+
+[PANADAPTER]
+sample_rate = 960000
+center_freq = 68330000
+freq_correction = 1
+gain = 10
+fft_window = hamming

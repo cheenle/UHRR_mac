@@ -62,8 +62,15 @@ class WDSPMeterType:
 def _load_wdsp_library():
     """Load the WDSP shared library"""
     import platform
+    import sys
     system = platform.system()
-    
+
+    # Base directory: repo root in source mode, dist root when frozen.
+    if getattr(sys, "frozen", False):
+        base_dir = os.path.dirname(os.path.abspath(sys.executable))
+    else:
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+
     # Search paths
     search_paths = [
         os.path.dirname(os.path.abspath(__file__)),  # Same directory
@@ -73,33 +80,41 @@ def _load_wdsp_library():
         "/usr/lib",
         "/tmp/wdsp",  # Build directory
         os.path.join(os.path.dirname(os.path.abspath(__file__)), "DSP", "wdsp"),  # 项目目录
+        os.path.join(base_dir, "vendor", "wdsp", "windows", "bin", "x64"),  # bundled Windows DLL
         ".",
     ]
-    
-    lib_name = "libwdsp.dylib" if system == "Darwin" else "libwdsp.so"
-    
-    print(f"🔍 WDSP: 正在搜索库文件: {lib_name}")
-    
-    for path in search_paths:
-        lib_path = os.path.join(path, lib_name)
-        if os.path.exists(lib_path):
-            print(f"🔍 WDSP: 找到库文件: {lib_path}")
-            try:
-                lib = ctypes.CDLL(lib_path)
-                print(f"✅ WDSP: 成功加载库: {lib_path}")
-                return lib
-            except OSError as e:
-                print(f"⚠️ WDSP: 加载失败 {lib_path}: {e}")
-                continue
-    
-    # Try system library
-    try:
-        lib = ctypes.CDLL(lib_name)
-        print(f"✅ WDSP: 从系统加载: {lib_name}")
-        return lib
-    except OSError as e:
-        print(f"⚠️ WDSP: 系统加载失败: {lib_name}: {e}")
-    
+
+    if system == "Darwin":
+        lib_names = ["libwdsp.dylib"]
+    elif system == "Windows":
+        lib_names = ["libwdsp.dll", "wdsp.dll"]
+    else:
+        lib_names = ["libwdsp.so"]
+
+    print(f"🔍 WDSP: 正在搜索库文件: {lib_names}")
+
+    for lib_name in lib_names:
+        for path in search_paths:
+            lib_path = os.path.join(path, lib_name)
+            if os.path.exists(lib_path):
+                print(f"🔍 WDSP: 找到库文件: {lib_path}")
+                try:
+                    lib = ctypes.CDLL(lib_path)
+                    print(f"✅ WDSP: 成功加载库: {lib_path}")
+                    return lib
+                except OSError as e:
+                    print(f"⚠️ WDSP: 加载失败 {lib_path}: {e}")
+                    continue
+
+    # Try system library by name
+    for lib_name in lib_names:
+        try:
+            lib = ctypes.CDLL(lib_name)
+            print(f"✅ WDSP: 从系统加载: {lib_name}")
+            return lib
+        except OSError as e:
+            print(f"⚠️ WDSP: 系统加载失败: {lib_name}: {e}")
+
     print(f"❌ WDSP: 未找到库文件！")
     return None
 

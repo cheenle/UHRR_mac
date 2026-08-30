@@ -9,5 +9,7 @@ pyserial
 # hamlib Python 绑定（Dockerfile 通过 apk 安装 py3-hamlib；本地可用 pip 安装）
 # pyhamlib 或从系统包管理器安装
 websocket-client
+# 启动器首次运行生成自签 TLS 证书
+cryptography
 # RTL-SDR 接收（可选）
 pyrtlsdr

@@ -2426,3 +2426,272 @@ function toggleRecord(sendit = false)
 
 
 // Tune/CQ 功能已提取到 modules/tune_cq.js
+
+// Device settings drawer (参考 ../ft8)
+let _deviceSettingsData = null;
+
+function openDeviceDrawer() {
+    document.getElementById('device-drawer-backdrop').style.display = 'block';
+    document.getElementById('device-drawer').style.display = 'block';
+    loadDeviceSettings();
+}
+
+function closeDeviceDrawer() {
+    document.getElementById('device-drawer-backdrop').style.display = 'none';
+    document.getElementById('device-drawer').style.display = 'none';
+}
+
+async function loadDeviceSettings() {
+    const content = document.getElementById('device-drawer-content');
+    content.innerHTML = '<p class="device-drawer-hint">Loading...</p>';
+    try {
+        const res = await fetch('/api/devices');
+        if (!res.ok) {
+            if (res.status === 401 || res.status === 403) {
+                content.innerHTML = '<p class="device-drawer-hint">Please login first.</p>';
+                return;
+            }
+            throw new Error('HTTP ' + res.status);
+        }
+        const data = await res.json();
+        _deviceSettingsData = data;
+        renderDeviceSettings(data);
+    } catch (e) {
+        content.innerHTML = '<p class="device-drawer-hint">Failed to load device settings: ' + e.message + '</p>';
+    }
+}
+
+function escHtml(s) {
+    return String(s).replace(/[&<>"']/g, function(c) {
+        return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+    });
+}
+
+function renderDeviceSettings(data) {
+    const content = document.getElementById('device-drawer-content');
+    const cfg = data.config || {};
+    const ham = cfg.HAMLIB || {};
+    const audio = cfg.AUDIO || {};
+    const serials = data.serial_devices || [];
+    const audioDevs = data.audio_devices || [];
+    const rigModels = data.rig_models || [];
+    const baudRates = data.baud_rates || [];
+    const pttActive = data.ptt_active;
+
+    let html = '';
+    if (pttActive) {
+        html += '<p class="device-drawer-warning">TX is active. Device settings are locked during transmit.</p>';
+    }
+
+    // Radio model
+    const currentModel = ham.rig_model || '';
+    const isCustomModel = currentModel && !rigModels.includes(currentModel);
+    html += '<label class="device-drawer-row"><span>Radio model</span>';
+    html += '<select id="dev-rig-model" onchange="onDeviceModelChange();">';
+    rigModels.forEach(function(m) {
+        html += '<option value="' + escHtml(m) + '" ' + (m === currentModel ? 'selected' : '') + '>' + escHtml(m) + '</option>';
+    });
+    html += '<option value="__custom__" ' + (isCustomModel ? 'selected' : '') + '>Custom...</option>';
+    html += '</select></label>';
+    html += '<div id="dev-rig-model-custom-wrap" class="device-drawer-row" style="' + (isCustomModel ? '' : 'display:none;') + '">';
+    html += '<span>Custom model</span><input type="text" id="dev-rig-model-custom" value="' + escHtml(isCustomModel ? currentModel : '') + '">';
+    html += '</div>';
+
+    // Serial port
+    const currentSerial = ham.rig_pathname || '';
+    const isCustomSerial = currentSerial && !serials.includes(currentSerial);
+    html += '<label class="device-drawer-row"><span>CAT serial device</span>';
+    html += '<select id="dev-rig-pathname" onchange="onDeviceSerialChange();">';
+    html += '<option value="">-- None --</option>';
+    serials.forEach(function(s) {
+        html += '<option value="' + escHtml(s) + '" ' + (s === currentSerial ? 'selected' : '') + '>' + escHtml(s) + '</option>';
+    });
+    html += '<option value="__custom__" ' + (isCustomSerial ? 'selected' : '') + '>Custom...</option>';
+    html += '</select></label>';
+    html += '<div id="dev-rig-pathname-custom-wrap" class="device-drawer-row" style="' + (isCustomSerial ? '' : 'display:none;') + '">';
+    html += '<span>Custom serial path</span><input type="text" id="dev-rig-pathname-custom" value="' + escHtml(isCustomSerial ? currentSerial : '') + '">';
+    html += '</div>';
+
+    // Baud rate
+    const currentBaud = ham.rig_rate || '';
+    html += '<label class="device-drawer-row"><span>Baud rate</span>';
+    html += '<select id="dev-rig-rate">';
+    baudRates.forEach(function(b) {
+        html += '<option value="' + b + '" ' + (String(b) === String(currentBaud) ? 'selected' : '') + '>' + b + '</option>';
+    });
+    html += '</select></label>';
+
+    // Data bits
+    html += '<label class="device-drawer-row"><span>Data bits</span><input type="text" id="dev-data-bits" value="' + escHtml(ham.data_bits || '') + '" placeholder="default"></label>';
+    // Stop bits
+    html += '<label class="device-drawer-row"><span>Stop bits</span><input type="text" id="dev-stop-bits" value="' + escHtml(ham.stop_bits || '') + '" placeholder="default"></label>';
+    // Parity
+    const parityOptions = ['', 'None', 'Odd', 'Even', 'Mark', 'Space'];
+    html += '<label class="device-drawer-row"><span>Parity</span>';
+    html += '<select id="dev-serial-parity">' + parityOptions.map(function(p) { return '<option value="' + escHtml(p) + '" ' + (p === (ham.serial_parity || '') ? 'selected' : '') + '>' + (p || 'default') + '</option>'; }).join('') + '</select></label>';
+    // Handshake
+    const handshakeOptions = ['', 'None', 'XONXOFF', 'Hardware'];
+    html += '<label class="device-drawer-row"><span>Handshake</span>';
+    html += '<select id="dev-serial-handshake">' + handshakeOptions.map(function(h) { return '<option value="' + escHtml(h) + '" ' + (h === (ham.serial_handshake || '') ? 'selected' : '') + '>' + (h || 'default') + '</option>'; }).join('') + '</select></label>';
+    // DTR
+    const dtrOptions = ['', 'ON', 'OFF'];
+    html += '<label class="device-drawer-row"><span>DTR state</span>';
+    html += '<select id="dev-dtr-state">' + dtrOptions.map(function(o) { return '<option value="' + escHtml(o) + '" ' + (o === (ham.dtr_state || '') ? 'selected' : '') + '>' + (o || 'default') + '</option>'; }).join('') + '</select></label>';
+    // RTS
+    html += '<label class="device-drawer-row"><span>RTS state</span>';
+    html += '<select id="dev-rts-state">' + dtrOptions.map(function(o) { return '<option value="' + escHtml(o) + '" ' + (o === (ham.rts_state || '') ? 'selected' : '') + '>' + (o || 'default') + '</option>'; }).join('') + '</select></label>';
+    // Auto power off
+    const trxAutoPower = ham.trxautopower || 'True';
+    html += '<label class="device-drawer-row"><span>Auto power off</span>';
+    html += '<select id="dev-trxautopower"><option value="True" ' + (trxAutoPower === 'True' ? 'selected' : '') + '>True</option><option value="False" ' + (trxAutoPower === 'False' ? 'selected' : '') + '>False</option></select></label>';
+
+    // Audio input
+    const currentAudioIn = audio.inputdevice || '';
+    html += '<label class="device-drawer-row"><span>Audio input (RX)</span>';
+    html += '<select id="dev-audio-input">';
+    html += '<option value="">-- default --</option>';
+    audioDevs.filter(function(d) { return d.max_input_channels > 0; }).forEach(function(d) {
+        html += '<option value="' + escHtml(d.name) + '" ' + (d.name === currentAudioIn ? 'selected' : '') + '>' + escHtml(d.name) + '</option>';
+    });
+    html += '</select></label>';
+
+    // Audio output
+    const currentAudioOut = audio.outputdevice || '';
+    html += '<label class="device-drawer-row"><span>Audio output (TX)</span>';
+    html += '<select id="dev-audio-output">';
+    html += '<option value="">-- default --</option>';
+    audioDevs.filter(function(d) { return d.max_output_channels > 0; }).forEach(function(d) {
+        html += '<option value="' + escHtml(d.name) + '" ' + (d.name === currentAudioOut ? 'selected' : '') + '>' + escHtml(d.name) + '</option>';
+    });
+    html += '</select></label>';
+
+    content.innerHTML = html;
+
+    const saveBtn = document.getElementById('device-btn-save');
+    const applyBtn = document.getElementById('device-btn-apply');
+    if (pttActive) {
+        if (saveBtn) saveBtn.disabled = true;
+        if (applyBtn) applyBtn.disabled = true;
+    } else {
+        if (saveBtn) saveBtn.disabled = false;
+        if (applyBtn) applyBtn.disabled = false;
+    }
+}
+
+function onDeviceModelChange() {
+    const sel = document.getElementById('dev-rig-model');
+    const wrap = document.getElementById('dev-rig-model-custom-wrap');
+    if (sel && wrap) {
+        wrap.style.display = sel.value === '__custom__' ? 'flex' : 'none';
+    }
+}
+
+function onDeviceSerialChange() {
+    const sel = document.getElementById('dev-rig-pathname');
+    const wrap = document.getElementById('dev-rig-pathname-custom-wrap');
+    if (sel && wrap) {
+        wrap.style.display = sel.value === '__custom__' ? 'flex' : 'none';
+    }
+}
+
+function getDeviceFormPayload() {
+    function getVal(id) {
+        const el = document.getElementById(id);
+        return el ? el.value : '';
+    }
+
+    const modelSel = document.getElementById('dev-rig-model');
+    let rigModel = modelSel ? modelSel.value : '';
+    if (rigModel === '__custom__') {
+        rigModel = document.getElementById('dev-rig-model-custom') ? document.getElementById('dev-rig-model-custom').value : '';
+    }
+
+    const serialSel = document.getElementById('dev-rig-pathname');
+    let rigPathname = serialSel ? serialSel.value : '';
+    if (rigPathname === '__custom__') {
+        rigPathname = document.getElementById('dev-rig-pathname-custom') ? document.getElementById('dev-rig-pathname-custom').value : '';
+    }
+
+    const payload = {
+        HAMLIB: {},
+        AUDIO: {}
+    };
+
+    if (rigModel) payload.HAMLIB.rig_model = rigModel;
+    if (rigPathname) payload.HAMLIB.rig_pathname = rigPathname;
+    const baud = getVal('dev-rig-rate');
+    if (baud) payload.HAMLIB.rig_rate = baud;
+
+    const dataBits = getVal('dev-data-bits');
+    if (dataBits !== '') payload.HAMLIB.data_bits = dataBits;
+    const stopBits = getVal('dev-stop-bits');
+    if (stopBits !== '') payload.HAMLIB.stop_bits = stopBits;
+    const parity = getVal('dev-serial-parity');
+    if (parity !== '') payload.HAMLIB.serial_parity = parity;
+    const handshake = getVal('dev-serial-handshake');
+    if (handshake !== '') payload.HAMLIB.serial_handshake = handshake;
+    const dtr = getVal('dev-dtr-state');
+    if (dtr !== '') payload.HAMLIB.dtr_state = dtr;
+    const rts = getVal('dev-rts-state');
+    if (rts !== '') payload.HAMLIB.rts_state = rts;
+    const trxAutoPower = getVal('dev-trxautopower');
+    if (trxAutoPower !== '') payload.HAMLIB.trxautopower = trxAutoPower;
+
+    const audioIn = getVal('dev-audio-input');
+    if (audioIn !== '') payload.AUDIO.inputdevice = audioIn;
+    const audioOut = getVal('dev-audio-output');
+    if (audioOut !== '') payload.AUDIO.outputdevice = audioOut;
+
+    return payload;
+}
+
+async function saveDeviceSettings() {
+    const content = document.getElementById('device-drawer-content');
+    if (_deviceSettingsData && _deviceSettingsData.ptt_active) {
+        alert('TX is active. Cannot save device settings while transmitting.');
+        return;
+    }
+    try {
+        const res = await fetch('/api/devices', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(getDeviceFormPayload())
+        });
+        const data = await res.json();
+        if (data.ok) {
+            content.insertAdjacentHTML('afterbegin', '<p class="device-drawer-success">Settings saved. Click Apply & Restart to take effect.</p>');
+        } else {
+            alert('Save failed: ' + (data.message || data.reason || res.status));
+        }
+    } catch (e) {
+        alert('Save failed: ' + e.message);
+    }
+}
+
+async function applyDeviceSettings() {
+    if (_deviceSettingsData && _deviceSettingsData.ptt_active) {
+        alert('TX is active. Cannot apply device settings while transmitting.');
+        return;
+    }
+    if (!confirm('Apply will restart the MRRC server.\nYou will be disconnected for about 10 seconds. Continue?')) {
+        return;
+    }
+    try {
+        const res = await fetch('/api/devices/apply', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(getDeviceFormPayload())
+        });
+        const data = await res.json();
+        if (data.ok && data.restarting) {
+            document.getElementById('device-drawer-content').innerHTML = '<p class="device-drawer-hint">Server is restarting. Please wait...</p>';
+            setTimeout(function() {
+                window.location.href = 'https://' + window.location.hostname + ':' + (data.port || window.location.port || '8877');
+            }, 10000);
+        } else {
+            alert('Apply failed: ' + (data.message || data.reason || res.status));
+        }
+    } catch (e) {
+        alert('Apply failed: ' + e.message);
+    }
+}

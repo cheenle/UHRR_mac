@@ -10,7 +10,7 @@
     <title>Ham Radio Modern Mobile</title>
     <link rel="apple-touch-icon" href="favicon.png">
     <link rel="manifest" href="manifest.json">
-    <link rel="stylesheet" type="text/css" href="mobile_modern.css?v=5.8.3">
+    <link rel="stylesheet" type="text/css" href="mobile_modern.css?v=5.8.4">
 </head>
 <body>
     <!-- Safe area insets for iPhone X+ -->
@@ -246,6 +246,7 @@
                 <li><a href="#" class="menu-item" data-action="bands">Band Selection</a></li>
                 <li><a href="#" class="menu-item" data-action="modes">Mode Selection</a></li>
                 <li><a href="#" class="menu-item" data-action="memory">Memory Management</a></li>
+                <li><a href="#" class="menu-item" data-action="device-config">Device Config</a></li>
                 <li><a href="#" class="menu-item" data-action="settings">Radio Settings</a></li>
                 <li><a href="#" class="menu-item" data-action="audio">Audio Controls</a></li>
                 <li><a href="#" class="menu-item" data-action="txeq">TX Equalizer</a></li>
@@ -278,5 +279,21 @@
     <script src="modules/tune_cq.js?v=5.8.1"></script>
     <script src="mobile_modern.js?v=5.8.5"></script>
     <script src="tx_button_optimized.js?v=5.8.3"></script>
+
+    <!-- Device settings drawer (参考 ../ft8) -->
+    <div id="device-drawer-backdrop" onclick="closeDeviceDrawer();"></div>
+    <div id="device-drawer">
+        <div class="device-drawer-header">
+            <h3>Device Settings</h3>
+            <button onclick="closeDeviceDrawer();">✕</button>
+        </div>
+        <div id="device-drawer-content">
+            <p class="device-drawer-hint">Loading...</p>
+        </div>
+        <div class="device-drawer-actions">
+            <button id="device-btn-save" onclick="saveDeviceSettings();">Save</button>
+            <button id="device-btn-apply" onclick="applyDeviceSettings();">Apply &amp; Restart</button>
+        </div>
+    </div>
 </body>
 </html>

@@ -162,7 +162,7 @@
 			
 			<label id="callsign"></label>
 			
-			<div id="div-conf"><a href="/CONFIG" target="_MRRCconfig"><img src="img/config.png"></a></div>
+			<div id="div-conf"><button onclick="openDeviceDrawer();" title="Device Settings"><img src="img/config.png"></button></div>
 			<div id="div-panfft"><a onclick="panfft = window.open( this.href, 'MRRCpanfft', 'width=1000, height=1000, menubar=no, toolbar=no, location=no, resizable=yes, scrollbars=no, status=no, dependent=yes'); return false;" href="/panfft.html" target="_MRRCpanfft"><img src="img/panfft.png"></a></div>
 			
 			<canvas id="canRXsmeter" width=250 height=50 ></canvas>
@@ -218,7 +218,7 @@
 		
 		<script src="modules/opus_wasm.js?v=5.8.1"></script>
 		<script src="modules/settings_manager.js?v=5.8.1"></script>
-		<script src="controls.js?v=5.8.3"></script>
+		<script src="controls.js?v=5.8.4"></script>
 		<script src="modules/opus_codec.js?v=5.8.1"></script>
 		<script src="modules/tx_audio_eq.js?v=5.8.1"></script>
 		<script src="modules/ptt_manager.js?v=5.8.1"></script>
@@ -336,5 +336,21 @@
 				}
 			});
 		</script>
+
+		<!-- Device settings drawer (参考 ../ft8) -->
+		<div id="device-drawer-backdrop" onclick="closeDeviceDrawer();"></div>
+		<div id="device-drawer">
+			<div class="device-drawer-header">
+				<h3>Device Settings</h3>
+				<button onclick="closeDeviceDrawer();">✕</button>
+			</div>
+			<div id="device-drawer-content">
+				<p class="device-drawer-hint">Loading...</p>
+			</div>
+			<div class="device-drawer-actions">
+				<button id="device-btn-save" onclick="saveDeviceSettings();">Save</button>
+				<button id="device-btn-apply" onclick="applyDeviceSettings();">Apply &amp; Restart</button>
+			</div>
+		</div>
 	</body>
 </html>

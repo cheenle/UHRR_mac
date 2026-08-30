@@ -2323,6 +2323,9 @@ function handleMenuItem(action) {
         case 'memory':
             showMemoryPanel();
             break;
+        case 'device-config':
+            openDeviceDrawer();
+            break;
         case 'settings':
             showSettingsPanel();
             break;

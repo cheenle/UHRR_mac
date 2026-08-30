@@ -697,3 +697,182 @@ div#Rxmeters div.value {
 	100% { opacity: 0; }
 }
 /* @end */
+
+/* Device settings drawer (参考 ../ft8) */
+#device-drawer-backdrop {
+    display: none;
+    position: fixed;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.7);
+    z-index: 3000;
+}
+
+#device-drawer {
+    display: none;
+    position: fixed;
+    right: 0;
+    top: 0;
+    width: 420px;
+    max-width: 90vw;
+    height: 100vh;
+    background: #1a1a24;
+    border-left: 1px solid #333;
+    box-shadow: -5px 0 20px rgba(0, 0, 0, 0.6);
+    z-index: 3001;
+    flex-direction: column;
+    color: #e0e0e0;
+    font-family: tahoma, sans-serif;
+}
+
+.device-drawer-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+    border-bottom: 1px solid #333;
+    background: #22222e;
+}
+
+.device-drawer-header h3 {
+    margin: 0;
+    font-size: 18px;
+    color: #fff;
+}
+
+.device-drawer-header button {
+    background: transparent;
+    border: none;
+    color: #aaa;
+    font-size: 20px;
+    cursor: pointer;
+}
+
+.device-drawer-header button:hover {
+    color: #fff;
+}
+
+#device-drawer-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px;
+}
+
+.device-drawer-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 14px;
+    gap: 12px;
+}
+
+.device-drawer-row span {
+    flex: 0 0 140px;
+    font-size: 13px;
+    color: #bbb;
+}
+
+.device-drawer-row select,
+.device-drawer-row input[type="text"] {
+    flex: 1;
+    padding: 8px 10px;
+    background: #0f0f16;
+    border: 1px solid #444;
+    border-radius: 4px;
+    color: #fff;
+    font-size: 13px;
+    min-width: 0;
+}
+
+.device-drawer-row select:focus,
+.device-drawer-row input[type="text"]:focus {
+    outline: none;
+    border-color: #4a9eff;
+}
+
+.device-drawer-actions {
+    display: flex;
+    gap: 10px;
+    padding: 16px 20px;
+    border-top: 1px solid #333;
+    background: #22222e;
+}
+
+.device-drawer-actions button {
+    flex: 1;
+    padding: 10px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: bold;
+}
+
+#device-btn-save {
+    background: #4a9eff;
+    color: #fff;
+}
+
+#device-btn-save:hover {
+    background: #3a8eef;
+}
+
+#device-btn-save:disabled {
+    background: #555;
+    cursor: not-allowed;
+}
+
+#device-btn-apply {
+    background: #f5a623;
+    color: #000;
+}
+
+#device-btn-apply:hover {
+    background: #e09620;
+}
+
+#device-btn-apply:disabled {
+    background: #555;
+    color: #aaa;
+    cursor: not-allowed;
+}
+
+.device-drawer-hint {
+    color: #888;
+    font-size: 13px;
+    text-align: center;
+    margin: 20px 0;
+}
+
+.device-drawer-warning {
+    background: rgba(245, 166, 35, 0.15);
+    border: 1px solid #f5a623;
+    color: #f5a623;
+    padding: 10px;
+    border-radius: 4px;
+    font-size: 13px;
+    margin-bottom: 16px;
+}
+
+.device-drawer-success {
+    background: rgba(76, 175, 80, 0.15);
+    border: 1px solid #4caf50;
+    color: #4caf50;
+    padding: 10px;
+    border-radius: 4px;
+    font-size: 13px;
+    margin-bottom: 16px;
+}
+
+#div-conf button {
+    background: transparent;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+}
+
+#div-conf button img {
+    display: block;
+}

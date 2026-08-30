@@ -16,13 +16,23 @@ logger = logging.getLogger(__name__)
 # Load the Hamlib library
 lib_path = ctypes.util.find_library('hamlib')
 if not lib_path:
-    # Try common paths on macOS
     import os
+    import sys
+    # Try common paths on macOS
     common_paths = [
         '/opt/local/lib/libhamlib.dylib',
         '/opt/homebrew/lib/libhamlib.dylib',
         '/usr/local/lib/libhamlib.dylib'
     ]
+    # Try bundled vendor path on Windows
+    if getattr(sys, 'frozen', False):
+        base = os.path.dirname(os.path.abspath(sys.executable))
+    else:
+        base = os.path.dirname(os.path.abspath(__file__))
+    common_paths.extend([
+        os.path.join(base, 'vendor', 'hamlib', 'windows', 'bin', 'x64', 'libhamlib.dll'),
+        os.path.join(base, 'vendor', 'hamlib', 'windows', 'bin', 'x64', 'hamlib.dll'),
+    ])
     for path in common_paths:
         if os.path.exists(path):
             lib_path = path

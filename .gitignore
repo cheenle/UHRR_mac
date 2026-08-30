@@ -72,3 +72,13 @@ certs/backup/
 certs/legacy/
 *.orig
 certs/*.zip
+
+# Windows installer build artifacts
+dist/
+build/
+
+# Bundled native libraries (place them locally, do not commit)
+vendor/**/*.dll
+vendor/**/*.dylib
+vendor/**/*.so
+

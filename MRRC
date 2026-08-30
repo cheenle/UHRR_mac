@@ -95,6 +95,26 @@ print("⚠️ TX 音频分析器已禁用（优化 TX→RX 延迟）")
 
 # V5.7: FT8/CW 功能已移除（WS_FT8Handler、ft8_integration、ft8_decoder 一并删除）
 
+############ Runtime / resource paths (source + PyInstaller frozen) ###########
+def _runtime_dir():
+    """Directory that contains the executable (source repo root or PyInstaller dist root)."""
+    if getattr(sys, "frozen", False):
+        return os.path.dirname(os.path.abspath(sys.executable))
+    return os.path.dirname(os.path.abspath(__file__))
+
+
+def _resource_dir():
+    """Directory that contains bundled read-only resources.
+
+    PyInstaller onedir places datas under sys._MEIPASS; source mode uses the
+    repo root next to this script.
+    """
+    meipass = getattr(sys, "_MEIPASS", None)
+    if meipass:
+        return meipass
+    return _runtime_dir()
+
+
 ############ Global variables ##################################
 CTRX=None
 config = configparser.ConfigParser()
@@ -109,7 +129,7 @@ else:
 
 # 确保使用绝对路径（如果提供的是相对路径）
 if not os.path.isabs(config_file):
-    config_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), config_file)
+    config_file = os.path.join(_runtime_dir(), config_file)
 
 config.read(config_file)
 print(f"Using config file: {config_file}")
@@ -125,7 +145,7 @@ logger.info(f"📂 使用 Unix Socket: {INSTANCE_UNIX_SOCKET}")
 
 # ---- 频道记忆服务端持久化 ----
 import threading
-MEMORY_CHANNELS_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'memory_channels.json')
+MEMORY_CHANNELS_FILE = os.environ.get("MRRC_MEMORY_CHANNELS_FILE") or os.path.join(_runtime_dir(), 'memory_channels.json')
 MEMORY_CHANNEL_COUNT = 6
 user_memory_channels = {}  # {user_callsign: [ch1, ch2, ...]}
 memory_lock = threading.RLock()  # 保护 user_memory_channels 的并发访问
@@ -3600,6 +3620,152 @@ class ConfigHandler(BaseHandler):
 		time.sleep(2)
 		os.system("sleep 2;./MRRC &")
 		os._exit(1)
+
+############ Devices API ##############
+class DevicesApiHandler(BaseHandler):
+	"""抽屉式设备配置 API（参考 ../ft8 的 device_config）。
+
+	GET /api/devices        -> 返回当前配置、可用串口/音频设备、电台型号列表
+	POST /api/devices       -> 保存配置到 MRRC.conf（不重启）
+	POST /api/devices/apply -> 保存配置并重启 MRRC 服务
+	"""
+
+	# 与 /CONFIG 页面一致的常用电台型号
+	RIG_MODELS = ["FT817", "IC_M710", "FT991", "FTDX10", "TS590", "IC706", "IC7300"]
+	BAUD_RATES = [150, 300, 600, 1200, 2400, 4800, 9600, 19200, 38400, 57600, 115200, 230400]
+
+	# 允许通过此 API 修改的键，按节分组
+	CONFIG_KEYS = {
+		"HAMLIB": [
+			"rig_model", "rig_pathname", "rig_rate",
+			"data_bits", "stop_bits", "serial_parity", "serial_handshake",
+			"dtr_state", "rts_state", "trxautopower"
+		],
+		"AUDIO": ["outputdevice", "inputdevice"],
+	}
+
+	def _ptt_active(self):
+		return bool(CTRX and getattr(CTRX, 'mrrc_ptt_active', False))
+
+	def _serial_devices(self):
+		try:
+			from serial.tools.list_ports import comports
+			return [str(p.device) for p in comports()]
+		except Exception:
+			return []
+
+	def _audio_devices(self):
+		if PYAUDIO_AVAILABLE:
+			try:
+				return enumerate_audio_devices()
+			except Exception:
+				return []
+		return []
+
+	def _current_config(self):
+		"""提取允许修改的配置项。"""
+		cfg = {}
+		for section, keys in self.CONFIG_KEYS.items():
+			section_cfg = {}
+			for key in keys:
+				if config.has_option(section, key):
+					section_cfg[key] = config.get(section, key)
+			cfg[section] = section_cfg
+		return cfg
+
+	def get(self):
+		self.set_header("Content-Type", "application/json")
+		data = {
+			"config": self._current_config(),
+			"serial_devices": self._serial_devices(),
+			"audio_devices": self._audio_devices(),
+			"rig_models": self.RIG_MODELS,
+			"baud_rates": self.BAUD_RATES,
+			"ptt_active": self._ptt_active(),
+		}
+		self.write(json.dumps(data))
+
+	def _write_config(self, payload):
+		"""原子写 MRRC.conf，只更新已知键。"""
+		for section, keys in self.CONFIG_KEYS.items():
+			if section not in payload:
+				continue
+			if not config.has_section(section):
+				config.add_section(section)
+			for key in keys:
+				if key in payload[section]:
+					config.set(section, key, str(payload[section][key]))
+		# 原子写入
+		tmp = config_file + ".tmp"
+		with open(tmp, 'w') as f:
+			config.write(f)
+		os.replace(tmp, config_file)
+
+	def _parse_body(self):
+		try:
+			return json.loads(self.request.body)
+		except Exception:
+			return None
+
+	def post_save(self):
+		self.set_header("Content-Type", "application/json")
+		if self._ptt_active():
+			self.set_status(423)
+			self.write(json.dumps({"ok": False, "reason": "tx_active", "message": "Devices locked during TX"}))
+			return
+		payload = self._parse_body()
+		if payload is None:
+			self.set_status(400)
+			self.write(json.dumps({"ok": False, "reason": "bad_json"}))
+			return
+		try:
+			self._write_config(payload)
+		except Exception as e:
+			self.set_status(500)
+			self.write(json.dumps({"ok": False, "reason": "write_failed", "message": str(e)}))
+			return
+		self.write(json.dumps({"ok": True, "config": self._current_config()}))
+
+	def post_apply(self):
+		self.set_header("Content-Type", "application/json")
+		if self._ptt_active():
+			self.set_status(423)
+			self.write(json.dumps({"ok": False, "reason": "tx_active", "message": "Devices locked during TX"}))
+			return
+		payload = self._parse_body()
+		if payload is None:
+			self.set_status(400)
+			self.write(json.dumps({"ok": False, "reason": "bad_json"}))
+			return
+		try:
+			self._write_config(payload)
+		except Exception as e:
+			self.set_status(500)
+			self.write(json.dumps({"ok": False, "reason": "write_failed", "message": str(e)}))
+			return
+		# 与 /CONFIG 一致的重启方式
+		self.write(json.dumps({"ok": True, "restarting": True}))
+		self.flush()
+		time.sleep(2)
+		os.system("sleep 2;./MRRC &")
+		os._exit(1)
+
+	def post(self):
+		if self.request.path.rstrip('/').endswith('/apply'):
+			return self.post_apply()
+		return self.post_save()
+		payload = self._parse_body()
+		if payload is None:
+			self.set_status(400)
+			self.write(json.dumps({"ok": False, "reason": "bad_json"}))
+			return
+		try:
+			self._write_config(payload)
+		except Exception as e:
+			self.set_status(500)
+			self.write(json.dumps({"ok": False, "reason": "write_failed", "message": str(e)}))
+			return
+		self.write(json.dumps({"ok": True, "config": self._current_config()}))
 		
 ############ Login ##############
 class AuthLoginHandler(BaseHandler):
@@ -4008,15 +4174,17 @@ if __name__ == "__main__":
 			(r'/WSATR1000', WS_ATR1000Handler),  # ATR-1000 天调 WebSocket
 			(r'/WSATU', WS_ATUAutoTunerHandler),  # ATU 自动调谐 WebSocket
 
-			(r'/(panfft.*)', AuthenticatedStaticFileHandler, { 'path' : './www/panadapter' }),
+			(r'/(panfft.*)', AuthenticatedStaticFileHandler, { 'path' : os.path.join(_resource_dir(), 'www', 'panadapter') }),
 					(r'/CONFIG', ConfigHandler),
 					(r'/test', TestRadioHandler),
 					(r'/mobile', MobileHandler),
 					(r'/api/mem_channels', MemChannelsHandler),  # 频道记忆 API
 					(r'/api/recordings', RecordingsListHandler),  # 录音列表API
+					(r'/api/devices', DevicesApiHandler),  # 抽屉式设备配置 API
+					(r'/api/devices/apply', DevicesApiHandler),  # 设备配置保存并重启
 					(r'/recordings/([^/]+)', RecordingsDownloadHandler),  # 录音下载
 					(r'/', MainHandler),
-					(r'/(.*)', AuthenticatedStaticFileHandler, { 'path' : './www' })			],debug=bool(config['SERVER']['debug']), websocket_ping_interval=30, cookie_secret=config['SERVER']['cookie_secret'])
+					(r'/(.*)', AuthenticatedStaticFileHandler, { 'path' : os.path.join(_resource_dir(), 'www') })			],debug=bool(config['SERVER']['debug']), websocket_ping_interval=30, cookie_secret=config['SERVER']['cookie_secret'])
 	except:
 		e = str(sys.exc_info())
 		print("=== SERVER FALLING BACK TO CONFIG-ONLY MODE ===")
@@ -4028,7 +4196,7 @@ if __name__ == "__main__":
 		app = tornado.web.Application([
 		(r'/CONFIG', ConfigHandler),
 		(r'/', ConfigHandler),
-		(r'/(.*)', tornado.web.StaticFileHandler, { 'path' : './www' })
+		(r'/(.*)', tornado.web.StaticFileHandler, { 'path' : os.path.join(_resource_dir(), 'www') })
 	],debug=bool(config['SERVER']['debug']))
 
 	# Use explicit SSLContext to avoid PEM parsing quirks

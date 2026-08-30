@@ -15,6 +15,7 @@
 - Dockerfile copies only selected runtime files plus `www/`; if adding a backend module needed in containers, update `Dockerfile` explicitly.
 - Multi-instance workflow uses `./mrrc_multi.sh create <name>`, edit `MRRC.<name>.conf`, then `./mrrc_multi.sh start <name>`; each instance needs unique web port, rigctld port, and Unix socket.
 - `mrrc_multi.sh` uses a `detect_python()` helper to pick the interpreter for MRRC startup (no longer hardcodes `/opt/local/bin/python3.12`); instance names are validated to `[A-Za-z0-9_-]` to prevent shell→Python string-literal injection.
+- Windows installer build chain mirrors `../mrrc_modern`: run `packaging/windows/build.ps1` on a Windows build machine after placing the required native DLLs under `vendor/{opus,hamlib,wdsp}/windows/bin/x64/`. See `win_pack.md` for the full workflow.
 
 ## Tests And Diagnostics
 - No root manifest, root test runner, pre-commit config, or CI workflow is present; use focused dev tools instead of assuming pytest/npm for the whole repo.
