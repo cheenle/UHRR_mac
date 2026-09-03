@@ -148,28 +148,28 @@
             <div class="section-header">
                 <span class="section-label">Overview</span>
                 <h2 class="section-title">The Evolution Chain</h2>
-                <p class="section-subtitle">Three projects, one FDE pipeline. MRRC: 15 cycles (Mar–Jun 2026). SunMRRC: 40+ commits in 13 days (Jun 21–Jul 3), V1.0 in 4 days. SunsdrMobile: single-commit V1.0 (Jul 1), zero server changes. Each project's Product phase becomes the next project's Echo baseline.</p>
+                <p class="section-subtitle">Three projects, one delivery loop. MRRC: 15 field cycles recorded Mar–Jun 2026 (historical; counts below are a snapshot). SunMRRC: reverse-engineered to V1.0 within Jun 21–Jul 3, 2026. SunsdrMobile: V1.0 shipped Jul 1, 2026.</p>
             </div>
             <div class="evolution-track">
                 <div class="evo-node">
                     <span class="tag foundation">Foundation</span>
                     <h3>MRRC</h3>
                     <div class="sub">Universal HF Remote</div>
-                    <p style="color:var(--text-secondary);font-size:0.8rem;margin-top:8px;line-height:1.5;">15 FDE cycles · V1.0→V5.8.5<br>WebSocket · WDSP · PTT Safety<br>290+ commits · 16 reusable assets</p>
+                    <p style="color:var(--text-secondary);font-size:0.8rem;margin-top:8px;line-height:1.5;">15 field cycles recorded Mar–Jun 2026 · V1.0→V5.8.5<br>WebSocket · WDSP · PTT Safety<br>Commit and asset counts: see the VLSC evidence ledger</p>
                 </div>
                 <div class="evo-arrow">→</div>
                 <div class="evo-node">
                     <span class="tag reverse">Reverse + Rebuild</span>
                     <h3>SunMRRC</h3>
                     <div class="sub">SunSDR2 DX Server</div>
-                    <p style="color:var(--text-secondary);font-size:0.8rem;margin-top:8px;line-height:1.5;">Protocol reverse-engineering (pre-git)<br>FastAPI · 5× WebSocket · IQ DSP<br>40+ commits · V1.0 in 4 days</p>
+                    <p style="color:var(--text-secondary);font-size:0.8rem;margin-top:8px;line-height:1.5;">Protocol reverse-engineering (pre-git)<br>FastAPI · 5× WebSocket · IQ DSP<br>V1.0 reached within Jun 21–Jul 3, 2026</p>
                 </div>
                 <div class="evo-arrow">→</div>
                 <div class="evo-node">
                     <span class="tag native">Native App</span>
                     <h3>SunsdrMobile</h3>
                     <div class="sub">iOS SwiftUI Client</div>
-                    <p style="color:var(--text-secondary);font-size:0.8rem;margin-top:8px;line-height:1.5;">Single-commit V1.0 · 3 commits total<br>Zero dependencies · 4 WebSockets<br>AVAudioEngine · Keychain auth</p>
+                    <p style="color:var(--text-secondary);font-size:0.8rem;margin-top:8px;line-height:1.5;">V1.0 shipped Jul 1, 2026<br>Zero dependencies · 4 WebSockets<br>AVAudioEngine · Keychain auth</p>
                 </div>
             </div>
         </div>
@@ -180,7 +180,7 @@
         <div class="container">
             <div class="section-header">
                 <span class="section-label">Part 1</span>
-                <h2 class="section-title">MRRC — 15 FDE Cycles as Foundation</h2>
+                <h2 class="section-title">MRRC — 15 Field Cycles as Foundation (Mar–Jun 2026)</h2>
                 <p class="section-subtitle">Each cycle = Echo (discover) → Delta (prototype) → Product (abstract). Every abstraction becomes a reusable asset for the next cycle — and for future projects.</p>
             </div>
 
@@ -345,7 +345,7 @@
                     <h4><i class="fas fa-mobile-alt"></i> iOS Build Stats</h4>
                     <div class="stat-row"><span class="stat-label">Git commits</span><span class="stat-val">4</span></div>
                     <div class="stat-row"><span class="stat-label">V1.0 release</span><span class="stat-val">Jul 1 (initial commit)</span></div>
-                    <div class="stat-row"><span class="stat-label">UI overhaul</span><span class="stat-val">Jul 4 (17 files, +FFTProcessor)</span></div>
+                    <div class="stat-row"><span class="stat-label">UI overhaul</span><span class="stat-val">Jul 4, 2026 (diff stat: see evidence ledger)</span></div>
                     <div class="stat-row"><span class="stat-label">3rd-party dependencies</span><span class="stat-val">0</span></div>
                     <div class="stat-row"><span class="stat-label">WebSocket connections</span><span class="stat-val">4</span></div>
                     <div class="stat-row"><span class="stat-label">Reusable components</span><span class="stat-val">10+</span></div>
@@ -744,5 +744,6 @@
     </footer>
 
     <script src="js/global-nav.js?v=4" defer data-gn="1"></script>
+<p style="text-align:center;margin-top:2rem;font-size:.85rem;opacity:.8;">Cross-project versions, test counts and release status live in the <a href="/agentic.html#evidence">VLSC evidence ledger</a> as the single source of truth. This page no longer self-reports comparable numbers.</p>
 </body>
 </html>
