@@ -40,11 +40,11 @@ scp /tmp/mrrc_website.tar.gz vlsc@www.vlsc.net:/tmp/
 
 # SSH到服务器解压
 ssh vlsc@www.vlsc.net
-sudo mkdir -p /var/www/html/mrrc
-cd /var/www/html/mrrc
+sudo mkdir -p /var/www/vlsc.net/mrrc
+cd /var/www/vlsc.net/mrrc
 sudo tar -xzf /tmp/mrrc_website.tar.gz
-sudo chown -R www-data:www-data /var/www/html/mrrc
-sudo chmod -R 755 /var/www/html/mrrc
+sudo chown -R www-data:www-data /var/www/vlsc.net/mrrc
+sudo chmod -R 755 /var/www/vlsc.net/mrrc
 sudo systemctl reload apache2
 ```
 
@@ -53,15 +53,19 @@ sudo systemctl reload apache2
 ```bash
 rsync -avz --delete \
   ./website/ \
-  vlsc@www.vlsc.net:/var/www/html/mrrc/
+  vlsc@www.vlsc.net:/var/www/vlsc.net/mrrc/
 ```
+
+> **注意**：部署目标为 `/var/www/vlsc.net/mrrc/`（不是 `/var/www/html/mrrc/`）。
+> 若 rsync 因权限失败，先 `ssh cheenle@www.vlsc.net "sudo chown -R cheenle /var/www/vlsc.net/mrrc"`
+> 再部署，完成后恢复 `sudo chown -R www-data:www-data /var/www/vlsc.net/mrrc`。
 
 ## Apache配置
 
 确保Apache配置允许.htaccess或添加以下配置：
 
 ```apache
-<Directory /var/www/html/mrrc>
+<Directory /var/www/vlsc.net/mrrc>
     Options -Indexes +FollowSymLinks
     AllowOverride All
     Require all granted

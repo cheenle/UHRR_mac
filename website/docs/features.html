@@ -227,9 +227,10 @@
                 <div class="tech-detail">
                     <h4>Learning Conditions</h4>
                     <ul>
-                        <li>SWR between 1.0 ~ 1.5</li>
-                        <li>Forward power > 5W</li>
-                        <li>5 consecutive samples meeting conditions before recording</li>
+                        <li>TX detected by measured forward power (≥ 3W) — works for front-panel and external-software transmissions too (V5.8.5)</li>
+                        <li>SWR between 1.0 ~ 1.8</li>
+                        <li>4 consecutive stable samples (SWR fluctuation ≤ 0.08) after relay/tune settling (1s ignore window)</li>
+                        <li>Grade-based dedup: worse SWR skipped, same SWR cooled 5s, improved SWR learned immediately</li>
                     </ul>
                     
                     <h4>Quick Tune</h4>
@@ -237,6 +238,13 @@
                         <li>Automatically applies learned tuner parameters when frequency changes</li>
                         <li>±10kHz tolerance range lookup</li>
                         <li>Parameters persisted to JSON file</li>
+                    </ul>
+
+                    <h4>SWR>2 Auto Full-Tune Guard (V5.8.0)</h4>
+                    <ul>
+                        <li>During TX, SWR &gt; 2.0 sustained ≥1.5s triggers a full ATR-1000 tune automatically</li>
+                        <li>30s cooldown + 3-attempt per-frequency failure protection</li>
+                        <li>After tuning, the improved parameters are learned and persisted</li>
                     </ul>
                 </div>
 

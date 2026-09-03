@@ -52,7 +52,7 @@
     <div class="hero-content">
         <div class="hero-badge">
             <i class="fas fa-satellite-dish"></i>
-            <span>V5.7.1 · 生产就绪</span>
+            <span>V5.8.5 · 生产就绪</span>
         </div>
         <h1 class="hero-title">
             业余无线电<br>
@@ -60,8 +60,9 @@
         </h1>
         <p class="hero-subtitle">
             MRRC 是 VLSC 远程无线电生态中的通用 HF 路线。手机、平板、电脑随时操控您的短波电台。
-            V5.7.1：TX AudioWorklet 采集（48kHz Opus CBR）、RX 20ms 对齐播放、WDSP 专业降噪、AI 语音助手、
-            ATR-1000 功率/SWR 实时监测、IC-M710 AGC/RF 增益控制、三层 PTT 安全防护体系。
+            V5.8.5：TX AudioWorklet 采集（48kHz Opus CBR）、RX 20ms 对齐播放、WDSP 专业降噪、AI 语音助手、
+            ATR-1000 功率/SWR 实时监测、天调自动学习修复（按实测功率判发射，面板直发同样学习）、
+            IC-M710 AGC/RF 增益控制、三层 PTT 安全防护体系。
         </p>
         <div class="hero-actions">
             <a href="/zh/index.html#selector" class="btn btn-secondary btn-large">
@@ -78,7 +79,7 @@
             <div class="stat-item"><span class="stat-value">&lt;100ms</span><span class="stat-label">TX/RX 切换</span></div>
             <div class="stat-item"><span class="stat-value">99%+</span><span class="stat-label">PTT 可靠性</span></div>
             <div class="stat-item"><span class="stat-value">15-20dB</span><span class="stat-label">WDSP 降噪</span></div>
-            <div class="stat-item"><span class="stat-value">V5.7.1</span><span class="stat-label">290+ 提交</span></div>
+            <div class="stat-item"><span class="stat-value">V5.8.5</span><span class="stat-label">290+ 提交</span></div>
         </div>
     </div>
 </section>
@@ -221,13 +222,13 @@
             </div>
             <div class="step">
                 <h4>安装 MRRC</h4>
-                <p>克隆仓库并运行安装脚本</p>
-                <code>git clone https://github.com/cheenle/UHRR_mac && cd UHRR_mac && ./install.sh</code>
+                <p>克隆仓库 — MRRC 即拉即用，无需安装脚本</p>
+                <code>git clone https://github.com/cheenle/UHRR_mac && cd UHRR_mac</code>
             </div>
             <div class="step">
                 <h4>启动服务器</h4>
-                <p>启动 Python 后端 — TLS、WebSocket 和音频管线集成在单进程中</p>
-                <code>python3 server.py --port 8877</code>
+                <p>启动服务栈 — rigctld、MRRC（TLS + WebSocket + 音频）和 ATR-1000 代理</p>
+                <code>./mrrc_control.sh start</code>
             </div>
             <div class="step">
                 <h4>打开浏览器</h4>
@@ -255,7 +256,7 @@
                 <p>
                     Mobile Remote Radio Control<br>
                     业余无线电，随时随地<br>
-                    V5.7.1 · GPLv3 协议
+                    V5.8.5 · GPLv3 协议
                 </p>
             </div>
             <div class="footer-section">
