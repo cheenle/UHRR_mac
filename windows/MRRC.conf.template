@@ -17,8 +17,8 @@ debug = False
 ptt_tot_seconds = 120
 
 [AUDIO]
-outputdevice = USB Audio CODEC
-inputdevice = USB Audio CODEC
+outputdevice = USB Audio
+inputdevice = USB Audio
 
 [HAMLIB]
 rig_pathname = COM3

@@ -43,14 +43,12 @@ Core Python imports:
 - `pyaudio`
 - `opuslib` or local Opus path used by the project
 - `configparser`
-- `rtlsdr` for panadapter support
 
 Hardware/system dependencies vary by feature:
 
 - PortAudio/PyAudio for audio I/O.
 - Hamlib/`rigctld` for radio control.
 - serial device access for CAT control.
-- RTL-SDR for panadapter.
 - `libwdsp` for WDSP DSP.
 - ATR-1000 network access and `atr1000_proxy.py` for tuner integration.
 

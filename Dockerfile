@@ -22,7 +22,6 @@ RUN apk add --no-cache \
 
 # 安装 Python 依赖
 RUN pip3 install --no-cache-dir --break-system-packages \
-    pyrtlsdr \
     tornado \
     pyaudio \
     numpy \

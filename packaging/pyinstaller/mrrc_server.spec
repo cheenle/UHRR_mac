@@ -51,7 +51,6 @@ a = Analysis(
         "pyaudio",
         "numpy",
         "serial",
-        "rtlsdr",
         # Opus wrapper
         "opus",
         "opus.api",

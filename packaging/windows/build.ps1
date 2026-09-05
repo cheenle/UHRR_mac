@@ -37,18 +37,21 @@ if (Test-Path (Join-Path $RepoRoot "tests")) {
 # Warn about missing native libraries.  The installer will still build, but the
 # app needs these DLLs at runtime on Windows.
 $vendorChecks = @(
-    @("vendor\opus\windows\bin\x64\opus.dll",    "Opus audio (RX/TX)"),
-    @("vendor\hamlib\windows\bin\x64\libhamlib.dll", "Hamlib radio control"),
-    @("vendor\hamlib\windows\bin\x64\hamlib.dll",   "Hamlib radio control"),
-    @("vendor\wdsp\windows\bin\x64\libwdsp.dll",   "WDSP DSP"),
-    @("vendor\wdsp\windows\bin\x64\wdsp.dll",      "WDSP DSP")
+    @{ Paths = @("vendor\opus\windows\bin\x64\opus.dll"); Description = "Opus audio (RX/TX)" },
+    @{ Paths = @("vendor\hamlib\windows\bin\x64\libhamlib.dll", "vendor\hamlib\windows\bin\x64\hamlib.dll"); Description = "Hamlib radio control" },
+    @{ Paths = @("vendor\wdsp\windows\bin\x64\libwdsp.dll", "vendor\wdsp\windows\bin\x64\wdsp.dll"); Description = "WDSP DSP" }
 )
-foreach ($pair in $vendorChecks) {
-    $rel = $pair[0]
-    $desc = $pair[1]
-    $full = Join-Path $RepoRoot $rel
-    if (!(Test-Path $full)) {
-        Write-Warning "Missing $desc runtime library: $rel"
+foreach ($check in $vendorChecks) {
+    $present = $false
+    foreach ($rel in $check.Paths) {
+        $full = Join-Path $RepoRoot $rel
+        if (Test-Path $full) {
+            $present = $true
+            break
+        }
+    }
+    if (!$present) {
+        Write-Warning "Missing $($check.Description) runtime library: $($check.Paths -join ' or ')"
     }
 }
 

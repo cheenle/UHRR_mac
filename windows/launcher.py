@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import configparser
 import os
+import secrets
 import signal
 import subprocess
 import sys
@@ -18,6 +19,8 @@ import ssl_bootstrap
 
 APP_NAME = "MRRC"
 DEFAULT_PORT = "8877"
+DEFAULT_LOGIN_USER = "admin"
+KNOWN_DEFAULT_ACCOUNTS = {("BG1SB", "abcd1234"), ("admin", "uhrr2024")}
 
 
 def app_dir() -> Path:
@@ -37,6 +40,10 @@ def config_path() -> Path:
     return user_data_dir() / "MRRC.conf"
 
 
+def quick_start_path() -> Path:
+    return user_data_dir() / "MRRC Quick Start.txt"
+
+
 def default_config_path() -> Path:
     return app_dir() / "windows" / "MRRC.conf.template"
 
@@ -49,6 +56,13 @@ def _copy_seed(target: Path, source: Path) -> None:
             target.write_bytes(source.read_bytes())
         except OSError:
             pass
+
+
+def _seed_candidates(filename: str) -> tuple[Path, ...]:
+    return (
+        app_dir() / filename,
+        app_dir() / "_internal" / filename,
+    )
 
 
 def ensure_config(cert_path: Path, key_path: Path) -> Path:
@@ -75,9 +89,107 @@ def ensure_config(cert_path: Path, key_path: Path) -> Path:
             )
 
     # Seed user-modifiable files next to the config.
-    _copy_seed(data_dir / "memory_channels.json", app_dir() / "memory_channels.json")
-    _copy_seed(data_dir / "MRRC_users.db", app_dir() / "MRRC_users.db")
+    for seed in _seed_candidates("memory_channels.json"):
+        _copy_seed(data_dir / "memory_channels.json", seed)
     return cfg
+
+
+def _read_accounts(path: Path) -> list[tuple[str, str]]:
+    if not path.exists():
+        return []
+    accounts = []
+    for raw in path.read_text(encoding="utf-8", errors="replace").splitlines():
+        line = raw.strip()
+        if not line or line.startswith("#"):
+            continue
+        parts = line.split(None, 1)
+        if len(parts) == 2:
+            accounts.append((parts[0], parts[1]))
+    return accounts
+
+
+def ensure_users() -> tuple[str | None, str | None, bool]:
+    """Ensure a first-run login exists without shipping a public password."""
+    db = user_data_dir() / "MRRC_users.db"
+    accounts = _read_accounts(db)
+    if accounts and set(accounts) != KNOWN_DEFAULT_ACCOUNTS:
+        return accounts[0][0], accounts[0][1], False
+
+    password = secrets.token_urlsafe(12)
+    db.write_text(
+        "# MRRC local users: one account per line as: username password\n"
+        "# Edit this file from the Start Menu if you want to change the password.\n"
+        f"{DEFAULT_LOGIN_USER} {password}\n",
+        encoding="utf-8",
+    )
+    return DEFAULT_LOGIN_USER, password, True
+
+
+def _detect_windows_serial_port() -> str | None:
+    if os.name != "nt":
+        return None
+    try:
+        import winreg
+    except ImportError:
+        return None
+    try:
+        with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, r"HARDWARE\DEVICEMAP\SERIALCOMM") as key:
+            ports = []
+            index = 0
+            while True:
+                try:
+                    _, value, _ = winreg.EnumValue(key, index)
+                except OSError:
+                    break
+                if isinstance(value, str) and value.upper().startswith("COM"):
+                    ports.append(value.upper())
+                index += 1
+    except OSError:
+        return None
+    preferred = [p for p in sorted(set(ports), key=lambda p: int(p[3:]) if p[3:].isdigit() else 999) if p != "COM1"]
+    return preferred[0] if preferred else None
+
+
+def apply_simple_defaults(cfg: Path) -> None:
+    parser = configparser.ConfigParser()
+    parser.read(cfg, encoding="utf-8")
+    changed = False
+    detected = _detect_windows_serial_port()
+    if detected and parser.has_section("HAMLIB"):
+        current = parser.get("HAMLIB", "rig_pathname", fallback="").strip().upper()
+        if current in ("", "COM3") and detected != current:
+            parser.set("HAMLIB", "rig_pathname", detected)
+            changed = True
+    if parser.has_section("AUDIO"):
+        for key in ("inputdevice", "outputdevice"):
+            current = parser.get("AUDIO", key, fallback="").strip()
+            if current in ("", "USB Audio CODEC"):
+                parser.set("AUDIO", key, "USB Audio")
+                changed = True
+    if changed:
+        with cfg.open("w", encoding="utf-8") as f:
+            parser.write(f)
+
+
+def write_quick_start(user: str | None, password: str | None) -> None:
+    lines = [
+        "MRRC Quick Start",
+        "================",
+        "",
+        "1. Connect the IC-M710 USB/serial adapter and USB audio device.",
+        "2. Start MRRC from the Start Menu or desktop shortcut.",
+        "3. Browser opens automatically. Accept the self-signed HTTPS warning.",
+        "4. Log in with:",
+        f"   Username: {user or '(your existing MRRC_users.db user)'}",
+        f"   Password: {password or '(unchanged; see MRRC_users.db)'}",
+        "",
+        f"Config file: {config_path()}",
+        f"Users file:  {user_data_dir() / 'MRRC_users.db'}",
+        "",
+        "If CAT does not connect, edit MRRC.conf and set [HAMLIB] rig_pathname to the COM port shown in Device Manager.",
+        "Default IC-M710 rigctld model: 30003, speed: 4800, stop bits: 2.",
+    ]
+    quick_start_path().write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
 def ssl_material() -> tuple[Path, Path] | None:
@@ -197,11 +309,17 @@ def main() -> int:
         return 1
 
     cfg = ensure_config(ssl_pair[0], ssl_pair[1])
+    apply_simple_defaults(cfg)
+    login_user, login_password, generated_login = ensure_users()
+    write_quick_start(login_user, login_password)
     port, host = _read_config_port_host(cfg)
     url = local_url(port, host, secure=True)
 
     print(APP_NAME)
     print(f"Config: {cfg}")
+    print(f"Quick Start: {quick_start_path()}")
+    if generated_login:
+        print(f"First-run login: {login_user} / {login_password}")
     print(f"URL:    {url}")
     print("HTTPS:  self-signed certificate (browser will warn once — accept it)")
     print("Close this window or press Ctrl-C to stop the server.")
@@ -214,6 +332,9 @@ def main() -> int:
     env = os.environ.copy()
     env["MRRC_MEMORY_CHANNELS_FILE"] = str(data_dir / "memory_channels.json")
     env["MRRC_ATR1000_STORE"] = str(data_dir / "atr1000_tuner.json")
+    if login_user and login_password:
+        env["MRRC_FIRST_RUN_LOGIN_USER"] = login_user
+        env["MRRC_FIRST_RUN_LOGIN_PASSWORD"] = login_password
     env = _environ_with_vendor_path(env)
 
     creationflags = 0

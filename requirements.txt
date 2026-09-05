@@ -11,5 +11,3 @@ pyserial
 websocket-client
 # 启动器首次运行生成自签 TLS 证书
 cryptography
-# RTL-SDR 接收（可选）
-pyrtlsdr

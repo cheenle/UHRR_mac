@@ -24,7 +24,7 @@ This document describes the currently implemented MRRC runtime, based on the mai
 | Audio backend | `audio_interface.py` | PyAudio capture/playback, Opus RX/TX support, WDSP/RNNoise hooks, recording buffers |
 | Radio control | `TRXRIG` in `MRRC`, `hamlib_wrapper.py` | rigctld socket commands for frequency, mode, PTT, S-meter |
 | DSP | `wdsp_wrapper.py`, `DSP/wdsp/` | Optional WDSP processing: NR2, NB, ANF, NF, AGC, bandpass |
-| Panadapter | `RtlSdr`, `www/panadapter/` | Optional RTL-SDR FFT stream over `/WSpanFFT` |
+| Panadapter | `www/panadapter/` | Legacy UI route remains; RTL-SDR runtime dependency is disabled by default |
 | ATR-1000 bridge | `ATR1000ProxyManager` in `MRRC` | Unix Socket client, bridges proxy data to `/WSATR1000` |
 | ATR-1000 proxy | `atr1000_proxy.py` | Single device connection to ATR-1000, dynamic polling, learning, quick tune |
 | ATR-1000 storage/API | `atr1000_tuner.py`, `atr1000_api_server.py` | JSON learning records and optional REST API through proxy socket |
@@ -54,7 +54,7 @@ This document describes the currently implemented MRRC runtime, based on the mai
 | `/WSaudioRX` | `WS_AudioRXHandler` | Server-to-browser RX audio frames; supports Int16 and Opus mode negotiation |
 | `/WSaudioTX` | `WS_AudioTXHandler` | Browser-to-server TX audio frames and TX init/stop messages |
 | `/WSCTRX` | `WS_ControlTRX` | Frequency, mode, PTT, WDSP, tune, CQ, recording commands |
-| `/WSpanFFT` | `WS_panFFTHandler` | FFT spectrum data from RTL-SDR when available |
+| `/WSpanFFT` | `WS_panFFTHandler` | Legacy FFT WebSocket; disabled by default without RTL-SDR dependency |
 | `/WSATR1000` | `WS_ATR1000Handler` | ATR-1000 meter/relay/tune bridge |
 | `/WSATU` | `WS_ATUAutoTunerHandler` | ATU automatic tuning command surface |
 

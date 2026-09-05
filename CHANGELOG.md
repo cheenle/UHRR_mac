@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [V6.0.0] - 2026-09-05
+
+### 🪟 Windows 安装包正式发布
+
+- 新增 Windows V6.0.0 安装包发布流程，安装后通过 `MRRC-Launcher.exe` 启动服务并自动打开浏览器。
+- 首次运行自动生成本机 `admin` 登录账号，写入 `%LOCALAPPDATA%\MRRC\MRRC_users.db`。
+- 生成 `%LOCALAPPDATA%\MRRC\MRRC Quick Start.txt`，开始菜单新增 `Login Info` 快捷方式，普通用户无需手工查找密码。
+- Windows 配置文件固定为 `%LOCALAPPDATA%\MRRC\MRRC.conf`，模板默认 IC-M710：`rig_model = IC_M710`、`rig_rate = 4800`、`stop_bits = 2`、音频设备片段 `USB Audio`。
+- 文档新增 [Windows Installer Configuration Guide](docs/current/operations/windows-installer-config-guide.md)，同步网站中英文安装页。
+
+### 🔧 Windows 启动与打包修复
+
+- 修复 Windows 中文/GBK 控制台下启动日志含 Unicode 字符时导致 `UnicodeEncodeError` 崩溃的问题。
+- 配置文件读取固定为 UTF-8，修复 Windows 安装版读取含中文注释的 `MRRC.conf` 时 `UnicodeDecodeError`。
+- 修复 PyInstaller onedir 安装版 `/mobile` 页面硬编码读取 `www/mobile_modern.html`，改为从 `_resource_dir()/www/mobile_modern.html` 加载。
+- 移除 RTL-SDR 运行依赖：不再导入 `rtlsdr`，`requirements.txt`/Docker/安装检查/PyInstaller hidden import/Windows DLL 检查均去除 `pyrtlsdr`/`librtlsdr`。
+- Windows 安装包仍保留 Panadapter 静态路由，但默认禁用 RTL-SDR 频谱数据流。
+
+---
+
 ## [V5.8.5] - 2026-08-30
 
 ### 🔧 ATR-1000 天调自动学习修复

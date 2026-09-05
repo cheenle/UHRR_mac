@@ -1,5 +1,5 @@
 #define MyAppName "MRRC"
-#define MyAppVersion "5.8.4"
+#define MyAppVersion "6.0.0"
 #define MyAppPublisher "cheenle"
 #define MyAppURL "https://github.com/cheenle/mrrc"
 #define MyAppServerName "MRRC-Server.exe"
@@ -32,6 +32,7 @@ Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppLauncherName}"
 Name: "{group}\{#MyAppName} Server"; Filename: "{app}\{#MyAppServerName}"
 Name: "{group}\{#MyAppName} ATR1000 Proxy"; Filename: "{app}\{#MyAppProxyName}"
 Name: "{group}\Edit Configuration"; Filename: "notepad.exe"; Parameters: """{localappdata}\MRRC\MRRC.conf"""
+Name: "{group}\Login Info"; Filename: "notepad.exe"; Parameters: """{localappdata}\MRRC\MRRC Quick Start.txt"""
 Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppLauncherName}"; Tasks: desktopicon
 
 [Tasks]
@@ -42,4 +43,4 @@ Filename: "{app}\{#MyAppLauncherName}"; Description: "Launch {#MyAppName}"; Flag
 
 [Messages]
 FinishedHeadingLabel=Completing {#MyAppName} Setup
-FinishedLabel=Setup has finished installing {#MyAppName} on your computer.%n%nLaunch "{#MyAppName}" from the Start Menu to start the server and open the web UI.%n%nEdit %LOCALAPPDATA%\MRRC\MRRC.conf to set your serial port (e.g. COM3) and radio model.
+FinishedLabel=Setup has finished installing {#MyAppName} on your computer.%n%nLaunch "{#MyAppName}" from the Start Menu to start the server and open the web UI.%n%nOn first launch, login details are written to %LOCALAPPDATA%\MRRC\MRRC Quick Start.txt and shown in the launcher window.%n%nIf CAT does not connect, edit %LOCALAPPDATA%\MRRC\MRRC.conf and set the IC-M710 COM port.

@@ -1,6 +1,6 @@
-# Mobile Remote Radio Control (MRRC) V5.8.2
+# Mobile Remote Radio Control (MRRC) V6.0.0
 
-[![English](https://img.shields.io/badge/lang-English-blue.svg)](README_en.md) [![中文](https://img.shields.io/badge/lang-中文-red.svg)](README_CN.md) [![版本](https://img.shields.io/badge/版本-V5.8.2-green.svg)](CHANGELOG.md)
+[![English](https://img.shields.io/badge/lang-English-blue.svg)](README_en.md) [![中文](https://img.shields.io/badge/lang-中文-red.svg)](README_CN.md) [![版本](https://img.shields.io/badge/版本-V6.0.0-green.svg)](CHANGELOG.md)
 
 **随时随地，畅享业余无线电。**
 
@@ -8,7 +8,19 @@ MRRC 是一款专为移动端优化的业余电台远程控制系统。无论您
 
 > ✅ **核心优势**：移动端优先设计，TX→RX切换延迟<100ms，PWA支持离线访问，专为单手操作优化
 >
+> 🎉 **V6.0.0 更新亮点**：
+> - 🪟 **Windows 安装包正式发布**：首启自动生成本机登录账号与
+>   `%LOCALAPPDATA%\MRRC\MRRC Quick Start.txt`，开始菜单提供 `Login Info`。
+> - 🔧 **安装版移动端修复**：修复 PyInstaller onedir 下 `/mobile` 找不到
+>   `www/mobile_modern.html` 的路径问题。
+> - 🧹 **去除 RTL-SDR 依赖**：Windows 安装与运行不再需要 `librtlsdr.dll` / `pyrtlsdr`。
+> - 📻 **IC-M710 默认配置**：Windows 模板默认 `IC_M710`、`4800`、`stop_bits=2`，
+>   rigctld 数字型号示例为 `30003`。
+>
 > 🎉 **V5.8 更新亮点**：
+> - 🔧 **ATR-1000 天调自动学习修复（V5.8.5）**：修复 `dispatch()` 嵌套函数未声明
+>   `global is_tx` 的回归（V5.7.1 引入），模块级 `is_tx` 不再恒为 False；学习入口改为
+>   按实测功率判定发射（`power ≥ 3W`），面板直发/外部软件路径同样自动学习
 > - 🔧 **ATR-1000 功率/SWR 前端不显示修复（V5.8.2）**：根因是 tornado 6.5 中 `IOLoop.instance()` 线程相关，后台线程（重连 Timer、rigctld executor、PTTSafetyMonitor）调用会捕获各自线程的事件循环导致广播永不执行——现主线程固定 `MAIN_IOLOOP`，功率/SWR 实时显示恢复
 > - ⚡ **RX 时延/卡顿提升（V5.8.1）**：IOLoop 去 rigctld 阻塞、客户端水印 LAN 调参（200→100ms）、restart.sh 停不干净修复
 > - 📡 **ATR-1000 SWR>2 自动完整调谐守卫（V5.8.0）**：SWR 超阈值自动完整调谐 + 学习/守卫功率阈值下调
@@ -69,7 +81,7 @@ MRRC 是一款专为移动端优化的业余电台远程控制系统。无论您
 │   (IC-M710/IC-7300/等)    │         │       atr1000_proxy.py              │
 │                           │         │                                     │
 │  • 频率/模式控制 (rigctld)│         │  • 唯一设备连接（避免冲突）          │
-│  • PTT 控制              │         │  • 动态轮询：空闲15s/活跃5s/TX 0.5s │
+│  • PTT 控制              │         │  • 动态轮询：空闲600s/活跃300s/TX 5s │
 │  • 音频 TX/RX            │         │  • 智能学习 + 快速调谐              │
 │  • S表读取               │         └──────────────┬──────────────────────┘
 └───────────────────────────┘                        │ WebSocket
@@ -365,6 +377,7 @@ curl -X POST -H "Content-Type: application/json" \
 - **[当前系统架构](docs/current/architecture/current-system.md)**：基于代码入口和路由的架构说明
 - **[当前能力地图](docs/current/design/capability-map.md)**：按实现列出的功能能力
 - **[运行与验证](docs/current/operations/runtime-and-verification.md)**：启动、Docker、测试和已知偏差
+- **[Windows 安装配置指南](docs/current/operations/windows-installer-config-guide.md)**：V6.0.0 Windows 安装包、配置路径、登录信息、IC-M710/rigctld 示例
 - **[旧版 ATR-1000 天调智能学习](docs/legacy/atr/ATR1000_Tuner_Auto_Learning.md)**：天调学习与 API 参考
 - **[旧版 PTT/音频稳定性](docs/legacy/audio/PTT_Audio_Postmortem_and_Best_Practices.md)**：稳定性分析与最佳实践
 - **[旧版延迟优化指南](docs/legacy/audio/latency_optimization_guide.md)**：TX/RX切换延迟优化详解
@@ -373,7 +386,7 @@ curl -X POST -H "Content-Type: application/json" \
 
 ---
 
-**最新版本: V5.8.2** (2026-08-09) | [查看更新日志](CHANGELOG.md)
+**最新版本: V6.0.0** (2026-09-05) | [查看更新日志](CHANGELOG.md)
 
 ## 🖥️ 多实例支持（Multi-Instance）⭐ 新功能
 

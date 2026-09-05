@@ -259,6 +259,21 @@
                 <h2>🚀 Installation Steps</h2>
 
                 <div class="step">
+                    <div class="step-number">0</div>
+                    <div class="step-content">
+                        <h3>Windows Installer (V6.0.0, Easiest Path)</h3>
+                        <p>Download <code>MRRC-Setup.exe</code>, run it, then start <strong>MRRC</strong> from the Start Menu. The launcher creates HTTPS certificates, a local login, and a quick-start file automatically.</p>
+                        <pre class="code-block"><code>Configuration: %LOCALAPPDATA%\MRRC\MRRC.conf
+Login info:    %LOCALAPPDATA%\MRRC\MRRC Quick Start.txt
+Users file:    %LOCALAPPDATA%\MRRC\MRRC_users.db
+
+# IC-M710 rigctld example
+rigctld.exe -m 30003 -r COM3 -s 4800 -C stop_bits=2 -T 127.0.0.1 -t 4532</code></pre>
+                        <p class="tip">📌 The default Windows config uses <code>rig_model = IC_M710</code>, <code>rig_rate = 4800</code>, <code>stop_bits = 2</code>, and audio device fragment <code>USB Audio</code>. No RTL-SDR DLL is required.</p>
+                    </div>
+                </div>
+
+                <div class="step">
                     <div class="step-number">1</div>
                     <div class="step-content">
                         <h3>Clone Repository</h3>
@@ -335,7 +350,7 @@ rigctld -m 3070 -r /dev/cu.usbserial-230 -s 4800 -C stop_bits=2
 
 # Or use control script
 ./mrrc_control.sh start-rigctld</code></pre>
-                        <p class="tip">📌 Common transceiver model codes: IC-7100=3070, FT-991A=1035, IC-R9000=30003</p>
+                        <p class="tip">📌 Common transceiver model codes: IC-M710=30003, IC-7100=3070, FT-991A=1035</p>
                     </div>
                 </div>
             </div>

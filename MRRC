@@ -23,6 +23,15 @@ import struct
 import html
 import urllib.parse
 
+# Windows consoles may use legacy code pages (for example GBK/cp936). Some
+# optional-feature startup messages contain Unicode symbols; never let logging
+# or print encoding failures abort server startup.
+for _stream in (sys.stdout, sys.stderr):
+    try:
+        _stream.reconfigure(errors='replace')
+    except Exception:
+        pass
+
 # Set up minimal logging to reduce I/O overhead
 # V4.8.1: 优化logging配置，减少文件I/O操作以降低CPU占用
 logging.basicConfig(
@@ -59,7 +68,6 @@ try:
 except ImportError:
     HAMLIB_AVAILABLE = False
     print("Hamlib wrapper not available")
-from rtlsdr import RtlSdr
 import numpy as np
 import math
 
@@ -131,7 +139,7 @@ else:
 if not os.path.isabs(config_file):
     config_file = os.path.join(_runtime_dir(), config_file)
 
-config.read(config_file)
+config.read(config_file, encoding='utf-8')
 print(f"Using config file: {config_file}")
 
 # ATR-1000 Unix Socket 路径（支持多实例）
@@ -308,23 +316,11 @@ class AuthenticatedStaticFileHandler(tornado.web.StaticFileHandler):
 				self.set_status(403)
 				self.finish('Authentication required')
 
-############ Generate and send FFT from RTLSDR ##############
-is_rtlsdr_present = True
-
-try:
-	FFTSIZE=4096
-	nbBuffer=24
-	nbsamples=nbBuffer/2*FFTSIZE
-	ptime=nbsamples/int(config['PANADAPTER']['sample_rate'])
-	sdr_windows = eval("np."+config['PANADAPTER']['fft_window']+ "(FFTSIZE)") 
-	fftpaquetlen=int(FFTSIZE*8/2048)
-	sdr = RtlSdr()
-	sdr.sample_rate = int(config['PANADAPTER']['sample_rate']) # Hz
-	sdr.center_freq = int(config['PANADAPTER']['center_freq']) # Hz
-	sdr.freq_correction = int(config['PANADAPTER']['freq_correction']) # PPM
-	sdr.gain = int(config['PANADAPTER']['gain']) #or 'auto'
-except:
-	is_rtlsdr_present = False
+############ FFT/panadapter disabled by default (no RTL-SDR runtime dependency) ##############
+is_rtlsdr_present = False
+FFTSIZE = 4096
+ptime = 1.0
+fftpaquetlen = 0
 	
 
 	
@@ -3777,6 +3773,18 @@ class AuthLoginHandler(BaseHandler):
 		next_url = html.escape(safe_next_url(self.get_argument('next', '/')), quote=True)
 		error_msg = html.escape(self.get_argument('error', ''), quote=True) if self.get_argument('error', '') else ''
 		error_html = '<div class="login-error">' + error_msg + '</div>' if error_msg else ''
+		first_run_html = ''
+		try:
+			first_user = os.environ.get('MRRC_FIRST_RUN_LOGIN_USER', '')
+			first_password = os.environ.get('MRRC_FIRST_RUN_LOGIN_PASSWORD', '')
+			if first_user and first_password and self.request.remote_ip in ('127.0.0.1', '::1'):
+				first_run_html = (
+					'<div class="login-help">First-run login<br>'
+					'Username: <b>' + html.escape(first_user, quote=True) + '</b><br>'
+					'Password: <b>' + html.escape(first_password, quote=True) + '</b></div>'
+				)
+		except Exception:
+			first_run_html = ''
 		self.write('''<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -3867,6 +3875,16 @@ body{
   margin-bottom:16px;
   animation:shake 0.4s ease;
 }
+.login-help{
+  background:rgba(0,212,255,0.10);
+  border:1px solid rgba(0,212,255,0.25);
+  border-radius:8px;
+  padding:10px 14px;
+  color:#d7f7ff;
+  font-size:13px;
+  line-height:1.6;
+  margin-bottom:16px;
+}
 @keyframes shake{
   0%,100%{transform:translateX(0)}
   20%{transform:translateX(-6px)}
@@ -3920,6 +3938,7 @@ body{
   </div>
   <div class="login-card">
     ''' + error_html + '''
+    ''' + first_run_html + '''
     <form action="/login" method="post">
       <input type="hidden" name="next" value="''' + next_url + '''">
       <div class="login-field">
@@ -4049,8 +4068,9 @@ class MobileHandler(BaseHandler):
 		self.set_header('X-Mobile-Interface', 'true')
 		# Serve the modern mobile HTML file
 		try:
-			print("Attempting to read www/mobile_modern.html")
-			with open("www/mobile_modern.html", "r") as f:
+			mobile_path = os.path.join(_resource_dir(), "www", "mobile_modern.html")
+			print(f"Attempting to read {mobile_path}")
+			with open(mobile_path, "r", encoding="utf-8") as f:
 				content = f.read()
 				print(f"Read {len(content)} characters from mobile_modern.html")
 				self.write(content)

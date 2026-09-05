@@ -1,6 +1,6 @@
-# Mobile Remote Radio Control (MRRC) V5.8.2
+# Mobile Remote Radio Control (MRRC) V6.0.0
 
-[![English](https://img.shields.io/badge/lang-English-blue.svg)](README_en.md) [![中文](https://img.shields.io/badge/lang-中文-red.svg)](README_CN.md) [![Version](https://img.shields.io/badge/version-V5.8.2-green.svg)](CHANGELOG.md)
+[![English](https://img.shields.io/badge/lang-English-blue.svg)](README_en.md) [![中文](https://img.shields.io/badge/lang-中文-red.svg)](README_CN.md) [![Version](https://img.shields.io/badge/version-V6.0.0-green.svg)](CHANGELOG.md)
 
 **Amateur Radio, Anytime, Anywhere.**
 
@@ -8,7 +8,21 @@ MRRC is a modern web-based remote control system optimized for mobile devices, e
 
 > ✅ **Core Advantage**: Mobile-first design, TX→RX switching latency <100ms, PWA support for offline access, optimized for one-hand operation
 >
+> 🎉 **V6.0.0 Highlights**:
+> - 🪟 **Windows installer release**: first run creates local login credentials and
+>   `%LOCALAPPDATA%\MRRC\MRRC Quick Start.txt`; Start Menu includes `Login Info`.
+> - 🔧 **Packaged mobile UI fixed**: `/mobile` now loads `mobile_modern.html` from
+>   PyInstaller's bundled resource path.
+> - 🧹 **RTL-SDR dependency removed**: no `librtlsdr.dll` / `pyrtlsdr` needed for install or startup.
+> - 📻 **IC-M710 defaults**: Windows template defaults to `IC_M710`, `4800`, `stop_bits=2`;
+>   rigctld numeric model example is `30003`.
+>
 > 🎉 **V5.8 Highlights**:
+> - 🔧 **ATR-1000 auto-learning fixed (V5.8.5)**: regression in the nested `dispatch()`
+>   (missing `global is_tx`, introduced in V5.7.1) left the module-level `is_tx` always
+>   False — auto-learning and TX-mode polling silently dead. Learning now detects TX by
+>   measured forward power (`power ≥ 3W`) like the SWR guard, so front-panel / external
+>   software transmissions learn too.
 > - 🔧 **ATR-1000 meter display fix (V5.8.2)**: power/SWR no longer stuck on initial snapshot — main-thread-pinned `MAIN_IOLOOP` replaces thread-dependent `IOLoop.instance()` calls in background threads (reconnect timer, rigctld executor, PTTSafetyMonitor)
 > - ⚡ **RX latency improvements (V5.8.1)**: IOLoop de-blocked from rigctld, client watermark tuned for LAN (prebuffer 200→100ms)
 > - 📡 **ATR-1000 SWR>2 auto full-tune guard (V5.8.0)**: automatic complete tuning when SWR exceeds threshold, lower learn/guard power thresholds
@@ -61,7 +75,7 @@ MRRC is a modern web-based remote control system optimized for mobile devices, e
 │   (IC-M710/IC-7300/etc)   │         │       atr1000_proxy.py              │
 │                           │         │                                     │
 │  • Freq/Mode (rigctld)    │         │  • Single device connection         │
-│  • PTT Control            │         │  • Dynamic polling: 15s/5s/0.5s     │
+│  • PTT Control            │         │  • Dynamic polling: 600s/300s/TX 5s  │
 │  • Audio TX/RX            │         │  • Smart Learning + Quick Tune      │
 │  • S-Meter Reading        │         └──────────────┬──────────────────────┘
 └───────────────────────────┘                        │ WebSocket
@@ -150,7 +164,34 @@ To prevent device hang from excessive requests, implemented dynamic polling:
 - **TLS/Certificates**: Support for custom certificate chain (fullchain + private key)
 - **User Authentication**: FILE-based authentication to protect your station
 
-## 🚀 Quick Start (macOS)
+## 🚀 Quick Start (Windows Installer)
+
+1. Download `MRRC-Setup.exe`: <https://www.vlsc.net/mrrc/downloads/MRRC-Setup.exe>
+2. Run the installer and launch `MRRC` from the Start Menu.
+3. Accept the browser self-signed HTTPS warning once.
+4. Read login info from Start Menu -> `MRRC` -> `Login Info`, or:
+
+```text
+%LOCALAPPDATA%\MRRC\MRRC Quick Start.txt
+```
+
+Important Windows files:
+
+```text
+%LOCALAPPDATA%\MRRC\MRRC.conf
+%LOCALAPPDATA%\MRRC\MRRC_users.db
+%LOCALAPPDATA%\MRRC\MRRC Quick Start.txt
+```
+
+IC-M710 rigctld example:
+
+```powershell
+rigctld.exe -m 30003 -r COM3 -s 4800 -C stop_bits=2 -T 127.0.0.1 -t 4532
+```
+
+See: [Windows Installer Configuration Guide](docs/current/operations/windows-installer-config-guide.md)
+
+## 🚀 Quick Start (macOS/Linux Source Run)
 
 ### 1. Dependencies
 - Python 3.12+
@@ -321,7 +362,7 @@ Based on [F4HTB/Universal_HamRadio_Remote_HTML5](https://github.com/F4HTB/Univer
 
 ---
 
-**Latest Version: V5.8.2** (2026-08-09) | [View Changelog](CHANGELOG.md)
+**Latest Version: V6.0.0** (2026-09-05) | [View Changelog](CHANGELOG.md)
 
 **MRRC - Mobile Remote Radio Control**  
 *Amateur Radio, Anytime, Anywhere.*

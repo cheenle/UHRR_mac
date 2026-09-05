@@ -76,7 +76,6 @@ check_python_dependencies() {
         "tornado"
         "numpy"
         "pyaudio"
-        "pyrtlsdr"
         "opuslib"
         "pyserial"
     )
@@ -109,7 +108,6 @@ install_python_dependencies() {
         "tornado"
         "numpy"
         "pyaudio"
-        "pyrtlsdr"
         "opuslib"
         "pyserial"
     )

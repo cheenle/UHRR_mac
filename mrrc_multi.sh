@@ -41,7 +41,7 @@ print_info() {
 }
 
 # 检测可用的 Python 解释器（兼容 Python 升级后的环境）
-# 优先使用项目 venv（且其底层框架仍存在），否则查找包含 tornado/numpy/rtlsdr 依赖的解释器
+# 优先使用项目 venv（且其底层框架仍存在），否则查找包含 tornado/numpy 依赖的解释器
 detect_python() {
     if [ -n "$PYTHON" ] && [ -x "$PYTHON" ]; then
         return 0
@@ -65,13 +65,13 @@ detect_python() {
             print_warning "venv 已失效（$cand 无法执行），跳过并查找其他解释器"
             continue
         fi
-        if [ -x "$cand" ] && ( "$cand" -c "import tornado, numpy, rtlsdr" >/dev/null 2>&1 ); then
+        if [ -x "$cand" ] && ( "$cand" -c "import tornado, numpy" >/dev/null 2>&1 ); then
             PYTHON="$cand"
             print_info "Using Python: $PYTHON"
             return 0
         fi
     done
-    print_error "未找到可用的 Python 解释器（需安装 tornado/numpy/rtlsdr）"
+    print_error "未找到可用的 Python 解释器（需安装 tornado/numpy）"
     return 1
 }
 
@@ -184,7 +184,7 @@ try:
         # 使用默认值
         print('')  # PORT
         print('')  # RIGCTL_DEVICE
-        print('30003')  # RIGCTL_MODEL
+        print('30003')  # RIGCTL_MODEL (IC-M710)
         print('4800')  # RIGCTL_SPEED
         print('2')  # RIGCTL_STOP_BITS
         print('127.0.0.1')  # RIGCTL_HOST

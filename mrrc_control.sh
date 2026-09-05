@@ -8,8 +8,8 @@ ulimit -n 10240
 SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
 
 # Configuration
-RIGCTL_MODEL="30003"  # IC-R9000
-RIGCTL_DEVICE="/dev/cu.usbserial-120"  # Modify this to match your device
+RIGCTL_MODEL="30003"  # IC-M710
+RIGCTL_DEVICE="/dev/cu.usbserial-230"  # Modify this to match your device
 RIGCTL_SPEED="4800"
 RIGCTL_STOP_BITS="2"
 RIGCTL_HOST="127.0.0.1"

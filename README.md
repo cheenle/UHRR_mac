@@ -1,8 +1,8 @@
-# Mobile Remote Radio Control (MRRC) V5.8.2
+# Mobile Remote Radio Control (MRRC) V6.0.0
 
 [![English](https://img.shields.io/badge/lang-English-blue.svg)](README_en.md)
 [![中文](https://img.shields.io/badge/lang-中文-red.svg)](README_CN.md)
-[![Version](https://img.shields.io/badge/version-V5.8.2-green.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-V6.0.0-green.svg)](CHANGELOG.md)
 
 ---
 
@@ -13,6 +13,14 @@
 A modern web-based remote control system optimized for mobile devices, enabling flexible operation of your amateur radio station from anywhere.
 
 基于现代Web技术的远程电台控制系统，专为移动端优化，让您随时随地灵活操控业余电台。
+
+> 🎉 **V6.0.0 更新**: Windows 安装包正式发布 — 首启自动生成本机登录账号与
+> `MRRC Quick Start.txt`，修复 PyInstaller 安装版 `/mobile` 页面资源路径，移除
+> `rtlsdr/pyrtlsdr/librtlsdr` 运行依赖，Windows 默认按 IC-M710 配置。
+
+> 🎉 **V5.8.5 更新**: ATR-1000 天调自动学习全面修复 — 修复 `dispatch()` 嵌套函数未声明
+> `global is_tx` 的回归（V5.7.1 引入），模块级 `is_tx` 不再恒为 False；学习入口改为按实测
+> 功率判定发射（`power ≥ 3W`），面板直发/外部软件路径同样自动学习。
 
 > 🎉 **V5.8.2 更新**: ATR-1000 功率/SWR 前端不显示修复（IOLoop 线程错位 — 主线程固定 MAIN_IOLOOP）、PTT 状态广播同根因修复
 >
@@ -57,7 +65,7 @@ A modern web-based remote control system optimized for mobile devices, enabling 
 │       电台设备             │         │       atr1000_proxy.py              │
 │                           │         │                                     │
 │  • Freq/Mode (rigctld)    │         │  • Single device connection         │
-│  • PTT Control            │         │  • Dynamic polling: 15s/5s/0.5s     │
+│  • PTT Control            │         │  • Dynamic polling: 600s/300s/TX 5s  │
 │  • Audio TX/RX            │         │  • Smart Learning + Quick Tune      │
 └───────────────────────────┘         └──────────────┬──────────────────────┘
                                                      │ WebSocket
@@ -173,13 +181,42 @@ curl http://localhost:8080/api/v1/status
 | PTT Reliability | 99%+ |
 | Audio Recording | WAV/MP3, Auto-download |
 | WDSP Processing | <20ms, 15-20dB NR2降噪 |
-| ATR-1000 Polling (Idle) | 15s |
-| ATR-1000 Polling (Active) | 5s |
-| ATR-1000 Polling (TX) | 0.5s |
+| ATR-1000 Polling (Idle) | 600s |
+| ATR-1000 Polling (Active) | 300s |
+| ATR-1000 Polling (TX) | 5s status check, no SYNC (device pushes METER) |
 
 ---
 
 ## 🚀 Quick Start / 快速开始
+
+### Windows Installer / Windows 安装包（V6.0.0）
+
+1. Download `MRRC-Setup.exe` from: <https://www.vlsc.net/mrrc/downloads/MRRC-Setup.exe>
+2. Run the installer and launch `MRRC` from the Start Menu.
+3. Accept the browser self-signed HTTPS warning once.
+4. Read login info from `Login Info` in the Start Menu or:
+
+```text
+%LOCALAPPDATA%\MRRC\MRRC Quick Start.txt
+```
+
+Important Windows files:
+
+```text
+%LOCALAPPDATA%\MRRC\MRRC.conf              Main configuration
+%LOCALAPPDATA%\MRRC\MRRC_users.db          Login users
+%LOCALAPPDATA%\MRRC\MRRC Quick Start.txt   Login info and first-run help
+```
+
+IC-M710 rigctld example:
+
+```powershell
+rigctld.exe -m 30003 -r COM3 -s 4800 -C stop_bits=2 -T 127.0.0.1 -t 4532
+```
+
+See also: [Windows Installer Configuration Guide](docs/current/operations/windows-installer-config-guide.md)
+
+### macOS/Linux Source Run
 
 ```bash
 # 1. Start rigctld
@@ -258,12 +295,13 @@ Based on [F4HTB/Universal_HamRadio_Remote_HTML5](https://github.com/F4HTB/Univer
 - [Current System Architecture](docs/current/architecture/current-system.md)
 - [Current Capability Map](docs/current/design/capability-map.md)
 - [Runtime & Verification](docs/current/operations/runtime-and-verification.md)
+- [Windows Installer Configuration Guide](docs/current/operations/windows-installer-config-guide.md)
 - [Legacy ATR-1000 Tuner Notes](docs/legacy/atr/ATR1000_Tuner_Auto_Learning.md)
 - [Legacy Multi-Instance Setup](docs/legacy/operations/Multi_Instance_Setup.md)
 
 ---
 
-**Latest Release: V5.7** (2026-08-08) | [View Changelog](CHANGELOG.md)
+**Latest Release: V6.0.0** (2026-09-05) | [View Changelog](CHANGELOG.md)
 
 ## 🖥️ Multi-Instance Support ⭐ New
 

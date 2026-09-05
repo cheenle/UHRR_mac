@@ -254,6 +254,21 @@
                 <h2>🚀 安装步骤</h2>
 
                 <div class="step">
+                    <div class="step-number">0</div>
+                    <div class="step-content">
+                        <h3>Windows 安装包（V6.0.0，最简单路径）</h3>
+                        <p>下载并运行 <code>MRRC-Setup.exe</code>，然后从开始菜单启动 <strong>MRRC</strong>。启动器会自动创建 HTTPS 证书、本机登录账号和快速入门文件。</p>
+                        <pre class="code-block"><code>配置文件：%LOCALAPPDATA%\MRRC\MRRC.conf
+登录信息：%LOCALAPPDATA%\MRRC\MRRC Quick Start.txt
+用户文件：%LOCALAPPDATA%\MRRC\MRRC_users.db
+
+# IC-M710 rigctld 示例
+rigctld.exe -m 30003 -r COM3 -s 4800 -C stop_bits=2 -T 127.0.0.1 -t 4532</code></pre>
+                        <p class="tip">📌 Windows 默认配置使用 <code>rig_model = IC_M710</code>、<code>rig_rate = 4800</code>、<code>stop_bits = 2</code>，音频设备使用稳定片段 <code>USB Audio</code>。V6.0.0 不再需要 RTL-SDR DLL。</p>
+                    </div>
+                </div>
+
+                <div class="step">
                     <div class="step-number">1</div>
                     <div class="step-content">
                         <h3>克隆仓库</h3>
@@ -330,7 +345,7 @@ rigctld -m 3070 -r /dev/cu.usbserial-230 -s 4800 -C stop_bits=2
 
 # 或使用控制脚本
 ./mrrc_control.sh start-rigctld</code></pre>
-                        <p class="tip">📌 常用电台型号代码：IC-7100=3070, FT-991A=1035, IC-R9000=30003</p>
+                        <p class="tip">📌 常用电台型号代码：IC-M710=30003, IC-7100=3070, FT-991A=1035</p>
                     </div>
                 </div>
             </div>
