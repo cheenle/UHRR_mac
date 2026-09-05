@@ -371,7 +371,9 @@ start_atr1000() {
     
     > "$ATR1000_LOG"
     
-    "$PYTHON" "$SCRIPT_DIR/atr1000_proxy.py" \
+    # V5.8.6: nohup 防 SIGHUP — 之前用 "&" 直挂终端,关掉终端标签页会把代理
+    # 无摘要猝死(14:34 事故签名),手机端功率显示随之失联且无人拉活。
+    nohup "$PYTHON" "$SCRIPT_DIR/atr1000_proxy.py" \
         --device "$INSTANCE_ATR1000_DEVICE" \
         --port "$INSTANCE_ATR1000_PORT" \
         --unix-socket "$INSTANCE_UNIX_SOCKET" \
@@ -380,7 +382,8 @@ start_atr1000() {
     local pid=$!
     sleep 2
     
-    if is_running "atr1000_proxy"; then
+    # V5.8.6: 限定本实例 socket，避免另一部署的代理造成误报 started
+    if is_running "atr1000_proxy.*--unix-socket $INSTANCE_UNIX_SOCKET"; then
         print_success "ATR-1000 proxy started (PID: $pid)"
         echo "$pid" > "$PID_DIR/atr1000_${INSTANCE}.pid"
         return 0
@@ -392,7 +395,10 @@ start_atr1000() {
 
 # 停止 ATR-1000 代理
 stop_atr1000() {
-    kill_process "atr1000_proxy"
+    # V5.8.6: 限定实例模式。原 "atr1000_proxy" 无路径/实例限制，
+    # 从另一份部署目录（如 UHRR/MRRC）执行 stop/restart 会误杀
+    # HAM/mrrc 正在服务的代理（今日 12:34/12:49 的 socket 中断即此症状）。
+    kill_process "atr1000_proxy.*--unix-socket $INSTANCE_UNIX_SOCKET"
     local rc=$?
     rm -f "$PID_DIR/atr1000_${INSTANCE}.pid"
     rm -f "$INSTANCE_UNIX_SOCKET"

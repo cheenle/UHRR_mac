@@ -51,8 +51,8 @@ start_tunnel() {
     if ps -p "$TUNNEL_PID" > /dev/null 2>&1; then
         log "✅ SSH 隧道已启动 (PID: $TUNNEL_PID)"
         log "用户可以通过以下地址访问:"
-        log "  radio1: https://$REMOTE_HOST:$REMOTE_RADIO1_PORT"
-        log "  radio2: https://$REMOTE_HOST:$REMOTE_RADIO2_PORT"
+        log "  radio1: https://radio1.vlsc.net  (经远端 nginx 反代, 隧道回环口 $REMOTE_RADIO1_PORT)"
+        log "  radio2: :$REMOTE_RADIO2_PORT (radio2 实例未运行时不可用)"
     else
         log "❌ SSH 隧道启动失败"
         rm -f "$PID_FILE"
@@ -90,7 +90,8 @@ status() {
             log "  radio2: https://$REMOTE_HOST:$REMOTE_RADIO2_PORT"
             
             # 检查远程端口是否监听
-            if ssh "$REMOTE_USER@$REMOTE_HOST" "lsof -i :$REMOTE_RADIO1_PORT -sTCP:LISTEN" > /dev/null 2>&1; then
+            # V5.8.6: 改用 ss — 原 lsof 以普通用户看不到 root(sshd) 的 socket, 永远误报"未监听"
+            if ssh "$REMOTE_USER@$REMOTE_HOST" "ss -tln | grep -qE ':$REMOTE_RADIO1_PORT\s'" 2>/dev/null; then
                 log "✅ 远程端口 $REMOTE_RADIO1_PORT 正在监听"
             else
                 log "⚠️ 远程端口 $REMOTE_RADIO1_PORT 未监听"

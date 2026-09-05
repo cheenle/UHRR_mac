@@ -3,8 +3,11 @@
 
 echo "Applying mobile interface WebSocket connection fix..."
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+MOBILE_JS="$SCRIPT_DIR/www/mobile.js"
+
 # Backup original file
-cp /Users/cheenle/MRRC/MRRC_mac/www/mobile.js /Users/cheenle/MRRC/MRRC_mac/www/mobile.js.backup
+cp "$MOBILE_JS" "$MOBILE_JS.backup"
 
 # Apply the fix by adding forced status updates
 echo "Adding forced status updates to mobile.js..."
@@ -17,7 +20,7 @@ sed -i '' '/wsControlTRX.onopen = function() {/a\
                 document.getElementById("status-ctrl").classList.add("connected");\
             }\
         }, 100);
-' /Users/cheenle/MRRC/MRRC_mac/www/mobile.js
+' "$MOBILE_JS"
 
 sed -i '' '/wsAudioRX.onopen = function() {/a\
         // Force immediate status update\
@@ -26,7 +29,7 @@ sed -i '' '/wsAudioRX.onopen = function() {/a\
                 document.getElementById("status-rx").classList.add("connected");\
             }\
         }, 100);
-' /Users/cheenle/MRRC/MRRC_mac/www/mobile.js
+' "$MOBILE_JS"
 
 sed -i '' '/wsAudioTX.onopen = function() {/a\
         // Force immediate status update\
@@ -35,7 +38,7 @@ sed -i '' '/wsAudioTX.onopen = function() {/a\
                 document.getElementById("status-tx").classList.add("connected");\
             }\
         }, 100);
-' /Users/cheenle/MRRC/MRRC_mac/www/mobile.js
+' "$MOBILE_JS"
 
 echo "Fix applied successfully!"
 echo "Please refresh your mobile interface to see the changes."

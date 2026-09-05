@@ -1588,6 +1588,9 @@ class ATR1000ProxyManager:
         self.refresh_timer = None  # 定期获取数据的定时器
         self._reconnect_delay = 0.5  # 重连初始延迟
         self._last_active_data_time = 0  # 最近一次收到正向功率(TX)的时间，驱动快速轮询
+        self._first_fail_time = None  # V5.8.6: 本轮持续连接失败的起始时间（看守用）
+        self._last_spawn_time = 0  # V5.8.6: 上次自动拉起代理进程的时间（冷却用）
+        self._spawn_lock = threading.Lock()  # V5.8.6: 防止并发重连链同时拉起两个代理
 
         logger.info("📡 ATR-1000 代理管理器已初始化")
     
@@ -1617,6 +1620,7 @@ class ATR1000ProxyManager:
             if hasattr(self, '_need_reconnect'):
                 self._need_reconnect = False
             self._reconnect_delay = 0.5  # 重置重连延迟
+            self._first_fail_time = None  # V5.8.6: 链路恢复，重置看守计时
 
             # 保存主事件循环引用 — 必须用主线程固定的 MAIN_IOLOOP。
             # tornado 6.5 中 IOLoop.instance()==current() 是线程相关的：若 _connect 经
@@ -1648,12 +1652,78 @@ class ATR1000ProxyManager:
             # 清除重连状态
             if hasattr(self, '_reconnecting'):
                 self._reconnecting = False
+            # V5.8.6: 看守 — 代理进程被杀/崩溃后 socket 永远无人监听（历史上
+            # 手机端功率"反复不显示"的根因），持续失败超时则自动拉起代理
+            self._watchdog_check()
             # 指数退避重试: 0.5s → 1s → 2s → 4s → 5s (上限)
             if self.running:
                 delay = self._reconnect_delay
                 logger.info(f"🔄 {delay:.1f}秒后重连 ATR-1000 代理...")
                 threading.Timer(delay, self._connect).start()
                 self._reconnect_delay = min(delay * 2, 5.0)
+
+    def _watchdog_check(self):
+        """连接失败看守：失败持续超时且不在冷却期时，尝试自动拉起代理进程"""
+        SPAWN_AFTER = 45.0   # 失败持续 45s 判定代理进程已死（正常重启窗口远小于此）
+        SPAWN_COOLDOWN = 120.0  # 两次拉起尝试的最小间隔
+        now = time.time()
+        if self._first_fail_time is None:
+            self._first_fail_time = now
+            return
+        if now - self._first_fail_time < SPAWN_AFTER:
+            return
+        if now - self._last_spawn_time < SPAWN_COOLDOWN:
+            return
+        # 锁保证多条并发重连链（start/Timer/读取线程退出）只会拉起一个代理
+        with self._spawn_lock:
+            if now - self._last_spawn_time < SPAWN_COOLDOWN:
+                return
+            self._last_spawn_time = now
+            self._spawn_proxy()
+
+    def _spawn_proxy(self):
+        """自动拉起 atr1000_proxy.py（仅当确实没有实例在监听本 socket 时）
+
+        只在配置了 instance_atr1000_device 的实例上生效；多实例部署下按
+        --unix-socket 路径匹配进程，避免误拉起或重复启动抢占设备 WebSocket。
+        """
+        try:
+            import subprocess
+            if not config.has_option('INSTANCE_SETTINGS', 'instance_atr1000_device'):
+                return  # 本实例未配置天调，永远不会有代理，不浪费进程
+            device = config.get('INSTANCE_SETTINGS', 'instance_atr1000_device')
+            port = config.get('INSTANCE_SETTINGS', 'instance_atr1000_port', fallback='60001')
+            script_dir = _runtime_dir()
+            script = os.path.join(script_dir, 'atr1000_proxy.py')
+            if not os.path.exists(script):
+                logger.warning(f"⚠️ 看守找不到代理脚本: {script}")
+                return
+
+            # 防重复：已有进程命令行带本 socket 路径则跳过（刚启动/socket 未就绪等场景）
+            marker = f"--unix-socket {INSTANCE_UNIX_SOCKET}"
+            try:
+                out = subprocess.run(['ps', '-axww', '-o', 'command='],
+                                     capture_output=True, text=True, timeout=5).stdout
+                if marker in out:
+                    logger.info("🛡️ ATR-1000 看守：代理进程仍在运行（socket 未就绪），本次不拉起")
+                    return
+            except Exception as e:
+                logger.debug(f"看守检查进程列表失败，继续尝试拉起: {e}")
+
+            proxy_log = os.path.join(script_dir, 'atr1000_proxy_watchdog.log')
+            with open(proxy_log, 'a') as lf:
+                lf.write(f"\n===== MRRC 看守拉起 @ {datetime.datetime.now().isoformat()} =====\n")
+                lf.flush()
+                proc = subprocess.Popen(
+                    [sys.executable, script,
+                     '--device', device, '--port', str(port),
+                     '--unix-socket', INSTANCE_UNIX_SOCKET],
+                    stdout=lf, stderr=subprocess.STDOUT,
+                    start_new_session=True,
+                )
+            logger.warning(f"🛡️ ATR-1000 看守：代理持续不可达，已自动拉起 atr1000_proxy.py (PID {proc.pid})")
+        except Exception as e:
+            logger.error(f"❌ ATR-1000 看守拉起代理失败: {e}")
 
     def _start_data_refresh(self):
         """定期向代理发送 get_data 请求，确保持续有数据推送给前端"""

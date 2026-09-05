@@ -59,8 +59,8 @@ Let me analyze this conversation chronologically to capture all important detail
       - Still investigating why proxy is not sending data correctly 
     
   Key files examined: 
-  - `/Users/cheenle/MRRC/MRRC_mac/MRRC` - Main Tornado server 
-  - `/Users/cheenle/MRRC/MRRC_mac/atr1000_proxy.py` - ATR-1000 proxy 
+  - `./MRRC` - Main Tornado server
+  - `./atr1000_proxy.py` - ATR-1000 proxy
     
   Current state: All modifications rolled back, service restarted, but still debugging the ATR-1000 communication issue. 
 
@@ -118,7 +118,7 @@ Let me analyze this conversation chronologically to capture all important detail
       - ScriptProcessorNode/WebSocket audio processing blocking event loop
 
    3. Files and Code Sections:
-      - `/Users/cheenle/MRRC/MRRC_mac/MRRC` (Main Tornado server)
+      - `./MRRC` (Main Tornado server)
         - Contains ATR1000ProxyManager class with the _broadcast_batch method
         - Contains WS_AudioTXHandler.on_message with blocking audio operations
         - Key problematic code (lines 563-575):
@@ -134,7 +134,7 @@ Let me analyze this conversation chronologically to capture all important detail
               for client in clients_snapshot:
                   client.write_message(latest_data, binary=False)  # Thread unsafe!
 
-      - `/Users/cheenle/MRRC/MRRC_mac/atr1000_proxy.py` (ATR-1000 proxy)
+      - `./atr1000_proxy.py` (ATR-1000 proxy)
         - Handles communication with ATR-1000 device via WebSocket
         - Broadcasts data to Unix Socket clients
         - broadcast_to_clients() function sends JSON data with newline delimiter
@@ -199,4 +199,3 @@ Let me analyze this conversation chronologically to capture all important detail
   the user how they want to proceed.
 
 ✦ </summary>
-

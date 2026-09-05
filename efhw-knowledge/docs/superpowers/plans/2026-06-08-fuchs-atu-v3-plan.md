@@ -2519,7 +2519,7 @@ git commit -m "docs: README V3.0 — Fuchs ESP32-S3 ATU, archive V1.0/V2.0"
 ### Task 19: Add Fuchs ATU to memory
 
 **Files:**
-- Create: `/Users/cheenle/.claude/projects/-Users-cheenle-UHRR-MRRC-efhw-knowledge/memory/fuchs-atu-v3-project.md`
+- Create: `~/.claude/projects/<项目slug>/memory/fuchs-atu-v3-project.md`
 - Modify: `MEMORY.md`
 
 - [ ] **Step 1: Write memory file**

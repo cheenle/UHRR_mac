@@ -95,36 +95,36 @@
 ./mrrc_setup.sh install
 
 # 2. 通过 SSH 远程检查
-ssh user@host "cd /Users/cheenle/MRRC/MRRC_mac && ./mrrc_control.sh status"
+ssh user@host "cd <项目目录> && ./mrrc_control.sh status"
 
 # 3. 远程重启服务
-ssh user@host "cd /Users/cheenle/MRRC/MRRC_mac && ./mrrc_control.sh restart"
+ssh user@host "cd <项目目录> && ./mrrc_control.sh restart"
 ```
 
 ### 场景 2：日常远程管理
 
 ```bash
 # 检查服务状态
-ssh user@host "cd /Users/cheenle/MRRC/MRRC_mac && ./mrrc_control.sh status"
+ssh user@host "cd <项目目录> && ./mrrc_control.sh status"
 
 # 查看实时日志
-ssh user@host "cd /Users/cheenle/MRRC/MRRC_mac && ./mrrc_control.sh logs"
+ssh user@host "cd <项目目录> && ./mrrc_control.sh logs"
 
 # 重启服务
-ssh user@host "cd /Users/cheenle/MRRC/MRRC_mac && ./mrrc_control.sh restart"
+ssh user@host "cd <项目目录> && ./mrrc_control.sh restart"
 ```
 
 ### 场景 3：故障排查
 
 ```bash
 # 完整健康检查
-ssh user@host "cd /Users/cheenle/MRRC/MRRC_mac && ./mrrc_monitor.sh status"
+ssh user@host "cd <项目目录> && ./mrrc_monitor.sh status"
 
 # 检查错误日志
-ssh user@host "cd /Users/cheenle/MRRC/MRRC_mac && ./mrrc_monitor.sh errors"
+ssh user@host "cd <项目目录> && ./mrrc_monitor.sh errors"
 
 # 检查系统资源
-ssh user@host "cd /Users/cheenle/MRRC/MRRC_mac && ./mrrc_monitor.sh system"
+ssh user@host "cd <项目目录> && ./mrrc_monitor.sh system"
 ```
 
 ## 脚本说明
@@ -147,9 +147,9 @@ ssh user@host "cd /Users/cheenle/MRRC/MRRC_mac && ./mrrc_monitor.sh system"
 ## 文件位置
 
 - **服务配置**: `~/Library/LaunchAgents/com.user.mrrc.plist`
-- **服务日志**: `/Users/cheenle/MRRC/MRRC_mac/mrrc_service.log`
-- **错误日志**: `/Users/cheenle/MRRC/MRRC_mac/mrrc_service_error.log`
-- **调试日志**: `/Users/cheenle/MRRC/MRRC_mac/mrrc_debug.log`
+- **服务日志**: `<项目目录>/mrrc_service.log`
+- **错误日志**: `<项目目录>/mrrc_service_error.log`
+- **调试日志**: `<项目目录>/mrrc_debug.log`
 
 ## 故障排除
 
@@ -200,14 +200,14 @@ Host mrrc-host
 
 然后使用：
 ```bash
-ssh mrrc-host "cd /Users/cheenle/MRRC/MRRC_mac && ./mrrc_control.sh status"
+ssh mrrc-host "cd <项目目录> && ./mrrc_control.sh status"
 ```
 
 ### 定时监控
 使用 crontab 定时检查服务状态：
 ```bash
 # 每5分钟检查一次
-*/5 * * * * cd /Users/cheenle/MRRC/MRRC_mac && ./mrrc_control.sh status > /dev/null 2>&1
+*/5 * * * * cd <项目目录> && ./mrrc_control.sh status > /dev/null 2>&1
 ```
 
 这个远程管理系统确保了 MRRC 服务始终在正确的环境中运行，同时提供了完整的远程管理能力。

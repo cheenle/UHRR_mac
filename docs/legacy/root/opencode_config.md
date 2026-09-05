@@ -23,7 +23,7 @@ ps aux | grep opencode
 
 发现：
 ```
-/Users/cheenle/.mulerun/vendor/opencode/node_modules/opencode-darwin-arm64/bin/opencode --model openai/gpt-5.5
+~/.mulerun/vendor/opencode/node_modules/opencode-darwin-arm64/bin/opencode --model openai/gpt-5.5
 ```
 
 模型通过 `--model` 启动参数传入。但同时也发现 system prompt 里写的是 `opencode/deepseek-v4-flash-free`，存在不一致。
@@ -99,7 +99,7 @@ ps aux | grep opencode
 检查 opencode 运行日志：
 
 ```
-cat /Users/cheenle/.mulerun/agent-data/opencode/opencode/log/*.log | grep -E "provider|model|deepseek"
+cat ~/.mulerun/agent-data/opencode/opencode/log/*.log | grep -E "provider|model|deepseek"
 ```
 
 关键日志：
