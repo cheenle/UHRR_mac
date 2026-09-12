@@ -334,6 +334,6 @@ function toggleMobileMenu() { document.querySelector('.nav-links').classList.tog
 document.querySelectorAll('a[href^="#"]').forEach(a => { a.addEventListener('click', function(e) { e.preventDefault(); const t = document.querySelector(this.getAttribute('href')); if (t) t.scrollIntoView({ behavior: 'smooth', block: 'start' }); }); });
 const nav = document.querySelector('.navbar'); window.addEventListener('scroll', () => { nav.style.background = window.scrollY > 50 ? 'rgba(0,0,0,0.98)' : 'rgba(0,0,0,0.92)'; });
 </script>
-    <script src="js/global-nav.js?v=4" defer data-gn="1"></script>
+    <script src="js/global-nav.js?v=5" defer data-gn="1"></script>
 </body>
 </html>

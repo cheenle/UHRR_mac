@@ -270,6 +270,8 @@ Users file:    %LOCALAPPDATA%\MRRC\MRRC_users.db
 # IC-M710 rigctld example
 rigctld.exe -m 30003 -r COM3 -s 4800 -C stop_bits=2 -T 127.0.0.1 -t 4532</code></pre>
                         <p class="tip">📌 The default Windows config uses <code>rig_model = IC_M710</code>, <code>rig_rate = 4800</code>, <code>stop_bits = 2</code>, and audio device fragment <code>USB Audio</code>. No RTL-SDR DLL is required.</p>
+                        <pre class="code-block"><code># Optional ATR-1000 proxy on Windows (localhost TCP IPC)
+ATR1000-Proxy.exe --device 192.168.1.63 --port 60001 --transport tcp --tcp-host 127.0.0.1 --tcp-port 60100</code></pre>
                     </div>
                 </div>
 
@@ -643,6 +645,6 @@ open dev_tools/debug_audio.html</code></pre>
     </footer>
 
     <script src="../js/main.js"></script>
-    <script src="../js/global-nav.js?v=4" defer data-gn="1"></script>
+    <script src="../js/global-nav.js?v=5" defer data-gn="1"></script>
 </body>
 </html>

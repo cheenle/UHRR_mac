@@ -265,6 +265,8 @@
 # IC-M710 rigctld 示例
 rigctld.exe -m 30003 -r COM3 -s 4800 -C stop_bits=2 -T 127.0.0.1 -t 4532</code></pre>
                         <p class="tip">📌 Windows 默认配置使用 <code>rig_model = IC_M710</code>、<code>rig_rate = 4800</code>、<code>stop_bits = 2</code>，音频设备使用稳定片段 <code>USB Audio</code>。V6.0.0 不再需要 RTL-SDR DLL。</p>
+                        <pre class="code-block"><code># Windows 可选 ATR-1000 代理（本机 TCP IPC）
+ATR1000-Proxy.exe --device 192.168.1.63 --port 60001 --transport tcp --tcp-host 127.0.0.1 --tcp-port 60100</code></pre>
                     </div>
                 </div>
 
@@ -638,6 +640,6 @@ open dev_tools/debug_audio.html</code></pre>
     </footer>
 
     <script src="../../js/main.js"></script>
-    <script src="../../js/global-nav.js?v=4" defer data-gn="1"></script>
+    <script src="../../js/global-nav.js?v=5" defer data-gn="1"></script>
 </body>
 </html>
