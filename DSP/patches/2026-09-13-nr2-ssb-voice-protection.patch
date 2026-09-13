@@ -1,0 +1,69 @@
+# WDSP fork patch: NR2(EMNR) SSB 语音保护（MRRC 2026-09-13）
+# 应用: cd DSP/wdsp && patch -p0 < ../../DSP/patches/2026-09-13-nr2-ssb-voice-protection.patch
+# 注意: DSP/wdsp 在主仓库里是失效的 gitlink，C 改动只能靠本 patch 版本化。
+
+--- /tmp/wdsp_pristine/emnr.h	2026-09-13 10:05:00
++++ DSP/wdsp/emnr.h	2026-09-13 10:05:05
+@@ -75,6 +75,8 @@
+ 		double* prev_mask;
+ 		double* prev_gamma;
+ 		double gf1p5;
++		double max_atten;		// MRRC: 每 bin 最大衰减（线性掩码下限）；0 = 不限制（旧行为）
++		double dry;			// MRRC: 干湿混合 mask' = dry + (1-dry)*mask；0 = 纯湿
+ 		double alpha;
+ 		double eps_floor;
+ 		double gamma_max;
+--- /tmp/wdsp_pristine/emnr.c	2026-09-13 10:05:00
++++ DSP/wdsp/emnr.c	2026-09-13 10:05:05
+@@ -487,6 +487,8 @@
+ 	a->g.gain_method = gain_method;
+ 	a->g.npe_method = npe_method;
+ 	a->g.ae_run = ae_run;
++	a->g.max_atten = 0.0;	// 0 = 不限制（保持旧行为，向后兼容）
++	a->g.dry = 0.0;
+ 	calc_emnr (a);
+ 	return a;
+ }
+@@ -807,6 +809,21 @@
+ 		}
+ 	}
+ 	if (a->g.ae_run) aepf(a);
++	// MRRC: SSB 语音保护 — 限制每 bin 衰减上限 / 可选干湿混合
++	// 依据: EMNR 最小统计在小信号/平稳段会把语音本身当噪声(lambda_d>lambda_y),
++	// 掩码塔陷到 0.02~0.25, 语音被整段削 10~33dB。
++	if (a->g.dry > 0.0 || a->g.max_atten > 0.0)
++	{
++		int m;
++		for (m = 0; m < a->g.msize; m++)
++		{
++			double mk = a->mask[m];
++			if (a->g.dry > 0.0) mk = a->g.dry + (1.0 - a->g.dry) * mk;
++			if (a->g.max_atten > 0.0 && mk < a->g.max_atten) mk = a->g.max_atten;
++			a->mask[m] = mk;
++			a->g.prev_mask[m] = mk;		// 决策导向环保持一致
++		}
++	}
+ }
+ 
+ void xemnr (EMNR a, int pos)
+@@ -953,3 +970,20 @@
+ 	rxa[channel].emnr.p->ae.psi = psi;
+ 	LeaveCriticalSection (&ch[channel].csDSP);
+ }
++
++PORT
++void SetRXAEMNRmaxAttenDb (int channel, double db)
++{
++	EnterCriticalSection (&ch[channel].csDSP);
++	// db < 0 → 掩码下限 = 10^(db/20)；db >= 0 → 不限制（关闭，回到旧行为）
++	rxa[channel].emnr.p->g.max_atten = (db < 0.0) ? pow (10.0, db / 20.0) : 0.0;
++	LeaveCriticalSection (&ch[channel].csDSP);
++}
++
++PORT
++void SetRXAEMNRdry (int channel, double dry)
++{
++	EnterCriticalSection (&ch[channel].csDSP);
++	rxa[channel].emnr.p->g.dry = (dry > 0.0) ? ((dry < 1.0) ? dry : 1.0) : 0.0;
++	LeaveCriticalSection (&ch[channel].csDSP);
++}

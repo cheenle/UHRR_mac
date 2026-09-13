@@ -196,15 +196,19 @@ def _bind_diversity_signatures():
 
 
 def _bind_nr2_signatures():
-    """绑定 NR2 (EMNR) 自动均衡(AE)参数 — 直接控制频谱减法"音乐噪声/水音"。
+    """绑定 NR2 (EMNR) 参数 — 直接控制频谱减法“音乐噪声/水音”与 SSB 语音保护。
 
     ae.psi:     掩码跨 bin 平滑宽度系数，越大平滑越宽 → 音乐噪声越少（默认10）
     ae.zetaThresh: AE 触发阈值，越小 AE 越常触发（默认0.75）
+    maxAttenDb: 每 bin 最大衰减（dB，<0）→ 限制 EMNR 对语音的“吃掉量”
+    dry:        干湿混合 mask' = dry + (1-dry)*mask（0~1）
     """
     c_int = ctypes.c_int
     c_double = ctypes.c_double
     _bind("SetRXAEMNRaePsi",        [c_int, c_double], c_int)
     _bind("SetRXAEMNRaeZetaThresh", [c_int, c_double], c_int)
+    _bind("SetRXAEMNRmaxAttenDb",   [c_int, c_double], c_int)
+    _bind("SetRXAEMNRdry",          [c_int, c_double], c_int)
 
 
 # ── 执行绑定 ──
@@ -235,7 +239,9 @@ class WDSPProcessor:
                  enable_anf: bool = False,
                  agc_mode: int = WDSPAGCMode.MED,
                  nr2_ae_psi: float = 12.0,
-                 nr2_ae_zeta_thresh: float = 0.65):
+                 nr2_ae_zeta_thresh: float = 0.65,
+                 nr2_max_atten_db: float = -12.0,
+                 nr2_dry: float = 0.0):
         """
         Initialize WDSP processor.
 
@@ -267,6 +273,9 @@ class WDSPProcessor:
         self._agc_mode = agc_mode
         self._nr2_ae_psi = nr2_ae_psi
         self._nr2_ae_zeta_thresh = nr2_ae_zeta_thresh
+        # SSB 语音保护：每 bin 最大衰减（<0 生效，>=0 关闭=旧行为）/ 干湿混合
+        self._nr2_max_atten_db = nr2_max_atten_db
+        self._nr2_dry = nr2_dry
         # Buffers for WDSP processing (float64 - WDSP 库要求)
         self._in_buffer = np.zeros(buffer_size * 2, dtype=np.float64)
         self._out_buffer = np.zeros(buffer_size * 2, dtype=np.float64)
@@ -351,12 +360,44 @@ class WDSPProcessor:
             _wdsp.SetRXAEMNRPosition(ctypes.c_int(self.channel), ctypes.c_int(0))
             # 调强 AE 掩码平滑（psi=20, zetaThresh=0.5），压制频谱减法"水音"音乐噪声
             self.set_nr2_ae(self._nr2_ae_psi, self._nr2_ae_zeta_thresh)
+            # SSB 语音保护：限制每 bin 最大衰减（默认 -12dB），杜绝"语音被整段削"
+            self.set_nr2_max_atten(self._nr2_max_atten_db)
+            if self._nr2_dry > 0.0:
+                self.set_nr2_dry(self._nr2_dry)
 
             self._nr2_enabled = True
             self._nr2_level = 2  # 默认温和
-            print(f"   NR2 (EMNR) configured - Gaussian, OSMS, AE=ON(psi={self._nr2_ae_psi},zeta={self._nr2_ae_zeta_thresh}), Pre-AGC (温和)")
+            print(f"   NR2 (EMNR) configured - Gaussian, OSMS, AE=ON(psi={self._nr2_ae_psi},"
+                  f"zeta={self._nr2_ae_zeta_thresh}), max_atten={self._nr2_max_atten_db}dB, Pre-AGC")
         except Exception as e:
             print(f"   ⚠️ NR2 setup error: {e}")
+
+    def set_nr2_max_atten(self, db: float):
+        """限制 NR2 每 bin 最大衰减（SSB 语音保护）。
+
+        db < 0：掩码下限 = 10^(db/20)，即最多衰减少于 |db|；db >= 0（或 None）：不限制（旧行为）。
+        依据：EMNR 最小统计会把语音本身当噪声（实测单音 mask=0.022，语音段平均 -18dB），
+        导致语音被整段削。限制后单音从 -37dB 提升到 ~-15dB，而降噪仅损失几 dB。
+        """
+        if not self._initialized:
+            return
+        try:
+            if db is not None:
+                self._nr2_max_atten_db = db
+            _wdsp.SetRXAEMNRmaxAttenDb(ctypes.c_int(self.channel),
+                                       ctypes.c_double(self._nr2_max_atten_db or -12.0))
+        except Exception as e:
+            print(f"⚠️ NR2 max atten setup error: {e}")
+
+    def set_nr2_dry(self, dry: float):
+        """NR2 干湿混合：mask' = dry + (1-dry)*mask（0=纯湿，比硬下限更平滑）。"""
+        if not self._initialized:
+            return
+        self._nr2_dry = dry
+        try:
+            _wdsp.SetRXAEMNRdry(ctypes.c_int(self.channel), ctypes.c_double(dry))
+        except Exception as e:
+            print(f"⚠️ NR2 dry setup error: {e}")
 
     def set_nr2_ae(self, psi: float = None, zeta_thresh: float = None):
         """调 NR2 (EMNR) 自动均衡(AE) 参数，抑制频谱减法"水音/音乐噪声"。
