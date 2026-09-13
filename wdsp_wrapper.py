@@ -387,8 +387,10 @@ class WDSPProcessor:
 
             self._nr2_enabled = True
             self._nr2_level = 2  # 默认温和
-            print(f"   NR2 (EMNR) configured - Gaussian, OSMS, AE=ON(psi={self._nr2_ae_psi},"
-                  f"zeta={self._nr2_ae_zeta_thresh}), max_atten={self._nr2_max_atten_db}dB, Pre-AGC")
+            eff_db = (self._nr2_max_atten_db if self._nr2_max_atten_db is not None
+                      else WDSPNR2Level.MAX_ATTEN_DB.get(2, -12.0))
+            print(f"   NR2 (EMNR) configured - Gaussian, MMSE, AE=ON(psi={self._nr2_ae_psi},"
+                  f"zeta={self._nr2_ae_zeta_thresh}), max_atten={eff_db}dB, Pre-AGC")
         except Exception as e:
             print(f"   ⚠️ NR2 setup error: {e}")
 

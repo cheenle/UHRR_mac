@@ -82,3 +82,6 @@ vendor/**/*.dll
 vendor/**/*.dylib
 vendor/**/*.so
 
+
+# NR2 探针输出的试听 WAV（生成物）
+dev_tools/nr2_out/
