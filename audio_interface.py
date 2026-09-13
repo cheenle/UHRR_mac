@@ -275,6 +275,12 @@ class PyAudioCapture(threading.Thread):
                     # AE 掩码平滑（抑制 NR2"水音"音乐噪声）：psi 越大越平滑，阈值越小越常触发
                     'nr2_ae_psi': config['WDSP'].getfloat('nr2_ae_psi', 12.0),
                     'nr2_ae_zeta_thresh': config['WDSP'].getfloat('nr2_ae_zeta_thresh', 0.65),
+                    # NR2 语音保护：每 bin 最大衰减（None=跟随 nr2_level 等级表）/ 干湿混合
+                    'nr2_max_atten_db': config['WDSP'].getfloat('nr2_max_atten_db', None),
+                    'nr2_dry': config['WDSP'].getfloat('nr2_dry', 0.0),
+                    # 增益级：AGC 最大补偿增益(dB) / 输出电势 panel
+                    'agc_top_db': config['WDSP'].getfloat('agc_top_db', 20.0),
+                    'panel_gain': config['WDSP'].getfloat('panel_gain', 0.35),
                 }
                 cfg = PyAudioCapture.wdsp_config
                 print(f"🔧 WDSP DSP 已启用（替代 RNNoise）")
@@ -496,6 +502,10 @@ class PyAudioCapture(threading.Thread):
                                     cfg.get('bandpass_high', 2700.0),
                                     cfg.get('nr2_ae_psi', 12.0),
                                     cfg.get('nr2_ae_zeta_thresh', 0.65),
+                                    cfg.get('nr2_max_atten_db'),
+                                    cfg.get('nr2_dry', 0.0),
+                                    cfg.get('agc_top_db', 20.0),
+                                    cfg.get('panel_gain', 0.35),
                                 ))
 
                                 if new_hash != PyAudioCapture._wdsp_config_hash or self.wdsp_processor is None:
@@ -513,6 +523,10 @@ class PyAudioCapture(threading.Thread):
                                             agc_mode=cfg['agc_mode'],
                                             nr2_ae_psi=cfg.get('nr2_ae_psi', 12.0),
                                             nr2_ae_zeta_thresh=cfg.get('nr2_ae_zeta_thresh', 0.65),
+                                            nr2_max_atten_db=cfg.get('nr2_max_atten_db'),
+                                            nr2_dry=cfg.get('nr2_dry', 0.0),
+                                            agc_top_db=cfg.get('agc_top_db', 20.0),
+                                            panel_gain=cfg.get('panel_gain', 0.35),
                                         )
                                         self.wdsp_processor.set_bandpass(cfg['bandpass_low'], cfg['bandpass_high'])
                                         if cfg['nr2_enabled']:
@@ -528,6 +542,10 @@ class PyAudioCapture(threading.Thread):
                                         self.wdsp_processor.set_anf_enabled(cfg['anf_enabled'])
                                         self.wdsp_processor.set_agc_mode(cfg['agc_mode'])
                                         self.wdsp_processor.set_bandpass(cfg['bandpass_low'], cfg['bandpass_high'])
+                                        # 语音保护/增益级（set_nr2_level 已带等级映射，这里处理覆盖值）
+                                        self.wdsp_processor.set_nr2_voice_protection(
+                                            cfg.get('nr2_max_atten_db'), cfg.get('nr2_dry', 0.0))
+                                        self.wdsp_processor.set_agc_top(cfg.get('agc_top_db', 20.0))
                                         # nr2_ae_run 已由 set_nr2_level() 内置管理，无需额外设置
                         except Exception as e:
                             # H10: WDSP 配置异常不可静默吞掉，否则 DSP 静默不工作且无法排查

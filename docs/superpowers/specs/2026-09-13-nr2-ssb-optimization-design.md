@@ -129,12 +129,16 @@ NR2 等级 → 参数映射（**最大衰减为主轴**，`psi/zeta` 为辅助�
 | 3 | MED | −16 dB | 14 | 0.60 | 中等噪声 |
 | 4 | HIGH | −20 dB | 18 | 0.55 | 强噪声，接受更多变形 |
 
+> 估计器固定为 MMSE（`npe=1`），`gain_method=0`。实测 `npe=0`（最小统计/OSMS）会把平稳信号当噪声
+> （单音 gamma=0.97 → mask=0.022），而 `npe=1` 下单音 gamma=24.8 → mask=0.972。
+
 ### 3.4 配置（`MRRC.conf` / `windows/MRRC.conf.template`）
 
 新增（全部有默认值，缺省即 §3.3 的推荐值）：
 ```ini
-# NR2 每 bin 最大衰减(dB)。0=不限制(旧行为)；越小越自然、降噪越弱
-nr2_max_atten_db = -12
+# NR2 每 bin 最大衰减(dB)。取消注释即"钉死"该上限（不再跟随 nr2_level 等级表）。
+# 默认：等级表 L1/L2/L3/L4 = -6/-12/-16/-20 dB；0 = 不限制（旧行为）
+#nr2_max_atten_db = -12
 # NR2 干湿混合(0~1)：>0 时 mask' = dry+(1-dry)*mask（比硬下限更平滑）
 nr2_dry = 0.0
 # AGC 最大补偿增益(dB)：限制"砍完再狂补"的增益级
@@ -142,6 +146,7 @@ agc_top_db = 20
 # 输出电势（panel）：AGC 输出 ~0.98 × 此值
 panel_gain = 0.35
 ```
+> 实现采用"可选覆盖"语义：配置里带 `#` 注释时由等级表决定上限；取消注释即钉死。
 `audio_interface.py`：读入以上键；**同步更新 `PyAudioCapture._wdsp_config_hash` 的元组**（含 `nr2_max_atten_db`、`nr2_dry`、`agc_top_db`、`panel_gain`），否则运行中改配置不生效。
 
 ### 3.5 前端

@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [未发布] — V6.0.1
+
+### 🎙️ WDSP NR2（EMNR）SSB 语音保护 — 修复“声音变形过度”
+
+- **根因**：EMNR 的最小统计噪声估计会把语音自身当噪声（实测干净单音 `gamma=0.97`、掩码 `0.022`；真实语音最强/最弱 bin 掩码均 ≈0.25，SNR 仅改善 ~1 dB），语音被整段削 10~33 dB；其后 AGC（`max_gain=10000`）再用 30~60 dB 补偿增益把残渣与掩码起伏放大回满量程。
+- **C 端（`DSP/wdsp`，patch 见 `DSP/patches/2026-09-13-nr2-ssb-voice-protection.patch`）**：新增 `SetRXAEMNRmaxAttenDb`（每 bin 最大衰减）与 `SetRXAEMNRdry`（干湿混合），在 `calc_gain` 的最终掩码上生效；新增 `SetRXANBPFreqs`。
+- **NR2 等级重映射**（主轴=每 bin 最大衰减）：level 1/2/3/4 = −6/−12/−16/−20 dB，估计器固定 MMSE（`npe=1`，实测不会把平稳段当噪声）。
+- **SSB 带通改由 always-on 的 `nbp0` 承担**（移到 NR 之前，噪声估计更准），不再依赖 `bp1`：修复“NR2 关闭/改带通后 RX 静音”（`bp1` 在非 NR 驱动状态下输出全零）。
+- **`fexchange0` 输出饥饿（`error=-2`）不再注入原始输入**（原始输入比处理后高约 18 dB，会造成 5.3 ms 响 click），改为保持上一块输出并计数告警。
+- **增益级**：AGC 补偿封顶 `agc_top_db`（默认 +20 dB）；`panel_gain` 0.06 → 0.35（**RX 音量约 +15 dB，可用配置调回**）；AGC OFF 固定增益修正为 0 dB（原传 `1.0` 实为 +1 dB）；MED 时间常数 6/500/500 ms。
+- **实测收益**：单音 —36.0 → −5.6 dB（不再被吃）；生产链路语音段衰减 −14.3 → **−2.8 dB**；静音段噪声抑制保留（隔离测量 L2 = 8.2 dB，受上限约束）；饥饿响 click 51 → 0 处。
+- **新增配置**：`nr2_max_atten_db`（可选覆盖）、`nr2_dry`、`agc_top_db`、`panel_gain`。
+
+---
+
 ## [V6.0.0] - 2026-09-05
 
 ### 🪟 Windows 安装包正式发布

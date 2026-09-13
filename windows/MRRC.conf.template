@@ -57,6 +57,20 @@ nr2_level = 2
 nr2_ae_psi = 12.0
 nr2_ae_zeta_thresh = 0.65
 
+# ── NR2 语气保真度 / 增益级（V6.0.1）─────────────────────────────
+# NR2 每 bin 最大衰减(dB)：EMNR 会把语音自身当噪声（实测单音 mask=0.022），
+# 限制每 bin 衰减可直接消除"声音变形过度"。默认跟随 nr2_level 等级表：
+#   level 1/2/3/4 = -6 / -12 / -16 / -20 dB。
+# 取消下面注释即"钉死"该上限（不再跟随等级）：-6 极保真 / -12 推荐 / -20 强降噪；0=不限制(旧行为)
+#nr2_max_atten_db = -12
+# NR2 干湿混合(0~1)：>0 时 mask' = dry+(1-dry)*mask，比硬下限更平滑
+nr2_dry = 0.0
+# AGC 最大补偿增益(dB)：限制"EMNR 砍完再被 AGC 狂补"的增益级（旧行为约 +80）
+agc_top_db = 20
+# 输出电势 panel：AGC 输出(~0.98) × 此值。旧值 0.06（-24dBFS）；
+# 0.35 约 -9dBFS，信噪比/Opus 更友好——音量会明显变大，如需保持旧音量可调回 0.06
+panel_gain = 0.35
+
 # 噪声抑制器（脉冲干扰: 电器火花、雷电等）
 nb_enabled = True
 
@@ -98,3 +112,12 @@ center_freq = 68330000
 freq_correction = 1
 gain = 10
 fft_window = hamming
+
+[INSTANCE_SETTINGS]
+# Windows uses localhost TCP between MRRC and ATR1000-Proxy because AF_UNIX is
+# not available in all Windows Python runtimes. Unix/macOS deployments can keep
+# atr1000_proxy_transport = unix and instance_unix_socket = /tmp/atr1000_proxy.sock.
+atr1000_proxy_transport = tcp
+atr1000_proxy_host = 127.0.0.1
+atr1000_proxy_port = 60100
+instance_unix_socket = /tmp/atr1000_proxy.sock
