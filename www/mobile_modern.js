@@ -972,9 +972,9 @@ function setMainAFGain(value) {
 function setupMenuItems() {
     document.querySelectorAll('.menu-item').forEach(item => {
         item.addEventListener('click', function(e) {
-            e.preventDefault();
             const action = this.dataset.action;
             if (action) {
+                e.preventDefault();      // 只有面板类菜单项才拦截；真链接（Recordings / WDSP）放行
                 handleMenuItem(action);
             }
         });
@@ -2227,6 +2227,7 @@ function cycleFilter() {
     const filters = [
         { name: 'OFF', ft: 'highshelf', frq: 22000, fg: 0, fq: 0 },
         { name: 'LP2.7k', ft: 'highshelf', frq: 2700, fg: -20, fq: 0 },
+        { name: 'LP2.4k', ft: 'highshelf', frq: 2400, fg: -20, fq: 0 },
         { name: 'LP2.1k', ft: 'highshelf', frq: 2100, fg: -20, fq: 0 },
         { name: 'LP1.0k', ft: 'highshelf', frq: 1000, fg: -20, fq: 0 },
         { name: 'BP500', ft: 'bandpass', frq: 500, fg: -100, fq: 50 },
@@ -2314,20 +2315,8 @@ function handleMenuItem(action) {
     closeMenu();
 
     switch (action) {
-        case 'bands':
-            showBandSelector();
-            break;
-        case 'modes':
-            showModeSelector();
-            break;
-        case 'memory':
-            showMemoryPanel();
-            break;
         case 'device-config':
             openDeviceDrawer();
-            break;
-        case 'audio':
-            showAudioPanel();
             break;
         case 'txeq':
             showTXEQPanel();
@@ -2397,17 +2386,7 @@ function setupFullscreenListener() {
 }
 
 // 波段选择器
-function showBandSelector() {
-    let html = '<div class="modal-panel"><h3>波段选择</h3><div class="band-grid">';
-    const currentBand = getCurrentMobileBand();
-    MOBILE_BANDS.forEach(band => {
-        const active = currentBand && currentBand.name === band.name ? ' active' : '';
-        html += `<button class="band-select-btn${active}" onclick="selectBand(${band.freq}, '${band.name}')">${band.name}</button>`;
-    });
-    html += '</div><button class="close-panel-btn" onclick="closeModalPanel()">关闭</button></div>';
-    
-    showModalPanel(html);
-}
+
 
 function selectBand(freq, name) {
     if (typeof TRXfrequency !== 'undefined') {
@@ -2427,17 +2406,7 @@ function selectBand(freq, name) {
 }
 
 // 模式选择器
-function showModeSelector() {
-    let html = '<div class="modal-panel"><h3>模式选择</h3><div class="mode-grid">';
-    const currentMode = normalizeMobileMode(mobileState.currentMode);
-    MOBILE_MODES.forEach(mode => {
-        const active = currentMode === mode ? 'active' : '';
-        html += `<button class="mode-select-btn ${active}" onclick="selectMode('${mode}')">${mode}</button>`;
-    });
-    html += '</div><button class="close-panel-btn" onclick="closeModalPanel()">关闭</button></div>';
-    
-    showModalPanel(html);
-}
+
 
 function selectMode(mode) {
     mobileState.currentMode = normalizeMobileMode(mode);
@@ -2855,23 +2824,9 @@ function setSquelch(value) {
 }
 
 // 音频面板
-function showAudioPanel() {
-    const filters = ['OFF', 'LP2.7k', 'LP2.1k', 'LP1.0k', 'BP500', 'BP300'];
-    
-    let html = '<div class="modal-panel"><h3>音频滤波器</h3><div class="filter-grid">';
-    filters.forEach(f => {
-        html += `<button class="filter-select-btn" onclick="selectFilter('${f}')">${f}</button>`;
-    });
-    html += '</div><button class="close-panel-btn" onclick="closeModalPanel()">关闭</button></div>';
-    showModalPanel(html);
-}
 
-function selectFilter(name) {
-    const filterBtn = document.getElementById('filter-btn');
-    if (filterBtn) filterBtn.innerHTML = name;
-    cycleFilter(); // 应用滤波器
-    closeModalPanel();
-}
+
+
 
 ////////////////////////////////////////////////////////////
 // TX EQ 均衡器面板 - 短波通信优化

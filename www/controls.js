@@ -629,9 +629,11 @@ function AudioRX_start(){
 	drawBF();
 	drawRXvol();
 	
-	AudioRX_biquadFilter_node.type = "lowshelf";
-	AudioRX_biquadFilter_node.frequency.setValueAtTime(22000, AudioRX_context.currentTime);
-	AudioRX_biquadFilter_node.gain.setValueAtTime(0, AudioRX_context.currentTime);
+	// 默认 SSB 音频滤波：LP2.4k（主界面 filter-btn 循环列表里的同一档）
+	AudioRX_biquadFilter_node.type = "highshelf";
+	AudioRX_biquadFilter_node.frequency.setValueAtTime(2400, AudioRX_context.currentTime);
+	AudioRX_biquadFilter_node.gain.setValueAtTime(-20, AudioRX_context.currentTime);
+	AudioRX_biquadFilter_node.Q.setValueAtTime(0, AudioRX_context.currentTime);
 	
 	AudioRX_SetGAIN();
     
