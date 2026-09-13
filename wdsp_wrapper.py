@@ -58,6 +58,18 @@ class WDSPMeterType:
     AGC_PK = 5
     AGC_AV = 6
 
+
+class WDSPNR2Level:
+    """NR2（EMNR）SSB 语音保护等级表。
+
+    主轴是“每 bin 最大衰减”：EMNR 的最小统计噪声估计会把语音自身当噪声
+    （实测干净单音 mask=0.022、真实语音段平均 -18dB 且不区分信噪比），
+    限制每 bin 衰减可直接消除“声音变形过度”。psi/zeta 为辅助（抑音乐噪声）。
+    """
+    MAX_ATTEN_DB = {1: -6.0, 2: -12.0, 3: -16.0, 4: -20.0}
+    PSI = {1: 8.0, 2: 12.0, 3: 14.0, 4: 18.0}
+    ZETA_THRESH = {1: 0.70, 2: 0.65, 3: 0.60, 4: 0.55}
+
 # Try to load WDSP library
 def _load_wdsp_library():
     """Load the WDSP shared library"""
@@ -240,8 +252,10 @@ class WDSPProcessor:
                  agc_mode: int = WDSPAGCMode.MED,
                  nr2_ae_psi: float = 12.0,
                  nr2_ae_zeta_thresh: float = 0.65,
-                 nr2_max_atten_db: float = -12.0,
-                 nr2_dry: float = 0.0):
+                 nr2_max_atten_db: float = None,
+                 nr2_dry: float = 0.0,
+                 agc_top_db: float = 20.0,
+                 panel_gain: float = 0.35):
         """
         Initialize WDSP processor.
 
@@ -273,9 +287,15 @@ class WDSPProcessor:
         self._agc_mode = agc_mode
         self._nr2_ae_psi = nr2_ae_psi
         self._nr2_ae_zeta_thresh = nr2_ae_zeta_thresh
-        # SSB 语音保护：每 bin 最大衰减（<0 生效，>=0 关闭=旧行为）/ 干湿混合
+        # SSB 语音保护：每 bin 最大衰减（None=跟随等级表，<0 生效，>=0 关闭=旧行为）/ 干湿混合
         self._nr2_max_atten_db = nr2_max_atten_db
         self._nr2_dry = nr2_dry
+        # 增益级：AGC 最大补偿增益 / 输出电势
+        self._agc_top_db = agc_top_db
+        self._panel_gain = panel_gain
+        # -2 饥饿时保持上一块输出（绝不注入原始输入）
+        self._last_output = None
+        self.starved_blocks = 0
         # Buffers for WDSP processing (float64 - WDSP 库要求)
         self._in_buffer = np.zeros(buffer_size * 2, dtype=np.float64)
         self._out_buffer = np.zeros(buffer_size * 2, dtype=np.float64)
@@ -313,7 +333,7 @@ class WDSPProcessor:
             
             # 设置面板增益为 0.06，进一步减少削波风险
             # 测试显示：PanelGain=0.06时，实际增益更保守
-            _wdsp.SetRXAPanelGain1(ctypes.c_int(self.channel), ctypes.c_double(0.06))
+            _wdsp.SetRXAPanelGain1(ctypes.c_int(self.channel), ctypes.c_double(self._panel_gain))
             
             # 注意：暂时禁用带通滤波器，因为测试显示它会导致信号被错误衰减
             # 后续需要进一步调试带通滤波器参数
@@ -360,8 +380,8 @@ class WDSPProcessor:
             _wdsp.SetRXAEMNRPosition(ctypes.c_int(self.channel), ctypes.c_int(0))
             # 调强 AE 掩码平滑（psi=20, zetaThresh=0.5），压制频谱减法"水音"音乐噪声
             self.set_nr2_ae(self._nr2_ae_psi, self._nr2_ae_zeta_thresh)
-            # SSB 语音保护：限制每 bin 最大衰减（默认 -12dB），杜绝"语音被整段削"
-            self.set_nr2_max_atten(self._nr2_max_atten_db)
+            # SSB 语音保护：限制每 bin 最大衰减（默认跟随等级表：L2 = -12dB）
+            self._apply_nr2_voice_protection(2)
             if self._nr2_dry > 0.0:
                 self.set_nr2_dry(self._nr2_dry)
 
@@ -424,13 +444,16 @@ class WDSPProcessor:
         """
         Set NR2 intensity level.
 
+        等级主轴 = **每 bin 最大衰减**（SSB 语音保护），psi/zeta 为辅助，
+        估计器用 MMSE(npe=1)：实测它不会把平稳信号（长音/持续共振峰）当噪声。
+
         Args:
             level: 0-4
                 0 = OFF
-                1 = MIN  — Gaussian + OSMS + AE=OFF (极温和，无处理痕迹)
-                2 = LOW  — Gaussian + OSMS + AE=ON  (温和，日常推荐)
-                3 = MED  — Gaussian + MMSE + AE=ON  (中等噪声，更强估计)
-                4 = HIGH — Gaussian(log) + MMSE + AE=ON (强噪声，对数域增益)
+                1 = MIN  — 最多衰减 -6dB，几乎不动语音
+                2 = LOW  — -12dB（日常推荐）
+                3 = MED  — -16dB（中等噪声）
+                4 = HIGH — -20dB（强噪声，接受更多变形）
         """
         if not self._initialized:
             return
@@ -446,32 +469,72 @@ class WDSPProcessor:
                 _wdsp.SetRXAANRRun(ctypes.c_int(self.channel), ctypes.c_int(0))
                 _wdsp.SetRXAEMNRRun(ctypes.c_int(self.channel), ctypes.c_int(1))
 
-                # Level → (gainMethod, npeMethod, aeRun)
-                # gainMethod: 0=Gaussian(自然), 1=Gaussian(log)(对数域)
-                # npeMethod: 0=OSMS(最优平滑), 1=MMSE(最小均方误差)
-                # 递进逻辑: L1→L2 开AE | L2→L3 MMSE替代OSMS | L3→L4 对数域增益
-                params = {
-                    1: (0, 0, 0),  # 极温和: Gaussian + OSMS, 无AE
-                    2: (0, 0, 1),  # 温和:   Gaussian + OSMS + AE
-                    3: (0, 1, 1),  # 中等:   Gaussian + MMSE + AE
-                    4: (1, 1, 1),  # 强力:   Gaussian(log) + MMSE + AE
-                }
-                gain_method, npe_method, ae_run = params.get(level, (0, 0, 1))
+                # 估计器固定 MMSE(npe=1)：最小统计(OSMS)在平稳段会把信号当噪声
+                # （实测单音 mask=0.022、语音段平均 -18dB）。gainMethod 0=Gaussian。
+                gain_method = 0
+                npe_method = 1
+                ae_run = 1 if level >= 2 else 0
 
                 _wdsp.SetRXAEMNRgainMethod(ctypes.c_int(self.channel), ctypes.c_int(gain_method))
                 _wdsp.SetRXAEMNRnpeMethod(ctypes.c_int(self.channel), ctypes.c_int(npe_method))
                 _wdsp.SetRXAEMNRaeRun(ctypes.c_int(self.channel), ctypes.c_int(ae_run))
                 # 保持 Position=0 (AGC 前)
                 _wdsp.SetRXAEMNRPosition(ctypes.c_int(self.channel), ctypes.c_int(0))
-                # 级别切换后保持 AE 掩码平滑参数（抑制水音）
+                # 等级驱动 psi/zeta + 每 bin 最大衰减（SSB 语音保护）
+                self._nr2_ae_psi = WDSPNR2Level.PSI.get(level, 12.0)
+                self._nr2_ae_zeta_thresh = WDSPNR2Level.ZETA_THRESH.get(level, 0.65)
                 self.set_nr2_ae()
+                self._apply_nr2_voice_protection(level)
 
                 self._nr2_enabled = True
                 self._nr2_level = level
                 level_names = {1: 'MIN(极温和)', 2: 'LOW(温和)', 3: 'MED(中等)', 4: 'HIGH(强力)'}
-                print(f"🔧 WDSP NR2: {level_names.get(level, level)} (gain={gain_method}, npe={npe_method}, ae={ae_run})")
+                db = (self._nr2_max_atten_db if self._nr2_max_atten_db is not None
+                      else WDSPNR2Level.MAX_ATTEN_DB.get(level, -12.0))
+                print(f"🔧 WDSP NR2: {level_names.get(level, level)} "
+                      f"(max_atten={db}dB, psi={self._nr2_ae_psi}, ae={ae_run})")
         except Exception as e:
             print(f"⚠️ NR2 level error: {e}")
+
+    def _apply_nr2_voice_protection(self, level: int):
+        """按等级（或配置覆盖）设置每 bin 最大衰减 / 干湿混合。"""
+        if not self._initialized:
+            return
+        try:
+            db = (self._nr2_max_atten_db if self._nr2_max_atten_db is not None
+                  else WDSPNR2Level.MAX_ATTEN_DB.get(level, -12.0))
+            _wdsp.SetRXAEMNRmaxAttenDb(ctypes.c_int(self.channel), ctypes.c_double(db))
+            if self._nr2_dry and self._nr2_dry > 0.0:
+                _wdsp.SetRXAEMNRdry(ctypes.c_int(self.channel), ctypes.c_double(self._nr2_dry))
+        except Exception as e:
+            print(f"⚠️ NR2 voice protection error: {e}")
+
+    def set_nr2_voice_protection(self, max_atten_db: float = None, dry: float = None):
+        """运行时调“语气保真度”：max_atten_db<0 钉死每 bin 衰减上限；dry=0~1 干湿混合。
+
+        max_atten_db=None 表示跟随 nr2_level 等级表；0 表示不限制（旧行为）。
+        """
+        if max_atten_db is not None:
+            self._nr2_max_atten_db = max_atten_db
+        if dry is not None:
+            self._nr2_dry = dry
+        level = getattr(self, '_nr2_level', 0) or 2
+        self._apply_nr2_voice_protection(level)
+
+    def set_agc_top(self, db: float = None):
+        """限制 AGC 最大补偿增益(dB)。默认 +20dB。
+
+        旧行为 max_gain=10000（+80dB）：EMNR 砍完 20~30dB 后 AGC 再狂补，
+        把 NR2 的残渣与掩码起伏放大回满量程 → 听感“变形/抽吸”。
+        """
+        if not self._initialized:
+            return
+        if db is not None:
+            self._agc_top_db = db
+        try:
+            _wdsp.SetRXAAGCTop(ctypes.c_int(self.channel), ctypes.c_double(self._agc_top_db))
+        except Exception as e:
+            print(f"⚠️ AGC top error: {e}")
     
     def _setup_nb(self):
         """Setup Noise Blanker"""
@@ -540,44 +603,37 @@ class WDSPProcessor:
             
             # Configure AGC parameters based on mode
             if mode == WDSPAGCMode.OFF:
-                # AGC OFF 时，设置固定增益为 1.0（直通），避免额外增益放大噪音
+                # AGC OFF：固定增益走 fixed_gain（SetRXAAGCFixed 单位是 dB！）
                 _wdsp.SetRXAAGCAttack(ctypes.c_int(self.channel), ctypes.c_int(0))
                 _wdsp.SetRXAAGCDecay(ctypes.c_int(self.channel), ctypes.c_int(0))
                 _wdsp.SetRXAAGCHang(ctypes.c_int(self.channel), ctypes.c_int(0))
-                # 设置 AGC 目标增益为 0dB（无增益）
-                # _wdsp.SetRXAAGCTarget(ctypes.c_int(self.channel), ctypes.c_float(0.0))
-                # 关键：强制设置固定增益为 1.0（无增益），从源头防止削波
-                _wdsp.SetRXAAGCFixed(ctypes.c_int(self.channel), ctypes.c_double(1.0))
-                # print(f"🔧 WDSP AGC: OFF (固定增益=1.0, 无放大)")
+                # 0 dB = 线性 1.0（旧代码传 1.0 实际是 +1 dB）
+                _wdsp.SetRXAAGCFixed(ctypes.c_int(self.channel), ctypes.c_double(0.0))
+                # print(f"🔧 WDSP AGC: OFF (固定增益 0dB)")
             elif mode == WDSPAGCMode.MED:
-                _wdsp.SetRXAAGCAttack(ctypes.c_int(self.channel), ctypes.c_int(4))
-                _wdsp.SetRXAAGCDecay(ctypes.c_int(self.channel), ctypes.c_int(250))
-                _wdsp.SetRXAAGCHang(ctypes.c_int(self.channel), ctypes.c_int(250))
-                # _wdsp.SetRXAAGCTarget(ctypes.c_int(self.channel), ctypes.c_float(-3.0))  # 默认目标 -3dB
-                # print(f"🔧 WDSP AGC: MED")
-            elif mode == WDSPAGCMode.FAST:
-                _wdsp.SetRXAAGCAttack(ctypes.c_int(self.channel), ctypes.c_int(2))
-                _wdsp.SetRXAAGCDecay(ctypes.c_int(self.channel), ctypes.c_int(100))
-                _wdsp.SetRXAAGCHang(ctypes.c_int(self.channel), ctypes.c_int(100))
-                # _wdsp.SetRXAAGCTarget(ctypes.c_int(self.channel), ctypes.c_float(-3.0))
-                # print(f"🔧 WDSP AGC: FAST")
-            elif mode == WDSPAGCMode.SLOW:
-                _wdsp.SetRXAAGCAttack(ctypes.c_int(self.channel), ctypes.c_int(4))
+                # SSB 语音：稍慢的 decay/hang，减少音节间抽吸
+                _wdsp.SetRXAAGCAttack(ctypes.c_int(self.channel), ctypes.c_int(6))
                 _wdsp.SetRXAAGCDecay(ctypes.c_int(self.channel), ctypes.c_int(500))
                 _wdsp.SetRXAAGCHang(ctypes.c_int(self.channel), ctypes.c_int(500))
-                # _wdsp.SetRXAAGCTarget(ctypes.c_int(self.channel), ctypes.c_float(-3.0))
-                # print(f"🔧 WDSP AGC: SLOW")
-            elif mode == WDSPAGCMode.LONG:
+                # _wdsp.SetRXAAGCTarget(ctypes.c_int(self.channel), ctypes.c_float(-3.0))  # 默认目标 -3dB
+            elif mode == WDSPAGCMode.FAST:
+                _wdsp.SetRXAAGCAttack(ctypes.c_int(self.channel), ctypes.c_int(2))
+                _wdsp.SetRXAAGCDecay(ctypes.c_int(self.channel), ctypes.c_int(150))
+                _wdsp.SetRXAAGCHang(ctypes.c_int(self.channel), ctypes.c_int(150))
+            elif mode == WDSPAGCMode.SLOW:
                 _wdsp.SetRXAAGCAttack(ctypes.c_int(self.channel), ctypes.c_int(6))
-                _wdsp.SetRXAAGCDecay(ctypes.c_int(self.channel), ctypes.c_int(1000))
-                _wdsp.SetRXAAGCHang(ctypes.c_int(self.channel), ctypes.c_int(1000))
-                # _wdsp.SetRXAAGCTarget(ctypes.c_int(self.channel), ctypes.c_float(-3.0))
-                # print(f"🔧 WDSP AGC: LONG")
-            
-            # 关键：每次 AGC 模式切换后，重新设置 PanelGain1 = 0.06
-            # 保持保守增益，减少削峰
-            _wdsp.SetRXAPanelGain1(ctypes.c_int(self.channel), ctypes.c_double(0.06))
-                
+                _wdsp.SetRXAAGCDecay(ctypes.c_int(self.channel), ctypes.c_int(750))
+                _wdsp.SetRXAAGCHang(ctypes.c_int(self.channel), ctypes.c_int(750))
+            elif mode == WDSPAGCMode.LONG:
+                _wdsp.SetRXAAGCAttack(ctypes.c_int(self.channel), ctypes.c_int(8))
+                _wdsp.SetRXAAGCDecay(ctypes.c_int(self.channel), ctypes.c_int(1200))
+                _wdsp.SetRXAAGCHang(ctypes.c_int(self.channel), ctypes.c_int(1200))
+
+            # 限制 AGC 最大补偿增益：避免"EMNR 砍完 20~30dB 后 AGC 再狂补"把残渣放大到满量程
+            self.set_agc_top()
+            # 输出电势（panel）：AGC 输出(~0.98) × panel_gain
+            _wdsp.SetRXAPanelGain1(ctypes.c_int(self.channel), ctypes.c_double(self._panel_gain))
+
         except Exception as e:
             print(f"⚠️ AGC setup error: {e}")
     
@@ -863,11 +919,17 @@ class WDSPProcessor:
                 # Extract output (I channel only for mono)
                 output = self._out_buffer[0::2].copy()
             
-            # error -2 means "output samples not available" - this is normal during startup
-            # WDSP uses ring buffers and needs time to fill them
+            # error -2：输出未就绪（DSP 线程落后于消费速度）。
+            # 绝不能拿原始输入顶替：原始输入比处理后的输出高约 18dB
+            # （EMNR 已削 20~30dB），会造成 5.3ms 响 click + 时间线跳变。
+            # 改为保持上一块输出（首次无历史则静音）。
             if error.value == -2:
-                # 输出不可用，返回输入数据（直通）
-                return audio_data
+                self.starved_blocks += 1
+                if self.starved_blocks % 200 == 1:
+                    print(f"⚠️ WDSP 输出饥饿(-2) 累计 {self.starved_blocks} 次，保持上一块输出")
+                if self._last_output is not None and len(self._last_output) == len(audio_data):
+                    return self._last_output.copy()
+                return np.zeros_like(audio_data)
             elif error.value != 0:
                 print(f"⚠️ WDSP processing error: {error.value}")
 
@@ -894,8 +956,10 @@ class WDSPProcessor:
                 output = np.clip(output * 32767, -32768, 32767).astype(np.int16)
             else:
                 output = output.astype(audio_data.dtype)
-            
-            return output[:len(audio_data)]
+
+            result = output[:len(audio_data)]
+            self._last_output = result   # 供 -2 饥饿时保持
+            return result
             
         except Exception as e:
             print(f"⚠️ WDSP processing error: {e}")
