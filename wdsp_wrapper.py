@@ -499,14 +499,24 @@ class WDSPProcessor:
             print(f"⚠️ NR2 level error: {e}")
 
     def _apply_nr2_voice_protection(self, level: int):
-        """按等级（或配置覆盖）设置每 bin 最大衰减 / 干湿混合。"""
+        """按等级（或配置覆盖）设置每 bin 最大衰减 / 干湿混合。
+
+        旧 libwdsp（未搭载 2026-09-13 patch）没有 SetRXAEMNRmaxAttenDb/SetRXAEMNRdry：
+        此时只告警一次并继续（估计器已固定为 MMSE，最关键的那半修复仍然生效）。
+        """
         if not self._initialized:
+            return
+        if not hasattr(_wdsp, "SetRXAEMNRmaxAttenDb"):
+            if not getattr(self, "_nr2_voice_protect_warned", False):
+                self._nr2_voice_protect_warned = True
+                print("⚠️ 当前 libwdsp 不支持每 bin 最大衰减（缺 SetRXAEMNRmaxAttenDb）；"
+                      "NR2 语音保护不可用，请用 DSP/patches/2026-09-13-nr2-ssb-voice-protection.patch 重编库")
             return
         try:
             db = (self._nr2_max_atten_db if self._nr2_max_atten_db is not None
                   else WDSPNR2Level.MAX_ATTEN_DB.get(level, -12.0))
             _wdsp.SetRXAEMNRmaxAttenDb(ctypes.c_int(self.channel), ctypes.c_double(db))
-            if self._nr2_dry and self._nr2_dry > 0.0:
+            if self._nr2_dry and self._nr2_dry > 0.0 and hasattr(_wdsp, "SetRXAEMNRdry"):
                 _wdsp.SetRXAEMNRdry(ctypes.c_int(self.channel), ctypes.c_double(self._nr2_dry))
         except Exception as e:
             print(f"⚠️ NR2 voice protection error: {e}")

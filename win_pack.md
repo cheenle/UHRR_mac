@@ -30,6 +30,33 @@ python -m venv venv
 
 缺失 DLL 时构建脚本只会警告，仍能出包；但运行时会缺少对应功能。
 
+### 2.1 重新编译 WDSP DLL（改过 DSP/wdsp 就必须做）
+
+`vendor\wdsp\windows\bin\x64\libwdsp.dll` **必须来自本仓库的 WDSP 分支**。源码副本
+`DSP/wdsp/` 在主仓库里是一个失效的 gitlink（无 git 元数据、改动不进版本控制），
+所以 C 改动以 patch 形式保存在 `DSP/patches/` 下，**Windows DLL 要用同样 patch 重编**，
+否则 MRRC 会打到旧库上：`SetRXAEMNRmaxAttenDb` / `SetRXAEMNRdry` / `SetRXANBPFreqs`
+缺失 → NR2 语音保护不生效（启动日志会打印“当前 libwdsp 不支持每 bin 最大衰减”）。
+
+MSYS2/MinGW-w64 下（装 `mingw-w64-x86_64-gcc`、`mingw-w64-x86_64-fftw`、`patch`）：
+
+```bash
+cd /c/mrrc/DSP/wdsp
+patch -p0 < ../../DSP/patches/2026-09-13-nr2-ssb-voice-protection.patch   # 若源码已是 patched 版本可跳过
+make                      # 产出 libwdsp.dll（Makefile 会自动识别非 Darwin 分支）
+mkdir -p /c/mrrc/vendor/wdsp/windows/bin/x64
+cp libwdsp.dll /c/mrrc/vendor/wdsp/windows/bin/x64/
+```
+
+验证 DLL 带上了新导出（应能列出 3 个符号）：
+
+```bash
+nm -g libwdsp.dll | grep -E "SetRXAEMNRmaxAttenDb|SetRXAEMNRdry|SetRXANBPFreqs"
+```
+
+> 经验：NR2 的最关键修复是 Python 侧把估计器固定为 MMSE（`npe=1`，不依赖新 DLL）；
+> 但“每 bin 最大衰减”与“SSB 带通改走 nbp0（消除 NR2 关闭后静音）”必须新 DLL 才生效。
+
 ## 3. 每次打包
 
 ```powershell
@@ -64,5 +91,9 @@ powershell -NoProfile -ExecutionPolicy Bypass -File packaging\windows\build.ps1
   ```powershell
   rigctld.exe -m 30003 -r COM3 -s 4800 -C stop_bits=2 -T 127.0.0.1 -t 4532
   ```
-- ATR-1000 天调代理为可选组件：`ATR1000-Proxy.exe`。默认 MRRC 通过 Unix Socket 连接代理；在 Windows 上如需使用，建议把代理配置为 TCP 模式或命名管道。
+- ATR-1000 天调代理为可选组件：`ATR1000-Proxy.exe`。Windows 默认通过 localhost TCP 连接代理：
+  ```powershell
+  ATR1000-Proxy.exe --device 192.168.1.63 --port 60001 --transport tcp --tcp-host 127.0.0.1 --tcp-port 60100
+  ```
+  对应 `MRRC.conf` 的 `[INSTANCE_SETTINGS] atr1000_proxy_transport=tcp / atr1000_proxy_port=60100`。
 - 本机 macOS/Linux 无法交叉编译 Windows 原生 DLL，因此打包前必须先在 Windows 上准备好 `vendor/` 中的 DLL。
