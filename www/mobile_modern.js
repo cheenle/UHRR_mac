@@ -2326,20 +2326,11 @@ function handleMenuItem(action) {
         case 'device-config':
             openDeviceDrawer();
             break;
-        case 'settings':
-            showSettingsPanel();
-            break;
         case 'audio':
             showAudioPanel();
             break;
         case 'txeq':
             showTXEQPanel();
-            break;
-        case 'digital':
-            showDigitalPanel();
-            break;
-        case 'logbook':
-            showLogbookPanel();
             break;
         case 'about':
             showAboutPanel();
@@ -2588,120 +2579,7 @@ function importMemories(fileInput) {
 }
 
 // 设置面板
-function showSettingsPanel() {
-    // 获取当前增益值
-    var cAfEl = document.getElementById('C_af');
-    var squelchEl = document.getElementById('SQUELCH');
-    
-    // AF增益值（0-1000映射到0-100%显示）
-    var afValue = cAfEl ? parseInt(cAfEl.value) : 500;
-    var afPercent = Math.round(afValue / 10); // 0-100%
-    
-    // 静噪值（0-100）
-    var sqlValue = squelchEl ? parseInt(squelchEl.value) : 0;
-    
-    // MIC增益（从Cookie获取，默认50%）
-    var micValue = 50;
-    try {
-        var micCookie = '';
-        if (typeof loadUserAudioSetting === 'function') {
-            micCookie = loadUserAudioSetting('mobile_mic_gain', '');
-        } else if (typeof getCookie === 'function') {
-            micCookie = getCookie('mobile_mic_gain');
-        }
-        if (micCookie) {
-            micValue = parseInt(micCookie);
-        }
-    } catch (e) {
-        console.warn('加载MIC增益失败:', e);
-    }
-    
-    let html = '<div class="modal-panel"><h3>Audio Settings</h3>';
 
-    // AF Gain
-    html += '<div class="setting-item">';
-    html += '<label>AF Gain: <span id="af-value-display">' + afPercent + '%</span></label>';
-    html += '<input type="range" id="mobile-af-gain" min="0" max="100" value="' + afPercent + '" oninput="setAFGain(this.value)">';
-    html += '</div>';
-
-    // MIC Gain
-    html += '<div class="setting-item">';
-    html += '<label>MIC Gain: <span id="mic-value-display">' + micValue + '%</span></label>';
-    html += '<input type="range" id="mobile-mic-gain" min="0" max="200" value="' + micValue + '" oninput="setMicGain(this.value)">';
-    html += '</div>';
-
-    // Squelch
-    html += '<div class="setting-item">';
-    html += '<label>Squelch: <span id="sql-value-display">' + sqlValue + '</span></label>';
-    html += '<input type="range" id="mobile-squelch" min="0" max="100" value="' + sqlValue + '" oninput="setSquelch(this.value)">';
-    html += '</div>';
-
-    html += '</div>'; // Close audio settings container
-
-    // ========== WDSP DSP Settings ==========
-    loadWDSPStateFromCookies();
-
-    html += '<div class="wdsp-settings">';
-    html += '<h4>WDSP Digital Signal Processing</h4>';
-
-    // WDSP enable
-    var wdspEnabledChecked = wdspState.enabled ? 'checked' : '';
-    html += '<div class="setting-item wdsp-item">';
-    html += '<label class="switch-label"><span>WDSP Processing</span>';
-    html += '<input type="checkbox" id="wdsp-enabled" onchange="toggleWDSP(this.checked)" ' + wdspEnabledChecked + '>';
-    html += '<span class="switch-slider"></span></label>';
-    html += '</div>';
-
-    // NR2
-    var nr2Checked = wdspState.nr2 ? 'checked' : '';
-    var nr2Disabled = wdspState.enabled ? '' : 'disabled';
-    html += '<div class="setting-item wdsp-item">';
-    html += '<label class="switch-label"><span>Spectrum Noise Reduction (NR2)</span>';
-    html += '<input type="checkbox" id="wdsp-nr2" onchange="setWDSPNR2(this.checked)" ' + nr2Checked + ' ' + nr2Disabled + '>';
-    html += '<span class="switch-slider"></span></label>';
-    html += '</div>';
-
-    // NB
-    var nbChecked = wdspState.nb ? 'checked' : '';
-    var nbDisabled = wdspState.enabled ? '' : 'disabled';
-    html += '<div class="setting-item wdsp-item">';
-    html += '<label class="switch-label"><span>Noise Blanker (NB)</span>';
-    html += '<input type="checkbox" id="wdsp-nb" onchange="setWDSPNB(this.checked)" ' + nbChecked + ' ' + nbDisabled + '>';
-    html += '<span class="switch-slider"></span></label>';
-    html += '</div>';
-
-    // ANF
-    var anfChecked = wdspState.anf ? 'checked' : '';
-    var anfDisabled = wdspState.enabled ? '' : 'disabled';
-    html += '<div class="setting-item wdsp-item">';
-    html += '<label class="switch-label"><span>Auto Notch Filter (ANF)</span>';
-    html += '<input type="checkbox" id="wdsp-anf" onchange="setWDSPANF(this.checked)" ' + anfChecked + ' ' + anfDisabled + '>';
-    html += '<span class="switch-slider"></span></label>';
-    html += '</div>';
-
-    // AGC mode
-    var agcDisabled = wdspState.enabled ? '' : 'disabled';
-    html += '<div class="setting-item wdsp-item">';
-    html += '<label>AGC Mode</label>';
-    html += '<select id="wdsp-agc" onchange="setWDSPAGC(this.value)" ' + agcDisabled + '>';
-    html += '<option value="0"' + (wdspState.agcMode == 0 ? ' selected' : '') + '>OFF</option>';
-    html += '<option value="1"' + (wdspState.agcMode == 1 ? ' selected' : '') + '>LONG</option>';
-    html += '<option value="2"' + (wdspState.agcMode == 2 ? ' selected' : '') + '>SLOW</option>';
-    html += '<option value="3"' + (wdspState.agcMode == 3 ? ' selected' : '') + '>MED</option>';
-    html += '<option value="4"' + (wdspState.agcMode == 4 ? ' selected' : '') + '>FAST</option>';
-    html += '</select>';
-    html += '</div>';
-
-    // Advanced settings link
-    html += '<div class="setting-item wdsp-item" style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #333;">';
-    html += '<a href="#" onclick="showWDSPAdvancedSettings(); return false;" style="color: #00d4ff; text-decoration: none; font-size: 14px;">Advanced Settings...</a>';
-    html += '</div>';
-
-    html += '</div>'; // Close WDSP settings container
-
-    html += '<button class="close-panel-btn" onclick="closeModalPanel()">Close</button></div>';
-    showModalPanel(html);
-}
 
 // WDSP 高级设置面板
 function showWDSPAdvancedSettings() {
@@ -3053,20 +2931,10 @@ function selectTX_EQ(presetName) {
 }
 
 // 数字模式面板（占位）
-function showDigitalPanel() {
-    let html = '<div class="modal-panel"><h3>数字模式</h3>';
-    html += '<p>数字模式功能开发中...</p>';
-    html += '<button class="close-panel-btn" onclick="closeModalPanel()">关闭</button></div>';
-    showModalPanel(html);
-}
+
 
 // 日志面板（占位）
-function showLogbookPanel() {
-    let html = '<div class="modal-panel"><h3>日志</h3>';
-    html += '<p>日志功能开发中...</p>';
-    html += '<button class="close-panel-btn" onclick="closeModalPanel()">关闭</button></div>';
-    showModalPanel(html);
-}
+
 
 // 关于面板
 function showAboutPanel() {

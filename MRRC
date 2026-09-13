@@ -142,14 +142,31 @@ if not os.path.isabs(config_file):
 config.read(config_file, encoding='utf-8')
 print(f"Using config file: {config_file}")
 
-# ATR-1000 Unix Socket 路径（支持多实例）
+# ATR-1000 proxy IPC. Unix Domain Socket is preferred on Unix-like systems;
+# Windows builds use localhost TCP because AF_UNIX is not always available.
 INSTANCE_UNIX_SOCKET = "/tmp/atr1000_proxy.sock"
+ATR1000_PROXY_TRANSPORT = "tcp" if os.name == "nt" else "unix"
+ATR1000_PROXY_HOST = "127.0.0.1"
+ATR1000_PROXY_PORT = 60100
 if config.has_option('INSTANCE_SETTINGS', 'instance_unix_socket'):
     INSTANCE_UNIX_SOCKET = config.get('INSTANCE_SETTINGS', 'instance_unix_socket')
-else:
-    pass  # 使用默认值
+if config.has_option('INSTANCE_SETTINGS', 'atr1000_proxy_transport'):
+    ATR1000_PROXY_TRANSPORT = config.get('INSTANCE_SETTINGS', 'atr1000_proxy_transport').strip().lower()
+if config.has_option('INSTANCE_SETTINGS', 'atr1000_proxy_host'):
+    ATR1000_PROXY_HOST = config.get('INSTANCE_SETTINGS', 'atr1000_proxy_host').strip() or ATR1000_PROXY_HOST
+if config.has_option('INSTANCE_SETTINGS', 'atr1000_proxy_port'):
+    try:
+        ATR1000_PROXY_PORT = config.getint('INSTANCE_SETTINGS', 'atr1000_proxy_port')
+    except Exception:
+        pass
 
-logger.info(f"📂 使用 Unix Socket: {INSTANCE_UNIX_SOCKET}")
+logger.info(
+    f"📂 ATR-1000 proxy IPC: {ATR1000_PROXY_TRANSPORT} "
+    f"{INSTANCE_UNIX_SOCKET if ATR1000_PROXY_TRANSPORT == 'unix' else f'{ATR1000_PROXY_HOST}:{ATR1000_PROXY_PORT}'}"
+)
+os.environ.setdefault("MRRC_ATR1000_PROXY_TRANSPORT", ATR1000_PROXY_TRANSPORT)
+os.environ.setdefault("MRRC_ATR1000_PROXY_HOST", ATR1000_PROXY_HOST)
+os.environ.setdefault("MRRC_ATR1000_PROXY_PORT", str(ATR1000_PROXY_PORT))
 
 # ---- 频道记忆服务端持久化 ----
 import threading
@@ -1604,15 +1621,21 @@ class ATR1000ProxyManager:
     
     def _connect(self):
         """连接到 ATR-1000 代理"""
-        global INSTANCE_UNIX_SOCKET
+        global INSTANCE_UNIX_SOCKET, ATR1000_PROXY_TRANSPORT, ATR1000_PROXY_HOST, ATR1000_PROXY_PORT
 
         try:
-            import os
-            self.unix_socket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+            if ATR1000_PROXY_TRANSPORT == 'tcp':
+                self.unix_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                endpoint = f"{ATR1000_PROXY_HOST}:{ATR1000_PROXY_PORT}"
+                connect_target = (ATR1000_PROXY_HOST, ATR1000_PROXY_PORT)
+            else:
+                self.unix_socket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+                endpoint = INSTANCE_UNIX_SOCKET
+                connect_target = INSTANCE_UNIX_SOCKET
             self.unix_socket.settimeout(2.0)
-            self.unix_socket.connect(INSTANCE_UNIX_SOCKET)
+            self.unix_socket.connect(connect_target)
             self.unix_socket.setblocking(False)
-            logger.info(f"✅ ATR-1000 代理管理器已连接 Unix Socket: {INSTANCE_UNIX_SOCKET}")
+            logger.info(f"✅ ATR-1000 代理管理器已连接 {ATR1000_PROXY_TRANSPORT}: {endpoint}")
 
             # 清除重连状态
             if hasattr(self, '_reconnecting'):
@@ -1647,7 +1670,8 @@ class ATR1000ProxyManager:
             # 启动定期数据刷新（代理不主动推送，需主动请求）
             self._start_data_refresh()
         except Exception as e:
-            logger.warning(f"⚠️ ATR-1000 代理连接失败 (Socket: {INSTANCE_UNIX_SOCKET}): {e}")
+            endpoint = INSTANCE_UNIX_SOCKET if ATR1000_PROXY_TRANSPORT == 'unix' else f"{ATR1000_PROXY_HOST}:{ATR1000_PROXY_PORT}"
+            logger.warning(f"⚠️ ATR-1000 代理连接失败 ({ATR1000_PROXY_TRANSPORT}: {endpoint}): {e}")
             self.unix_socket = None
             # 清除重连状态
             if hasattr(self, '_reconnecting'):
@@ -3234,6 +3258,56 @@ class WS_ControlTRX(AuthenticatedWebSocketHandler):
 					yield self.send_to_all_clients(f"setWDSPNR2Level:{level}")
 			except ValueError:
 				pass
+
+		elif(action == "setWDSPMaxAtten"):
+			# NR2 每 bin 最大衰减(dB)：''/'auto' = 跟随 nr2_level 等级表；0 = 不限制(旧行为)
+			from audio_interface import PyAudioCapture
+			val = datato.strip().lower()
+			if val in ('', 'auto', 'none', 'null'):
+				PyAudioCapture.wdsp_config['nr2_max_atten_db'] = None
+				print("🔧 WDSP NR2 最大衰减: 跟随等级表")
+				yield self.send_to_all_clients("setWDSPMaxAtten:auto")
+			else:
+				try:
+					db = float(val)
+					PyAudioCapture.wdsp_config['nr2_max_atten_db'] = db
+					print(f"🔧 WDSP NR2 最大衰减: {db} dB")
+					yield self.send_to_all_clients(f"setWDSPMaxAtten:{db}")
+				except ValueError:
+					pass
+
+		elif(action == "setWDSPDry"):
+			# NR2 干湿混合 0~1（0 = 纯湿）
+			from audio_interface import PyAudioCapture
+			try:
+				dry = max(0.0, min(1.0, float(datato)))
+				PyAudioCapture.wdsp_config['nr2_dry'] = dry
+				print(f"🔧 WDSP NR2 干湿混合: {dry}")
+				yield self.send_to_all_clients(f"setWDSPDry:{dry}")
+			except ValueError:
+				pass
+
+		elif(action == "setWDSPAGCTop"):
+			# AGC 最大补偿增益(dB)：限制"NR2 砍完再被 AGC 狂补"
+			from audio_interface import PyAudioCapture
+			try:
+				db = float(datato)
+				PyAudioCapture.wdsp_config['agc_top_db'] = db
+				print(f"🔧 WDSP AGC 补偿上限: {db} dB")
+				yield self.send_to_all_clients(f"setWDSPAGCTop:{db}")
+			except ValueError:
+				pass
+
+		elif(action == "setWDSPPanelGain"):
+			# 输出电势 panel_gain（0.01~1.0）
+			from audio_interface import PyAudioCapture
+			try:
+				g = max(0.01, min(1.0, float(datato)))
+				PyAudioCapture.wdsp_config['panel_gain'] = g
+				print(f"🔧 WDSP panel 增益: {g}")
+				yield self.send_to_all_clients(f"setWDSPPanelGain:{g}")
+			except ValueError:
+				pass
 			
 		elif(action == "setWDSPNB"):
 			# 设置 NB (噪声抑制器)
@@ -3393,7 +3467,12 @@ class WS_ControlTRX(AuthenticatedWebSocketHandler):
 				'bpLow': PyAudioCapture.wdsp_config.get('bandpass_low', 300),
 				'bpHigh': PyAudioCapture.wdsp_config.get('bandpass_high', 2700),
 				'sampleRate': PyAudioCapture.wdsp_config.get('sample_rate', 48000),
-				'bufferSize': PyAudioCapture.wdsp_config.get('buffer_size', 256)
+				'bufferSize': PyAudioCapture.wdsp_config.get('buffer_size', 256),
+				# NR2 SSB 语音保护 / 增益级（None = 跟随等级表）
+				'nr2MaxAttenDb': PyAudioCapture.wdsp_config.get('nr2_max_atten_db'),
+				'nr2Dry': PyAudioCapture.wdsp_config.get('nr2_dry', 0.0),
+				'agcTopDb': PyAudioCapture.wdsp_config.get('agc_top_db', 20.0),
+				'panelGain': PyAudioCapture.wdsp_config.get('panel_gain', 0.35)
 			}
 			yield self.send_to_all_clients(f"wdspStatus:{json.dumps(status)}")
 		

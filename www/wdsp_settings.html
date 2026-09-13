@@ -403,35 +403,33 @@
             </div>
             
             <div class="param-row">
-                <span class="param-label">Gain Method</span>
-                <select id="nr2-gain-method" onchange="setNR2GainMethod(this.value)">
-                    <option value="0">保守 (Conservative)</option>
-                    <option value="1">中等 (Moderate)</option>
-                    <option value="2">激进 (Aggressive)</option>
+                <span class="param-label">每 bin 最大衰减</span>
+                <select id="nr2-max-atten" onchange="setNR2MaxAtten(this.value)">
+                    <option value="auto">跟随等级（推荐）</option>
+                    <option value="-6">-6 dB（最保真）</option>
+                    <option value="-9">-9 dB</option>
+                    <option value="-12">-12 dB</option>
+                    <option value="-16">-16 dB</option>
+                    <option value="-20">-20 dB（最强）</option>
+                    <option value="0">不限制（旧行为）</option>
                 </select>
             </div>
-            
+
             <div class="param-row">
-                <span class="param-label">NPE Method</span>
-                <select id="nr2-npe-method" onchange="setNR2NpeMethod(this.value)">
-                    <option value="0">LambdaD</option>
-                    <option value="1">LambdaDs (推荐)</option>
-                </select>
-            </div>
-            
-            <div class="param-row">
-                <span class="param-label">自动均衡 (AE)</span>
-                <div class="switch-container">
-                    <label class="switch">
-                        <input type="checkbox" id="nr2-ae-run" onchange="setNR2AeRun(this.checked)">
-                        <span class="slider"></span>
-                    </label>
+                <span class="param-label">干湿混合 (dry)</span>
+                <div class="range-container">
+                    <input type="range" id="nr2-dry" min="0" max="0.5" step="0.05" value="0"
+                           oninput="document.getElementById('nr2-dry-value').textContent=this.value"
+                           onchange="setNR2Dry(this.value)">
+                    <span class="range-value" id="nr2-dry-value">0</span>
                 </div>
             </div>
-            
+
             <div class="info-text">
-                NR2 使用 EMNR (Enhanced Multi-band Noise Reduction) 频谱降噪算法。
-                Gain Method 控制降噪激进程度，NPE Method 控制噪声估计方法。
+                NR2 = EMNR 频谱降噪。<b>主轴是「每 bin 最大衰减」</b>：EMNR 的最小统计
+                会把语音自身当噪声（实测干净单音掩码 0.022 = −33 dB），限制衰减上限
+                可直接消除「声音变形过度」。等级 1/2/3/4 对应 −6/−12/−16/−20 dB；
+                弱信号建议选 1（几乎不动语音）。
             </div>
         </div>
         
@@ -502,10 +500,31 @@
                 <span class="param-label">Hang 时间</span>
                 <span class="param-value" id="agc-hang-value">-</span>
             </div>
-            
+
+            <div class="param-row">
+                <span class="param-label">补偿增益上限 (dB)</span>
+                <div class="range-container">
+                    <input type="range" id="agc-top" min="0" max="40" step="2" value="20"
+                           oninput="document.getElementById('agc-top-value').textContent=this.value+' dB'"
+                           onchange="setAGCTop(this.value)">
+                    <span class="range-value" id="agc-top-value">20 dB</span>
+                </div>
+            </div>
+
+            <div class="param-row">
+                <span class="param-label">输出电势 (panel)</span>
+                <div class="range-container">
+                    <input type="range" id="panel-gain" min="0.05" max="1" step="0.05" value="0.35"
+                           oninput="document.getElementById('panel-gain-value').textContent=this.value"
+                           onchange="setPanelGain(this.value)">
+                    <span class="range-value" id="panel-gain-value">0.35</span>
+                </div>
+            </div>
+
             <div class="info-text">
-                AGC 自动调整音频增益，保持输出电平稳定。
-                SSB 语音推荐 MED 模式，CW 推荐 FAST 模式。
+                AGC 自动调整音频增益，保持输出电平稳定。SSB 语音推荐 MED。
+                <b>补偿增益上限</b>限制"NR2 削完再被 AGC 狂补"（旧值 +80 dB 会把底噪抬满）；
+                <b>输出电势</b>决定最终音量（旧值 0.06 = −24 dBFS，现 0.35）。
             </div>
         </div>
         
@@ -594,10 +613,11 @@
         // WDSP 设置状态
         let wdspSettings = {
             enabled: false,
-            nr2Level: 1,
-            nr2GainMethod: 0,
-            nr2NpeMethod: 1,
-            nr2AeRun: false,
+            nr2Level: 2,
+            nr2MaxAttenDb: null,
+            nr2Dry: 0,
+            agcTopDb: 20,
+            panelGain: 0.35,
             nbEnabled: false,
             anfEnabled: false,
             agcMode: 3,
@@ -614,9 +634,9 @@
             ssb: {
                 enabled: true,
                 nr2Level: 2,
-                nr2GainMethod: 0,
-                nr2NpeMethod: 1,
-                nr2AeRun: true,
+                nr2MaxAttenDb: null,
+                agcTopDb: 20,
+                panelGain: 0.35,
                 nbEnabled: false,
                 anfEnabled: false,
                 agcMode: 3,
@@ -626,21 +646,20 @@
             cw: {
                 enabled: true,
                 nr2Level: 1,
-                nr2GainMethod: 0,
-                nr2NpeMethod: 0,
-                nr2AeRun: false,
+                agcTopDb: 20,
+                panelGain: 0.35,
                 nbEnabled: true,
                 anfEnabled: true,
                 agcMode: 4,
                 bpLow: 400,
                 bpHigh: 800
             },
-            dx: {
+            dx: {   // DX 弱信号：更保守的衰减上限（少动语音）+ 更深降噪等级
                 enabled: true,
                 nr2Level: 3,
-                nr2GainMethod: 1,
-                nr2NpeMethod: 1,
-                nr2AeRun: true,
+                nr2MaxAttenDb: -12,
+                agcTopDb: 20,
+                panelGain: 0.35,
                 nbEnabled: true,
                 anfEnabled: true,
                 agcMode: 2,
@@ -650,9 +669,9 @@
             contest: {
                 enabled: true,
                 nr2Level: 2,
-                nr2GainMethod: 0,
-                nr2NpeMethod: 1,
-                nr2AeRun: false,
+                nr2MaxAttenDb: null,
+                agcTopDb: 25,
+                panelGain: 0.4,
                 nbEnabled: true,
                 anfEnabled: false,
                 agcMode: 4,
@@ -770,22 +789,26 @@
                 logMsg('success', `✅ NR2 降噪级别: ${wdspSettings.nr2Level}`);
                 console.log('🔧 NR2 级别同步:', wdspSettings.nr2Level);
             }
-            else if (data.startsWith('setWDSPNR2GainMethod:')) {
-                wdspSettings.nr2GainMethod = parseInt(data.split(':')[1]);
+            else if (data.startsWith('setWDSPMaxAtten:')) {
+                const v = data.split(':')[1].trim();
+                wdspSettings.nr2MaxAttenDb = (v === 'auto' || v === '') ? null : parseFloat(v);
                 updateUI();
-                const names = {0: '保守', 1: '中等', 2: '激进'};
-                logMsg('success', `✅ NR2 GainMethod: ${names[wdspSettings.nr2GainMethod] || wdspSettings.nr2GainMethod}`);
+                logMsg('success', `✅ NR2 最大衰减: ${wdspSettings.nr2MaxAttenDb === null ? '跟随等级表' : wdspSettings.nr2MaxAttenDb + ' dB'}`);
             }
-            else if (data.startsWith('setWDSPNR2NpeMethod:')) {
-                wdspSettings.nr2NpeMethod = parseInt(data.split(':')[1]);
+            else if (data.startsWith('setWDSPDry:')) {
+                wdspSettings.nr2Dry = parseFloat(data.split(':')[1]);
                 updateUI();
-                const names = {0: 'LambdaD', 1: 'LambdaDs'};
-                logMsg('success', `✅ NR2 NpeMethod: ${names[wdspSettings.nr2NpeMethod] || wdspSettings.nr2NpeMethod}`);
+                logMsg('success', `✅ NR2 干湿混合: ${wdspSettings.nr2Dry}`);
             }
-            else if (data.startsWith('setWDSPNR2AeRun:')) {
-                wdspSettings.nr2AeRun = data.split(':')[1] === 'true';
+            else if (data.startsWith('setWDSPAGCTop:')) {
+                wdspSettings.agcTopDb = parseFloat(data.split(':')[1]);
                 updateUI();
-                logMsg('success', `✅ NR2 自动均衡: ${wdspSettings.nr2AeRun ? '开启' : '关闭'}`);
+                logMsg('success', `✅ AGC 补偿上限: ${wdspSettings.agcTopDb} dB`);
+            }
+            else if (data.startsWith('setWDSPPanelGain:')) {
+                wdspSettings.panelGain = parseFloat(data.split(':')[1]);
+                updateUI();
+                logMsg('success', `✅ 输出电势: ${wdspSettings.panelGain}`);
             }
             else if (data.startsWith('setWDSPNB:')) {
                 wdspSettings.nbEnabled = data.split(':')[1] === 'true';
@@ -852,7 +875,7 @@
             if (preset) {
                 const presetNames = {ssb: 'SSB语音', cw: 'CW模式', dx: 'DX弱信号', contest: '比赛模式'};
                 logMsg('info', `📋 应用预设: <b>${presetNames[name] || name}</b>`);
-                wdspSettings = { ...preset };
+                wdspSettings = { ...wdspSettings, ...preset };
                 applyAllSettings();
                 updateUI();
                 console.log('✅ 应用预设:', name);
@@ -868,6 +891,11 @@
             sendCommand('setWDSPANF', wdspSettings.anfEnabled ? 'true' : 'false');
             sendCommand('setWDSPAGCMode', wdspSettings.agcMode.toString());
             sendCommand('setWDSPBandpass', `${wdspSettings.bpLow},${wdspSettings.bpHigh}`);
+            sendCommand('setWDSPMaxAtten', wdspSettings.nr2MaxAttenDb === null || wdspSettings.nr2MaxAttenDb === undefined
+                ? 'auto' : wdspSettings.nr2MaxAttenDb.toString());
+            sendCommand('setWDSPDry', (wdspSettings.nr2Dry || 0).toString());
+            sendCommand('setWDSPAGCTop', (wdspSettings.agcTopDb ?? 20).toString());
+            sendCommand('setWDSPPanelGain', (wdspSettings.panelGain ?? 0.35).toString());
         }
         
         // WDSP 主开关
@@ -884,22 +912,32 @@
             updateUI();
         }
         
-        // NR2 Gain Method
-        function setNR2GainMethod(method) {
-            wdspSettings.nr2GainMethod = parseInt(method);
-            sendCommand('setWDSPNR2GainMethod', method);
+        // NR2 最大衰减（|dB| 越小越不动语音；auto = 跟随等级表）
+        function setNR2MaxAtten(v) {
+            wdspSettings.nr2MaxAttenDb = (v === 'auto') ? null : parseFloat(v);
+            sendCommand('setWDSPMaxAtten', v === 'auto' ? 'auto' : v);
+            logMsg('info', `📤 NR2 最大衰减: ${v === 'auto' ? '跟随等级表' : v + ' dB'}`);
         }
-        
-        // NR2 NPE Method
-        function setNR2NpeMethod(method) {
-            wdspSettings.nr2NpeMethod = parseInt(method);
-            sendCommand('setWDSPNR2NpeMethod', method);
+
+        // NR2 干湿混合
+        function setNR2Dry(v) {
+            wdspSettings.nr2Dry = parseFloat(v);
+            sendCommand('setWDSPDry', v);
+            logMsg('info', `📤 NR2 干湿混合: ${v}`);
         }
-        
-        // NR2 AE Run
-        function setNR2AeRun(enabled) {
-            wdspSettings.nr2AeRun = enabled;
-            sendCommand('setWDSPNR2AeRun', enabled ? 'true' : 'false');
+
+        // AGC 补偿增益上限
+        function setAGCTop(v) {
+            wdspSettings.agcTopDb = parseFloat(v);
+            sendCommand('setWDSPAGCTop', v);
+            logMsg('info', `📤 AGC 补偿上限: ${v} dB`);
+        }
+
+        // 输出电势 panel
+        function setPanelGain(v) {
+            wdspSettings.panelGain = parseFloat(v);
+            sendCommand('setWDSPPanelGain', v);
+            logMsg('info', `📤 输出电势: ${v}`);
         }
         
         // NB 开关
@@ -957,9 +995,26 @@
                     parseInt(btn.dataset.level) === wdspSettings.nr2Level);
             });
             
-            document.getElementById('nr2-gain-method').value = wdspSettings.nr2GainMethod;
-            document.getElementById('nr2-npe-method').value = wdspSettings.nr2NpeMethod;
-            document.getElementById('nr2-ae-run').checked = wdspSettings.nr2AeRun;
+            const maxAttenSel = document.getElementById('nr2-max-atten');
+            if (maxAttenSel) {
+                maxAttenSel.value = (wdspSettings.nr2MaxAttenDb === null || wdspSettings.nr2MaxAttenDb === undefined)
+                    ? 'auto' : String(wdspSettings.nr2MaxAttenDb);
+            }
+            const dryEl = document.getElementById('nr2-dry');
+            if (dryEl) {
+                dryEl.value = (wdspSettings.nr2Dry || 0);
+                document.getElementById('nr2-dry-value').textContent = (wdspSettings.nr2Dry || 0);
+            }
+            const agcTopEl = document.getElementById('agc-top');
+            if (agcTopEl) {
+                agcTopEl.value = (wdspSettings.agcTopDb ?? 20);
+                document.getElementById('agc-top-value').textContent = (wdspSettings.agcTopDb ?? 20) + ' dB';
+            }
+            const pgEl = document.getElementById('panel-gain');
+            if (pgEl) {
+                pgEl.value = (wdspSettings.panelGain ?? 0.35);
+                document.getElementById('panel-gain-value').textContent = (wdspSettings.panelGain ?? 0.35);
+            }
             
             // NB
             document.getElementById('nb-enabled').checked = wdspSettings.nbEnabled;
@@ -1029,10 +1084,11 @@
                 logMsg('info', '🔄 恢复默认设置...');
                 wdspSettings = {
                     enabled: true,
-                    nr2Level: 1,
-                    nr2GainMethod: 0,
-                    nr2NpeMethod: 1,
-                    nr2AeRun: false,
+                    nr2Level: 2,
+                    nr2MaxAttenDb: null,
+                    nr2Dry: 0,
+                    agcTopDb: 20,
+                    panelGain: 0.35,
                     nbEnabled: true,
                     anfEnabled: false,
                     agcMode: 3,
