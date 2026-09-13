@@ -61,7 +61,13 @@ echo ""
 # Create deployment package
 echo "Creating deployment package..."
 DEPLOY_PACKAGE="/tmp/mrrc_website_$(date +%Y%m%d_%H%M%S).tar.gz"
-tar -czf "$DEPLOY_PACKAGE" -C "$LOCAL_WEBSITE_DIR" .
+# Build-time tooling must not be in the package at all: the DocumentRoot is
+# world-readable. Until 2026-09-13 this tar excluded nothing, so /mrrc/deploy.sh,
+# /mrrc/stats/analyze.py and /mrrc/README.md all served HTTP 200.
+tar -czf "$DEPLOY_PACKAGE" \
+    --exclude='deploy.sh' --exclude='stats' --exclude='README.md' \
+    --exclude='.DS_Store' --exclude='__pycache__' \
+    -C "$LOCAL_WEBSITE_DIR" .
 echo -e "${GREEN}✓${NC} Package created: $DEPLOY_PACKAGE"
 echo ""
 
@@ -104,6 +110,11 @@ ssh "$REMOTE_USER@$REMOTE_HOST" << EOF
 
     echo "Extracting files..."
     sudo tar -xzf "$DEPLOY_PACKAGE" -C "$REMOTE_WEBROOT" --overwrite
+
+    # tar -x never deletes: anything an earlier package published stays served
+    # until it is removed explicitly. Retire the tooling older runs shipped.
+    sudo rm -rf "$REMOTE_WEBROOT/deploy.sh" "$REMOTE_WEBROOT/stats" "$REMOTE_WEBROOT/README.md"
+    echo "Pruned tooling that older versions of this script published."
 
     echo "Setting ownership..."
     sudo chown -R www-data:www-data "$REMOTE_WEBROOT"
