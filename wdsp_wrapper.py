@@ -494,8 +494,13 @@ class WDSPProcessor:
     
     def set_bandpass(self, low_freq: float, high_freq: float):
         """
-        Set bandpass filter frequencies.
-        
+        Set SSB bandpass filter frequencies.
+
+        走 always-on 的 nbp0 FIR（`SetRXANBPFreqs`），不再依赖 bp1：
+        bp1 在"非 NR 模块驱动"状态下会输出全零（实测 NR2 关闭初始化 + 改频点 → RX 静音），
+        且其增益/掩码激活路径不可靠。bp1 的开关完全交给 WDSP 的 RXAbp1Set 管理。
+        nbp0 位于 NR 之前，带外噪声先被滤掉，EMNR 的噪声估计更准。
+
         Args:
             low_freq: Low cutoff frequency in Hz
             high_freq: High cutoff frequency in Hz
@@ -504,15 +509,19 @@ class WDSPProcessor:
             return
         
         try:
-            _wdsp.SetRXABandpassRun(ctypes.c_int(self.channel), ctypes.c_int(1))
-            _wdsp.SetRXABandpassFreqs(
-                ctypes.c_int(self.channel),
-                ctypes.c_double(low_freq),
-                ctypes.c_double(high_freq)
-            )
+            if hasattr(_wdsp, "SetRXANBPFreqs"):
+                _wdsp.SetRXANBPFreqs(ctypes.c_int(self.channel),
+                                     ctypes.c_double(low_freq), ctypes.c_double(high_freq))
+            else:   # 旧库回退：无 nbp setter 时仍用 bp1
+                _wdsp.SetRXABandpassRun(ctypes.c_int(self.channel), ctypes.c_int(1))
+                _wdsp.SetRXABandpassFreqs(
+                    ctypes.c_int(self.channel),
+                    ctypes.c_double(low_freq),
+                    ctypes.c_double(high_freq)
+                )
             self._bandpass_low = low_freq
             self._bandpass_high = high_freq
-            print(f"🔧 WDSP Bandpass: {low_freq}Hz - {high_freq}Hz")
+            print(f"🔧 WDSP Bandpass: {low_freq}Hz - {high_freq}Hz (nbp0)")
         except Exception as e:
             print(f"⚠️ Bandpass setup error: {e}")
     

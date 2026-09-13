@@ -67,3 +67,81 @@
 +	rxa[channel].emnr.p->g.dry = (dry > 0.0) ? ((dry < 1.0) ? dry : 1.0) : 0.0;
 +	LeaveCriticalSection (&ch[channel].csDSP);
 +}
+--- /tmp/wdsp_pristine/nbp.h	2026-09-13 10:05:00
++++ DSP/wdsp/nbp.h	2026-09-13 10:06:02
+@@ -93,6 +93,10 @@
+ 
+ extern void setMp_nbp (NBP a);
+ 
++// MRRC: 设置 nbp0 的带通频点（SSB 带通由始终运行的 nbp0 承担），
++// 内部走 calc_nbp_impulse + setImpulse_fircore(...,1) 立即生效
++extern void SetRXANBPFreqs (int channel, double f_low, double f_high);
++
+ __declspec (dllexport) void RXANBPSetFreqs (int channel, double flow, double fhigh);
+ 
+ __declspec (dllexport) void RXANBPSetNC (int channel, int nc);
+--- /tmp/wdsp_pristine/nbp.c	2026-09-13 10:05:00
++++ DSP/wdsp/nbp.c	2026-09-13 10:06:02
+@@ -615,5 +615,23 @@
+ 	{
+ 		b->autoincr = autoincr;
+ 		recalc_bpsnba_filter (b, 1);
++	}
++}
++
++PORT
++void SetRXANBPFreqs (int channel, double f_low, double f_high)
++{
++	// MRRC: nbp0 是 xrxa 中无条件运行的 FIR，用作 SSB 带通（不依赖 bp1）。
++	// 与 RXANBPSetAutoIncrease 同构：重算脉冲→立即激活→释放。
++	NBP a = rxa[channel].nbp0.p;
++	EnterCriticalSection (&ch[channel].csDSP);
++	if ((f_low != a->flow) || (f_high != a->fhigh))
++	{
++		a->flow  = f_low;
++		a->fhigh = f_high;
++		calc_nbp_impulse (a);						// fnfrun=0: fir_bandpass；fnfrun=1: fir_mbandpass
++		setImpulse_fircore (a->p, a->impulse, 1);	// 1 = 立即激活
++		_aligned_free (a->impulse);
+ 	}
++	LeaveCriticalSection (&ch[channel].csDSP);
+ }
+--- /tmp/wdsp_pristine/nbp.h	2026-09-13 10:05:00
++++ DSP/wdsp/nbp.h	2026-09-13 10:06:02
+@@ -93,6 +93,10 @@
+ 
+ extern void setMp_nbp (NBP a);
+ 
++// MRRC: 设置 nbp0 的带通频点（SSB 带通由始终运行的 nbp0 承担），
++// 内部走 calc_nbp_impulse + setImpulse_fircore(...,1) 立即生效
++extern void SetRXANBPFreqs (int channel, double f_low, double f_high);
++
+ __declspec (dllexport) void RXANBPSetFreqs (int channel, double flow, double fhigh);
+ 
+ __declspec (dllexport) void RXANBPSetNC (int channel, int nc);
+--- /tmp/wdsp_pristine/nbp.c	2026-09-13 10:05:00
++++ DSP/wdsp/nbp.c	2026-09-13 10:06:02
+@@ -615,5 +615,23 @@
+ 	{
+ 		b->autoincr = autoincr;
+ 		recalc_bpsnba_filter (b, 1);
++	}
++}
++
++PORT
++void SetRXANBPFreqs (int channel, double f_low, double f_high)
++{
++	// MRRC: nbp0 是 xrxa 中无条件运行的 FIR，用作 SSB 带通（不依赖 bp1）。
++	// 与 RXANBPSetAutoIncrease 同构：重算脉冲→立即激活→释放。
++	NBP a = rxa[channel].nbp0.p;
++	EnterCriticalSection (&ch[channel].csDSP);
++	if ((f_low != a->flow) || (f_high != a->fhigh))
++	{
++		a->flow  = f_low;
++		a->fhigh = f_high;
++		calc_nbp_impulse (a);						// fnfrun=0: fir_bandpass；fnfrun=1: fir_mbandpass
++		setImpulse_fircore (a->p, a->impulse, 1);	// 1 = 立即激活
++		_aligned_free (a->impulse);
+ 	}
++	LeaveCriticalSection (&ch[channel].csDSP);
+ }
