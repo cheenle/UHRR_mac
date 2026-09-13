@@ -19,6 +19,7 @@ ATU 自动调谐模块 - V2.0 联动版
 
 import json
 import logging
+import os
 import threading
 import time
 import socket
@@ -146,6 +147,9 @@ class ATR1000Client:
     
     def __init__(self, socket_path: str = ATR1000_SOCKET_PATH):
         self.socket_path = socket_path
+        self.transport = os.environ.get("MRRC_ATR1000_PROXY_TRANSPORT") or ("tcp" if os.name == "nt" else "unix")
+        self.tcp_host = os.environ.get("MRRC_ATR1000_PROXY_HOST", "127.0.0.1")
+        self.tcp_port = int(os.environ.get("MRRC_ATR1000_PROXY_PORT", "60100"))
         self._cache = {}  # 缓存数据
         self._cache_time = {}  # 缓存时间
         self._cache_ttl = 0.5  # 缓存有效期（秒）
@@ -166,9 +170,14 @@ class ATR1000Client:
         
         sock = None
         try:
-            sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+            if self.transport == "tcp":
+                sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                connect_target = (self.tcp_host, self.tcp_port)
+            else:
+                sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+                connect_target = self.socket_path
             sock.settimeout(timeout)
-            sock.connect(self.socket_path)
+            sock.connect(connect_target)
             
             # 发送命令
             msg = json.dumps(command) + "\n"
