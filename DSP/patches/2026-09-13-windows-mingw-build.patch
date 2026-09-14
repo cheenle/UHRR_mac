@@ -1,0 +1,218 @@
+# WDSP fork patch: Windows(MinGW-w64) 可构建性（MRRC 2026-09-13）
+# 应用: cd DSP/wdsp && patch -p1 < ../../DSP/patches/2026-09-13-windows-mingw-build.patch
+# 背景: 平台守卫写成 `defined(linux) || defined(__APPLE__)`，mingw 落到 MSVC 分支，
+#       __declspec()/_int64/1i64 等 MSVC 专有写法在 GCC 下编译失败；iobuffs.h 的
+#       `typedef struct _iob` 与 MSVCRT 的 stdio 内部符号 _iob 冲突；另外 mingw 的
+#       windows.h 已声明同名 Win32 API，POSIX shim 需要前缀化才能链接。
+# 影响: 只新增 __MINGW32__ 分支/改名，macOS 与 Linux 行为不变。
+# 注意: DSP/wdsp 在主仓库里是失效的 gitlink，C 改动只能靠本 patch 版本化。
+
+--- a/analyzer.c
++++ b/analyzer.c
+@@ -607,5 +607,5 @@
+ 
+ 		EnterCriticalSection (&a->StitchSection);
+-#if defined(linux) || defined(__APPLE__)
++#if defined(linux) || defined(__APPLE__) || defined(__MINGW32__)
+                 a->stitch_flag |= 1L << ss;
+ #else
+@@ -613,5 +613,5 @@
+ #endif
+ 
+-#if defined(linux) || defined(__APPLE__)
++#if defined(linux) || defined(__APPLE__) || defined(__MINGW32__)
+                 if (a->stitch_flag == ((1L << a->num_stitch) - 1))
+ #else
+@@ -693,5 +693,5 @@
+ 
+ 		EnterCriticalSection (&a->StitchSection);
+-#if defined(linux) || defined(__APPLE__)
++#if defined(linux) || defined(__APPLE__) || defined(__MINGW32__)
+                 a->stitch_flag |= 1L << ss;
+ #else
+@@ -699,5 +699,5 @@
+ #endif
+ 
+-#if defined(linux) || defined(__APPLE__)
++#if defined(linux) || defined(__APPLE__) || defined(__MINGW32__)
+                 if (a->stitch_flag == ((1L << a->num_stitch) - 1))
+ #else
+--- a/channel.c
++++ b/channel.c
+@@ -31,5 +31,5 @@
+ void start_thread (int channel)
+ {
+-#if defined(linux) || defined(__APPLE__)
++#if defined(linux) || defined(__APPLE__) || defined(__MINGW32__)
+ 	HANDLE handle = (HANDLE) _beginthread(wdspmain, 0, (void *)channel);
+ #else
+@@ -103,5 +103,5 @@
+ 		InterlockedBitTestAndSet (&ch[channel].exchange, 0);
+ 	}
+-#if !defined(linux) && !defined(__APPLE__)
++#if !defined(linux) && !defined(__APPLE__) && !defined(__MINGW32__)
+         _MM_SET_FLUSH_ZERO_MODE (_MM_FLUSH_ZERO_ON);
+ #endif
+--- a/comm.h
++++ b/comm.h
+@@ -25,5 +25,5 @@
+ */
+ 
+-#if defined(linux) || defined(__APPLE__)
++#if defined(linux) || defined(__APPLE__) || defined(__MINGW32__)
+ #include <stdlib.h>
+ #include <pthread.h>
+--- a/emnr.c
++++ b/emnr.c
+@@ -27,5 +27,5 @@
+ #include "comm.h"
+ 
+-#if defined(linux) || defined(__APPLE__)
++#if defined(linux) || defined(__APPLE__) || defined(__MINGW32__)
+ #include "calculus.h"
+ #endif
+@@ -279,5 +279,5 @@
+ 	a->g.GG = (double *)malloc0(241 * 241 * sizeof(double));
+ 	a->g.GGS = (double *)malloc0(241 * 241 * sizeof(double));
+-#if defined(linux) || defined(__APPLE__)
++#if defined(linux) || defined(__APPLE__) || defined(__MINGW32__)
+         memcpy(a->g.GG, GG, 241 * 241 * sizeof(double));
+         memcpy(a->g.GGS, GGS, 241 * 241 * sizeof(double));
+--- a/iobuffs.h
++++ b/iobuffs.h
+@@ -28,5 +28,5 @@
+ #define _iobuffs_h
+ #include "comm.h"
+-typedef struct _iob
++typedef struct _wdsp_iob
+ {
+ 	int   channel;
+--- a/linux_port.c
++++ b/linux_port.c
+@@ -35,5 +35,5 @@
+ ********************************************************************************************************/
+ 
+-#if defined(linux) || defined(__APPLE__)
++#if defined(linux) || defined(__APPLE__) || defined(__MINGW32__)
+ 
+ void QueueUserWorkItem(void *function,void *context,int flags) {
+--- a/linux_port.h
++++ b/linux_port.h
+@@ -26,5 +26,5 @@
+ */
+ 
+-#if defined(linux) || defined(__APPLE__)
++#if defined(linux) || defined(__APPLE__) || defined(__MINGW32__)
+ 
+ 
+@@ -79,4 +79,18 @@
+ #define INFINITE -1
+ 
++#ifdef __MINGW32__
++/* MinGW 的 windows.h 已声明同名 Win32 API（libkernel32 导入库里有跳转桩），
++   把本文件的 POSIX shim 名字前缀化，避免 “multiple definition” 链接冲突。 */
++#define QueueUserWorkItem                        wdsp_QueueUserWorkItem
++#define InitializeCriticalSectionAndSpinCount    wdsp_InitializeCriticalSectionAndSpinCount
++#define EnterCriticalSection                     wdsp_EnterCriticalSection
++#define LeaveCriticalSection                     wdsp_LeaveCriticalSection
++#define DeleteCriticalSection                    wdsp_DeleteCriticalSection
++#define CreateEvent                              wdsp_CreateEvent
++#define SetThreadPriority                        wdsp_SetThreadPriority
++#define CloseHandle                              wdsp_CloseHandle
++#define _endthread                               wdsp_endthread
++#endif
++
+ void QueueUserWorkItem(void *function,void *context,int flags);
+ 
+--- a/main.c
++++ b/main.c
+@@ -28,5 +28,5 @@
+ //#include <avrt.h>
+ 
+-#if defined(linux) || defined(__APPLE__)
++#if defined(linux) || defined(__APPLE__) || defined(__MINGW32__)
+ void wdspmain(void *pargs)
+ #else
+--- a/main.h
++++ b/main.h
+@@ -28,5 +28,5 @@
+ #define _mainloop_h
+ 
+-#if defined(linux) || defined(__APPLE__)
++#if defined(linux) || defined(__APPLE__) || defined(__MINGW32__)
+ void wdspmain(void *pargs);
+ #else
+--- a/utilities.c
++++ b/utilities.c
+@@ -43,5 +43,5 @@
+ }
+ 
+-#if !defined(linux) && !defined(__APPLE__)
++#if !defined(linux) && !defined(__APPLE__) && !defined(__MINGW32__)
+ // Exported calls
+ 
+@@ -303,5 +303,5 @@
+ }
+ 
+-#if !defined(linux) && !defined(__APPLE__)
++#if !defined(linux) && !defined(__APPLE__) && !defined(__MINGW32__)
+ 
+ // Audacity:  Import Raw Data, Signed 32-bit PCM, Little-endian, Mono/Stereo per mode selection, 48K rate
+--- a/wisdom.c
++++ b/wisdom.c
+@@ -28,5 +28,5 @@
+ #include "comm.h"
+ 
+-#if defined(linux) || defined(__APPLE__)
++#if defined(linux) || defined(__APPLE__) || defined(__MINGW32__)
+ static char status[128];
+ #endif
+@@ -59,5 +59,5 @@
+                 (*env)->CallVoidMethod(env, obj, update, utf8);
+ #endif
+-#if defined(linux) || defined(__APPLE__)
++#if defined(linux) || defined(__APPLE__) || defined(__MINGW32__)
+                 fprintf(stdout, "Optimizing FFT sizes through %d\n\n", maxsize);
+                 fprintf(stdout, "Please do not close this window until wisdom plans are completed.\n\n");
+@@ -70,5 +70,5 @@
+ 			fprintf(stdout, "Planning COMPLEX FORWARD  FFT size %d\n", psize);
+ 			fflush(stdout);
+-#if defined(linux) || defined(__APPLE__)
++#if defined(linux) || defined(__APPLE__) || defined(__MINGW32__)
+ 			sprintf(status, "Planning COMPLEX FORWARD  FFT size %d\n", psize);
+ #endif
+@@ -78,5 +78,5 @@
+ 			fprintf(stdout, "Planning COMPLEX BACKWARD FFT size %d\n", psize);
+ 			fflush(stdout);
+-#if defined(linux) || defined(__APPLE__)
++#if defined(linux) || defined(__APPLE__) || defined(__MINGW32__)
+ 			sprintf(status, "Planning COMPLEX BACKWARD  FFT size %d\n", psize);
+ #endif
+@@ -86,5 +86,5 @@
+ 			fprintf(stdout, "Planning COMPLEX BACKWARD FFT size %d\n", psize + 1);
+ 			fflush(stdout);
+-#if defined(linux) || defined(__APPLE__)
++#if defined(linux) || defined(__APPLE__) || defined(__MINGW32__)
+ 			sprintf(status, "Planning COMPLEX BACKWARD  FFT size %d\n", psize + 1);
+ #endif
+@@ -101,5 +101,5 @@
+ 				fprintf(stdout, "Planning COMPLEX FORWARD  FFT size %d\n", psize);
+ 				fflush(stdout);
+-#if defined(linux) || defined(__APPLE__)
++#if defined(linux) || defined(__APPLE__) || defined(__MINGW32__)
+ 				sprintf(status, "Planning COMPLEX FORWARD  FFT size %d\n", psize);
+ #endif
+@@ -110,5 +110,5 @@
+ 			fprintf(stdout, "Planning REAL    FORWARD  FFT size %d\n", psize);
+ 			fflush(stdout);
+-#if defined(linux) || defined(__APPLE__)
++#if defined(linux) || defined(__APPLE__) || defined(__MINGW32__)
+ 			sprintf(status, "Planning REAL    FORWARD  FFT size %d\n", psize);
+ #endif
+@@ -129,5 +129,5 @@
+ }
+ 
+-#if defined(linux) || defined(__APPLE__)
++#if defined(linux) || defined(__APPLE__) || defined(__MINGW32__)
+ char *wisdom_get_status() {
+ 	return status;

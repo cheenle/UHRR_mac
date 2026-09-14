@@ -30,32 +30,38 @@ python -m venv venv
 
 缺失 DLL 时构建脚本只会警告，仍能出包；但运行时会缺少对应功能。
 
-### 2.1 重新编译 WDSP DLL（改过 DSP/wdsp 就必须做）
+### 2.1 构建 WDSP DLL（**必做**，否则 Windows 上 WDSP 完全不可用）
 
-`vendor\wdsp\windows\bin\x64\libwdsp.dll` **必须来自本仓库的 WDSP 分支**。源码副本
-`DSP/wdsp/` 在主仓库里是一个失效的 gitlink（无 git 元数据、改动不进版本控制），
-所以 C 改动以 patch 形式保存在 `DSP/patches/` 下，**Windows DLL 要用同样 patch 重编**，
-否则 MRRC 会打到旧库上：`SetRXAEMNRmaxAttenDb` / `SetRXAEMNRdry` / `SetRXANBPFreqs`
-缺失 → NR2 语音保护不生效（启动日志会打印“当前 libwdsp 不支持每 bin 最大衰减”）。
+历史上 `vendor\wdsp\windows\bin\x64\` 一直是空的：WDSP 的 macOS/Linux 构建走 Makefile，
+Windows 只有 MSVC 工程而且编不过（MSVC 专有写法 + MSVCRT 符号冲突），所以 6.0.0 之前的
+Windows 包根本没带 WDSP 库。现在用 **MSYS2/MinGW-w64** 编（已脚本化）：
 
-MSYS2/MinGW-w64 下（装 `mingw-w64-x86_64-gcc`、`mingw-w64-x86_64-fftw`、`patch`）：
-
-```bash
-cd /c/mrrc/DSP/wdsp
-patch -p0 < ../../DSP/patches/2026-09-13-nr2-ssb-voice-protection.patch   # 若源码已是 patched 版本可跳过
-make                      # 产出 libwdsp.dll（Makefile 会自动识别非 Darwin 分支）
-mkdir -p /c/mrrc/vendor/wdsp/windows/bin/x64
-cp libwdsp.dll /c/mrrc/vendor/wdsp/windows/bin/x64/
+```powershell
+cd C:\mrrc
+powershell -NoProfile -ExecutionPolicy Bypass -File packaging\windows\build_wdsp_dll.ps1
 ```
 
-验证 DLL 带上了新导出（应能列出 3 个符号）：
+脚本会：清掉 macOS/Linux 残留 `.o` → 编 60 个 `.c`（排除 JNI 桥）→ 校验
+`SetRXAEMNRmaxAttenDb`/`SetRXAEMNRdry`/`SetRXANBPFreqs` 等导出 → 确认运行时只依赖
+`KERNEL32.dll`/`msvcrt.dll` → 复制到 `vendor\wdsp\windows\bin\x64\libwdsp.dll`。
 
-```bash
-nm -g libwdsp.dll | grep -E "SetRXAEMNRmaxAttenDb|SetRXAEMNRdry|SetRXANBPFreqs"
-```
+前置：MSYS2 装在 `C:\msys64`，带 `mingw-w64-x86_64-gcc` 与 `mingw-w64-x86_64-fftw`。
+FFTW 用静态 `libfftw3.a` 链接（`-static`），所以不需要额外 Windows DLL。
 
-> 经验：NR2 的最关键修复是 Python 侧把估计器固定为 MMSE（`npe=1`，不依赖新 DLL）；
-> 但“每 bin 最大衰减”与“SSB 带通改走 nbp0（消除 NR2 关闭后静音）”必须新 DLL 才生效。
+**源码侧的 Windows 可构建性修复**（已包含在源码包里，patch 存档）：
+
+- `DSP/patches/2026-09-13-windows-mingw-build.patch`：平台守卫 `defined(linux) || defined(__APPLE__)`
+  补上 `__MINGW32__`、`iobuffs.h` 的 `struct _iob` 改名避开 MSVCRT 同名符号、
+  POSIX shim 的 `EnterCriticalSection`/`CloseHandle` 等在 mingw 下前缀化避免与 libkernel32 冲突。
+  应用：`cd DSP/wdsp && patch -p1 < ../../DSP/patches/2026-09-13-windows-mingw-build.patch`。
+- 已应用于仓库里的 `DSP/wdsp/` 源码（源码包即 patched 状态，通常无需再跑 patch）。
+
+> 踩坑记录：① PowerShell 脚本带中文注释 **必须存 UTF-8 with BOM**，否则 PS 5.1 按 GBK 读会语法崩；
+> ② `-static` 不能省，否则包里要再带 `libwinpthread-1.dll`/`libfftw3-3.dll`；
+> ③ 用 `objdump -p libwdsp.dll` 看 `DLL Name` 与导出表，比 `nm` 直观。
+>
+> 经验：NR2 最关键的一半修复（估计器固定 MMSE）在 Python 侧，不依赖新 DLL；
+> 但“每 bin 最大衰减”“SSB 带通走 nbp0（消除 NR2 关闭后静音）”“干湿混合”必须有新 DLL。
 
 ## 3. 每次打包
 

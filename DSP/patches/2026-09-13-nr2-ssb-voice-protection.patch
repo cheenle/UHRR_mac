@@ -1,9 +1,9 @@
 # WDSP fork patch: NR2(EMNR) SSB 语音保护（MRRC 2026-09-13）
-# 应用: cd DSP/wdsp && patch -p0 < ../../DSP/patches/2026-09-13-nr2-ssb-voice-protection.patch
+# 应用: cd DSP/wdsp && patch -p1 < ../../DSP/patches/2026-09-13-nr2-ssb-voice-protection.patch
 # 注意: DSP/wdsp 在主仓库里是失效的 gitlink，C 改动只能靠本 patch 版本化。
 
---- /tmp/wdsp_pristine/emnr.h	2026-09-13 10:05:00
-+++ DSP/wdsp/emnr.h	2026-09-13 10:05:05
+--- a/emnr.h	2026-09-13 10:05:00
++++ b/emnr.h	2026-09-13 10:05:05
 @@ -75,6 +75,8 @@
  		double* prev_mask;
  		double* prev_gamma;
@@ -13,8 +13,8 @@
  		double alpha;
  		double eps_floor;
  		double gamma_max;
---- /tmp/wdsp_pristine/emnr.c	2026-09-13 10:05:00
-+++ DSP/wdsp/emnr.c	2026-09-13 10:05:05
+--- a/emnr.c	2026-09-13 10:05:00
++++ b/emnr.c	2026-09-13 10:05:05
 @@ -487,6 +487,8 @@
  	a->g.gain_method = gain_method;
  	a->g.npe_method = npe_method;
@@ -67,8 +67,8 @@
 +	rxa[channel].emnr.p->g.dry = (dry > 0.0) ? ((dry < 1.0) ? dry : 1.0) : 0.0;
 +	LeaveCriticalSection (&ch[channel].csDSP);
 +}
---- /tmp/wdsp_pristine/nbp.h	2026-09-13 10:05:00
-+++ DSP/wdsp/nbp.h	2026-09-13 10:06:02
+--- a/nbp.h	2026-09-13 10:05:00
++++ b/nbp.h	2026-09-13 10:06:02
 @@ -93,6 +93,10 @@
  
  extern void setMp_nbp (NBP a);
@@ -80,8 +80,8 @@
  __declspec (dllexport) void RXANBPSetFreqs (int channel, double flow, double fhigh);
  
  __declspec (dllexport) void RXANBPSetNC (int channel, int nc);
---- /tmp/wdsp_pristine/nbp.c	2026-09-13 10:05:00
-+++ DSP/wdsp/nbp.c	2026-09-13 10:06:02
+--- a/nbp.c	2026-09-13 10:05:00
++++ b/nbp.c	2026-09-13 10:06:02
 @@ -615,5 +615,23 @@
  	{
  		b->autoincr = autoincr;
@@ -106,8 +106,8 @@
  	}
 +	LeaveCriticalSection (&ch[channel].csDSP);
  }
---- /tmp/wdsp_pristine/nbp.h	2026-09-13 10:05:00
-+++ DSP/wdsp/nbp.h	2026-09-13 10:06:02
+--- a/nbp.h	2026-09-13 10:05:00
++++ b/nbp.h	2026-09-13 10:06:02
 @@ -93,6 +93,10 @@
  
  extern void setMp_nbp (NBP a);
@@ -119,8 +119,8 @@
  __declspec (dllexport) void RXANBPSetFreqs (int channel, double flow, double fhigh);
  
  __declspec (dllexport) void RXANBPSetNC (int channel, int nc);
---- /tmp/wdsp_pristine/nbp.c	2026-09-13 10:05:00
-+++ DSP/wdsp/nbp.c	2026-09-13 10:06:02
+--- a/nbp.c	2026-09-13 10:05:00
++++ b/nbp.c	2026-09-13 10:06:02
 @@ -615,5 +615,23 @@
  	{
  		b->autoincr = autoincr;

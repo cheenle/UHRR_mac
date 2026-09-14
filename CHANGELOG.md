@@ -21,6 +21,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [V6.0.1] - 2026-09-13
 
+### 🪟 Windows 安装包首次内置 WDSP 库
+
+- 新增 `packaging/windows/build_wdsp_dll.ps1`：用 MSYS2/MinGW-w64 构建 `libwdsp.dll`（`-static`，运行时只依赖 `KERNEL32.dll`/`msvcrt.dll`），并自动校验导出符号与依赖。
+- 为让 WDSP 源码能在 GCC/MinGW 下编译，新增 `DSP/patches/2026-09-13-windows-mingw-build.patch`：平台守卫补 `__MINGW32__`、`iobuffs.h` 的 `struct _iob` 改名避开 MSVCRT 同名符号、POSIX shim 的 `EnterCriticalSection`/`CloseHandle` 等在 mingw 下前缀化以免与 `libkernel32` 冲突。
+- **V6.0.0 及更早的 Windows 包没有 WDSP 库**（`vendor\wdsp\windows\bin\x64\` 是空的），所以 Windows 上 NR2 一直不可用；6.0.1 起随包提供。
+
 ### 🎛️ 新增独立「WDSP 设置」页 + 服务端热生效参数
 
 - 新增 `www/wdsp_settings.html` 独立设置页（移动端菜单「🔧 WDSP 设置」、桌面工具栏「🔧WDSP」均可打开），无需改配置文件即可调 WDSP。
