@@ -15,7 +15,8 @@ docs/current/
 │   └── capability-map.md
 ├── methodology/
 │   ├── code-first-docs.md
-│   └── vibe-coding-practice.md
+│   ├── vibe-coding-practice.md
+│   └── project-retrospective-2026-09.md   (全历程复盘：阶段/问题图谱/方法验证/展望)
 ├── operations/
 │   └── runtime-and-verification.md
 ├── audit/

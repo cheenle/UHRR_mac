@@ -59,6 +59,7 @@
 
 ## Existing Guidance
 - `docs/current/reliability/` indexes the reliability/safety case series (RC-001: IOLoop wedge + BT-DAC-churn silent TX); consult it before touching TX init, the IOLoop, or macOS audio device handling.
+- `docs/current/methodology/project-retrospective-2026-09.md` is the full project history retrospective (phases, problem taxonomy, validated methods, future outlook) — read it when planning larger direction changes.
 - `docs/legacy/methodology/aldv2/Aladdin_V2_Methodology.md` is the top-level engineering methodology; `.opencode/skills/aladdin-v2/SKILL.md` turns it into a repo-local OpenCode skill.
 - `docs/legacy/tooling/CLAUDE.md` has broader architecture notes; prefer this file for compact OpenCode-specific gotchas.
 - `docs/legacy/root/AOD.md`, `docs/legacy/root/DSP.md`, and `docs/legacy/operations/Multi_Instance_Setup.md` are useful when changing wiring, DSP, or multi-instance behavior.

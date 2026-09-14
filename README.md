@@ -1,8 +1,8 @@
-# Mobile Remote Radio Control (MRRC) V6.0.1
+# Mobile Remote Radio Control (MRRC) V6.0.2
 
 [![English](https://img.shields.io/badge/lang-English-blue.svg)](README_en.md)
 [![中文](https://img.shields.io/badge/lang-中文-red.svg)](README_CN.md)
-[![Version](https://img.shields.io/badge/version-V6.0.1-green.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-V6.0.2-green.svg)](CHANGELOG.md)
 
 ---
 
@@ -14,6 +14,11 @@ A modern web-based remote control system optimized for mobile devices, enabling 
 
 基于现代Web技术的远程电台控制系统，专为移动端优化，让您随时随地灵活操控业余电台。
 
+> 🎉 **V6.0.2 更新**: 修复 8891 端口假死（PTT 时 IOLoop 被同步 `p.open()` 楔死）与
+> TX 间歇静默发射（`p.open` 阻塞期帧静默丢弃）——TX 初始化异步化 + 帧缓存补放 +
+> IOLoop 假死看门狗 + 日志轮转保留死亡现场；端到端复盘见
+> `docs/current/reliability/RC-001-ioloop-wedge-and-tx-silence.md`。
+>
 > 🎉 **V6.0.1 更新**: WDSP NR2（EMNR）降噪不再把 SSB 语音削变形 — 估计器固定
 > MMSE，新增每 bin 最大衰减（level 1–4 = −6/−12/−16/−20 dB）与干湿混合，AGC 补偿封顶；
 > 新增独立「WDSP 设置」页可热调 NR2 参数，RX 音频约 +15 dB（`panel_gain` 可调回）；
