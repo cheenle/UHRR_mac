@@ -1,6 +1,6 @@
 # Windows Installer Configuration Guide
 
-This guide is for the MRRC V6.0.0 Windows installer.
+This guide is for the MRRC V6.0.x Windows installer (V6.0.0+).
 
 ## Quick Start
 
@@ -58,6 +58,27 @@ If Device Manager shows a different USB serial port, edit `%LOCALAPPDATA%\MRRC\M
 rig_pathname = COM4
 ```
 
+## ATR-1000 Proxy on Windows
+
+V6.0.0+ uses localhost TCP between MRRC and `ATR1000-Proxy.exe` on Windows. Unix Domain Socket remains the default on macOS/Linux.
+
+Windows defaults in `MRRC.conf`:
+
+```ini
+[INSTANCE_SETTINGS]
+atr1000_proxy_transport = tcp
+atr1000_proxy_host = 127.0.0.1
+atr1000_proxy_port = 60100
+```
+
+Start the proxy with matching IPC settings:
+
+```powershell
+ATR1000-Proxy.exe --device 192.168.1.63 --port 60001 --transport tcp --tcp-host 127.0.0.1 --tcp-port 60100
+```
+
+If you do not use ATR-1000, no action is required; MRRC will still start normally.
+
 ## Login
 
 On first run the launcher creates a local `admin` account with a random password. It is written to:
@@ -70,7 +91,8 @@ If the users file already exists, the launcher shows the first account from `MRR
 
 ## Notes
 
-- No RTL-SDR DLL is required in V6.0.0.
+- No RTL-SDR DLL is required in V6.0.0+.
+- No Unix socket support is required on Windows; ATR-1000 IPC uses localhost TCP.
 - WDSP is optional; missing `wdsp.dll` disables WDSP but does not prevent startup.
 - If there is no audio device on a VM, MRRC still starts in web/control mode.
 - The mobile UI is available at `/mobile` after login.

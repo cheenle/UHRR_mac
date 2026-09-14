@@ -5,7 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [未发布] — V6.0.1
+## [V6.0.1] - 2026-09-13
+
+### 🎛️ 新增独立「WDSP 设置」页 + 服务端热生效参数
+
+- 新增 `www/wdsp_settings.html` 独立设置页（移动端菜单「🔧 WDSP 设置」、桌面工具栏「🔧WDSP」均可打开），无需改配置文件即可调 WDSP。
+- `/WSCTRX` 新增 4 个动作：`setWDSPMaxAtten` / `setWDSPDry` / `setWDSPAGCTop` / `setWDSPPanelGain`，`getWDSPStatus` 同步返回这 4 个值；写入 `wdsp_config` 后按哈希热生效，无需重启。
+- 删除页面上的无效控件（GainMethod / NpeMethod / AE 开关）：估计器已固定 MMSE、AE 由等级表决定，留着只会误导。
+
+### 🧹 移动端菜单瘦身 + 修复「Recording 点了没反应」
+
+- 菜单 10 项 → 6 项：删掉与主界面重复的 Band Selection、Mode Selection、Memory Management、Audio Filters（主界面已有 `band-btn`/`mode-btn`/`filter-btn`/M1–M6 记忆条），连带清掉 4 个死函数。
+- 修复 `setupMenuItems()` 对所有 `.menu-item` 无条件 `preventDefault()`，导致 Recordings / WDSP 这类真链接被吞掉、点击无任何反应。
+- 音频滤波默认改为 **LP2.4k**（`highshelf 2400 Hz / −20 dB`，原先初始化为 `lowshelf 22 kHz / 0` 等价关闭），滤波档位循环列表补上 LP2.4k。
+
+### 🐛 修复
+
+- **ATU 自动调谐回调从未挂上**：`atu_auto_tuner.py` 使用 `os.environ`/`os.name` 却漏了 `import os`，每次启动都报 `设置 ATU 回调函数失败: name 'os' is not defined`，`start_tune`/`stop_tune`/`set_freq` 三个回调被 `except` 吞掉。
+- 旧版 `libwdsp`（未含本次 C 改动）启动时只告警一次并说明需重编，不再每帧刷错误。
 
 ### 🎙️ WDSP NR2（EMNR）SSB 语音保护 — 修复“声音变形过度”
 
@@ -17,6 +34,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **增益级**：AGC 补偿封顶 `agc_top_db`（默认 +20 dB）；`panel_gain` 0.06 → 0.35（**RX 音量约 +15 dB，可用配置调回**）；AGC OFF 固定增益修正为 0 dB（原传 `1.0` 实为 +1 dB）；MED 时间常数 6/500/500 ms。
 - **实测收益**：单音 —36.0 → −5.6 dB（不再被吃）；生产链路语音段衰减 −14.3 → **−2.8 dB**；静音段噪声抑制保留（隔离测量 L2 = 8.2 dB，受上限约束）；饥饿响 click 51 → 0 处。
 - **新增配置**：`nr2_max_atten_db`（可选覆盖）、`nr2_dry`、`agc_top_db`、`panel_gain`。
+- **Windows 打包注意**：`vendor\wdsp\windows\bin\x64\libwdsp.dll` 必须用 `DSP/patches/2026-09-13-nr2-ssb-voice-protection.patch` 重编（步骤见 `win_pack.md` §2.1），否则只有 MMSE 那一半修复生效，每 bin 最大衰减与“NR2 关闭后静音”修复不生效。
 
 ---
 

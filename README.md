@@ -1,8 +1,8 @@
-# Mobile Remote Radio Control (MRRC) V6.0.0
+# Mobile Remote Radio Control (MRRC) V6.0.1
 
 [![English](https://img.shields.io/badge/lang-English-blue.svg)](README_en.md)
 [![中文](https://img.shields.io/badge/lang-中文-red.svg)](README_CN.md)
-[![Version](https://img.shields.io/badge/version-V6.0.0-green.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-V6.0.1-green.svg)](CHANGELOG.md)
 
 ---
 
@@ -13,6 +13,11 @@
 A modern web-based remote control system optimized for mobile devices, enabling flexible operation of your amateur radio station from anywhere.
 
 基于现代Web技术的远程电台控制系统，专为移动端优化，让您随时随地灵活操控业余电台。
+
+> 🎉 **V6.0.1 更新**: WDSP NR2（EMNR）降噪不再把 SSB 语音削变形 — 估计器固定
+> MMSE，新增每 bin 最大衰减（level 1–4 = −6/−12/−16/−20 dB）与干湿混合，AGC 补偿封顶；
+> 新增独立「WDSP 设置」页可热调 NR2 参数，RX 音频约 +15 dB（`panel_gain` 可调回）；
+> 修复 NR2 关闭/改带通后 RX 静音、`fexchange0` 饥饿响 click、ATU 回调 `import os` 缺失。
 
 > 🎉 **V6.0.0 更新**: Windows 安装包正式发布 — 首启自动生成本机登录账号与
 > `MRRC Quick Start.txt`，修复 PyInstaller 安装版 `/mobile` 页面资源路径，移除
@@ -189,7 +194,7 @@ curl http://localhost:8080/api/v1/status
 
 ## 🚀 Quick Start / 快速开始
 
-### Windows Installer / Windows 安装包（V6.0.0）
+### Windows Installer / Windows 安装包（V6.0.1）
 
 1. Download `MRRC-Setup.exe` from: <https://www.vlsc.net/mrrc/downloads/MRRC-Setup.exe>
 2. Run the installer and launch `MRRC` from the Start Menu.
