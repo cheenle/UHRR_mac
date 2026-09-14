@@ -1,71 +1,81 @@
 #!/bin/bash
-# SSL 证书到期检查脚本
-# 用于手动 DNS 模式的证书到期提醒
+# SSL 证书到期检查脚本 (radio.vlsc.net)
+# 检查已部署的证书文件, 剩余天数不足时给出提醒
+# 退出码: 0=正常 1=即将到期(<=14天) 2=已过期
+
+set -u
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-CERT_FILE="$SCRIPT_DIR/radio.vlsc.net.pem"
 DOMAIN="radio.vlsc.net"
 DAYS_WARNING=14
 
-# 检查证书是否存在
-if [ ! -f "$CERT_FILE" ]; then
-    echo "[ERROR] 证书文件不存在: $CERT_FILE"
-    exit 1
-fi
-
-# 获取到期日期并使用Python计算剩余天数
-EXPIRY_INFO=$(python3 << EOF
-import datetime
-import sys
-
-# 从openssl输出解析日期
-import subprocess
-result = subprocess.run(['openssl', 'x509', '-in', '$CERT_FILE', '-noout', '-enddate'], capture_output=True, text=True)
-expiry_str = result.stdout.strip().split('=')[1]
-
-# 解析日期
-expiry_dt = datetime.datetime.strptime(expiry_str, '%b %d %H:%M:%S %Y %Z')
-expiry_timestamp = int(expiry_dt.timestamp())
-
-# 当前时间
-now_timestamp = int(datetime.datetime.now().timestamp())
-
-# 计算剩余天数
-days_remaining = (expiry_timestamp - now_timestamp) // 86400
-
-print(f"EXPIRY_DATE={expiry_str}")
-print(f"DAYS_REMAINING={days_remaining}")
-EOF
+# 线上实例实际使用的文件: radio1 用 fullchain.pem, 默认实例用 radio.vlsc.net.pem
+CERT_FILES=(
+    "$SCRIPT_DIR/radio.vlsc.net.pem"
+    "$SCRIPT_DIR/fullchain.pem"
 )
 
-# 解析Python输出
-EXPIRY_DATE=$(echo "$EXPIRY_INFO" | grep "EXPIRY_DATE=" | cut -d= -f2)
-DAYS_REMAINING=$(echo "$EXPIRY_INFO" | grep "DAYS_REMAINING=" | cut -d= -f2)
+MIN_DAYS=""
+MIN_FILE=""
+MIN_EXPIRY=""
+MISSING=0
+
+for f in "${CERT_FILES[@]}"; do
+    if [ ! -f "$f" ]; then
+        echo "[ERROR] 证书文件不存在: $f"
+        MISSING=1
+        continue
+    fi
+
+    INFO=$(python3 - "$f" << 'EOF'
+import datetime, subprocess, sys
+path = sys.argv[1]
+enddate = subprocess.run(
+    ['openssl', 'x509', '-in', path, '-noout', '-enddate'],
+    capture_output=True, text=True, check=True
+).stdout.strip().split('=', 1)[1]
+expiry = datetime.datetime.strptime(enddate, '%b %d %H:%M:%S %Y %Z')
+days = (int(expiry.timestamp()) - int(datetime.datetime.now().timestamp())) // 86400
+print(f"{enddate}|{days}")
+EOF
+    )
+    if [ -z "$INFO" ]; then
+        echo "[ERROR] 无法解析证书: $f"
+        MISSING=1
+        continue
+    fi
+    EXPIRY="${INFO%|*}"
+    DAYS="${INFO#*|}"
+
+    if [ -z "$MIN_DAYS" ] || [ "$DAYS" -lt "$MIN_DAYS" ]; then
+        MIN_DAYS="$DAYS"; MIN_FILE="$f"; MIN_EXPIRY="$EXPIRY"
+    fi
+done
+
+[ "$MISSING" = "1" ] && exit 1
+[ -z "$MIN_DAYS" ] && { echo "[ERROR] 未找到可检查的证书"; exit 1; }
 
 echo "[INFO] 域名: $DOMAIN"
-echo "[INFO] 到期日期: $EXPIRY_DATE"
-echo "[INFO] 剩余天数: $DAYS_REMAINING"
+echo "[INFO] 最早到期文件: $MIN_FILE"
+echo "[INFO] 到期日期: $MIN_EXPIRY"
+echo "[INFO] 剩余天数: $MIN_DAYS"
 
-# 检查是否需要续期
-if [ "$DAYS_REMAINING" -le 0 ]; then
+if [ "$MIN_DAYS" -le 0 ]; then
     echo "[CRITICAL] 证书已过期！请立即续期！"
     echo "           运行: cd $SCRIPT_DIR && ./setup_ssl_manual.sh"
-    
-    # 发送系统通知（macOS）
     if command -v osascript &> /dev/null; then
-        osascript -e "display notification \"证书已过期，请立即续期!\" with title \"SSL证书警告\""
+        osascript -e "display notification \"证书已过期，请立即续期!\" with title \"SSL证书警告\"" 2>/dev/null
     fi
     exit 2
-elif [ "$DAYS_REMAINING" -le $DAYS_WARNING ]; then
-    echo "[WARNING] 证书将在 $DAYS_REMAINING 天后到期，请尽快续期！"
+elif [ "$MIN_DAYS" -le "$DAYS_WARNING" ]; then
+    echo "[WARNING] 证书将在 $MIN_DAYS 天后到期，请尽快续期！"
     echo "          运行: cd $SCRIPT_DIR && ./setup_ssl_manual.sh"
-    
-    # 发送系统通知（macOS）
+    echo "          （或配置好阿里云 DNS API 后运行 ./setup_ssl_auto.sh 实现自动续期）"
     if command -v osascript &> /dev/null; then
-        osascript -e "display notification \"证书将在 $DAYS_REMAINING 天后到期，请尽快续期!\" with title \"SSL证书提醒\""
+        osascript -e "display notification \"证书将在 $MIN_DAYS 天后到期，请尽快续期!\" with title \"SSL证书提醒\"" 2>/dev/null
     fi
     exit 1
 else
-    echo "[OK] 证书正常，还有 $DAYS_REMAINING 天到期"
+    echo "[OK] 证书正常，还有 $MIN_DAYS 天到期"
     exit 0
 fi
