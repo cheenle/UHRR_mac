@@ -85,7 +85,9 @@ def setup_comm_logger(instance=None):
     fh.setLevel(logging.DEBUG)
     
     # 格式：时间戳 | 方向 | 类型 | 数据 | 说明
-    formatter = logging.Formatter('%(asctime)s | %(message)s', datefmt='%Y-%m-%d %H:%M:%S.%f')
+    # logging.Formatter uses time.strftime for datefmt; %f is not portable
+    # there and raises on Windows. Keep seconds precision for compatibility.
+    formatter = logging.Formatter('%(asctime)s | %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
     fh.setFormatter(formatter)
     
     comm_logger.addHandler(fh)
@@ -440,6 +442,9 @@ clients = []  # Unix Socket 客户端列表
 
 # Unix Socket 路径
 UNIX_SOCKET_PATH = "/tmp/atr1000_proxy.sock"
+IPC_TRANSPORT = "auto"
+TCP_LISTEN_HOST = "127.0.0.1"
+TCP_LISTEN_PORT = 60100
 
 # 轮询间隔（秒）- V4.5.19 优化版：大幅降低设备压力
 POLL_INTERVAL_IDLE = 600.0    # 空闲时：10分钟一次（600s，大幅降低压力）
@@ -1356,6 +1361,37 @@ def run_unix_server(atr1000):
         logger.info("Unix Socket 服务器关闭")
 
 
+def run_tcp_server(atr1000):
+    """运行 localhost TCP IPC 服务器（Windows 兼容）"""
+    global running
+    server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    server.bind((TCP_LISTEN_HOST, TCP_LISTEN_PORT))
+    server.listen(5)
+    server.settimeout(1.0)
+
+    logger.info(f"🔌 TCP IPC 服务器启动: {TCP_LISTEN_HOST}:{TCP_LISTEN_PORT}")
+
+    try:
+        while running:
+            try:
+                conn, addr = server.accept()
+                conn.settimeout(1.0)
+                threading.Thread(
+                    target=handle_unix_client,
+                    args=(conn, addr, atr1000),
+                    daemon=True
+                ).start()
+            except socket.timeout:
+                continue
+            except Exception as e:
+                if running:
+                    logger.error(f"TCP IPC 错误: {e}")
+    finally:
+        server.close()
+        logger.info("TCP IPC 服务器关闭")
+
+
 def signal_handler(sig, frame):
     """信号处理"""
     global running
@@ -1368,18 +1404,29 @@ def signal_handler(sig, frame):
 def main():
     global running
     global UNIX_SOCKET_PATH
+    global IPC_TRANSPORT, TCP_LISTEN_HOST, TCP_LISTEN_PORT
     
     parser = argparse.ArgumentParser(description='ATR-1000 天调代理 - V4.5.18 通讯日志版')
     parser.add_argument('--device', default='192.168.1.63', help='ATR-1000 设备 IP')
     parser.add_argument('--port', type=int, default=60001, help='ATR-1000 WebSocket 端口')
     parser.add_argument('--interval', type=float, default=1.0, help='数据请求间隔（秒）')
     parser.add_argument('--unix-socket', default='/tmp/atr1000_proxy.sock', help='Unix Socket 路径')
+    parser.add_argument('--transport', choices=('auto', 'unix', 'tcp'), default='auto', help='MRRC IPC 传输: auto/unix/tcp')
+    parser.add_argument('--tcp-host', default='127.0.0.1', help='TCP IPC 监听地址')
+    parser.add_argument('--tcp-port', type=int, default=60100, help='TCP IPC 监听端口')
     parser.add_argument('--instance', '-i', default=None, help='实例名称 (如 radio1)')
     parser.add_argument('--debug', action='store_true', help='调试模式')
     args = parser.parse_args()
     
-    # 设置 Unix Socket 路径
     UNIX_SOCKET_PATH = args.unix_socket
+    TCP_LISTEN_HOST = args.tcp_host
+    TCP_LISTEN_PORT = args.tcp_port
+    IPC_TRANSPORT = args.transport
+    if IPC_TRANSPORT == 'auto':
+        IPC_TRANSPORT = 'unix' if hasattr(socket, 'AF_UNIX') and os.name != 'nt' else 'tcp'
+    if IPC_TRANSPORT == 'unix' and not hasattr(socket, 'AF_UNIX'):
+        logger.warning("当前平台不支持 AF_UNIX，自动改用 TCP IPC")
+        IPC_TRANSPORT = 'tcp'
     
     # 初始化通讯日志 - V4.5.18
     setup_comm_logger(args.instance)
@@ -1394,7 +1441,7 @@ def main():
     logger.info("=" * 50)
     logger.info("ATR-1000 天调代理程序启动 V4.5.18")
     logger.info(f"设备地址: {args.device}:{args.port}")
-    logger.info(f"Unix Socket: {UNIX_SOCKET_PATH}")
+    logger.info(f"IPC: {IPC_TRANSPORT} " + (UNIX_SOCKET_PATH if IPC_TRANSPORT == 'unix' else f"{TCP_LISTEN_HOST}:{TCP_LISTEN_PORT}"))
     logger.info(f"通讯日志: {COMM_LOG_FILE}")
     logger.info(f"轮询间隔: 空闲{POLL_INTERVAL_IDLE}s / 活跃{POLL_INTERVAL_ACTIVE}s / TX{POLL_INTERVAL_TX}s")
     logger.info("=" * 50)
@@ -1402,7 +1449,7 @@ def main():
     # 通讯日志记录启动
     if comm_logger:
         comm_logger.info(f"CONFIG | 设备: {args.device}:{args.port}")
-        comm_logger.info(f"CONFIG | Unix Socket: {UNIX_SOCKET_PATH}")
+        comm_logger.info(f"CONFIG | IPC: {IPC_TRANSPORT} " + (UNIX_SOCKET_PATH if IPC_TRANSPORT == 'unix' else f"{TCP_LISTEN_HOST}:{TCP_LISTEN_PORT}"))
         comm_logger.info(f"CONFIG | 轮询间隔: 空闲{POLL_INTERVAL_IDLE}s / 活跃{POLL_INTERVAL_ACTIVE}s / TX{POLL_INTERVAL_TX}s")
     
     # 创建 ATR-1000 客户端
@@ -1413,13 +1460,14 @@ def main():
     if not atr1000.connect():
         logger.error("无法连接 ATR-1000，将自动重试")
     
-    # 启动 Unix Socket 服务器
-    unix_thread = threading.Thread(
-        target=run_unix_server,
+    # 启动 MRRC IPC 服务器
+    server_target = run_unix_server if IPC_TRANSPORT == 'unix' else run_tcp_server
+    ipc_thread = threading.Thread(
+        target=server_target,
         args=(atr1000,),
         daemon=True
     )
-    unix_thread.start()
+    ipc_thread.start()
     
     # 主循环
     try:
