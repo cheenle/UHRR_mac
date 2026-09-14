@@ -25,7 +25,7 @@ This document describes the currently implemented MRRC runtime, based on the mai
 | Radio control | `TRXRIG` in `MRRC`, `hamlib_wrapper.py` | rigctld socket commands for frequency, mode, PTT, S-meter |
 | DSP | `wdsp_wrapper.py`, `DSP/wdsp/` | Optional WDSP processing: NR2, NB, ANF, NF, AGC, bandpass |
 | Panadapter | `www/panadapter/` | Legacy UI route remains; RTL-SDR runtime dependency is disabled by default |
-| ATR-1000 bridge | `ATR1000ProxyManager` in `MRRC` | Unix Socket client, bridges proxy data to `/WSATR1000` |
+| ATR-1000 bridge | `ATR1000ProxyManager` in `MRRC` | Local IPC client (Unix Socket on Unix/macOS, localhost TCP on Windows), bridges proxy data to `/WSATR1000` |
 | ATR-1000 proxy | `atr1000_proxy.py` | Single device connection to ATR-1000, dynamic polling, learning, quick tune |
 | ATR-1000 storage/API | `atr1000_tuner.py`, `atr1000_api_server.py` | JSON learning records and optional REST API through proxy socket |
 | Recording | `audio_interface.py`, `www/recordings.html` | RX/TX recording buffers, `/api/recordings`, `/recordings/<file>` download |
@@ -71,7 +71,7 @@ radio audio input -> PyAudioCapture -> optional WDSP/RNNoise -> Int16/Opus frame
 ### TX Audio
 
 ```text
-browser microphone -> Web Audio API -> TX EQ/RagChew chain -> tx-capture AudioWorklet (ScriptProcessor fallback on iOS) -> 48kHz Opus tagged frames -> /WSaudioTX -> PyAudioPlayback -> radio audio output
+browser microphone -> Web Audio API -> TX EQ/RagChew chain -> tx-capture AudioWorklet (ScriptProcessor fallback on iOS) -> 48kHz Opus tagged frames -> /WSaudioTX -> async TX init (F4/F4b: run_in_executor worker, frames buffered in _tx_pending_frames while p.open blocks, flushed on completion) -> PyAudioPlayback -> radio audio output
 ```
 
 ### Radio Control
@@ -85,7 +85,7 @@ browser controls -> /WSCTRX -> TRXRIG -> rigctld TCP -> radio CAT/PTT
 ### ATR-1000
 
 ```text
-ATR-1000 device -> WebSocket device protocol -> atr1000_proxy.py -> Unix Socket -> MRRC ATR1000ProxyManager -> /WSATR1000 -> mobile_modern.js display and tune hooks
+ATR-1000 device -> WebSocket device protocol -> atr1000_proxy.py -> local IPC (Unix Socket or Windows TCP) -> MRRC ATR1000ProxyManager -> /WSATR1000 -> mobile_modern.js display and tune hooks
 ```
 
 The proxy answers from cache only; TX `stop` zeroes the cached power/SWR (no ghost readings during RX), and `MRRC` fast-polls (250 ms) off the CTRX PTT state, broadcasting on the IOLoop thread.

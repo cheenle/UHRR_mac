@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [V6.0.2] - 2026-09-14
+
+### 🚨 修复 8891 端口突发无响应（IOLoop 被同步 `p.open()` 楔死）
+
+- **根因**：按 PTT 时 `WS_AudioTXHandler.on_message('m:')` 在 IOLoop 线程同步调 `TX_init` → `PyAudioPlayback.__init__` 的 `p.open()`（`audio_interface.py:909`）。CoreAudio 卡顿（当日蓝牙音频设备 AVDTP 流抖动）时该调用长时间不返回，整个事件循环停摆：进程活着、端口无响应、所有 WebSocket 断连。F2/F3 修复已把 `stream.write()` 与 rigctld I/O 挪出 IOLoop，唯独漏了构造函数。
+- **修复（F4）**：`TX_init` 整体经 `run_in_executor` 卸载到工作线程（`MRRC` `_start_tx_init_async`）；构造期间重复的 `m:` 直接丢弃；`TX_init` 内的 PTT 广播改经 `MAIN_IOLOOP.add_callback`（`write_message` 非线程安全）。
+- **安全竞态**：构造阻塞期间收到 `s:`/`on_close`（用户已松手）置 `_tx_init_cancel`，工作线程完成后丢弃播放实例且**绝不补键 PTT**，防止松手后电台重新发射。
+- **诊断**：新增 `arm_ioloop_watchdog()`（`HTTP server started.` 后武装）——心跳超时调度在 IOLoop 上，晚于预定 >8s 即判定假死，`faulthandler.dump_traceback` 把所有线程栈打进日志，30s 防刷屏冷却。下次假死可直接看到阻塞调用点。
+- **运维**：`mrrc_multi.sh` 启动时的 `> 日志` 清空改为先 `mv` 为 `.prev` 再写新文件——本次事故中旧实例的死亡现场被启动脚本截断，无法考证；`delete` 命令同步清理 `.prev`。
+- **F4b（同日第二轮，09:01 实例日志实证）**：端口假死已消除，但 `p.open()` 在工作线程仍间歇性慢（实测 0.3s~15s+，蓝牙设备 AVDTP 抖动所致）。慢期间 TX 音频帧被静默丢弃 → "按了 PTT、电台发射、全程无调制"（ATR 功率计实证：两段 TX 6-7W 平坦载波 vs 两段 126-153W 正常调制）。修复：① 初始化期间到达的帧缓存 250 帧（5s），完成后补放；② 丢弃路径强制释放 PTT，覆盖 `s:` 与自动键控乱序竞态（安全关键）；③ 设备索引缓存 + 校验，按 PTT 全量枚举 6+ 设备（蓝牙抖动时每次 CoreAudio 查询都可阻塞数百 ms）降为 1 次查询；④ 枚举/`p.open` 分段耗时打点进日志。
+- **端到端复盘**：完整因果链（蓝牙 DAC A2DP 协商失败 → CoreAudio 全局阻塞 → 端口假死/TX 静默）、验证方法、安全影响与排查工具箱见 `docs/current/reliability/RC-001-ioloop-wedge-and-tx-silence.md`。
+
+---
+
 ## [V6.0.1] - 2026-09-13
 
 ### 🎛️ 新增独立「WDSP 设置」页 + 服务端热生效参数

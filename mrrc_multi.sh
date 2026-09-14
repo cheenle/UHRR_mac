@@ -281,7 +281,8 @@ start_rigctld() {
     print_status "  Speed: $INSTANCE_RIGCTL_SPEED"
     print_status "  Port: $INSTANCE_RIGCTL_PORT"
     
-    # 清空日志
+    # 日志轮转：先把上一份（可能是死亡现场）留作 .prev，再写新文件
+    [ -f "$RIGCTLD_LOG" ] && mv "$RIGCTLD_LOG" "$RIGCTLD_LOG.prev"
     > "$RIGCTLD_LOG"
     
     # 启动 rigctld，使用实例名称作为标识
@@ -326,7 +327,8 @@ start_mrrc() {
     
     print_status "Starting MRRC server..."
     
-    # 清空日志
+    # 日志轮转：先把上一份（可能是死亡现场）留作 .prev，再写新文件
+    [ -f "$MRRC_LOG" ] && mv "$MRRC_LOG" "$MRRC_LOG.prev"
     > "$MRRC_LOG"
     
     # 启动 MRRC，传递配置文件路径
@@ -368,7 +370,9 @@ start_atr1000() {
     fi
     
     print_status "Starting ATR-1000 proxy..."
-    
+
+    # 日志轮转：先把上一份（可能是死亡现场）留作 .prev，再写新文件
+    [ -f "$ATR1000_LOG" ] && mv "$ATR1000_LOG" "$ATR1000_LOG.prev"
     > "$ATR1000_LOG"
     
     # V5.8.6: nohup 防 SIGHUP — 之前用 "&" 直挂终端,关掉终端标签页会把代理
@@ -655,8 +659,11 @@ delete_instance() {
     # 删除配置文件
     rm -f "$config_file"
     rm -f "$SCRIPT_DIR/rigctld_${instance_name}.log"
+    rm -f "$SCRIPT_DIR/rigctld_${instance_name}.log.prev"
     rm -f "$SCRIPT_DIR/mrrc_${instance_name}.log"
+    rm -f "$SCRIPT_DIR/mrrc_${instance_name}.log.prev"
     rm -f "$SCRIPT_DIR/atr1000_${instance_name}.log"
+    rm -f "$SCRIPT_DIR/atr1000_${instance_name}.log.prev"
     
     print_success "Deleted instance: $instance_name"
 }

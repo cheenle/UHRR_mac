@@ -23,6 +23,9 @@
 - Audio device/capture/playback checks: `python3 dev_tools/test_audio.py` and `python3 dev_tools/test_audio_capture.py`; these require usable local audio devices.
 - `dev_tools/test_connection.py` targets `https://localhost:8888/`, which does not match the current default `8877`; adjust before using it.
 - Hardware-facing checks may require PortAudio/PyAudio, Hamlib/rigctld, serial devices, RTL-SDR, TLS certs, or ATR-1000 network access.
+- `mrrc_multi.sh` rotates logs on start: the previous instance's tail survives as `<log>.prev` — the first place to look after a crash/restart.
+- Runtime log markers (F4/F4b, V6.0.2): `IOLoop watchdog armed` at startup; `⏱️ TX audio init: 枚举 Xs, p.open Xs` on every PTT (healthy <0.2s each); `📦 TX init took ... flushing N buffered frames` when F4b buffering engaged; `🚨 IOLoop stall` + full thread dump if the event loop wedges. TX modulation is verified fastest via ATR-1000 power readings (swinging 100W+ = modulated, flat ~7W carrier = silent TX).
+- Bluetooth audio devices as macOS default output churn A2DP (`bluetoothd` `Jitter Buffer ... error 312`) and stall CoreAudio globally, slowing MRRC `p.open()`; see `docs/current/reliability/RC-001-ioloop-wedge-and-tx-silence.md` §7 for probes.
 
 ## Architecture Notes
 - Radio control goes through `rigctld`/Hamlib via `hamlib_wrapper.py`; audio I/O goes through PyAudio abstractions in `audio_interface.py`.
@@ -34,12 +37,14 @@
 - WDSP integration is in `wdsp_wrapper.py` plus `DSP/wdsp/`; macOS builds produce `libwdsp.dylib`, Linux builds produce `libwdsp.so`.
 - ATR-1000 integration uses `atr1000_proxy.py` with a Unix socket defaulting to `/tmp/atr1000_proxy.sock`; multi-instance configs override this via `[INSTANCE_SETTINGS]`. The proxy answers from cache only (request/response); TX `stop` zeroes the cached power/SWR so RX never shows ghost readings, and `MRRC`'s `ATR1000ProxyManager` fast-polls (250 ms) off the CTRX PTT state, broadcasting meter JSON to `/WSATR1000` clients via the IOLoop thread only.
 - **IOLoop thread-safety (V5.8.2)**: `tornado.ioloop.IOLoop.instance()` is a thread-dependent alias of `IOLoop.current()` in tornado 6.5. Background threads (ATR-1000 reconnect `Timer`, rigctld executor via `run_in_executor`, `PTTSafetyMonitor`) MUST use the main-thread-pinned global `MAIN_IOLOOP` (defined at module top) for `add_callback`/`add_timeout`, never `IOLoop.instance()` — calling it from a worker thread creates a separate asyncio loop whose queued callbacks never run (ATR meter/PTT broadcasts silently die, frontend shows only the initial snapshot).
+- **TX init is async (F4/F4b, V6.0.2)**: `WS_AudioTXHandler` `m:` → `_start_tx_init_async` runs `TX_init` (incl. blocking `p.open()`) on a `run_in_executor` worker — never call `TX_init` synchronously from `on_message`. Frames arriving during init buffer into `_tx_pending_frames` (250-frame cap) and flush on completion; `s:`/`on_close` set `_tx_init_cancel` and clear the buffer; the discard path force-releases PTT. `audio_interface.py` caches the output-device index (`_output_device_index_cache`, validated by name on each hit). A heartbeat watchdog (`arm_ioloop_watchdog`, 2s/8s) dumps all thread stacks if the IOLoop wedges. Full story: `docs/current/reliability/RC-001-ioloop-wedge-and-tx-silence.md`.
 
 ## Audio/PTT Guardrails
 - TX/PTT timing is fragile; preserve the flow documented in `docs/legacy/audio/PTT_Audio_Postmortem_and_Best_Practices.md` and implemented in `www/tx_button_optimized.js`.
 - `rx_worklet_processor.js` uses a **millisecond watermark** buffer (not legacy frame counts). Normal RX needs `prebufferMs` well above one frame; safe desktop config is `prebufferMs: 200, recoveryMs: 80, maxMs: 600`.
 - TX-to-RX intentionally drops to a transient low-buffer window (`prebufferMs: 20`, ≈1 frame) in `tx_button_optimized.js`, then restores `prebufferMs: 200 / recoveryMs: 80 / maxMs: 600` after 200 ms; do not remove that timer.
 - PTT release must clear all three queues: `client.Wavframes = []`, `PyAudioCapture._flush_opus_accumulator = True`, and JS `AudioWorklet.flush()` plus `AudioRX_audiobuffer = []`.
+- F4b added a fourth queue to that release contract: `WS_AudioTXHandler._tx_pending_frames` must be cleared on `s:`/`on_close`, and any discard path must force-release PTT (`setPTT("false")`) to cover the init race — see RC-001 §5 for why.
 - `tune`, `cq`, and `toggleaudioRX()` stop/unmute paths must keep equivalent flush behavior because they can bypass the main `setPTT` cleanup path.
 - `stream.read()` capture sizes should align to Opus frames; `audio_interface.py` reads 960 samples per call (20 ms at 48 kHz → exactly one 320-sample Opus frame after 3:1 decimation to 16 kHz).
 
@@ -53,6 +58,7 @@
 - `docs/legacy/tooling/CLAUDE.md` has the website nav/version/path gotchas; check it before changing many `website/*.html` pages.
 
 ## Existing Guidance
+- `docs/current/reliability/` indexes the reliability/safety case series (RC-001: IOLoop wedge + BT-DAC-churn silent TX); consult it before touching TX init, the IOLoop, or macOS audio device handling.
 - `docs/legacy/methodology/aldv2/Aladdin_V2_Methodology.md` is the top-level engineering methodology; `.opencode/skills/aladdin-v2/SKILL.md` turns it into a repo-local OpenCode skill.
 - `docs/legacy/tooling/CLAUDE.md` has broader architecture notes; prefer this file for compact OpenCode-specific gotchas.
 - `docs/legacy/root/AOD.md`, `docs/legacy/root/DSP.md`, and `docs/legacy/operations/Multi_Instance_Setup.md` are useful when changing wiring, DSP, or multi-instance behavior.

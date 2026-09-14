@@ -18,8 +18,11 @@ docs/current/
 │   └── vibe-coding-practice.md
 ├── operations/
 │   └── runtime-and-verification.md
-└── audit/
-    └── documentation-cross-check.md
+├── audit/
+│   └── documentation-cross-check.md
+└── reliability/
+    ├── README.md                          (可靠性/安全性案例索引)
+    └── RC-001-ioloop-wedge-and-tx-silence.md
 ```
 
 ## Source Of Truth

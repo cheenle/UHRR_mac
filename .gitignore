@@ -9,6 +9,7 @@ __pycache__/
 
 # Logs
 *.log
+*.log.prev
 *.pid
 nohup.out
 

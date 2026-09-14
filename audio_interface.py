@@ -855,6 +855,13 @@ class PyAudioCapture(threading.Thread):
         """Return a snapshot of the active recording session."""
         return _recording_session.status()
 
+# F4b (2026-09-14): 输出设备索引缓存。蓝牙音频设备抖动时，CoreAudio 的
+# 每次设备查询都可能阻塞数百毫秒，而每次按 PTT 都全量枚举所有设备是
+# p.open 慢的主要来源之一。命中缓存后用 1 次查询校验名称/输出通道，
+# 失配（设备插拔导致索引变化）再回退全量枚举。
+_output_device_index_cache = {}
+
+
 class PyAudioPlayback:
     """PyAudio-based replacement for ALSA playback"""
     
@@ -888,17 +895,12 @@ class PyAudioPlayback:
         playback_rate = op_rate if is_encoded else itrate
         
         # Initialize PyAudio
+        _t_init0 = time.time()
         self.p = pyaudio.PyAudio()
         
-        # List available audio devices for debugging
-        print("Available audio output devices:")
-        for i in range(self.p.get_device_count()):
-            info = self.p.get_device_info_by_index(i)
-            if info['maxOutputChannels'] > 0:
-                print(f"  {i}: {info['name']} (channels: {info['maxOutputChannels']})")
-        
-        # Get device index
+        # Get device index（F4b: 带缓存；缓存未命中时打印完整设备列表）
         device_index = self._get_device_index(config['AUDIO']['outputdevice'])
+        _t_enum = time.time()
         
         try:
             try:
@@ -915,6 +917,9 @@ class PyAudioPlayback:
                     frames_per_buffer=tx_frames_per_buffer
                 )
                 print(f'PyAudio output stream opened successfully at {playback_rate}Hz (Opus: {is_encoded}, buf: {tx_frames_per_buffer})')
+                # F4b: 耗时打点 —— 蓝牙设备抖动时 p.open 可能从 0.3s 到 15s+，
+                # 日志里量化枚举/打开两段耗时，定位慢在哪
+                print(f'⏱️ TX audio init: 枚举 {_t_enum - _t_init0:.2f}s, p.open {time.time() - _t_enum:.2f}s')
             except Exception as e:
                 print(f"Failed to open PyAudio output stream: {e}")
                 # Try with default device
@@ -948,14 +953,32 @@ class PyAudioPlayback:
         if device_name == "" or device_name is None:
             return None  # Use default device
         
-        # Try to find device by name (partial match)
+        key = device_name.lower()
+        # F4b: 缓存命中 → 1 次查询校验（蓝牙插拔会改变索引，必须验证）
+        cached = _output_device_index_cache.get(key)
+        if cached is not None:
+            try:
+                info = self.p.get_device_info_by_index(cached)
+                if key in info['name'].lower() and info['maxOutputChannels'] > 0:
+                    print(f"Found output device (cached): {info['name']} (index {cached})")
+                    return cached
+            except Exception:
+                pass
+            # 校验失败（索引已变）：作废缓存，走全量枚举
+            _output_device_index_cache.pop(key, None)
+        
+        # List available audio output devices for debugging（仅全量枚举时）
+        print("Available audio output devices:")
         try:
             for i in range(self.p.get_device_count()):
                 info = self.p.get_device_info_by_index(i)
+                if info['maxOutputChannels'] > 0:
+                    print(f"  {i}: {info['name']} (channels: {info['maxOutputChannels']})")
                 if device_name.lower() in info['name'].lower():
                     # Check if device supports the required channels
                     if info['maxOutputChannels'] > 0:
                         print(f"Found output device: {info['name']} (index {i})")
+                        _output_device_index_cache[key] = i
                         return i
         except Exception as e:
             print(f"Error finding device '{device_name}': {e}")

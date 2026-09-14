@@ -710,6 +710,82 @@ class WS_AudioTXHandler(AuthenticatedWebSocketHandler):
 		tornado.ioloop.IOLoop.instance().add_timeout(datetime.timedelta(seconds=0.2), self.stoppttontimeout)
 
 
+	def _start_tx_init_async(self, msg):
+		"""F4 fix (2026-09-14 事故): TX_init → PyAudioPlayback.__init__ 在 IOLoop
+		线程同步执行 p.open()，CoreAudio 卡顿（如蓝牙设备抖动）会把整个事件
+		循环楔死 —— 进程活着但 8891 端口完全无响应。这里把初始化卸载到
+		线程执行器；构造期间的重复 m: 直接丢弃（TX 重连会重发）。
+		F4b: p.open 在工作线程仍可能阻塞数秒（实测 0.3s~15s+，蓝牙设备
+		抖动时），阻塞期间到达的 TX 音频帧先入 _tx_pending_frames 缓冲，
+		初始化完成后补放，消除"按了 PTT 电台发射但全程无调制"的静默窗口。
+		竞态处理：若构造期间收到 s:/on_close（用户已松开 PTT），置
+		_tx_init_cancel，工作线程完成后不再自动键控电台（安全关键，
+		防止用户松手后电台重新发射），并强制释放 PTT 覆盖一切乱序。"""
+		if getattr(self, '_tx_init_busy', False):
+			print("⚠️ TX init already in progress, dropping duplicate m:")
+			return
+		self._tx_init_busy = True
+		self._tx_init_cancel = False
+		self._tx_pending_frames = []
+
+		def _run():
+			ok = False
+			_t0 = time.time()
+			try:
+				self.TX_init(msg)
+				ok = True
+			except Exception as e:
+				logger.error(f'TX init worker failed: {e}')
+			finally:
+				self._tx_init_busy = False
+			_elapsed = time.time() - _t0
+			# 构造完成才收到停止请求：丢弃播放实例，绝不补键 PTT
+			if ok and getattr(self, '_tx_init_cancel', False):
+				self._tx_init_cancel = False
+				print(f"⚠️ TX init finished after stop request (init took {_elapsed:.2f}s) — discarding playback, not keying PTT")
+				pending = getattr(self, '_tx_pending_frames', [])
+				self._tx_pending_frames = []
+				try:
+					if getattr(self, 'audio_playback', None):
+						self.audio_playback.close()
+						self.audio_playback = None
+					if tx_audio_analyzer and tx_audio_analyzer.is_recording:
+						tx_audio_analyzer.stop_recording()
+				except Exception as e:
+					logger.error(f'Error discarding late TX init: {e}')
+				# 安全关键：s:/on_close 与 TX_init 自动键控的竞态乱序下，
+				# TX_init 可能已补键 PTT —— 这里无条件强制释放（setPTT 线程安全）
+				try:
+					if CTRX and CTRX.mrrc_ptt_active:
+						print("🔴 丢弃路径强制释放 PTT（覆盖 init 竞态补键）")
+						CTRX.setPTT("false")
+				except Exception as e:
+					logger.error(f'Force PTT release in discard path failed: {e}')
+				return
+			# 正常路径：补放初始化期间缓存的帧（用户已发射但音频迟到）
+			if ok:
+				pending = getattr(self, '_tx_pending_frames', [])
+				self._tx_pending_frames = []
+				if pending and getattr(self, 'audio_playback', None):
+					print(f"📦 TX init took {_elapsed:.2f}s — flushing {len(pending)} buffered frames")
+					for frame in pending:
+						self.audio_playback.write(frame)
+				elif _elapsed > 1.0:
+					print(f"⏱️ TX init took {_elapsed:.2f}s (no frames buffered)")
+
+		def _done(fut):
+			try:
+				fut.result()
+			except Exception as e:
+				logger.error(f'TX init executor error: {e}')
+
+		try:
+			fut = tornado.ioloop.IOLoop.current().run_in_executor(None, _run)
+			fut.add_done_callback(_done)
+		except Exception as e:
+			self._tx_init_busy = False
+			logger.error(f'Failed to schedule TX init: {e}')
+
 	def TX_init(self, msg) :
 
 		parts = [int(i) for i in msg.split(',')]
@@ -747,20 +823,24 @@ class WS_AudioTXHandler(AuthenticatedWebSocketHandler):
 					CTRX.setPTT("true")
 					
 					# 广播PTT状态变化
+					# F4 fix: TX_init 现在运行在工作线程，write_message
+					# 非线程安全，统一 marshal 回 IOLoop（同 setPTT 的做法）
 					try:
 						global ControlTRXHandlerClients
-						clients_to_remove = []
-						for client in ControlTRXHandlerClients:
-							try:
-								if client.ws_connection and not client.close_code:
-									client.write_message("getPTT:true")
-							except Exception:
-								clients_to_remove.append(client)
-						for client in clients_to_remove:
-							if client in ControlTRXHandlerClients:
-								ControlTRXHandlerClients.remove(client)
+						def _broadcast_ptt_on():
+							clients_to_remove = []
+							for client in ControlTRXHandlerClients:
+								try:
+									if client.ws_connection and not client.close_code:
+										client.write_message("getPTT:true")
+								except Exception:
+									clients_to_remove.append(client)
+							for client in clients_to_remove:
+								if client in ControlTRXHandlerClients:
+									ControlTRXHandlerClients.remove(client)
+						MAIN_IOLOOP.add_callback(_broadcast_ptt_on)
 					except Exception as e:
-						logger.error(f"Error broadcasting PTT status: {e}")
+						logger.error(f"Error scheduling PTT status broadcast: {e}")
 					
 			except Exception as e:
 				logger.error(f'PyAudio TX initialization failed: {e}')
@@ -783,6 +863,13 @@ class WS_AudioTXHandler(AuthenticatedWebSocketHandler):
 			AudioTXHandlerClients.append(self)
 			print('new connection on AudioTXHandler socket.')
 		last_AudioTXHandler_msg_time=time.time()
+		# F4 fix: TX 初始化在工作线程异步执行，这两个标志处理
+		# "初始化阻塞期间用户已松开 PTT" 的竞态（详见 _start_tx_init_async）
+		self._tx_init_busy = False
+		self._tx_init_cancel = False
+		# F4b: 初始化阻塞期间到达的 TX 音频帧临时缓冲（上限 5 秒），
+		# 初始化完成后补放，避免 p.open 慢时整段静默发射
+		self._tx_pending_frames = []
 		self.stoppttontimeout()
 		self.set_nodelay(True)
 
@@ -794,10 +881,13 @@ class WS_AudioTXHandler(AuthenticatedWebSocketHandler):
 			self.miss_count = 0
 		
 		if str(data).startswith('m:') :
-			self.TX_init(str(data[2:]))
+			self._start_tx_init_async(str(data[2:]))
 		elif str(data).startswith('s:') :
 			# 立即停止音频播放，清除缓冲区，并关闭PTT
 			print("🛑 立即停止音频播放并关闭PTT")
+			# F4 fix: 若 TX 初始化还在工作线程阻塞（p.open 未返回），
+			# 置取消标志，工作线程完成后不得再自动键控 PTT
+			self._tx_init_cancel = True
 			if PYAUDIO_AVAILABLE:
 				if hasattr(self, 'audio_playback') and self.audio_playback:
 					self.audio_playback.close()
@@ -808,6 +898,8 @@ class WS_AudioTXHandler(AuthenticatedWebSocketHandler):
 					self.inp = None
 			# 清除任何待播放的音频数据
 			print("🧹 清除音频缓冲区")
+			# F4b: 同时丢弃初始化期间缓存的帧
+			self._tx_pending_frames = []
 			# 🎙️ TX 音频分析：停止录音
 			if tx_audio_analyzer and tx_audio_analyzer.is_recording:
 				tx_audio_analyzer.stop_recording()
@@ -860,6 +952,14 @@ class WS_AudioTXHandler(AuthenticatedWebSocketHandler):
 						add_recording_audio(
 							"tx", played_pcm, self.tx_input_rate, tx_timestamp_ns
 						)
+			elif getattr(self, '_tx_init_busy', False):
+				# F4b: p.open 在工作线程阻塞期间缓存帧（标签剥离在上面的
+				# 公共代码已完成），上限 250 帧≈5 秒，超出丢最旧；
+				# 初始化完成后由 _run 补放
+				pending = self._tx_pending_frames
+				if len(pending) >= 250:
+					pending.pop(0)
+				pending.append(data)
 			else:
 				# Fallback to ALSA
 				if hasattr(self, 'inp') and self.inp:
@@ -879,6 +979,10 @@ class WS_AudioTXHandler(AuthenticatedWebSocketHandler):
 
 	def on_close(self):
 		global AudioTXHandlerClients
+		# F4 fix: 同 s: 分支 —— 初始化阻塞期间连接断开也不得补键 PTT
+		self._tx_init_cancel = True
+		# F4b: 丢弃初始化期间缓存的帧
+		self._tx_pending_frames = []
 		if PYAUDIO_AVAILABLE:
 			if hasattr(self, 'audio_playback') and self.audio_playback:
 				self.audio_playback.close()
@@ -4290,6 +4394,39 @@ class MainHandler(BaseHandler):
 		self.redirect("/mobile")
 		return
 
+def arm_ioloop_watchdog(interval=2.0, threshold=8.0):
+	"""IOLoop 假死看门狗（2026-09-14 8891 无响应事故后引入）。
+
+	心跳超时本身调度在 IOLoop 上：若它实际触发时间比预定时间晚超过
+	threshold 秒，说明事件循环线程被同步阻塞（如在 IOLoop 线程上执行
+	p.open()/rigctld I/O 之类）。此时把所有线程栈 dump 到 stderr（进
+	MRRC 日志），下次假死可直接看到阻塞点，无需猜测。30s 冷却避免
+	持续卡死时刷屏。
+	"""
+	import faulthandler
+	state = {'cooldown_until': 0.0}
+
+	def _beat():
+		now = time.time()
+		late = now - scheduled[0]
+		if late > threshold and now >= state['cooldown_until']:
+			state['cooldown_until'] = now + 30.0
+			logger.error(
+				f"🚨 IOLoop stall: heartbeat fired {late:.1f}s late "
+				f"(threshold {threshold:.1f}s) — dumping all thread stacks:"
+			)
+			try:
+				faulthandler.dump_traceback(file=sys.stderr)
+			except Exception as e:
+				logger.error(f"faulthandler dump failed: {e}")
+		scheduled[0] = time.time() + interval
+		MAIN_IOLOOP.add_timeout(datetime.timedelta(seconds=interval), _beat)
+
+	scheduled = [time.time() + interval]
+	MAIN_IOLOOP.add_timeout(datetime.timedelta(seconds=interval), _beat)
+	# 用 print 而非 logger.info：basicConfig 级别是 WARNING，info 不进日志
+	print(f"IOLoop watchdog armed (interval={interval}s, threshold={threshold}s)")
+
 if __name__ == "__main__":
 	# 加载频道记忆（服务端持久化）
 	load_memory_channels()
@@ -4386,4 +4523,5 @@ if __name__ == "__main__":
 	)
 	http_server.listen(int(config['SERVER']['port']))
 	print('HTTP server started.')
+	arm_ioloop_watchdog()
 	tornado.ioloop.IOLoop.instance().start()
