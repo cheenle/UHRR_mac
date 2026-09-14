@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [V6.0.2] - 2026-09-14
 
+### 🪟 Windows 安装包发布（首个内置 WDSP 库的版本）
+
+- 本版发布 `MRRC-Setup.exe`（45,411,773 bytes，SHA256 `56EFAA63…068E`），包含 V6.0.1 的 NR2 SSB 语音保护、WDSP 设置页、菜单瘦身，以及 V6.0.2 的 IOLoop/TX 初始化三项修复。
+- **首次内置 `libwdsp.dll`**：此前（含 V6.0.0）Windows 包不含 WDSP 库，NR2 在 Windows 上不可用；现由 `packaging/windows/build_wdsp_dll.ps1` 用 MSYS2/MinGW-w64 构建并随包提供。
+
 ### 🚨 修复 8891 端口突发无响应（IOLoop 被同步 `p.open()` 楔死）
 
 - **根因**：按 PTT 时 `WS_AudioTXHandler.on_message('m:')` 在 IOLoop 线程同步调 `TX_init` → `PyAudioPlayback.__init__` 的 `p.open()`（`audio_interface.py:909`）。CoreAudio 卡顿（当日蓝牙音频设备 AVDTP 流抖动）时该调用长时间不返回，整个事件循环停摆：进程活着、端口无响应、所有 WebSocket 断连。F2/F3 修复已把 `stream.write()` 与 rigctld I/O 挪出 IOLoop，唯独漏了构造函数。
@@ -25,7 +30,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - 新增 `packaging/windows/build_wdsp_dll.ps1`：用 MSYS2/MinGW-w64 构建 `libwdsp.dll`（`-static`，运行时只依赖 `KERNEL32.dll`/`msvcrt.dll`），并自动校验导出符号与依赖。
 - 为让 WDSP 源码能在 GCC/MinGW 下编译，新增 `DSP/patches/2026-09-13-windows-mingw-build.patch`：平台守卫补 `__MINGW32__`、`iobuffs.h` 的 `struct _iob` 改名避开 MSVCRT 同名符号、POSIX shim 的 `EnterCriticalSection`/`CloseHandle` 等在 mingw 下前缀化以免与 `libkernel32` 冲突。
-- **V6.0.0 及更早的 Windows 包没有 WDSP 库**（`vendor\wdsp\windows\bin\x64\` 是空的），所以 Windows 上 NR2 一直不可用；6.0.1 起随包提供。
+- **V6.0.0 及更早的 Windows 包没有 WDSP 库**（`vendor\wdsp\windows\bin\x64\` 是空的），所以 Windows 上 NR2 一直不可用；6.0.2 安装包起随包提供。
 
 ### 🎛️ 新增独立「WDSP 设置」页 + 服务端热生效参数
 

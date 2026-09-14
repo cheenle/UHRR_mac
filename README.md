@@ -23,7 +23,7 @@ A modern web-based remote control system optimized for mobile devices, enabling 
 > MMSE，新增每 bin 最大衰减（level 1–4 = −6/−12/−16/−20 dB）与干湿混合，AGC 补偿封顶；
 > 新增独立「WDSP 设置」页可热调 NR2 参数，RX 音频约 +15 dB（`panel_gain` 可调回）；
 > 修复 NR2 关闭/改带通后 RX 静音、`fexchange0` 饥饿响 click、ATU 回调 `import os` 缺失。
-> Windows 安装包自 V6.0.1 起首次内置 WDSP 库（此前 Windows 上 WDSP/NR2 不可用）。
+> Windows 安装包自 V6.0.2 起首次内置 WDSP 库（此前 Windows 上 WDSP/NR2 不可用）。
 
 > 🎉 **V6.0.0 更新**: Windows 安装包正式发布 — 首启自动生成本机登录账号与
 > `MRRC Quick Start.txt`，修复 PyInstaller 安装版 `/mobile` 页面资源路径，移除

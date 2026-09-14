@@ -93,6 +93,6 @@ If the users file already exists, the launcher shows the first account from `MRR
 
 - No RTL-SDR DLL is required in V6.0.0+.
 - No Unix socket support is required on Windows; ATR-1000 IPC uses localhost TCP.
-- WDSP ships with the installer from V6.0.1 (`vendor\wdsp\windows\bin\x64\libwdsp.dll`, built with MinGW-w64). It is still optional: if the DLL is missing, WDSP is disabled but startup is unaffected.
+- WDSP ships with the installer from V6.0.2 (`vendor\wdsp\windows\bin\x64\libwdsp.dll`, built with MinGW-w64). It is still optional: if the DLL is missing, WDSP is disabled but startup is unaffected.
 - If there is no audio device on a VM, MRRC still starts in web/control mode.
 - The mobile UI is available at `/mobile` after login.
