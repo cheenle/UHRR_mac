@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MRRC 项目全历程复盘 — 从 2024 到 2026 的工程演进</title>
+    <meta name="description" content="MRRC 远程电台控制系统全历程复盘：六阶段演进、五类问题图谱、方法验证清单、验证手段演化史、未来展望与元教训。数据全部来自 git 全史与版本记录。">
+    <meta name="keywords" content="MRRC, 项目复盘, 远程电台, 业余无线电, 工程方法论, 可靠性, FDE, Aladdin V2">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../css/octen.css?v=2">
+    <link rel="stylesheet" href="../css/sunsdrmobile.css?v=1">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .hero { min-height: auto; padding: 160px 24px 80px; }
+        .section { padding: 96px 0; border-bottom: 1px solid var(--border); }
+        .section:last-child { border-bottom: none; }
+        .section-header { text-align: center; margin-bottom: 56px; }
+        .section-label { display: inline-block; font-size: 0.8rem; color: var(--accent); text-transform: uppercase; letter-spacing: 0.12em; margin-bottom: 14px; }
+        .section-title { font-size: 2.25rem; font-weight: 700; letter-spacing: -0.03em; }
+        .section-subtitle { color: var(--text-secondary); font-size: 1.05rem; margin-top: 12px; max-width: 760px; margin-left: auto; margin-right: auto; }
+        .grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 24px; }
+        .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px; }
+        .card-lite { background: var(--bg-card); border: 1px solid var(--border); border-radius: 16px; padding: 28px; transition: all .25s; }
+        .card-lite:hover { border-color: var(--accent); transform: translateY(-3px); }
+        .card-lite .icon { width: 54px; height: 54px; border-radius: 14px; display: flex; align-items: center; justify-content: center; background: var(--accent-glow); color: var(--accent); font-size: 1.4rem; margin-bottom: 18px; }
+        .card-lite h3 { font-size: 1.2rem; margin-bottom: 10px; }
+        .card-lite p, .card-lite li { color: var(--text-secondary); font-size: .92rem; line-height: 1.7; }
+        .card-lite ul { list-style: none; padding: 0; }
+        .card-lite li { padding: 5px 0 5px 18px; position: relative; }
+        .card-lite li::before { content: '•'; position: absolute; left: 0; color: var(--accent); }
+        .card-lite .ptag { display:inline-block; font-family:var(--font-mono); font-size:.66rem; color:var(--accent); background:var(--accent-glow); padding:2px 8px; border-radius:5px; margin-bottom:6px; letter-spacing:.04em; }
+        .tool-table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: .9rem; }
+        .tool-table th, .tool-table td { text-align: left; padding: 14px 16px; border-bottom: 1px solid var(--border); vertical-align: top; }
+        .tool-table th { color: var(--accent); font-weight: 600; font-size: .8rem; text-transform: uppercase; letter-spacing: .06em; }
+        .tool-table td { color: var(--text-secondary); line-height: 1.6; }
+        .tool-table td strong { color: var(--text-primary); }
+        .tool-table tr:last-child td { border-bottom: none; }
+        .principle-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 18px; }
+        .principle { display: flex; gap: 14px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 14px; padding: 22px; }
+        .principle-num { width: 34px; height: 34px; border-radius: 9px; background: var(--accent-glow); color: var(--accent); display: flex; align-items: center; justify-content: center; font-weight: 700; flex-shrink: 0; }
+        .principle p { color: var(--text-secondary); line-height: 1.6; font-size: .9rem; }
+        .quote-box { background: linear-gradient(135deg, var(--accent-glow), rgba(245,158,11,.08)); border: 1px solid var(--border); border-radius: 18px; padding: 34px; color: var(--text-secondary); line-height: 1.8; }
+        .quote-box strong { color: var(--text-primary); }
+        .phase-tag { display:inline-block; font-family:var(--font-mono); font-size:.68rem; font-weight:700; color:var(--accent); background:var(--accent-glow); padding:1px 8px; border-radius:5px; margin-right:8px; vertical-align:middle; }
+        .code-inline { font-family: var(--font-mono); font-size: .82em; color: var(--accent); background: rgba(0,0,0,.3); padding: 1px 6px; border-radius: 5px; }
+        .verdict-yes { color: #10b981; font-weight: 700; }
+        .verdict-no { color: #ef4444; font-weight: 700; }
+        .new-badge { display: inline-block; font-size: .66rem; background: var(--accent); color: #000; padding: 2px 7px; border-radius: 5px; margin-left: 8px; font-weight: 700; letter-spacing: .04em; vertical-align: middle; }
+        @media (max-width: 900px) { .grid-2, .grid-3 { grid-template-columns: 1fr; } .hero { padding-top: 120px; } .tool-table { font-size: .8rem; } }
+    </style>
+</head>
+<body data-site="mrrc">
+    <nav class="navbar">
+        <div class="container navbar-content">
+            <a href="index.html" class="logo"><span class="logo-icon">📻</span><span>MRRC</span></a>
+            <ul class="nav-links">
+                <li><a href="index.html">首页</a></li>
+                <li><a href="docs/features.html">功能</a></li>
+                <li><a href="index.html#demo">演示</a></li>
+                <li><a href="docs/installation.html">安装</a></li>
+                <li><a href="docs/design.html">设计 &amp; 架构</a></li>
+                <li><a href="docs/docs.html">文档</a></li>
+                <li><a href="agentic.html">Agentic</a></li>
+                <li><a href="aladdin-v2.html">阿拉丁 V2</a></li>
+                <li><a href="retrospective.html">项目复盘</a></li>
+                <li><a href="efhw/index.html">EFHW</a></li>
+                <li><a href="https://github.com/cheenle/UHRR_mac" target="_blank" rel="noopener"><i class="fab fa-github"></i> GitHub</a></li>
+            </ul>
+            <div class="nav-actions">
+                <a href="../retrospective.html" class="lang-btn">EN</a>
+                <button class="mobile-menu-toggle"><i class="fas fa-bars"></i></button>
+            </div>
+        </div>
+    </nav>
+
+    <section class="hero">
+        <div class="hero-content">
+            <div class="hero-badge"><i class="fas fa-clock-rotate-left"></i><span>Project Retrospective · 2026-09</span></div>
+            <h1 class="hero-title">两年，<br><span class="gradient">一次完整复盘</span></h1>
+            <p class="hero-subtitle" style="max-width: 780px;">
+                从 2024 年 10 月的第一行代码到 2026 年 9 月的 V6.0.2：六阶段演进、五类反复出现的问题、被证明有效的方法、验证手段的演化，以及面向未来的展望。所有结论由 git 全史与版本记录写成——没有回忆，没有美化，只有证据。
+            </p>
+            <div class="hero-stats">
+                <div class="stat-item"><span class="stat-value">400+</span><span class="stat-label">Commits 总计</span></div>
+                <div class="stat-item"><span class="stat-value">35</span><span class="stat-label">发布版本</span></div>
+                <div class="stat-item"><span class="stat-value">6</span><span class="stat-label">演进阶段</span></div>
+                <div class="stat-item"><span class="stat-value">7</span><span class="stat-label">元教训</span></div>
+            </div>
+        </div>
+    </section>
+
+    <section class="section" id="overview">
+        <div class="container">
+            <div class="section-header">
+                <span class="section-label">Overview</span>
+                <h2 class="section-title">数据概览</h2>
+                <p class="section-subtitle">本仓（UHRR_mac，2026-03-06 起）206 commits；父项目 UHRR（2024-10 起）约 208 commits。合计 400+ 次提交、35 个版本。</p>
+            </div>
+            <div class="grid-3">
+                <div class="card-lite">
+                    <div class="icon"><i class="fas fa-chart-line"></i></div>
+                    <h3>月度节奏</h3>
+                    <p>3月 <strong>48</strong> / 4月 4 / 5月 35 / 6月 32 / 7月 1 / <strong>8月 55</strong>（最狠月份）/ 9月 31。低谷期是"用出来的"——产品在真实通联中跑，问题在积累。</p>
+                </div>
+                <div class="card-lite">
+                    <div class="icon"><i class="fas fa-bolt"></i></div>
+                    <h3>发布峰值日</h3>
+                    <p><strong>2026-08-09</strong> 单日 5 个版本（V5.7.1 → V5.8.2）：RagChew 修复、ATR SWR 守卫、IOLoop 去阻塞、线程错位修复，一场集中爆发的大整修。</p>
+                </div>
+                <div class="card-lite">
+                    <div class="icon"><i class="fas fa-layer-group"></i></div>
+                    <h3>平台演化</h3>
+                    <p>树莓派/Linux（父项目）→ <strong>macOS</strong>（本仓起点，2026-03）→ <strong>Windows 安装包</strong>（V6.0.0，2026-09）。一套代码三个平台。</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="section" id="phases">
+        <div class="container">
+            <div class="section-header">
+                <span class="section-label">Journey</span>
+                <h2 class="section-title">六阶段历程</h2>
+                <p class="section-subtitle">每个阶段都由 git 提交链直接写成。</p>
+            </div>
+            <div class="grid-2">
+                <div class="card-lite">
+                    <span class="phase-tag">Phase 0 · 2024-10 → 2026-02</span>
+                    <h3>从零到可用（父项目）</h3>
+                    <ul>
+                        <li>V1.0 → V4.3：核心架构定型（Tornado + WebSocket + PyAudio + Hamlib + Opus）</li>
+                        <li>桌面/移动双界面、基础录音</li>
+                        <li>FDE 驻场模式确立：作者自己（BG1SB）是第一个重度用户，日常通联即测试场</li>
+                    </ul>
+                </div>
+                <div class="card-lite">
+                    <span class="phase-tag">Phase 1 · 2026-03 · 48 commits</span>
+                    <h3>Mac 移植爆发期</h3>
+                    <ul>
+                        <li>ATR-1000 天调接入 saga：SYNC 节流、防断连、智能学习（V4.5.11→V4.5.18）</li>
+                        <li>首次线程化战役：TX AudioWorklet 重构 → 果断回滚（<span class="code-inline">d4a40c2</span>）</li>
+                        <li>高品质语音版、WDSP、多实例部署、远程隧道、中英双语界面</li>
+                    </ul>
+                </div>
+                <div class="card-lite">
+                    <span class="phase-tag">Phase 2 · 2026-04 · 4 commits</span>
+                    <h3>静默期</h3>
+                    <ul>
+                        <li>只有移动端正修复 + WDSP NF，月底 V5.0.0 移动端 UI 现代化</li>
+                        <li>低提交量 ≠ 停滞：这是真实使用积累问题的阶段</li>
+                    </ul>
+                </div>
+                <div class="card-lite">
+                    <span class="phase-tag">Phase 3 · 2026-05 → 06 · 67 commits</span>
+                    <h3>音质军备竞赛 + 方法落成</h3>
+                    <ul>
+                        <li>RagChew TX 音频链（V5.1）、RX 引擎重写（V5.2）、卡顿修复再回滚（V5.3.1）</li>
+                        <li>降噪第一战：NR2 Gaussian 重写消除"数码音"</li>
+                        <li>ATR 学习 saga 四连修：假 SWR 污染 → 缓冲器 → 继电器保留 → 去重</li>
+                        <li>FDE 实践指导书（05-10）→ Aladdin V2（06-06）→ SDD 浮出水面</li>
+                    </ul>
+                </div>
+                <div class="card-lite">
+                    <span class="phase-tag">Phase 4 · 2026-08 · 55 commits</span>
+                    <h3>V5.7/V5.8 大整修</h3>
+                    <ul>
+                        <li>高保真音频：48kHz 全带宽 / 64kbps CBR / 软膝限幅 / 水印缓冲</li>
+                        <li>整体删除 FT8/CW 解码器（含模型与前端页）——减法即架构</li>
+                        <li>全面代码审查（<span class="code-inline">8b741b1</span>）+ IOLoop 去阻塞系列（F3 / MAIN_IOLOOP）</li>
+                        <li>iOS 后台音频修复、单声道录音时间轴（spec→plan→实现 四连提交）</li>
+                    </ul>
+                </div>
+                <div class="card-lite">
+                    <span class="phase-tag">Phase 5 · 2026-09 · 进行中</span>
+                    <h3>跨平台 + 降噪深水区 + RC-001</h3>
+                    <ul>
+                        <li>V6.0.0 Windows 安装包：从自用工具到可分发的软件</li>
+                        <li>NR2 SSB 语音保护（V6.0.1）：C 层补丁 + 红绿验收 + 拉丁方 A/B 试听</li>
+                        <li>RC-001（09-14）：IOLoop 楔死致端口假死 + 蓝牙 DAC 抖动致 TX 静默——首次把根因追出代码边界</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="section" id="problems">
+        <div class="container">
+            <div class="section-header">
+                <span class="section-label">Problem Taxonomy</span>
+                <h2 class="section-title">五类反复出现的问题</h2>
+                <p class="section-subtitle">每一类都有"修了多次才根治"的完整故事。</p>
+            </div>
+
+            <h3 style="text-align:center; margin-bottom: 28px;">线程与事件循环阻塞 —— 贯穿全程的第一主题</h3>
+            <div style="max-width: 920px; margin: 0 auto 56px;">
+                <table class="tool-table">
+                    <tr><th>时间</th><th>战役</th><th>修的什么</th></tr>
+                    <tr><td>2026-03-06</td><td><span class="code-inline">ba66892</span> / <span class="code-inline">1a072b3</span></td><td>TX 主线程阻塞、ATR 广播线程安全</td></tr>
+                    <tr><td>2026-03-07</td><td><span class="code-inline">d4a40c2</span></td><td>新架构回滚（过度工程化的代价）</td></tr>
+                    <tr><td>2026-08-09</td><td>V5.8.1 / V5.8.2</td><td>rigctld I/O 进执行器（F3）、MAIN_IOLOOP 固定</td></tr>
+                    <tr><td>2026-08-28</td><td>F2</td><td><span class="code-inline">stream.write()</span> 挪出 IOLoop</td></tr>
+                    <tr><td>2026-09-14</td><td>RC-001 F4/F4b</td><td>构造函数 <span class="code-inline">p.open()</span>——最后一个漏网的阻塞点</td></tr>
+                </table>
+                <div class="quote-box" style="margin-top: 22px;">
+                    前四次都是"哪里卡修哪里"，RC-001 才把问题总结为纪律——<strong>IOLoop 线程零阻塞</strong>，并配看门狗把纪律变成可观测的约定。从"修点"到"修面"用了 6 个月。
+                </div>
+            </div>
+
+            <div class="grid-2">
+                <div class="card-lite">
+                    <div class="icon"><i class="fas fa-wave-square"></i></div>
+                    <h3>音频质量：耳朵与指标的双轨演化</h3>
+                    <p>RNNoise → WDSP → EMNR Gaussian 重写（数码音）→ 采样率之争（水音）→ NR2 SSB 语音保护（吃语音，C 补丁）。从"听着不对"进化到四个指标断言：<strong>voiceΔ / noiseΔ / LSD / jitter</strong>。</p>
+                </div>
+                <div class="card-lite">
+                    <div class="icon"><i class="fas fa-plug-circle-exclamation"></i></div>
+                    <h3>设备脆弱性：围着不可靠外设设计</h3>
+                    <p>ATR-1000 的 SYNC 节流、防断连、学习污染、SWR 守卫，加上蓝牙 DAC——模式是同一套：<strong>代理隔离 + 缓存应答 + 压力控制 + 异常观测</strong>。协议边界永远假设对端会卡。</p>
+                </div>
+                <div class="card-lite">
+                    <div class="icon"><i class="fas fa-shield-halved"></i></div>
+                    <h3>安全：PTT 是唯一的物理安全面</h3>
+                    <p>PTT Safety Monitor（释放失败重试 + TOT 硬上限）、5 秒无帧收 PTT、方向感知状态机（R3）、SWR&gt;2 自动调谐守卫、RC-001 丢弃路径强制释放。<strong>软件状态可能骗你，电台不会</strong>——判据最终下沉到物理量。</p>
+                </div>
+                <div class="card-lite">
+                    <div class="icon"><i class="fas fa-bluetooth-b"></i></div>
+                    <h3>环境边界：代码外的世界</h3>
+                    <p>RC-001 首次把根因钉在系统外：杂牌蓝牙固件不应答 Jitter Buffer 配置（<span class="code-inline">error 312</span>）→ CoreAudio 全局阻塞 → 拖住无关的 USB 声卡。观测手段随之装进系统层（unified log / bluetoothd / 功率计 A/B）。</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="section" id="methods">
+        <div class="container">
+            <div class="section-header">
+                <span class="section-label">Validated Methods</span>
+                <h2 class="section-title">方法验证清单</h2>
+                <p class="section-subtitle">每条都有提交或文档证据；并诚实列出没有证明有效的做法。</p>
+            </div>
+            <div style="max-width: 980px; margin: 0 auto;">
+                <table class="tool-table">
+                    <tr><th>做法</th><th>证据</th><th>判定</th></tr>
+                    <tr><td><strong>spec → design → plan → tasks 链条</strong></td><td>08-28 录音四连提交、09-13 NR2 任务 1-6</td><td class="verdict-yes">✅ 复杂改动零返工</td></tr>
+                    <tr><td><strong>红绿验收（先写会失败的基线）</strong></td><td><span class="code-inline">3dc6319</span> "基线均失败" → 任务逐个通过</td><td class="verdict-yes">✅ 感觉型质量的唯一可靠路径</td></tr>
+                    <tr><td><strong>指标化音频评估</strong>（A/B + 拉丁方 + 四指标）</td><td>09-13 全套 NR2 验收</td><td class="verdict-yes">✅ 耳朵会漂移，指标不会</td></tr>
+                    <tr><td><strong>Postmortem 文化</strong></td><td>PTT_Audio_Postmortem → RC-001 案例编号制</td><td class="verdict-yes">✅ 事故变资产</td></tr>
+                    <tr><td><strong>revert 纪律</strong></td><td><span class="code-inline">d4a40c2</span>、<span class="code-inline">dab904a</span> 两次果断回滚</td><td class="verdict-yes">✅ 新不如旧就退</td></tr>
+                    <tr><td><strong>功能裁剪</strong></td><td>V5.7 删 FT8/CW 后整体更稳</td><td class="verdict-yes">✅ 功能熵与可靠性负相关</td></tr>
+                    <tr><td><strong>CHANGELOG + tag 纪律</strong></td><td>35 个版本全程记录</td><td class="verdict-yes">✅ 本复盘的数据基础</td></tr>
+                    <tr><td><strong>数据即真相</strong></td><td>ATR 功率计判调制（软件每层都"正常"时）</td><td class="verdict-yes">✅ 物理量击穿日志幻觉</td></tr>
+                    <tr><td><strong>code-first docs + audit</strong></td><td><span class="code-inline">docs/current/</span> + 交叉核对</td><td class="verdict-yes">✅ 文档不过期</td></tr>
+                    <tr><td>大而全的新架构重构</td><td>两次回滚（AudioWorklet/Worker、缓冲策略）</td><td class="verdict-no">❌ 未证明有效</td></tr>
+                    <tr><td>无验收标准的"优化"</td><td>多次音质回归后靠用户耳朵报警</td><td class="verdict-no">❌ 未证明有效</td></tr>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    <section class="section" id="evolution">
+        <div class="container">
+            <div class="section-header">
+                <span class="section-label">Verification Evolution</span>
+                <h2 class="section-title">验证手段的演化史</h2>
+                <p class="section-subtitle">方向始终一致：离物理真相更近，离猜测更远。</p>
+            </div>
+            <div class="principle-list" style="max-width: 980px; margin: 0 auto;">
+                <div class="principle"><div class="principle-num">1</div><p><strong>手工试错</strong>（父项目早期）——有什么修什么。</p></div>
+                <div class="principle"><div class="principle-num">2</div><p><strong>日志 + 功率计观察</strong>（V4.5 ATR saga）——第一次用设备读数对照软件行为。</p></div>
+                <div class="principle"><div class="principle-num">3</div><p><strong>spec/plan + 手动验收</strong>（V5.x）——复杂改动开始有文档链。</p></div>
+                <div class="principle"><div class="principle-num">4</div><p><strong>红绿测试 + 四指标 + A/B 试听</strong>（V6.0.1）——感觉型质量变成测试断言。</p></div>
+                <div class="principle"><div class="principle-num">5</div><p><strong>运行时遥测</strong>（V6.0.2）——IOLoop 看门狗 / ⏱️ 耗时打点 / .prev 死亡现场轮转。</p></div>
+                <div class="principle"><div class="principle-num">6</div><p><strong>环境 A/B 隔离实验</strong>（V6.0.2）——断开蓝牙 DAC 对照，11 段发射全部正常调制。</p></div>
+            </div>
+        </div>
+    </section>
+
+    <section class="section" id="outlook">
+        <div class="container">
+            <div class="section-header">
+                <span class="section-label">Outlook</span>
+                <h2 class="section-title">未来展望</h2>
+            </div>
+            <div class="grid-2">
+                <div class="card-lite">
+                    <div class="icon"><i class="fas fa-radio"></i></div>
+                    <h3>产品</h3>
+                    <ul>
+                        <li>多电台/多实例运营成熟化（mrrc_multi.sh 已就位）</li>
+                        <li>Windows 包发布渠道常态化</li>
+                        <li>录音/回放/分享闭环（单声道时间轴 → 通联记录资产）</li>
+                    </ul>
+                </div>
+                <div class="card-lite">
+                    <div class="icon"><i class="fas fa-microchip"></i></div>
+                    <h3>技术</h3>
+                    <ul>
+                        <li>音频输出选择器（setSinkId）——电台音频与系统默认输出解耦</li>
+                        <li>主机迁移 5GHz Wi-Fi 或有线——消除 2.4G 蓝牙共存底噪</li>
+                        <li>WDSP 调优转入指标驱动（LSD/jitter 阈值进 CI）</li>
+                        <li>ATR-1000 协议层继续深挖（学习加速、预测调谐）</li>
+                    </ul>
+                </div>
+                <div class="card-lite">
+                    <div class="icon"><i class="fas fa-gears"></i></div>
+                    <h3>工程</h3>
+                    <ul>
+                        <li>可靠性案例系列做大：RC-002+ 按编号入库，模式 ≥3 次即提炼最佳实践</li>
+                        <li>看门狗从观测升级到自愈（stall → 安全收 PTT → 受控重启）</li>
+                        <li>CI 缺失是最大工程债：红绿脚本接入自动化</li>
+                        <li>测试金字塔：单元层 → 集成层（mock rigctld / mock PyAudio）</li>
+                    </ul>
+                </div>
+                <div class="card-lite">
+                    <div class="icon"><i class="fas fa-compass"></i></div>
+                    <h3>方法</h3>
+                    <ul>
+                        <li>Product Leverage 原则排序特性：只杠杆真实通联中高频的路径</li>
+                        <li>方法论保持"从项目里长出来"的节奏，不超前设计</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="section" id="lessons">
+        <div class="container">
+            <div class="section-header">
+                <span class="section-label">Meta Lessons</span>
+                <h2 class="section-title">七条元教训</h2>
+                <p class="section-subtitle">每一条都由真实事故或回归换来。</p>
+            </div>
+            <div class="principle-list">
+                <div class="principle"><div class="principle-num">1</div><p><strong>修点不修面，问题会换着面孔回来。</strong>线程阻塞修了 5 次才变成纪律。对反复出现的同类问题：枚举所有可能点 + 立规矩 + 装探针，而不是等下一次事故。</p></div>
+                <div class="principle"><div class="principle-num">2</div><p><strong>异步化移动 bug，不消灭 bug。</strong>每把一个阻塞点挪出关键线程，必须先回答"阻塞窗口内到达的数据和事件去哪了"。</p></div>
+                <div class="principle"><div class="principle-num">3</div><p><strong>环境问题不等于代码问题。</strong>改代码之前，把观测做到系统边界（OS 日志、硬件读数）。ATR 功率计和 bluetoothd 日志比任何 Python 日志都更快定位真相。</p></div>
+                <div class="principle"><div class="principle-num">4</div><p><strong>物理量是终极断言。</strong>软件每一层都可以"看起来正常"，发射功率不会撒谎。怀疑软件链路时，先找一个硬件读数对照。</p></div>
+                <div class="principle"><div class="principle-num">5</div><p><strong>1 人 + AI 的形态被验证了，但纪律不能省。</strong>AI 加速的是执行，不是判断；没有纪律的 AI 加速只是把债还得更快。</p></div>
+                <div class="principle"><div class="principle-num">6</div><p><strong>减法是架构能力。</strong>删 FT8/CW、两次回滚、菜单瘦身——每次"砍"都对应可靠性或可用性的上升。敢于删功能的项目才有长期演进空间。</p></div>
+                <div class="principle"><div class="principle-num">7</div><p><strong>文档的复利。</strong>CHANGELOG 35 版 + 案例库 + code-first docs，让这份复盘完全由数据写成——没有回忆，没有美化，只有 git 里的证据。</p></div>
+            </div>
+        </div>
+    </section>
+
+    <section class="cta-section">
+        <div class="container">
+            <h2>数据全在仓库里</h2>
+            <p>本复盘的数据源：<code>git log</code>、<code>CHANGELOG.md</code>（35 个版本）、RC-001 可靠性案例、FDE 实践指导书、阿拉丁 V2 方法论——全部开源在 GitHub。</p>
+            <a href="https://github.com/cheenle/UHRR_mac/tree/main/docs/current/methodology/project-retrospective-2026-09.md" class="btn btn-primary btn-large" target="_blank" rel="noopener"><i class="fab fa-github"></i> 查看原始文档</a>
+        </div>
+    </section>
+
+    <script src="../js/main.js"></script>
+    <script src="../js/global-nav.js?v=6" defer data-gn="1"></script>
+</body>
+</html>

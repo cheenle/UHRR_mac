@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MRRC Retrospective — Two Years of Engineering Evolution, 2024–2026</title>
+    <meta name="description" content="Full retrospective of the MRRC remote radio control project: six phases of evolution, five recurring problem classes, validated methods, the evolution of verification, future outlook, and seven meta-lessons — all written from git history and version records.">
+    <meta name="keywords" content="MRRC, project retrospective, remote radio, amateur radio, engineering methodology, reliability, FDE, Aladdin V2">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/octen.css?v=2">
+    <link rel="stylesheet" href="css/sunsdrmobile.css?v=1">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .hero { min-height: auto; padding: 160px 24px 80px; }
+        .section { padding: 96px 0; border-bottom: 1px solid var(--border); }
+        .section:last-child { border-bottom: none; }
+        .section-header { text-align: center; margin-bottom: 56px; }
+        .section-label { display: inline-block; font-size: 0.8rem; color: var(--accent); text-transform: uppercase; letter-spacing: 0.12em; margin-bottom: 14px; }
+        .section-title { font-size: 2.25rem; font-weight: 700; letter-spacing: -0.03em; }
+        .section-subtitle { color: var(--text-secondary); font-size: 1.05rem; margin-top: 12px; max-width: 760px; margin-left: auto; margin-right: auto; }
+        .grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 24px; }
+        .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px; }
+        .card-lite { background: var(--bg-card); border: 1px solid var(--border); border-radius: 16px; padding: 28px; transition: all .25s; }
+        .card-lite:hover { border-color: var(--accent); transform: translateY(-3px); }
+        .card-lite .icon { width: 54px; height: 54px; border-radius: 14px; display: flex; align-items: center; justify-content: center; background: var(--accent-glow); color: var(--accent); font-size: 1.4rem; margin-bottom: 18px; }
+        .card-lite h3 { font-size: 1.2rem; margin-bottom: 10px; }
+        .card-lite p, .card-lite li { color: var(--text-secondary); font-size: .92rem; line-height: 1.7; }
+        .card-lite ul { list-style: none; padding: 0; }
+        .card-lite li { padding: 5px 0 5px 18px; position: relative; }
+        .card-lite li::before { content: '•'; position: absolute; left: 0; color: var(--accent); }
+        .tool-table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: .9rem; }
+        .tool-table th, .tool-table td { text-align: left; padding: 14px 16px; border-bottom: 1px solid var(--border); vertical-align: top; }
+        .tool-table th { color: var(--accent); font-weight: 600; font-size: .8rem; text-transform: uppercase; letter-spacing: .06em; }
+        .tool-table td { color: var(--text-secondary); line-height: 1.6; }
+        .tool-table td strong { color: var(--text-primary); }
+        .tool-table tr:last-child td { border-bottom: none; }
+        .principle-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 18px; }
+        .principle { display: flex; gap: 14px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 14px; padding: 22px; }
+        .principle-num { width: 34px; height: 34px; border-radius: 9px; background: var(--accent-glow); color: var(--accent); display: flex; align-items: center; justify-content: center; font-weight: 700; flex-shrink: 0; }
+        .principle p { color: var(--text-secondary); line-height: 1.6; font-size: .9rem; }
+        .quote-box { background: linear-gradient(135deg, var(--accent-glow), rgba(245,158,11,.08)); border: 1px solid var(--border); border-radius: 18px; padding: 34px; color: var(--text-secondary); line-height: 1.8; }
+        .quote-box strong { color: var(--text-primary); }
+        .phase-tag { display:inline-block; font-family:var(--font-mono); font-size:.68rem; font-weight:700; color:var(--accent); background:var(--accent-glow); padding:1px 8px; border-radius:5px; margin-right:8px; vertical-align:middle; }
+        .code-inline { font-family: var(--font-mono); font-size: .82em; color: var(--accent); background: rgba(0,0,0,.3); padding: 1px 6px; border-radius: 5px; }
+        .verdict-yes { color: #10b981; font-weight: 700; }
+        .verdict-no { color: #ef4444; font-weight: 700; }
+        @media (max-width: 900px) { .grid-2, .grid-3 { grid-template-columns: 1fr; } .hero { padding-top: 120px; } .tool-table { font-size: .8rem; } }
+    </style>
+</head>
+<body data-site="mrrc">
+    <nav class="navbar">
+        <div class="container navbar-content">
+            <a href="index.html" class="logo"><span class="logo-icon">📻</span><span>MRRC</span></a>
+            <ul class="nav-links">
+                <li><a href="index.html">Home</a></li>
+                <li><a href="docs/features.html">Features</a></li>
+                <li><a href="index.html#demo">Demo</a></li>
+                <li><a href="docs/installation.html">Installation</a></li>
+                <li><a href="docs/design.html">Design &amp; Architecture</a></li>
+                <li><a href="docs/docs.html">Docs</a></li>
+                <li><a href="agentic.html">Agentic</a></li>
+                <li><a href="aladdin-v2.html">Aladdin V2</a></li>
+                <li><a href="retrospective.html">Retrospective</a></li>
+                <li><a href="efhw/index.html">EFHW</a></li>
+                <li><a href="https://github.com/cheenle/UHRR_mac" target="_blank" rel="noopener"><i class="fab fa-github"></i> GitHub</a></li>
+            </ul>
+            <div class="nav-actions">
+                <a href="zh/retrospective.html" class="lang-btn">中文</a>
+                <button class="mobile-menu-toggle"><i class="fas fa-bars"></i></button>
+            </div>
+        </div>
+    </nav>
+
+    <section class="hero">
+        <div class="hero-content">
+            <div class="hero-badge"><i class="fas fa-clock-rotate-left"></i><span>Project Retrospective · 2026-09</span></div>
+            <h1 class="hero-title">Two Years,<br><span class="gradient">One Full Retrospective</span></h1>
+            <p class="hero-subtitle" style="max-width: 780px;">
+                From the first commit in October 2024 to V6.0.2 in September 2026: six phases of evolution, five classes of recurring problems, the methods that proved themselves, the evolution of verification, and a look forward. Every claim is written from git history and version records — no recollection, no polish, only evidence.
+            </p>
+            <div class="hero-stats">
+                <div class="stat-item"><span class="stat-value">400+</span><span class="stat-label">Total Commits</span></div>
+                <div class="stat-item"><span class="stat-value">35</span><span class="stat-label">Released Versions</span></div>
+                <div class="stat-item"><span class="stat-value">6</span><span class="stat-label">Evolution Phases</span></div>
+                <div class="stat-item"><span class="stat-value">7</span><span class="stat-label">Meta Lessons</span></div>
+            </div>
+        </div>
+    </section>
+
+    <section class="section" id="overview">
+        <div class="container">
+            <div class="section-header">
+                <span class="section-label">Overview</span>
+                <h2 class="section-title">By the Numbers</h2>
+                <p class="section-subtitle">This repo (UHRR_mac, from 2026-03-06): 206 commits. Parent project UHRR (from 2024-10): ~208 commits. 400+ commits and 35 versions combined.</p>
+            </div>
+            <div class="grid-3">
+                <div class="card-lite">
+                    <div class="icon"><i class="fas fa-chart-line"></i></div>
+                    <h3>Monthly Cadence</h3>
+                    <p>Mar <strong>48</strong> / Apr 4 / May 35 / Jun 32 / Jul 1 / <strong>Aug 55</strong> (the most intense month) / Sep 31. The quiet months were "usage-driven" — the product ran in real QSOs while problems accumulated.</p>
+                </div>
+                <div class="card-lite">
+                    <div class="icon"><i class="fas fa-bolt"></i></div>
+                    <h3>Peak Release Day</h3>
+                    <p><strong>2026-08-09</strong>: five versions in one day (V5.7.1 → V5.8.2) — RagChew fixes, ATR SWR guard, IOLoop de-blocking, thread-misplacement fix. A concentrated overhaul burst.</p>
+                </div>
+                <div class="card-lite">
+                    <div class="icon"><i class="fas fa-layer-group"></i></div>
+                    <h3>Platform Evolution</h3>
+                    <p>Raspberry Pi/Linux (parent) → <strong>macOS</strong> (this repo's origin, 2026-03) → <strong>Windows installer</strong> (V6.0.0, 2026-09). One codebase, three platforms.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="section" id="phases">
+        <div class="container">
+            <div class="section-header">
+                <span class="section-label">Journey</span>
+                <h2 class="section-title">Six Phases</h2>
+                <p class="section-subtitle">Every phase is written directly from the commit chain.</p>
+            </div>
+            <div class="grid-2">
+                <div class="card-lite">
+                    <span class="phase-tag">Phase 0 · 2024-10 → 2026-02</span>
+                    <h3>From Zero to Usable (parent project)</h3>
+                    <ul>
+                        <li>V1.0 → V4.3: core architecture settled (Tornado + WebSocket + PyAudio + Hamlib + Opus)</li>
+                        <li>Dual desktop/mobile interfaces, basic recording</li>
+                        <li>FDE mode established: the author (BG1SB) was the first heavy user — daily QSOs as the test field</li>
+                    </ul>
+                </div>
+                <div class="card-lite">
+                    <span class="phase-tag">Phase 1 · 2026-03 · 48 commits</span>
+                    <h3>The Mac Port Sprint</h3>
+                    <ul>
+                        <li>ATR-1000 tuner saga: SYNC throttling, anti-disconnect, intelligent learning (V4.5.11→V4.5.18)</li>
+                        <li>First threading battles: TX AudioWorklet refactor → decisive rollback (<span class="code-inline">d4a40c2</span>)</li>
+                        <li>High-fidelity voice edition, WDSP, multi-instance deployment, remote tunnel, bilingual UI</li>
+                    </ul>
+                </div>
+                <div class="card-lite">
+                    <span class="phase-tag">Phase 2 · 2026-04 · 4 commits</span>
+                    <h3>The Quiet Month</h3>
+                    <ul>
+                        <li>Only a mobile fix + WDSP NF; V5.0.0 mobile UI modernization at month's end</li>
+                        <li>Low commit count ≠ stagnation: real usage was accumulating real problems</li>
+                    </ul>
+                </div>
+                <div class="card-lite">
+                    <span class="phase-tag">Phase 3 · 2026-05 → 06 · 67 commits</span>
+                    <h3>Audio Arms Race + Methodology Crystallizes</h3>
+                    <ul>
+                        <li>RagChew TX audio chain (V5.1), RX engine rewrite (V5.2), stall fix then rollback again (V5.3.1)</li>
+                        <li>First noise-reduction war: NR2 Gaussian rewrite killing the "digital artifacts"</li>
+                        <li>ATR learning saga, four fixes in a row: false-SWR pollution → stability buffer → relay state → dedup</li>
+                        <li>FDE practice guide (05-10) → Aladdin V2 (06-06) → SDD surfaces as the vibe-coding core</li>
+                    </ul>
+                </div>
+                <div class="card-lite">
+                    <span class="phase-tag">Phase 4 · 2026-08 · 55 commits</span>
+                    <h3>The V5.7/V5.8 Overhaul</h3>
+                    <ul>
+                        <li>High-fidelity audio: 48 kHz full bandwidth / 64 kbps CBR / soft-knee limiter / watermark buffer</li>
+                        <li>Entire FT8/CW decoder removed (models, frontend, automation dir) — subtraction as architecture</li>
+                        <li>Comprehensive code audit (<span class="code-inline">8b741b1</span>) + IOLoop de-blocking series (F3 / MAIN_IOLOOP)</li>
+                        <li>iOS background-audio fix, mono conversation recording timeline (spec→plan→impl, four-commit chain)</li>
+                    </ul>
+                </div>
+                <div class="card-lite">
+                    <span class="phase-tag">Phase 5 · 2026-09 · ongoing</span>
+                    <h3>Cross-Platform + Deep DSP + RC-001</h3>
+                    <ul>
+                        <li>V6.0.0 Windows installer: from personal tool to distributable software</li>
+                        <li>NR2 SSB voice protection (V6.0.1): C-level patch + red-green acceptance + Latin-square A/B listening</li>
+                        <li>RC-001 (09-14): IOLoop wedge freezing the web port + Bluetooth DAC churn silencing TX — first root cause found outside the code boundary</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="section" id="problems">
+        <div class="container">
+            <div class="section-header">
+                <span class="section-label">Problem Taxonomy</span>
+                <h2 class="section-title">Five Recurring Problem Classes</h2>
+                <p class="section-subtitle">Each has a full "fixed repeatedly until truly solved" story.</p>
+            </div>
+
+            <h3 style="text-align:center; margin-bottom: 28px;">Threading &amp; Event-Loop Blocking — the #1 Theme</h3>
+            <div style="max-width: 920px; margin: 0 auto 56px;">
+                <table class="tool-table">
+                    <tr><th>Date</th><th>Battle</th><th>What Was Fixed</th></tr>
+                    <tr><td>2026-03-06</td><td><span class="code-inline">ba66892</span> / <span class="code-inline">1a072b3</span></td><td>TX main-thread blocking, ATR broadcast thread safety</td></tr>
+                    <tr><td>2026-03-07</td><td><span class="code-inline">d4a40c2</span></td><td>New-architecture rollback (the cost of over-engineering)</td></tr>
+                    <tr><td>2026-08-09</td><td>V5.8.1 / V5.8.2</td><td>rigctld I/O into an executor (F3), pinned MAIN_IOLOOP</td></tr>
+                    <tr><td>2026-08-28</td><td>F2</td><td><span class="code-inline">stream.write()</span> moved off the IOLoop</td></tr>
+                    <tr><td>2026-09-14</td><td>RC-001 F4/F4b</td><td>Constructor <span class="code-inline">p.open()</span> — the last blocking call standing</td></tr>
+                </table>
+                <div class="quote-box" style="margin-top: 22px;">
+                    The first four times we "fixed wherever it hung". RC-001 finally turned it into a discipline — <strong>zero blocking on the IOLoop thread</strong> — backed by a watchdog that makes the discipline observable. From fixing points to fixing the surface: six months.
+                </div>
+            </div>
+
+            <div class="grid-2">
+                <div class="card-lite">
+                    <div class="icon"><i class="fas fa-wave-square"></i></div>
+                    <h3>Audio Quality: Ears and Metrics on Two Tracks</h3>
+                    <p>RNNoise → WDSP → EMNR Gaussian rewrite (digital artifacts) → sample-rate wars (watery sound) → NR2 SSB voice protection (voice suppression, C patch). From "sounds wrong" to four testable assertions: <strong>voiceΔ / noiseΔ / LSD / jitter</strong>.</p>
+                </div>
+                <div class="card-lite">
+                    <div class="icon"><i class="fas fa-plug-circle-exclamation"></i></div>
+                    <h3>Device Fragility: Designing Around Unreliable Peripherals</h3>
+                    <p>ATR-1000 SYNC throttling, anti-disconnect, learning pollution, SWR guard, plus the Bluetooth DAC — the pattern is always the same: <strong>proxy isolation + cached answers + pressure control + anomaly observability</strong>. Assume every protocol peer can stall.</p>
+                </div>
+                <div class="card-lite">
+                    <div class="icon"><i class="fas fa-shield-halved"></i></div>
+                    <h3>Safety: PTT Is the Only Physical Surface</h3>
+                    <p>PTT Safety Monitor (release-failure retry + TOT hard cap), 5-second no-frame auto-release, direction-aware state machine (R3), SWR&gt;2 auto-retune guard, RC-001 forced release on the discard path. <strong>Software state can lie to you; the radio cannot</strong> — the verdict ultimately sinks to physical quantities.</p>
+                </div>
+                <div class="card-lite">
+                    <div class="icon"><i class="fas fa-bluetooth-b"></i></div>
+                    <h3>Environment Boundary: The World Outside the Code</h3>
+                    <p>RC-001 pinned the root cause outside the system for the first time: a generic Bluetooth firmware never acknowledging the jitter-buffer config (<span class="code-inline">error 312</span>) → CoreAudio stalls globally → unrelated USB sound card dragged down. Probes moved into the system layer accordingly (unified log / bluetoothd / power-meter A/B).</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="section" id="methods">
+        <div class="container">
+            <div class="section-header">
+                <span class="section-label">Validated Methods</span>
+                <h2 class="section-title">What Actually Worked</h2>
+                <p class="section-subtitle">Every entry carries commit or document evidence — and we honestly list what did not prove itself.</p>
+            </div>
+            <div style="max-width: 980px; margin: 0 auto;">
+                <table class="tool-table">
+                    <tr><th>Practice</th><th>Evidence</th><th>Verdict</th></tr>
+                    <tr><td><strong>spec → design → plan → tasks chain</strong></td><td>08-28 recording four-commit chain, 09-13 NR2 tasks 1–6</td><td class="verdict-yes">✅ zero rework on complex changes</td></tr>
+                    <tr><td><strong>Red-green acceptance (failing baseline first)</strong></td><td><span class="code-inline">3dc6319</span> "all baselines fail" → tasks pass one by one</td><td class="verdict-yes">✅ the only reliable path for "feels-like" quality</td></tr>
+                    <tr><td><strong>Metricized audio evaluation</strong> (A/B + Latin square + four metrics)</td><td>09-13 full NR2 acceptance</td><td class="verdict-yes">✅ ears drift, metrics don't</td></tr>
+                    <tr><td><strong>Postmortem culture</strong></td><td>PTT_Audio_Postmortem → RC-001 numbered case series</td><td class="verdict-yes">✅ incidents become assets</td></tr>
+                    <tr><td><strong>Revert discipline</strong></td><td><span class="code-inline">d4a40c2</span>, <span class="code-inline">dab904a</span> — two decisive rollbacks</td><td class="verdict-yes">✅ if the new is worse, go back</td></tr>
+                    <tr><td><strong>Feature pruning</strong></td><td>V5.7 removed FT8/CW; everything got more stable</td><td class="verdict-yes">✅ feature entropy is negatively correlated with reliability</td></tr>
+                    <tr><td><strong>CHANGELOG + tag discipline</strong></td><td>35 versions, all recorded</td><td class="verdict-yes">✅ the data foundation of this very retrospective</td></tr>
+                    <tr><td><strong>Data as truth</strong></td><td>ATR power meter judged modulation when every software layer looked "fine"</td><td class="verdict-yes">✅ physical quantities pierce log illusions</td></tr>
+                    <tr><td><strong>Code-first docs + audit</strong></td><td><span class="code-inline">docs/current/</span> + cross-check audit</td><td class="verdict-yes">✅ docs that don't rot</td></tr>
+                    <tr><td>Big-bang architecture rewrites</td><td>Rolled back twice (AudioWorklet/Worker, buffer strategy)</td><td class="verdict-no">❌ not proven</td></tr>
+                    <tr><td>"Optimization" without acceptance criteria</td><td>Multiple audio regressions caught by the user's ears</td><td class="verdict-no">❌ not proven</td></tr>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    <section class="section" id="evolution">
+        <div class="container">
+            <div class="section-header">
+                <span class="section-label">Verification Evolution</span>
+                <h2 class="section-title">How Verification Evolved</h2>
+                <p class="section-subtitle">The direction never changed: closer to physical truth, further from guessing.</p>
+            </div>
+            <div class="principle-list" style="max-width: 980px; margin: 0 auto;">
+                <div class="principle"><div class="principle-num">1</div><p><strong>Manual trial and error</strong> (early parent project) — fix whatever breaks.</p></div>
+                <div class="principle"><div class="principle-num">2</div><p><strong>Logs + power-meter observation</strong> (V4.5 ATR saga) — first time device readings were cross-checked against software behavior.</p></div>
+                <div class="principle"><div class="principle-num">3</div><p><strong>spec/plan + manual acceptance</strong> (V5.x) — complex changes started carrying a document chain.</p></div>
+                <div class="principle"><div class="principle-num">4</div><p><strong>Red-green tests + four metrics + A/B listening</strong> (V6.0.1) — felt quality became test assertions.</p></div>
+                <div class="principle"><div class="principle-num">5</div><p><strong>Runtime telemetry</strong> (V6.0.2) — IOLoop watchdog / ⏱️ timing probes / .prev death-scene log rotation.</p></div>
+                <div class="principle"><div class="principle-num">6</div><p><strong>Environmental A/B isolation</strong> (V6.0.2) — Bluetooth DAC disconnected as control: 11 transmissions, all properly modulated.</p></div>
+            </div>
+        </div>
+    </section>
+
+    <section class="section" id="outlook">
+        <div class="container">
+            <div class="section-header">
+                <span class="section-label">Outlook</span>
+                <h2 class="section-title">Looking Forward</h2>
+            </div>
+            <div class="grid-2">
+                <div class="card-lite">
+                    <div class="icon"><i class="fas fa-radio"></i></div>
+                    <h3>Product</h3>
+                    <ul>
+                        <li>Multi-radio / multi-instance operations maturity (mrrc_multi.sh in place)</li>
+                        <li>Windows package release channel normalized</li>
+                        <li>Recording/playback/sharing loop (mono timeline → QSO record assets)</li>
+                    </ul>
+                </div>
+                <div class="card-lite">
+                    <div class="icon"><i class="fas fa-microchip"></i></div>
+                    <h3>Technology</h3>
+                    <ul>
+                        <li>Audio output selector (AudioContext.setSinkId) — decouple radio audio from the system default output</li>
+                        <li>Host migration to 5 GHz Wi-Fi or wired — eliminate 2.4 GHz Bluetooth coexistence noise</li>
+                        <li>WDSP tuning driven by metrics (LSD/jitter thresholds into CI)</li>
+                        <li>Deeper ATR-1000 protocol work (faster learning, predictive tuning)</li>
+                    </ul>
+                </div>
+                <div class="card-lite">
+                    <div class="icon"><i class="fas fa-gears"></i></div>
+                    <h3>Engineering</h3>
+                    <ul>
+                        <li>Grow the reliability case series: RC-002+ filed by number; a pattern seen ≥3 times gets its own best-practice doc</li>
+                        <li>Watchdog evolves from observation to self-healing (stall → safe PTT release → controlled restart)</li>
+                        <li>Missing CI is the largest engineering debt: red-green scripts belong in automation</li>
+                        <li>Test pyramid: unit layer → integration layer (mock rigctld / mock PyAudio)</li>
+                    </ul>
+                </div>
+                <div class="card-lite">
+                    <div class="icon"><i class="fas fa-compass"></i></div>
+                    <h3>Method</h3>
+                    <ul>
+                        <li>Product Leverage for feature ordering: only leverage paths that are high-frequency in real QSOs</li>
+                        <li>Keep the methodology growing out of the project — never design ahead of evidence</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="section" id="lessons">
+        <div class="container">
+            <div class="section-header">
+                <span class="section-label">Meta Lessons</span>
+                <h2 class="section-title">Seven Meta-Lessons</h2>
+                <p class="section-subtitle">Each one was bought with a real incident or regression.</p>
+            </div>
+            <div class="principle-list">
+                <div class="principle"><div class="principle-num">1</div><p><strong>Fixing points instead of the surface lets the problem return wearing a new face.</strong> Thread blocking was fixed five times before it became a discipline. For recurring problem classes: enumerate every possible site, make a rule, install a probe — don't wait for the next incident.</p></div>
+                <div class="principle"><div class="principle-num">2</div><p><strong>Async moves bugs; it doesn't kill them.</strong> Every time you move a blocking call off a critical thread, first answer "where do the data and events go while it blocks?"</p></div>
+                <div class="principle"><div class="principle-num">3</div><p><strong>An environment problem is not a code problem.</strong> Before touching code, extend observability to the system boundary (OS logs, hardware readings). The ATR power meter and bluetoothd logs located the truth faster than any Python log.</p></div>
+                <div class="principle"><div class="principle-num">4</div><p><strong>Physical quantities are the ultimate assertion.</strong> Every software layer can "look fine"; transmit power cannot lie. When you suspect the software chain, find a hardware reading to cross-check first.</p></div>
+                <div class="principle"><div class="principle-num">5</div><p><strong>One human + AI works — but discipline cannot be skipped.</strong> AI accelerates execution, not judgment; AI acceleration without discipline just pays down debt faster into a wall.</p></div>
+                <div class="principle"><div class="principle-num">6</div><p><strong>Subtraction is an architectural skill.</strong> Removing FT8/CW, two rollbacks, menu slimming — every cut raised reliability or usability. Projects that dare to delete features get long-term room to evolve.</p></div>
+                <div class="principle"><div class="principle-num">7</div><p><strong>Documentation compounds.</strong> A 35-version CHANGELOG, a case library, and code-first docs let this retrospective be written entirely from data — no recollection, no polish, only evidence in git.</p></div>
+            </div>
+        </div>
+    </section>
+
+    <section class="cta-section">
+        <div class="container">
+            <h2>All Data Lives in the Repository</h2>
+            <p>Sources for this retrospective: <code>git log</code>, <code>CHANGELOG.md</code> (35 versions), the RC-001 reliability case, the FDE practice guide, and the Aladdin V2 methodology — all open on GitHub.</p>
+            <a href="https://github.com/cheenle/UHRR_mac/tree/main/docs/current/methodology/project-retrospective-2026-09.md" class="btn btn-primary btn-large" target="_blank" rel="noopener"><i class="fab fa-github"></i> View the Source Document</a>
+        </div>
+    </section>
+
+    <script src="js/main.js"></script>
+    <script src="js/global-nav.js?v=6" defer data-gn="1"></script>
+</body>
+</html>
