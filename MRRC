@@ -32,6 +32,11 @@ for _stream in (sys.stdout, sys.stderr):
     except Exception:
         pass
 
+# 统一的容错文本/配置读写（UTF-8 优先，GBK 等历史编码自动迁移）。
+# 见 config_io.py 顶部注释：中文 Windows 上"写 GBK / 读 UTF-8"会让
+# 服务器在读取含中文路径值的 MRRC.conf 时 UnicodeDecodeError 起不来。
+import config_io
+
 # Set up minimal logging to reduce I/O overhead
 # V4.8.1: 优化logging配置，减少文件I/O操作以降低CPU占用
 logging.basicConfig(
@@ -172,8 +177,11 @@ else:
 if not os.path.isabs(config_file):
     config_file = os.path.join(_runtime_dir(), config_file)
 
-config.read(config_file, encoding='utf-8')
+_loaded_encoding = config_io.read_config(config, config_file)
 print(f"Using config file: {config_file}")
+if config_io.should_migrate(_loaded_encoding):
+    print(f"配置文件原始编码为 {_loaded_encoding}，已自动迁移为 UTF-8"
+          f"（原文件备份: {config_file}.bak）")
 
 # ATR-1000 proxy IPC. Unix Domain Socket is preferred on Unix-like systems;
 # Windows builds use localhost TCP because AF_UNIX is not always available.
@@ -213,8 +221,8 @@ def load_memory_channels():
     with memory_lock:
         try:
             if os.path.exists(MEMORY_CHANNELS_FILE):
-                with open(MEMORY_CHANNELS_FILE, 'r') as f:
-                    user_memory_channels = json.load(f)
+                raw_text = config_io.read_text(MEMORY_CHANNELS_FILE)
+                user_memory_channels = json.loads(raw_text) if raw_text else {}
                 logger.info(f"📻 频道记忆已加载: {len(user_memory_channels)} 个用户")
             else:
                 user_memory_channels = {}
@@ -228,8 +236,7 @@ def load_memory_channels():
 def _save_memory_channels_to_file_unlocked():
     """内部方法：保存到文件（不加锁，调用者需持有锁）"""
     try:
-        with open(MEMORY_CHANNELS_FILE, 'w') as f:
-            json.dump(user_memory_channels, f, indent=2)
+        config_io.write_text(MEMORY_CHANNELS_FILE, json.dumps(user_memory_channels, indent=2))
     except Exception as e:
         logger.warning(f"保存频道记忆文件失败: {e}")
 
@@ -266,7 +273,7 @@ except ImportError as e:
 
 ############ Global functions ##################################
 def writte_log(logmsg):
-	logfile = open(config['SERVER']['log_file'],"a") 
+	logfile = open(config['SERVER']['log_file'],"a", encoding="utf-8", errors="replace") 
 	msg = str(datetime.datetime.now())+":"+str(logmsg)
 	logfile.write(msg) 
 	print(msg)
@@ -1864,7 +1871,7 @@ class ATR1000ProxyManager:
                 logger.debug(f"看守检查进程列表失败，继续尝试拉起: {e}")
 
             proxy_log = os.path.join(script_dir, 'atr1000_proxy_watchdog.log')
-            with open(proxy_log, 'a') as lf:
+            with open(proxy_log, 'a', encoding="utf-8", errors="replace") as lf:
                 lf.write(f"\n===== MRRC 看守拉起 @ {datetime.datetime.now().isoformat()} =====\n")
                 lf.flush()
                 proc = subprocess.Popen(
@@ -3891,8 +3898,7 @@ class ConfigHandler(BaseHandler):
 			print(s,o,v)
 			if config.has_option(s,o):
 				config[s][o]=v
-		with open('MRRC.conf', 'w') as configfile:
-			config.write(configfile)
+		config_io.write_config(config, config_file)
 		self.write("""<html><head><script>window.setTimeout(function() {window.location.href = 'https://'+window.location.hostname+':'+ '"""+config['SERVER']['port']+"""';}, 10000);</script><head><body>You will be redirected automatically. Please wait...<br><img width="40px" height=40px" src="../img/spinner.gif"></body></html>""")
 		self.flush() 
 		time.sleep(2)
@@ -3973,11 +3979,8 @@ class DevicesApiHandler(BaseHandler):
 			for key in keys:
 				if key in payload[section]:
 					config.set(section, key, str(payload[section][key]))
-		# 原子写入
-		tmp = config_file + ".tmp"
-		with open(tmp, 'w') as f:
-			config.write(f)
-		os.replace(tmp, config_file)
+		# 原子写入（固定 UTF-8，避免中文 Windows 上写出 GBK 导致下次启动解码失败）
+		config_io.write_config(config, config_file)
 
 	def _parse_body(self):
 		try:
@@ -4256,15 +4259,16 @@ body{
 		retval = False
 		if (user!="" and password!=""):
 			if config['SERVER']['auth'].find("FILE") != -1: #test with users db file
-				with open(config['SERVER']['db_users_file'], "r") as f:
-					for x in f:
+				content = config_io.read_text(config['SERVER']['db_users_file'])
+				if content:
+					for x in content.splitlines():
 						line = x.strip()
 						if not line or line.startswith("#"):
 							continue
 						db = line.split(None, 1)
 						if len(db) == 2 and db[0] == user and db[1] == password:
 							retval = True
-							break		
+							break
 			if not retval and config['SERVER']['auth'].find("PAM") != -1:#test with pam module
 				if config['SERVER']['pam_account'].find(user) != -1:
 					import pam

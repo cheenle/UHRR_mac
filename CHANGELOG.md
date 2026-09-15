@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### 🩹 WebSocket 写入健壮性：消除 `WebSocketClosedError` 日志风暴与线程违规
+
+- **根因**：tornado 6.5 的 `write_message()` 返回 Future，全项目 fire-and-forget 丢弃它；客户端断线后的残留写入被 asyncio 记为 `Task exception was never retrieved`（上一实例 22 小时累计 **12,620 条**，占全部 ERROR 的 99.9%，峰值 1821 条/分钟），淹没真实错误。
+- **修复**：新增 `safe_ws_write()`（消费 Future；同步吞掉已关闭连接类异常，真实异常仍上抛），替换 12 处广播/音频写入点；`sendPTINFOS` 写入失败时主动摘除客户端并停止自调度循环（风暴根因）；`send_to_all_clients` 失败客户端同步清理。
+- **线程违规修复**：`play_cq` 工作线程与 `_ptt_monitor_loop` 后台线程直接调 `write_message` → 改为 `MAIN_IOLOOP.add_callback` 编组（前者导致 `cq:complete` 通知丢失，违反 V5.8.2 规则）。
+- **日志粘连**：`mrrc_multi.sh` 启动 MRRC 加 `-u`（stdout 无缓冲），`print` 与 `logging` 不再互相插行，日志可被 grep 正常解析。
+
+### 🪟 修复 Windows 安装版启动 `UnicodeDecodeError`（写侧 GBK / 读侧 UTF-8 不一致）
+
+- **根因**：V6.0.0 只把配置**读侧**固定为 UTF-8，**写侧**仍是 locale 编码——中文 Windows 上是 GBK(cp936)。当配置值含非 ASCII（`%LOCALAPPDATA%` 路径带中文用户名，如 `C:/Users/张伟/...`；或用户用记事本另存为 ANSI）时：写出的 GBK 文件在下次启动被 UTF-8 读取 → `UnicodeDecodeError`，服务器起不来。触发写侧的主要是设置页保存（`/api/devices/apply` → `_write_config`）与 `/CONFIG` 页面。
+- **修复**：新增 `config_io.py` 统一策略——读侧 UTF-8 优先，回退 UTF-16(BOM)/locale/GB18030/Big5/latin-1；读到非 UTF-8 的配置自动迁移为 UTF-8 并保留 `.bak`；写侧固定 UTF-8 + 原子替换。服务器与 Windows 启动器共用（`MRRC`、`windows/launcher.py`）。
+- **同类点一并修复**：`memory_channels.json`、`MRRC_users.db`（容错读 + UTF-8 写）以及 `MRRC.log` / `atr1000_proxy_watchdog.log`（`encoding='utf-8', errors='replace'`，避免 GBK 控制台/文件写日志时 `UnicodeEncodeError`）。
+- **回归测试**：新增 `dev_tools/test_config_encoding.py`（复现故障 + 23 项断言，覆盖 GBK/BOM/缺失文件/迁移备份/启动器读取），并接入 `packaging/windows/build.ps1` 作为构建门禁。
+- **打包**：`config_io` 加入两个 PyInstaller spec 的 hiddenimports，Dockerfile 同步 `COPY config_io.py`。
+
+---
+
 ## [V6.0.2] - 2026-09-14
 
 ### 🪟 Windows 安装包发布（首个内置 WDSP 库的版本）

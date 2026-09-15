@@ -14,6 +14,7 @@ from pathlib import Path
 
 # ssl_bootstrap lives at the repo root; PyInstaller bundles it via pathex.
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+import config_io
 import ssl_bootstrap
 
 
@@ -152,7 +153,7 @@ def _detect_windows_serial_port() -> str | None:
 
 def apply_simple_defaults(cfg: Path) -> None:
     parser = configparser.ConfigParser()
-    parser.read(cfg, encoding="utf-8")
+    config_io.read_config(parser, cfg)
     changed = False
     detected = _detect_windows_serial_port()
     if detected and parser.has_section("HAMLIB"):
@@ -222,7 +223,7 @@ def _environ_with_vendor_path(env: dict[str, str]) -> dict[str, str]:
 
 def _read_config_port_host(cfg: Path) -> tuple[str, str]:
     parser = configparser.ConfigParser()
-    parser.read(cfg, encoding="utf-8")
+    config_io.read_config(parser, cfg)
     port = parser.get("SERVER", "port", fallback=DEFAULT_PORT)
     host = parser.get("SERVER", "host", fallback="127.0.0.1")
     if host in ("0.0.0.0", "::", ""):

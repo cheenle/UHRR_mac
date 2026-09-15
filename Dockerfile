@@ -33,6 +33,7 @@ WORKDIR /uhrh
 
 # 复制项目文件
 COPY MRRC /uhrh/MRRC
+COPY config_io.py /uhrh/config_io.py
 COPY atr1000_proxy.py /uhrh/atr1000_proxy.py
 COPY atr1000_tuner.py /uhrh/atr1000_tuner.py
 COPY audio_interface.py /uhrh/audio_interface.py

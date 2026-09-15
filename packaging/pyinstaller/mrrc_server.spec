@@ -66,6 +66,7 @@ a = Analysis(
         "atu_fuchs_handler",
         "atr1000_tuner",
         "ssl_bootstrap",
+        "config_io",
         "dev_tools.tx_audio_analyzer",
         # TLS bootstrap
         "cryptography",

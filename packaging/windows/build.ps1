@@ -34,6 +34,12 @@ if (Test-Path (Join-Path $RepoRoot "tests")) {
     Invoke-Checked python -m unittest discover -s tests -v
 }
 
+# Windows-specific regression gate: config/text encoding robustness.
+# History: GBK-written MRRC.conf (locale write path / Notepad ANSI) crashed
+# startup with UnicodeDecodeError when the reader was pinned to UTF-8.
+# Never ship an installer that fails this test.
+Invoke-Checked python dev_tools\test_config_encoding.py
+
 # Warn about missing native libraries.  The installer will still build, but the
 # app needs these DLLs at runtime on Windows.
 $vendorChecks = @(

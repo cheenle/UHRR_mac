@@ -14,6 +14,7 @@ a = Analysis(
         (str(ROOT / "windows" / "MRRC.conf.template"), "windows"),
     ],
     hiddenimports=[
+        "config_io",
         "ssl_bootstrap",
         "cryptography",
     ],
