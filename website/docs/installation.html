@@ -271,6 +271,9 @@ Users file:    %LOCALAPPDATA%\MRRC\MRRC_users.db
 # IC-M710 rigctld example
 rigctld.exe -m 30003 -r COM3 -s 4800 -C stop_bits=2 -T 127.0.0.1 -t 4532</code></pre>
                         <p class="tip">📌 The default Windows config uses <code>rig_model = IC_M710</code>, <code>rig_rate = 4800</code>, <code>stop_bits = 2</code>, and audio device fragment <code>USB Audio</code>. No RTL-SDR DLL is required.</p>
+                        <p class="tip">⚠️ Console window flashes and dies with <code>UnicodeDecodeError: 'utf-8' codec can't decode byte ...</code>?
+                            That is a config-encoding issue on Chinese Windows — <strong>no reinstall needed</strong>:
+                            see <a href="windows-fix.html">Windows startup fix (one-click tool)</a>.</p>
                         <pre class="code-block"><code># Optional ATR-1000 proxy on Windows (localhost TCP IPC)
 ATR1000-Proxy.exe --device 192.168.1.63 --port 60001 --transport tcp --tcp-host 127.0.0.1 --tcp-port 60100</code></pre>
                     </div>
@@ -544,6 +547,15 @@ docker-compose -f docker-compose.multi.yml up -d</code></pre>
             <!-- Troubleshooting -->
             <div class="doc-section" id="troubleshoot">
                 <h2>🔧 Troubleshooting</h2>
+
+                <div class="troubleshoot-item">
+                    <h4>❌ Windows startup fails with UnicodeDecodeError</h4>
+                    <p><strong>Symptom</strong>: double-clicking MRRC flashes a console window, or the launcher prints
+                        <code>UnicodeDecodeError: 'utf-8' codec can't decode byte 0x.. in position ..</code></p>
+                    <p><strong>Fix</strong>: on Chinese Windows the older installer wrote <code>MRRC.conf</code> as GBK
+                        while the server reads it as UTF-8. Download the one-click repair tool (no reinstall) →
+                        <a href="windows-fix.html">Windows startup fix</a>.</p>
+                </div>
 
                 <div class="troubleshoot-item">
                     <h4>❌ Cannot Connect to WebSocket</h4>

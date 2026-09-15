@@ -266,6 +266,8 @@
 # IC-M710 rigctld 示例
 rigctld.exe -m 30003 -r COM3 -s 4800 -C stop_bits=2 -T 127.0.0.1 -t 4532</code></pre>
                         <p class="tip">📌 Windows 默认配置使用 <code>rig_model = IC_M710</code>、<code>rig_rate = 4800</code>、<code>stop_bits = 2</code>，音频设备使用稳定片段 <code>USB Audio</code>。V6.0.0 不再需要 RTL-SDR DLL。</p>
+                        <p class="tip">⚠️ 启动时黑窗一闪而过、报 <code>UnicodeDecodeError: 'utf-8' codec can't decode byte ...</code>？
+                            这是中文 Windows 的配置编码问题，<strong>无需重装</strong>：见 <a href="windows-fix.html">Windows 启动修复（一键工具）</a>。</p>
                         <pre class="code-block"><code># Windows 可选 ATR-1000 代理（本机 TCP IPC）
 ATR1000-Proxy.exe --device 192.168.1.63 --port 60001 --transport tcp --tcp-host 127.0.0.1 --tcp-port 60100</code></pre>
                     </div>
@@ -539,6 +541,14 @@ docker-compose -f docker-compose.multi.yml up -d</code></pre>
             <!-- Troubleshooting -->
             <div class="doc-section" id="troubleshoot">
                 <h2>🔧 故障排查</h2>
+
+                <div class="troubleshoot-item">
+                    <h4>❌ Windows 启动报 UnicodeDecodeError</h4>
+                    <p><strong>症状</strong>：双击 MRRC 后黑窗一闪而过，或启动器输出
+                        <code>UnicodeDecodeError: 'utf-8' codec can't decode byte 0x.. in position ..</code></p>
+                    <p><strong>解决</strong>：中文 Windows 上旧安装包把 <code>MRRC.conf</code> 写成了 GBK，
+                        而服务器按 UTF-8 读。下载一键修复工具（无需重装）→ <a href="windows-fix.html">Windows 启动修复</a>。</p>
+                </div>
 
                 <div class="troubleshoot-item">
                     <h4>❌ 无法连接WebSocket</h4>

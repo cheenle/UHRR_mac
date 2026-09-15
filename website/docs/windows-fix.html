@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Windows Startup Fix (UnicodeDecodeError) - MRRC</title>
+    <meta name="description" content="MRRC Windows installer fails to start with UnicodeDecodeError: 'utf-8' codec can't decode byte? One-click repair tool, no reinstall needed.">
+    <meta name="keywords" content="MRRC, Windows, UnicodeDecodeError, GBK, encoding fix, startup failure">
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="../css/octen.css?v=2">
+    <link rel="stylesheet" href="../css/sunsdrmobile.css?v=1">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="../css/docs.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body data-site="mrrc">
+        <!-- Navigation -->
+    <nav class="navbar">
+        <div class="container navbar-content">
+            <a href="../index.html" class="logo">
+                <span class="logo-icon">&#x1f4fb;</span>
+                <span>MRRC</span>
+            </a>
+            <ul class="nav-links">
+                <li><a href="../index.html">Home</a></li>
+                <li><a href="features.html">Features</a></li>
+                <li><a href="../index.html#demo">Demo</a></li>
+                <li><a href="installation.html">Installation</a></li>
+                <li><a href="design.html">Design &amp; Architecture</a></li>
+                <li><a href="docs.html">Docs</a></li>
+                <li><a href="windows-fix.html">Windows Fix</a></li>
+                <li><a href="https://github.com/cheenle/UHRR_mac" target="_blank" rel="noopener">
+                    <i class="fab fa-github"></i> GitHub
+                </a></li>
+            </ul>
+            <div class="nav-actions">
+                <a href="../zh/docs/windows-fix.html" class="lang-btn">中文</a>
+                <button class="mobile-menu-toggle"><i class="fas fa-bars"></i></button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero -->
+    <section class="hero">
+        <div class="hero-bg"></div>
+        <div class="container">
+            <h1 class="hero-title">Windows Startup Fix</h1>
+            <p class="hero-subtitle">Installer fails with <code>UnicodeDecodeError: 'utf-8' codec can't decode byte ...</code>? Fixed in two steps, no reinstall</p>
+        </div>
+    </section>
+
+    <section class="section">
+        <div class="container">
+            <!-- TOC -->
+            <div class="toc">
+                <h3>Contents</h3>
+                <ul>
+                    <li><a href="#symptom">Is this your problem?</a></li>
+                    <li><a href="#fix">One-minute fix (recommended)</a></li>
+                    <li><a href="#oneliner">No download: one-line fix</a></li>
+                    <li><a href="#download">Installer download</a></li>
+                    <li><a href="#faq">FAQ</a></li>
+                </ul>
+            </div>
+
+            <!-- Symptom -->
+            <div class="doc-section" id="symptom">
+                <h2>🔍 Is this your problem?</h2>
+
+                <p><strong>Typical error</strong> (in the black server window, or the launcher output):</p>
+                <pre class="code-block"><code>UnicodeDecodeError: 'utf-8' codec can't decode byte 0xd5 in position 29: invalid continuation byte
+  File "MRRC", line 175, in &lt;module&gt;
+    config.read(config_file, encoding='utf-8')</code></pre>
+
+                <p><strong>Symptoms</strong>:</p>
+                <ul>
+                    <li>Double-clicking <strong>MRRC</strong> flashes a console window and the browser never opens;</li>
+                    <li>or the launcher stops at "Server exited during startup — see messages above.";</li>
+                    <li>port 8877 never answers, the Start Menu shortcut does nothing.</li>
+                </ul>
+
+                <p><strong>Cause in one sentence</strong>: the older installers (V6.0.0 – V6.0.2) write
+                    <code>MRRC.conf</code> back as GBK (the Chinese Windows ANSI codepage) when saving settings,
+                    while the server reads the config strictly as UTF-8. Any non-ASCII content (most commonly a
+                    Windows user name with Chinese characters in the path) then aborts startup.
+                    This is a <strong>file-encoding problem, not a hardware/radio problem</strong> — your
+                    settings and login are not lost.</p>
+
+                <p class="tip">📌 Want to check before changing anything? Run the tool with <code>-DryRun</code>: it only reports, never writes.</p>
+            </div>
+
+            <!-- Fix -->
+            <div class="doc-section" id="fix">
+                <h2>🚀 One-minute fix (recommended)</h2>
+
+                <div class="step">
+                    <div class="step-number">1</div>
+                    <div class="step-content">
+                        <h3>Download the repair tool</h3>
+                        <p><a href="../downloads/mrrc-windows-config-fix.zip" class="btn btn-primary">⬇️ mrrc-windows-config-fix.zip</a> (5.6 KB, no install)</p>
+                    </div>
+                </div>
+
+                <div class="step">
+                    <div class="step-number">2</div>
+                    <div class="step-content">
+                        <h3>Extract anywhere</h3>
+                        <p>Keep the three files in the same folder:</p>
+                        <pre class="code-block"><code>fix_mrrc_encoding.bat        &lt;- double-click this
+fix_and_start_mrrc.bat       &lt;- or this (repair + start)
+fix_mrrc_encoding.ps1        &lt;- the actual logic, keep it</code></pre>
+                    </div>
+                </div>
+
+                <div class="step">
+                    <div class="step-number">3</div>
+                    <div class="step-content">
+                        <h3>Double-click <code>fix_and_start_mrrc.bat</code></h3>
+                        <p>It converts the config to UTF-8 (original saved as <code>MRRC.conf.bak</code>) and then starts MRRC:</p>
+                        <pre class="code-block"><code>========================================
+  MRRC config encoding repair (Chinese Windows)
+========================================
+Data directory: C:\Users\&lt;you&gt;\AppData\Local\MRRC
+Local ANSI code page: 936
+
+== Converting
+  [fix]  MRRC.conf: GB2312 (codepage 936) -&gt; UTF-8 (backup: MRRC.conf.bak)
+
+== Result
+  [OK]  1 file repaired
+        Restart MRRC from the Start Menu.</code></pre>
+                        <p class="tip">📌 If Windows SmartScreen blocks it: "More info" → "Run anyway"; or right-click the .bat → Properties → Unblock.</p>
+                    </div>
+                </div>
+
+                <h3>How to start MRRC from now on</h3>
+                <p>Use <code>fix_and_start_mrrc.bat</code> for daily starts (pin a shortcut to it if you like):
+                    the old installer writes GBK again whenever you <strong>save settings in the web UI</strong>,
+                    and this script repairs before every start.</p>
+            </div>
+
+            <!-- One-liner -->
+            <div class="doc-section" id="oneliner">
+                <h2>⚡ No download: one-line fix</h2>
+                <p>For remote support or when copying files is awkward. Paste into a <strong>PowerShell</strong> window and press Enter:</p>
+                <pre class="code-block"><code>$p="$env:LOCALAPPDATA\MRRC\MRRC.conf"; $b=[IO.File]::ReadAllBytes($p); try{[Text.UTF8Encoding]::new($false,$true).GetString($b)|Out-Null; "already UTF-8"}catch{Copy-Item $p "$p.bak" -Force; [IO.File]::WriteAllText($p,[Text.Encoding]::GetEncoding(936).GetString($b),[Text.UTF8Encoding]::new($false)); "repaired to UTF-8 (backup $p.bak)"}</code></pre>
+                <p>When it prints "repaired to UTF-8", start MRRC from the Start Menu again. The original file stays as <code>MRRC.conf.bak</code>.</p>
+            </div>
+
+            <!-- Download -->
+            <div class="doc-section" id="download">
+                <h2>📦 Installer download</h2>
+                <p>Current Windows installer:</p>
+                <p><a href="../downloads/MRRC-Setup.exe" class="btn btn-primary btn-large">⬇️ MRRC-Setup.exe (V6.0.2, ~45 MB)</a></p>
+                <table class="hardware-table">
+                    <tr>
+                        <td>Config file</td>
+                        <td><code>%LOCALAPPDATA%\MRRC\MRRC.conf</code></td>
+                    </tr>
+                    <tr>
+                        <td>Login info</td>
+                        <td><code>%LOCALAPPDATA%\MRRC\MRRC Quick Start.txt</code></td>
+                    </tr>
+                    <tr>
+                        <td>Config backup (after repair)</td>
+                        <td><code>%LOCALAPPDATA%\MRRC\MRRC.conf.bak</code></td>
+                    </tr>
+                </table>
+                <p class="tip">📌 V6.0.2 does not contain this fix yet — use the repair tool above if startup fails.
+                    The next build (V6.0.3) bakes the fix in (tolerant config reads that auto-migrate to UTF-8, and UTF-8 writes), so the tool will not be needed.</p>
+            </div>
+
+            <!-- FAQ -->
+            <div class="doc-section" id="faq">
+                <h2>❓ FAQ</h2>
+
+                <div class="troubleshoot-item">
+                    <h4>Why does this happen?</h4>
+                    <p>Chinese Windows uses GBK as its ANSI codepage. The installer's server writes the config with
+                        the locale encoding (GBK) but reads it back as UTF-8. As soon as the config contains non-ASCII
+                        characters — most commonly <code>C:\Users\张三\AppData\Local\MRRC\...</code> — the next start fails to decode it.</p>
+                </div>
+
+                <div class="troubleshoot-item">
+                    <h4>It broke again after I saved settings in the web UI</h4>
+                    <p>Run the repair tool again (the old build rewrites GBK on save), or simply always start with
+                        <code>fix_and_start_mrrc.bat</code> — it repairs on every start. The permanent fix ships with V6.0.3.</p>
+                </div>
+
+                <div class="troubleshoot-item">
+                    <h4>How do I verify it worked?</h4>
+                    <p>The tool prints "already UTF-8" when nothing needs doing; or run
+                        <code>fix_mrrc_encoding.bat -DryRun</code> for a report only. A healthy start shows
+                        <code>Using config file: ...</code> in the server window and serves <code>https://localhost:8877</code>.</p>
+                </div>
+
+                <div class="troubleshoot-item">
+                    <h4>Will I lose settings or passwords?</h4>
+                    <p>No. The tool only re-encodes bytes (byte → text → UTF-8 bytes); the content is unchanged and the
+                        original file is kept as <code>MRRC.conf.bak</code>. The users file
+                        (<code>MRRC_users.db</code>) is untouched by default. To roll back, rename the
+                        <code>.bak</code> file back to <code>MRRC.conf</code>.</p>
+                </div>
+
+                <div class="troubleshoot-item">
+                    <h4>What options does the tool take?</h4>
+                    <p><code>fix_mrrc_encoding.bat -DryRun</code> report only; <code>-IncludeAux</code> also converts
+                        <code>MRRC_users.db</code> / <code>memory_channels.json</code> / <code>atr1000_tuner.json</code>;
+                        <code>-SelfTest</code> verifies the encoding detection logic.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA -->
+    <section class="section section-cta">
+        <div class="container">
+            <h2 class="cta-title">Still stuck?</h2>
+            <p class="cta-text">Post the full error from the server window on GitHub Issues</p>
+            <div class="cta-buttons">
+                <a href="../downloads/mrrc-windows-config-fix.zip" class="btn btn-primary">Download repair tool</a>
+                <a href="https://github.com/cheenle/UHRR_mac/issues" class="btn btn-secondary" target="_blank">GitHub Issues</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-grid">
+                <div class="footer-section">
+                    <h4>MRRC</h4>
+                    <p>Mobile Remote Radio Control<br>Amateur radio anywhere</p>
+                </div>
+                <div class="footer-section">
+                    <h4>Links</h4>
+                    <ul>
+                        <li><a href="../index.html">Home</a></li>
+                        <li><a href="features.html">Features</a></li>
+                        <li><a href="installation.html">Installation</a></li>
+                        <li><a href="docs.html">Docs</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h4>Resources</h4>
+                    <ul>
+                        <li><a href="https://github.com/cheenle/UHRR_mac" target="_blank">GitHub</a></li>
+                        <li><a href="https://github.com/cheenle/UHRR_mac/issues" target="_blank">Issues</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2024-2026 MRRC Project. Open Source under GPL-3.0 License.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="../js/main.js"></script>
+    <script src="../js/global-nav.js?v=6" defer data-gn="1"></script>
+</body>
+</html>

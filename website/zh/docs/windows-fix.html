@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Windows 启动修复（UnicodeDecodeError）- MRRC</title>
+    <meta name="description" content="中文 Windows 上 MRRC 安装版启动报 UnicodeDecodeError: 'utf-8' codec can't decode byte？下载一键修复工具，两步修好，无需重装。">
+    <meta name="keywords" content="MRRC, Windows, UnicodeDecodeError, GBK, 编码修复, 启动失败">
+    <link rel="stylesheet" href="../../css/style.css">
+    <link rel="stylesheet" href="../../css/octen.css?v=2">
+    <link rel="stylesheet" href="../../css/sunsdrmobile.css?v=1">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="../../css/docs.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body data-site="mrrc">
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="container navbar-content">
+            <a href="../../index.html" class="logo">
+                <span class="logo-icon">&#x1f4fb;</span>
+                <span>MRRC</span>
+            </a>
+            <ul class="nav-links">
+                <li><a href="../../index.html">首页</a></li>
+                <li><a href="features.html">功能特性</a></li>
+                <li><a href="installation.html">安装指南</a></li>
+                <li><a href="docs.html">技术文档</a></li>
+                <li><a href="windows-fix.html">Windows 修复</a></li>
+                <li><a href="https://github.com/cheenle/UHRR_mac" target="_blank" rel="noopener">
+                    <i class="fab fa-github"></i> GitHub
+                </a></li>
+            </ul>
+            <div class="nav-actions">
+                <a href="../../docs/windows-fix.html" class="lang-btn">English</a>
+                <button class="mobile-menu-toggle"><i class="fas fa-bars"></i></button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero -->
+    <section class="hero">
+        <div class="hero-bg"></div>
+        <div class="container">
+            <h1 class="hero-title">Windows 启动修复</h1>
+            <p class="hero-subtitle">安装版启动报 <code>UnicodeDecodeError: 'utf-8' codec can't decode byte ...</code>？两步修好，无需重装</p>
+        </div>
+    </section>
+
+    <section class="section">
+        <div class="container">
+            <!-- TOC -->
+            <div class="toc">
+                <h3>目录</h3>
+                <ul>
+                    <li><a href="#symptom">你是这个故障吗</a></li>
+                    <li><a href="#fix">一分钟修复（推荐）</a></li>
+                    <li><a href="#oneliner">不用下载：一行命令修复</a></li>
+                    <li><a href="#download">安装包下载</a></li>
+                    <li><a href="#faq">常见问题</a></li>
+                </ul>
+            </div>
+
+            <!-- Symptom -->
+            <div class="doc-section" id="symptom">
+                <h2>🔍 你是这个故障吗</h2>
+
+                <p><strong>典型报错</strong>（在黑色的服务器窗口里，或在启动器的输出里）：</p>
+                <pre class="code-block"><code>UnicodeDecodeError: 'utf-8' codec can't decode byte 0xd5 in position 29: invalid continuation byte
+  File "MRRC", line 175, in &lt;module&gt;
+    config.read(config_file, encoding='utf-8')</code></pre>
+
+                <p><strong>现象</strong>：</p>
+                <ul>
+                    <li>双击 <strong>MRRC</strong> 图标后，黑色窗口一闪而过，浏览器打不开；</li>
+                    <li>或者启动窗口停在 "Server exited during startup — see messages above."；</li>
+                    <li>端口 8877 无响应，开始菜单里怎么点都起不来。</li>
+                </ul>
+
+                <p><strong>一句话原因</strong>：旧版安装包（V6.0.0 – V6.0.2）在中文 Windows 上会把配置文件
+                    <code>MRRC.conf</code> 按 GBK（系统编码）写回，而服务器启动时固定按 UTF-8 读配置，
+                    于是中文内容（例如带中文用户名的路径）让启动直接失败。这是<strong>文件编码问题，不是硬件/电台问题</strong>，修好后原有配置、登录账号都不会丢。</p>
+
+                <p class="tip">📌 想先确认再动手？运行修复工具时加 <code>-DryRun</code>，只检查、不改文件。</p>
+            </div>
+
+            <!-- Fix -->
+            <div class="doc-section" id="fix">
+                <h2>🚀 一分钟修复（推荐）</h2>
+
+                <div class="step">
+                    <div class="step-number">1</div>
+                    <div class="step-content">
+                        <h3>下载修复工具</h3>
+                        <p><a href="../../downloads/mrrc-windows-config-fix.zip" class="btn btn-primary">⬇️ mrrc-windows-config-fix.zip</a>（5.6 KB，免安装）</p>
+                    </div>
+                </div>
+
+                <div class="step">
+                    <div class="step-number">2</div>
+                    <div class="step-content">
+                        <h3>解压到任意文件夹</h3>
+                        <p>保持 3 个文件在同一个目录里：</p>
+                        <pre class="code-block"><code>fix_mrrc_encoding.bat        ← 双击这个
+fix_and_start_mrrc.bat       ← 或者双击这个（修复并启动）
+fix_mrrc_encoding.ps1        ← 实际逻辑，别删</code></pre>
+                    </div>
+                </div>
+
+                <div class="step">
+                    <div class="step-number">3</div>
+                    <div class="step-content">
+                        <h3>双击 <code>fix_and_start_mrrc.bat</code></h3>
+                        <p>它会先把配置转成 UTF-8（原文件自动备份为 <code>MRRC.conf.bak</code>），然后启动 MRRC。成功时会看到：</p>
+                        <pre class="code-block"><code>========================================
+  MRRC 配置编码修复（中文 Windows）
+========================================
+数据目录：C:\Users\你的用户名\AppData\Local\MRRC
+本机 ANSI 代码页：936（gb2312）
+
+== 转换文件
+  [修复] MRRC.conf：GB2312 (代码页 936) -> UTF-8（原文件已备份为 MRRC.conf.bak）
+
+== 结果
+  [OK]   1 个文件已修复为 UTF-8
+        请重新启动 MRRC（关闭旧窗口后从开始菜单启动）。</code></pre>
+                        <p class="tip">📌 如果 Windows 弹出"已保护你的电脑"：点「更多信息」→「仍要运行」；或右键 bat → 属性 → 勾选"解除锁定"。</p>
+                    </div>
+                </div>
+
+                <h3>以后怎么启动</h3>
+                <p>建议日常就用 <code>fix_and_start_mrrc.bat</code> 启动（或把它发送到桌面快捷方式）：
+                    旧版安装包在<strong>网页设置页保存</strong>后会再次把配置写成 GBK，这个 bat 每次都会先修再启，避免反复出问题。</p>
+            </div>
+
+            <!-- One-liner -->
+            <div class="doc-section" id="oneliner">
+                <h2>⚡ 不用下载：一行命令修复</h2>
+                <p>适合远程协助/不方便拷文件的场景。在 <strong>PowerShell</strong> 窗口里粘贴回车：</p>
+                <pre class="code-block"><code>$p="$env:LOCALAPPDATA\MRRC\MRRC.conf"; $b=[IO.File]::ReadAllBytes($p); try{[Text.UTF8Encoding]::new($false,$true).GetString($b)|Out-Null; "已是 UTF-8"}catch{Copy-Item $p "$p.bak" -Force; [IO.File]::WriteAllText($p,[Text.Encoding]::GetEncoding(936).GetString($b),[Text.UTF8Encoding]::new($false)); "已修复为 UTF-8（备份 $p.bak）"}</code></pre>
+                <p>看到「已修复为 UTF-8」后，从开始菜单重新启动 MRRC 即可。原文件同样保留在 <code>MRRC.conf.bak</code>。</p>
+            </div>
+
+            <!-- Download -->
+            <div class="doc-section" id="download">
+                <h2>📦 安装包下载</h2>
+                <p>当前 Windows 安装包：</p>
+                <p><a href="../../downloads/MRRC-Setup.exe" class="btn btn-primary btn-large">⬇️ MRRC-Setup.exe（V6.0.2，约 45 MB）</a></p>
+                <table class="hardware-table">
+                    <tr>
+                        <td>安装后配置文件</td>
+                        <td><code>%LOCALAPPDATA%\MRRC\MRRC.conf</code></td>
+                    </tr>
+                    <tr>
+                        <td>登录信息</td>
+                        <td><code>%LOCALAPPDATA%\MRRC\MRRC Quick Start.txt</code></td>
+                    </tr>
+                    <tr>
+                        <td>配置备份（修复后）</td>
+                        <td><code>%LOCALAPPDATA%\MRRC\MRRC.conf.bak</code></td>
+                    </tr>
+                </table>
+                <p class="tip">📌 V6.0.2 安装包尚未包含本修复，安装后如遇启动报错，用上面的修复工具即可正常使用。
+                    下一版（V6.0.3）会把修复内置（读配置自动容错并迁移为 UTF-8、保存固定写 UTF-8），装上后无需再跑修复工具。</p>
+            </div>
+
+            <!-- FAQ -->
+            <div class="doc-section" id="faq">
+                <h2>❓ 常见问题</h2>
+
+                <div class="troubleshoot-item">
+                    <h4>为什么会出现这个问题？</h4>
+                    <p>中文 Windows 的默认文本编码是 GBK。安装包里的程序在保存配置时用了系统默认编码（写出 GBK），
+                        而读取配置时按 UTF-8 解析。只要配置里有中文（最常见是带中文用户名的
+                        <code>C:\Users\张三\AppData\Local\MRRC\...</code> 路径），下一次启动就会解码失败。</p>
+                </div>
+
+                <div class="troubleshoot-item">
+                    <h4>修好后，在网页里保存设置又坏了怎么办？</h4>
+                    <p>再跑一次修复工具即可（旧版保存设置时还会写回 GBK）。或者一直用
+                        <code>fix_and_start_mrrc.bat</code> 启动——它每次启动前都会自动检查并修复。
+                        根治请等内置修复的新安装包（V6.0.3）。</p>
+                </div>
+
+                <div class="troubleshoot-item">
+                    <h4>怎么确认已经修好？</h4>
+                    <p>修复工具显示「已是 UTF-8，无需修复」就是正常状态；或再次运行
+                        <code>fix_mrrc_encoding.bat -DryRun</code> 预演，若显示无需转换即已修好。
+                        启动成功的标志是服务器窗口出现 <code>Using config file: ...</code> 且浏览器能打开 <code>https://localhost:8877</code>。</p>
+                </div>
+
+                <div class="troubleshoot-item">
+                    <h4>会丢配置或密码吗？</h4>
+                    <p>不会。工具只做「字节 → 文本 → UTF-8 字节」的转换，内容不变，并且把原文件原样备份为
+                        <code>MRRC.conf.bak</code>；登录账号文件（<code>MRRC_users.db</code>）默认不动。
+                        想回滚就把 <code>.bak</code> 改回 <code>MRRC.conf</code>。</p>
+                </div>
+
+                <div class="troubleshoot-item">
+                    <h4>工具用的是什么参数？</h4>
+                    <p><code>fix_mrrc_encoding.bat -DryRun</code> 只检查；<code>-IncludeAux</code> 同时转换
+                        <code>MRRC_users.db</code> / <code>memory_channels.json</code> / <code>atr1000_tuner.json</code>；
+                        <code>-SelfTest</code> 自检验证编码识别逻辑。</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA -->
+    <section class="section section-cta">
+        <div class="container">
+            <h2 class="cta-title">还没解决？</h2>
+            <p class="cta-text">把服务器窗口里的完整报错发到 Issues，我们帮你定位</p>
+            <div class="cta-buttons">
+                <a href="../../downloads/mrrc-windows-config-fix.zip" class="btn btn-primary">下载修复工具</a>
+                <a href="https://github.com/cheenle/UHRR_mac/issues" class="btn btn-secondary" target="_blank">GitHub Issues</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-grid">
+                <div class="footer-section">
+                    <h4>MRRC</h4>
+                    <p>Mobile Remote Radio Control<br>随时随地，畅享业余无线电</p>
+                </div>
+                <div class="footer-section">
+                    <h4>快速链接</h4>
+                    <ul>
+                        <li><a href="../../index.html">首页</a></li>
+                        <li><a href="features.html">功能特性</a></li>
+                        <li><a href="installation.html">安装指南</a></li>
+                        <li><a href="docs.html">技术文档</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h4>资源</h4>
+                    <ul>
+                        <li><a href="https://github.com/cheenle/UHRR_mac" target="_blank">GitHub仓库</a></li>
+                        <li><a href="https://github.com/cheenle/UHRR_mac/issues" target="_blank">问题反馈</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2024-2026 MRRC Project. Open Source under GPL-3.0 License.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="../../js/main.js"></script>
+    <script src="../../js/global-nav.js?v=6" defer data-gn="1"></script>
+</body>
+</html>
