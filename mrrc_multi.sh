@@ -332,7 +332,10 @@ start_mrrc() {
     > "$MRRC_LOG"
     
     # 启动 MRRC，传递配置文件路径
-    cd "$SCRIPT_DIR" && "$PYTHON" "$SCRIPT_DIR/MRRC" "$SCRIPT_DIR/MRRC.$INSTANCE.conf" > "$MRRC_LOG" 2>&1 &
+    # -u: stdout 无缓冲。print() 与 logging 写同一个日志文件，缓冲不一致会把
+    # print 行粘到 logger 行中间（日志出现 "...datato=false2026-...- ERROR" 之类），
+    # 破坏 grep 解析。
+    cd "$SCRIPT_DIR" && "$PYTHON" -u "$SCRIPT_DIR/MRRC" "$SCRIPT_DIR/MRRC.$INSTANCE.conf" > "$MRRC_LOG" 2>&1 &
     
     local pid=$!
     sleep 3

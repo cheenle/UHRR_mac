@@ -61,6 +61,39 @@ except RuntimeError:
 # 回调（ATR 电表广播、PTT 状态广播）永不执行 → 前端 ATR 面板只收到初始快照后
 # 数据超时/设备离线。所有后台线程必须使用这个主线程固定的引用。
 MAIN_IOLOOP = tornado.ioloop.IOLoop.instance()
+
+
+def safe_ws_write(client, message, binary=False):
+    """安全地向 WebSocket 客户端写入（保持 fire-and-forget 语义）。
+
+    tornado >= 6.0 的 write_message() 返回 Future；调用方不消费它时，
+    连接断开产生的 WebSocketClosedError 会被 asyncio 记为
+    "Task exception was never retrieved"，历史上曾一夜刷出上万条日志。
+    本函数同步吞掉"连接已关闭"类失败并返回 False（调用方可据此清理
+    客户端）；真正的异常（序列化错误等）仍向上抛出，保留原有错误处理。
+    仅限 IOLoop 线程调用（write_message 非线程安全）。
+    """
+    if client is None:
+        return False
+    try:
+        if not getattr(client, "ws_connection", None) or getattr(client, "close_code", None):
+            return False
+        fut = client.write_message(message, binary=binary)
+    except (tornado.websocket.WebSocketClosedError, tornado.iostream.StreamClosedError):
+        return False
+    if fut is not None and hasattr(fut, "add_done_callback"):
+        def _consume(f):
+            try:
+                f.exception()
+            except Exception:
+                pass
+        try:
+            fut.add_done_callback(_consume)
+        except Exception:
+            pass
+    return True
+
+
 # Use cross-platform Hamlib wrapper instead of direct import
 try:
     from hamlib_wrapper import HamlibWrapper
@@ -612,7 +645,9 @@ class WS_AudioRXHandler(AuthenticatedWebSocketHandler):
 				batch = 0
 				while batch < max_batch and self.ws_connection and not self.close_code:
 					try:
-						self.write_message(self.Wavframes[0], binary=True)
+						if not safe_ws_write(self, self.Wavframes[0], binary=True):
+							logger.info("音频发送时客户端已断开")
+							return
 						del self.Wavframes[0]
 						batch += 1
 						consecutive_errors = 0  # 重置错误计数
@@ -832,7 +867,7 @@ class WS_AudioTXHandler(AuthenticatedWebSocketHandler):
 							for client in ControlTRXHandlerClients:
 								try:
 									if client.ws_connection and not client.close_code:
-										client.write_message("getPTT:true")
+										safe_ws_write(client, "getPTT:true")
 								except Exception:
 									clients_to_remove.append(client)
 							for client in clients_to_remove:
@@ -913,7 +948,7 @@ class WS_AudioTXHandler(AuthenticatedWebSocketHandler):
 					for client in ControlTRXHandlerClients:
 						try:
 							if client.ws_connection and not client.close_code:
-								client.write_message("getPTT:false")
+								safe_ws_write(client, "getPTT:false")
 						except Exception:
 							clients_to_remove.append(client)
 					for client in clients_to_remove:
@@ -1347,23 +1382,13 @@ def play_cq():
 
 
 
-            for client in ControlTRXHandlerClients:
-
-
-
-                try:
-
-
-
-                    client.write_message("cq:complete")
-
-
-
-                except Exception as e:
-
-
-
-                    logger.error(f"Error sending CQ complete notification: {e}")
+            def _notify_cq_complete():
+                for client in list(ControlTRXHandlerClients):
+                    safe_ws_write(client, "cq:complete")
+            try:
+                MAIN_IOLOOP.add_callback(_notify_cq_complete)
+            except Exception as e:
+                logger.error(f"Error scheduling CQ complete notification: {e}")
 
 
 
@@ -2031,9 +2056,7 @@ class ATR1000ProxyManager:
         failed_clients = []
 
         for client in clients_snapshot:
-            try:
-                client.write_message(latest_data, binary=False)
-            except Exception:
+            if not safe_ws_write(client, latest_data):
                 failed_clients.append(client)
 
         # 已在主线程中，直接清理失败的客户端
@@ -2229,7 +2252,7 @@ class WS_ATR1000Handler(AuthenticatedWebSocketHandler):
         # 如果有缓存的数据，立即发送
         if atr1000_proxy_manager.last_data:
             try:
-                self.write_message(atr1000_proxy_manager.last_data, binary=False)
+                safe_ws_write(self, atr1000_proxy_manager.last_data)
             except:
                 pass
     
@@ -2350,7 +2373,7 @@ class WS_ATUAutoTunerHandler(AuthenticatedWebSocketHandler):
         message = json.dumps(data)
         for client in cls.clients:
             try:
-                client.write_message(message)
+                safe_ws_write(client, message)
             except:
                 pass
 
@@ -2901,8 +2924,8 @@ class TRXRIG:
 					for client in list(ControlTRXHandlerClients):
 						try:
 							if client.ws_connection and not client.close_code:
-								client.write_message("getPTT:true")
-								client.write_message("pttError:release_failed")
+								safe_ws_write(client, "getPTT:true")
+								safe_ws_write(client, "pttError:release_failed")
 						except Exception:
 							pass
 				try:
@@ -2933,7 +2956,7 @@ class TRXRIG:
 				for client in ControlTRXHandlerClients:
 					try:
 						if client.ws_connection and not client.close_code:
-							client.write_message(f"getPTT:{str(state).lower()}")
+							safe_ws_write(client, f"getPTT:{str(state).lower()}")
 					except Exception:
 						clients_to_remove.append(client)
 				for client in clients_to_remove:
@@ -3034,16 +3057,15 @@ class TRXRIG:
 						
 						# Broadcast the corrected state
 						global ControlTRXHandlerClients
-						clients_to_remove = []
-						for client in ControlTRXHandlerClients:
-							try:
-								if client.ws_connection and not client.close_code:
-									client.write_message(f"getPTT:{str(actual_ptt).lower()}")
-							except Exception:
-								clients_to_remove.append(client)
-						for client in clients_to_remove:
-							if client in ControlTRXHandlerClients:
-								ControlTRXHandlerClients.remove(client)
+						def _broadcast_actual_ptt(state=actual_ptt):
+							clients_to_remove = []
+							for client in list(ControlTRXHandlerClients):
+								if not safe_ws_write(client, f"getPTT:{str(state).lower()}"):
+									clients_to_remove.append(client)
+							for client in clients_to_remove:
+								if client in ControlTRXHandlerClients:
+									ControlTRXHandlerClients.remove(client)
+						MAIN_IOLOOP.add_callback(_broadcast_actual_ptt)
 				
 				time.sleep(5)  # Check every 5 seconds
 			except Exception as e:
@@ -3102,7 +3124,7 @@ class PTTSafetyMonitor(threading.Thread):
 							for client in list(ControlTRXHandlerClients):
 								try:
 									if client.ws_connection and not client.close_code:
-										client.write_message("pttError:tot_timeout")
+										safe_ws_write(client, "pttError:tot_timeout")
 								except Exception:
 									pass
 						try:
@@ -3135,8 +3157,8 @@ class WS_ControlTRX(AuthenticatedWebSocketHandler):
 		clients_to_remove = []
 		for client in ControlTRXHandlerClients:
 			try:
-				if client.ws_connection and not client.close_code:
-					client.write_message(msg)
+				if not safe_ws_write(client, msg):
+					clients_to_remove.append(client)
 			except Exception as e:
 				logger.warning(f"发送消息失败，标记客户端待移除: {e}")
 				clients_to_remove.append(client)
@@ -3152,11 +3174,18 @@ class WS_ControlTRX(AuthenticatedWebSocketHandler):
 			logger.info("控制客户端已断开，停止发送状态更新")
 			return None
 		try:
+			writes_ok = True
 			if self.StrgLVL != CTRX.infos["StrgLVL"]:
-				self.write_message("getSignalLevel:"+str(CTRX.infos["StrgLVL"]))
+				writes_ok = safe_ws_write(self, "getSignalLevel:"+str(CTRX.infos["StrgLVL"])) and writes_ok
 				self.StrgLVL=CTRX.infos["StrgLVL"]
 			# 定期发送PTT状态
-			self.write_message("getPTT:"+str(CTRX.infos["PTT"]).lower())
+			writes_ok = safe_ws_write(self, "getPTT:"+str(CTRX.infos["PTT"]).lower()) and writes_ok
+			if not writes_ok:
+				# 写入失败：停止本客户端的状态推送循环，避免对死连接无限重写
+				logger.info("控制客户端已断开，停止发送状态更新")
+				if self in ControlTRXHandlerClients:
+					ControlTRXHandlerClients.remove(self)
+				return None
 			
 			# V4.5.18: 定期同步频率给 ATR-1000 代理（支持外部软件控制频率）
 			# 修复：只有频率变化时才同步，避免频繁触发自动调谐
