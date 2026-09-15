@@ -91,7 +91,38 @@ powershell -NoProfile -ExecutionPolicy Bypass -File packaging\windows\build.ps1
 
 普通用户最简流程：安装后点 `MRRC`，浏览器打开后接受自签证书提示；登录用户名默认是 `admin`，首次生成的密码会显示在启动窗口、本机登录页，以及开始菜单 `Login Info` 打开的 quick start 文件中。
 
-## 5. 注意事项
+## 5. 客户机就地修复（旧版安装包 GBK 启动失败）
+
+**症状**：装完 V6.0.0 – V6.0.2，服务器窗口一闪而过/起不来，报
+`UnicodeDecodeError: 'utf-8' codec can't decode byte 0x.. in position ..`。
+
+**原因**：旧包设置页保存时把 `MRRC.conf` 写成 GBK（中文 Windows 的 locale 编码），
+而启动读配置固定 UTF-8。
+
+**修复工具**（免安装，`dist/mrrc-windows-config-fix.zip`，也可直接用 `packaging/windows/` 下同名文件）：
+
+| 文件 | 用途 |
+|------|------|
+| `fix_mrrc_encoding.bat` | 双击即修（把 `%LOCALAPPDATA%\MRRC\MRRC.conf` 转为 UTF-8，原文件存 `.bak`）|
+| `fix_and_start_mrrc.bat` | 先修再启动，建议日常用它替代原来的快捷方式 |
+| `fix_mrrc_encoding.ps1` | 实际逻辑；支持 `-DryRun`（预演）、`-IncludeAux`（顺带转 users.db 等）、`-SelfTest`（自检）、`-CreateShortcut`（建桌面快捷方式）|
+
+三个文件放同一目录双击 bat 即可（bat 是 ASCII + CRLF，ps1 是 UTF-8 with BOM，
+符合 PS 5.1 读中文的踩坑记录）。
+
+```bat
+fix_mrrc_encoding.bat                  :: 只修配置
+fix_and_start_mrrc.bat                 :: 修完启动
+fix_mrrc_encoding.bat -DryRun          :: 只检查不写
+fix_mrrc_encoding.bat -IncludeAux      :: 同时转 MRRC_users.db / memory_channels.json / atr1000_tuner.json
+```
+
+> 注意：旧包在网页设置页保存后仍会写回 GBK；启动失败时重跑即可，
+> 或一直用 `fix_and_start_mrrc.bat` 启动。装上含 `config_io.py` 修复的新包后，
+> 应用会自动容错读取并迁移，这两个脚本只用于过渡期。
+> 若配置里含非 ASCII（如中文用户名路径），工具会给出提示。
+
+## 6. 注意事项
 
 - MRRC 通过 `rigctld` 控制电台。Windows 用户需要自行运行 Hamlib 提供的 `rigctld.exe`，例如：
   ```powershell

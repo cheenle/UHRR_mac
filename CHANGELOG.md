@@ -21,6 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **同类点一并修复**：`memory_channels.json`、`MRRC_users.db`（容错读 + UTF-8 写）以及 `MRRC.log` / `atr1000_proxy_watchdog.log`（`encoding='utf-8', errors='replace'`，避免 GBK 控制台/文件写日志时 `UnicodeEncodeError`）。
 - **回归测试**：新增 `dev_tools/test_config_encoding.py`（复现故障 + 23 项断言，覆盖 GBK/BOM/缺失文件/迁移备份/启动器读取），并接入 `packaging/windows/build.ps1` 作为构建门禁。
 - **打包**：`config_io` 加入两个 PyInstaller spec 的 hiddenimports，Dockerfile 同步 `COPY config_io.py`。
+- **客户机就地修复工具**：新增 `packaging/windows/fix_mrrc_encoding.ps1` + `fix_mrrc_encoding.bat` + `fix_and_start_mrrc.bat`（免安装，`dist/mrrc-windows-config-fix.zip`）——已发布的 V6.0.2 安装包无需重装，在客户机上双击即可把 GBK 配置转为 UTF-8（保留 `.bak`），`fix_and_start_mrrc.bat` 可“先修后启”。支持 `-DryRun` / `-IncludeAux` / `-SelfTest` / `-CreateShortcut`。流程见 `win_pack.md` §5。
 
 ---
 
