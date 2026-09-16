@@ -39,6 +39,15 @@ def _bootstrap():
         patch_dir = patch_overlay.patch_dir()
         if patch_dir:
             overlay_app = os.path.join(patch_dir, "app")
+            # 引擎自身也要可热修：上面的 import 已经加载了内置副本，若覆盖层里有
+            # patch_overlay.py，就丢掉缓存重新加载（此后 MRRC 的 import 会拿到覆盖层版本）。
+            if os.path.isfile(os.path.join(overlay_app, "patch_overlay.py")):
+                import importlib
+                sys.modules.pop("patch_overlay", None)
+                patch_overlay = importlib.import_module("patch_overlay")
+                patch_overlay.configure(config_path=config_path, resource_dir=meipass,
+                                        runtime_dir=runtime_dir)
+                patch_overlay.apply_python_path()
     except Exception as exc:                                    # 覆盖层坏了也必须能启动
         print(f"⚠️ 补丁覆盖层初始化失败（继续使用内置代码）: {exc}", flush=True)
 

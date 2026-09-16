@@ -37,6 +37,24 @@ for _stream in (sys.stdout, sys.stderr):
 # 服务器在读取含中文路径值的 MRRC.conf 时 UnicodeDecodeError 起不来。
 import config_io
 
+# ---- 补丁覆盖层：必须在本文件下面的“模块级导入”之前生效 ------------------------
+# 第 100 行以后有一批模块级 `from hamlib_wrapper import …` / `from audio_interface import …`，
+# 它们一旦先被导入，覆盖层就永远轮不到（实测：源码模式下 Python 热修会失效）。
+# 所以这里先按“配置文件同级的 patch/”算好覆盖层并把 app 目录插到 sys.path 最前，
+# 下面第 ~190 行的那段再按真实 config_file 复核一遍（幂等）并打印日志。
+# 详见 patch_overlay.py 头部与 docs/current/operations/hotfix-and-patching.md。
+try:
+    _early_resource = getattr(sys, "_MEIPASS", None) or os.path.dirname(os.path.abspath(__file__))
+    _early_config = (sys.argv[1] if len(sys.argv) > 1
+                     else os.path.join(os.path.dirname(os.path.abspath(__file__)), "MRRC.conf"))
+    import patch_overlay
+    patch_overlay.configure(config_path=_early_config, resource_dir=_early_resource,
+                            runtime_dir=os.path.dirname(os.path.abspath(__file__)))
+    patch_overlay.apply_python_path()
+except Exception as _early_patch_err:      # 覆盖层坏掉不能影响启动
+    patch_overlay = None
+    print(f"⚠️ 补丁覆盖层早期初始化失败（继续使用内置代码）: {_early_patch_err}", flush=True)
+
 # Set up minimal logging to reduce I/O overhead
 # V4.8.1: 优化logging配置，减少文件I/O操作以降低CPU占用
 logging.basicConfig(
