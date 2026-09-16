@@ -205,5 +205,52 @@ class UpgradeRobustnessTest(unittest.TestCase):
                 self.launcher.app_dir = old
 
 
+class UpgradeWatcherTest(unittest.TestCase):
+    """watch_upgrade：页面按钮写的是具体版本号，没暂存时必须自己下载；失败不能丢请求。
+
+    2026-09-16 VM 端到端实测：哨兵比下载早到 1 分钟 → 只记 missing_staged → 升级被静默丢弃。
+    """
+
+    def setUp(self):
+        self.launcher = load_launcher()
+        self.tmp = Path(tempfile.mkdtemp())
+        self._saved = []
+
+    def tearDown(self):
+        for obj, name, old in reversed(self._saved):
+            setattr(obj, name, old)
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
+    def _patch(self, obj, name, value):
+        self._saved.append((obj, name, getattr(obj, name)))
+        setattr(obj, name, value)
+
+    def test_specific_version_downloads_then_installs(self):
+        import upgrade_core as uc
+        calls = []
+        info = {"available": True, "version": "6.1.4", "url": "https://x/a.exe",
+                "sha256": "a" * 64, "size": 10}
+        self._patch(uc, "fetch_manifest", lambda *a, **k: ({"latest": "6.1.4"}, None))
+        self._patch(uc, "plan_upgrade", lambda installed, man, **k: {"installer": info})
+        self._patch(uc, "staged_matches", lambda state, v, s: False)
+        self._patch(uc, "download_installer",
+                    lambda url, sha, base, version: calls.append(("dl", version)) or {"ok": True, "size": 10})
+        self._patch(self.launcher, "_installed_version", lambda: "6.1.3")
+        self._patch(self.launcher, "run_upgrade",
+                    lambda base, v: calls.append(("run", v)) or "installing")
+        self._patch(self.launcher, "_exit_for_upgrade", lambda *a, **k: calls.append(("exit", "")))
+        uc.write_upgrade_request(self.tmp, "6.1.4")
+        self.launcher.watch_upgrade(self.tmp, "", 0.01, "")          # 会 return（不能挂住）
+        self.assertIn(("dl", "6.1.4"), calls, "具体版本号也必须先下载")
+        self.assertIn(("run", "6.1.4"), calls, "下载完必须真的执行升级")
+        self.assertIn(("exit", ""), calls, "拉起安装器后要走受控退出")
+
+    def test_main_blocked_normally_while_upgrading(self):
+        """升级中主线程不能正常退出：否则解释器收尾会 Fatal Python error 打断安装。"""
+        import inspect
+        src = inspect.getsource(self.launcher.main)
+        self.assertIn("_UPGRADING.is_set()", src)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [V6.1.4] - 2026-09-16
+
+### 🐛 一键升级：VM 真机第二轮暴露的 4 个问题（全部修复）
+
+1. **升级器拉起来了，启动器却当场死**：`/CLOSEAPPLICATIONS` 关不掉控制台进程 → 我先停服务，
+   但**主线程随即从 `proc.wait()` 返回** → 解释器收尾与 `input()`/转发线程抢缓冲区 →
+   `Fatal Python error: _enter_buffered_busy` → 安装被打断。
+   → 新增 `_UPGRADING` 事件：升级中主线程**永不正常退出**，由 `_exit_for_upgrade` 的
+   `os._exit` 受控收尾。
+2. **页面按钮（具体版本号）不会自动下载**：原逻辑只有 `"latest"` 分支会下载，
+   写具体版本时若安装包还没下完 → 记 `missing_staged` → 请求被丢弃。
+   → `watch_upgrade` 统一两条路径：先取清单 → 需要就下载 → 失败保留请求重试（不丢指令）。
+3. **`upgrade_core` 没进安装包**：MRRC 是 datas 里的数据文件、函数内 import 分析不到 →
+   `ModuleNotFoundError: No module named 'upgrade_core'`（服务端 `/api/update` 实报）。
+   → 加进 spec 的 `_APP_MODULES`（同时获得热修可覆盖能力）。
+4. **state.json 并发覆盖**：下载线程与升级线程读-改-写互相覆盖（失败痕迹被冲掉）。
+   → `upgrade_core._STATE_LOCK` 串行化。
+
 ## [V6.1.3] - 2026-09-16
 
 - 一键升级端到端验收版：承接 6.1.2 的 6 项修复（RestartManager 关不掉控制台进程导致的

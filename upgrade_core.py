@@ -17,6 +17,7 @@
 import hashlib
 import json
 import os
+import threading
 import time
 import urllib.request
 
@@ -136,6 +137,11 @@ def state_path(base_dir):
     return os.path.join(updates_dir(base_dir), "state.json")
 
 
+# 下载线程与升级线程都会读-改-写 state.json：不加锁会互相覆盖
+# （2026-09-16 VM 实测：下载完成覆盖了 lastResult，失败时无痕可查）。
+_STATE_LOCK = threading.RLock()
+
+
 def request_path(base_dir):
     return os.path.join(updates_dir(base_dir), "upgrade.request")
 
@@ -163,10 +169,11 @@ def read_state(base_dir):
 
 
 def write_state(base_dir, **fields):
-    state = read_state(base_dir)
-    state.update(fields)
-    _write_json_atomic(state_path(base_dir), state)
-    return state
+    with _STATE_LOCK:
+        state = read_state(base_dir)
+        state.update(fields)
+        _write_json_atomic(state_path(base_dir), state)
+        return state
 
 
 def record_result(base_dir, status, version="", detail=""):

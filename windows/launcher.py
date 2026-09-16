@@ -51,6 +51,7 @@ def _safe_print(text: str) -> None:
 APP_NAME = "MRRC"
 DEFAULT_PORT = "8877"
 _SERVER_PROC = None      # 主流程拉起的服务子进程（升级前必须先停，见 _stop_server_for_upgrade）
+_UPGRADING = threading.Event()   # 已在拉安装器：主线程不得正常退出（见 main 尾部保护）
 DEFAULT_LOGIN_USER = "admin"
 KNOWN_DEFAULT_ACCOUNTS = {("BG1SB", "abcd1234"), ("admin", "uhrr2024")}
 
@@ -659,11 +660,11 @@ def run_upgrade(data_dir: Path, version: str) -> str:
         import ctypes
         if _is_elevated():
             # 已提权：直接跑（不再弹 UAC）——也避免 ShellExecuteW 在非交互窗口站上卡死。
+            _UPGRADING.set()
             subprocess.Popen([setup] + args, cwd=str(Path(data_dir) / "updates"),
                              close_fds=True)
             up.record_result(data_dir, "installing", version, "已启动静默安装（提权直跑）")
             print("[update] 已启动静默安装；本窗口即将退出，安装完成后会自动打开新版本。")
-            _exit_for_upgrade()
             return "installing"
         params = " ".join(f'"{a}"' if " " in a else a for a in args)
         rc = ctypes.windll.shell32.ShellExecuteW(
@@ -731,7 +732,14 @@ def wait_for_upgrade_key(data_dir: Path, stop_event: threading.Event) -> None:
 
 def watch_upgrade(data_dir: Path, pending_version: str = "", poll_seconds: float = 1.0,
                   port: str = "") -> None:
-    """轮询哨兵文件（页面里的「立即升级」按钮会写它）并执行升级；成功后重启启动器。"""
+    """轮询哨兵文件（页面「立即升级」按钮/按 U）并执行升级。
+
+    关键点（均为 2026-09-16 VM 端到端实测所得）：
+      * 页面按钮写的是**具体版本号**，不是 "latest"：两条路径都要能用，
+        且“还没下载完就先下载”，不能要求用户再点一次；
+      * 失败（下载失败 / 暂存未就绪 / 发射中）时**保留请求重试**，不能静默丢弃；
+      * 真正拉起安装器后必须让进程受控退出（返回 "installing" 由 main 的保护逻辑收尾）。
+    """
     import upgrade_core as up
     while True:
         request = up.read_upgrade_request(data_dir)
@@ -740,42 +748,51 @@ def watch_upgrade(data_dir: Path, pending_version: str = "", poll_seconds: float
             up.clear_upgrade_request(data_dir)          # 先清，避免重复触发
         elif pending_version:
             target, pending_version = pending_version, ""   # 启动检查已经知道有新版本
+        if not target:
+            time.sleep(poll_seconds)
+            continue
+
+        manifest, _err = up.fetch_manifest()
+        plan = up.plan_upgrade(_installed_version(), manifest) if manifest else {}
+        info = (plan or {}).get("installer") or {}
         if target == "latest":
-            manifest, _err = up.fetch_manifest()
-            plan = up.plan_upgrade(_installed_version(), manifest) if manifest else {}
-            info = (plan or {}).get("installer") or {}
             if not info.get("available"):
                 print("[update] 清单里没有可用新版本（可能已是最新或网络失败）")
+                target = ""
                 time.sleep(poll_seconds)
                 continue
-            if not up.staged_matches(up.read_state(data_dir), info["version"], info["sha256"]):
-                print(f"[update] 正在下载 {info['version']} …")
-                result = up.download_installer(info["url"], info["sha256"], data_dir, info["version"])
-                if not result.get("ok"):
-                    print(f"[update] 下载失败：{result.get('reason')}")
-                    time.sleep(poll_seconds)
-                    continue
             target = info["version"]
-        if target:
-            if port:
-                allowed, why = server_allows_upgrade(port)
-                if not allowed:
-                    print(f"[update] 现在不能升级：{why}（发射中请先松开 PTT，稍后再按 U）")
-                    up.record_result(data_dir, "ptt_active", target, why)
-                    pending_version = ""
-                    time.sleep(poll_seconds)
-                    continue
-            status = run_upgrade(data_dir, target)
-            print(f"[update] 升级结果：{status}")
-            if status == "ok":
-                print("[update] 升级完成，正在重启…")
-                try:
-                    os.execv(sys.executable, [sys.executable] + sys.argv)
-                except Exception as exc:               # 重启失败也不能崩
-                    print(f"[update] 自动重启失败（请手动重开）：{exc}")
-                return
-            pending_version = ""
-        time.sleep(poll_seconds)
+        if not info.get("available") or str(info.get("version") or "") != target:
+            print(f"[update] 清单里没有 {target}（可能已下线或已装上），跳过")
+            target = ""
+            time.sleep(poll_seconds)
+            continue
+
+        if not up.staged_matches(up.read_state(data_dir), target, info.get("sha256", "")):
+            print(f"[update] 正在下载 {target} …")
+            result = up.download_installer(info["url"], info["sha256"], data_dir, target)
+            if not result.get("ok"):
+                print(f"[update] 下载失败（稍后自动重试）：{result.get('reason')}")
+                time.sleep(max(poll_seconds, 10))
+                continue
+            print(f"[update] 已下载 {target}（{result.get('size', 0) // 1024} KB）")
+
+        if port:
+            allowed, why = server_allows_upgrade(port)
+            if not allowed:
+                print(f"[update] 现在不能升级：{why}（发射中请先松开 PTT，稍后再按 U）")
+                up.record_result(data_dir, "ptt_active", target, why)
+                time.sleep(poll_seconds)
+                continue
+
+        status = run_upgrade(data_dir, target)
+        print(f"[update] 升级结果：{status}")
+        if status in ("ok", "installing"):
+            print("[update] 升级已启动，正在退出以便安装器替换文件…")
+            _exit_for_upgrade(2.0)
+            return
+        # 失败不丢请求：下一轮继续（例如安装包刚写好、或临时网络问题）
+        time.sleep(max(poll_seconds, 5))
 
 
 def _update_enabled(cfg: Path) -> bool:
@@ -888,10 +905,17 @@ def main() -> int:
         print(f"Server did not answer within 15s; opening {url} anyway.")
         webbrowser.open(url)
     try:
-        return proc.wait()
+        rc = proc.wait()
     except KeyboardInterrupt:
         stop_process(proc)
         return 0
+    if _UPGRADING.is_set():
+        # 升级进行中：绝不能正常退出。解释器收尾会和 input()/转发线程抢缓冲区，
+        # 触发 “Fatal Python error: _enter_buffered_busy”，安装被当场打断
+        # （2026-09-16 VM 实测）。由 _exit_for_upgrade 里的 os._exit 收尾。
+        while True:
+            time.sleep(0.5)
+    return rc
 
 
 if __name__ == "__main__":

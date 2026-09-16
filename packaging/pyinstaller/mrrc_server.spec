@@ -29,6 +29,8 @@ _APP_MODULES = [
     "patch_overlay",           # 覆盖层自身也应可被覆盖（后续演进兼容）
     "rig_models",              # hamlib 机型表（改型号列表/别名时无需重新打包）
     "support_bundle",          # 诊断包收集/脱敏（安全逻辑，需可单独热修）
+    "upgrade_core",            # 一键升级纯逻辑（服务端 /api/update 与启动器都 import；
+                               #   漏了它会 ModuleNotFoundError，2026-09-16 VM 实测）
     "config_io",
     "audio_interface",
     "hamlib_wrapper",
