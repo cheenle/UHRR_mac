@@ -22,6 +22,7 @@ import json
 import struct
 import html
 import urllib.parse
+import re
 
 # Windows consoles may use legacy code pages (for example GBK/cp936). Some
 # optional-feature startup messages contain Unicode symbols; never let logging
@@ -4347,6 +4348,215 @@ class DevicesApiHandler(BaseHandler):
 			return self.post_apply()
 		return self.post_save()
 		
+############ 诊断包 / 一键上传 ################
+class SupportApiHandler(BaseHandler):
+	"""「🐞 遇到问题」用的一键诊断包接口。
+
+	POST /api/support/bundle      生成包（磁盘 IO 走 executor，不阻塞 IOLoop）
+	POST /api/support/upload      上传到接收端（网络 IO 走 executor）
+	POST /api/support/save        仅保存到本地（返回路径；Windows 上顺带打开目录）
+	GET  /api/support/bundle/<id> 浏览器下载
+	GET  /api/support/state       接收端地址（页面显示用）
+
+	安全：生成强制脱敏（白名单 + 密钥替换 + 禁打包证书/用户库，见 support_bundle）；
+	上传需用户主动触发；只充许读取本进程本次生成的 id 对应的包。
+	"""
+
+	SUPPORT_URL_DEFAULT = "https://www.vlsc.net/mrrc/support/api"
+	BUNDLE_ID_RE = r'^\d{8}-\d{6}-[0-9a-f]{4}$'
+
+	def _support_dir(self):
+		base = os.path.dirname(os.path.abspath(config_file))
+		path = os.path.join(base, "support")
+		os.makedirs(path, exist_ok=True)
+		return path
+
+	def _support_url(self):
+		try:
+			return config.get('SUPPORT', 'url', fallback=self.SUPPORT_URL_DEFAULT).strip() \
+				or self.SUPPORT_URL_DEFAULT
+		except Exception:
+			return self.SUPPORT_URL_DEFAULT
+
+	@staticmethod
+	def _rigctld_endpoint():
+		host, port = "127.0.0.1", 4532
+		if config.has_option('INSTANCE_SETTINGS', 'instance_rigctl_host'):
+			host = config.get('INSTANCE_SETTINGS', 'instance_rigctl_host').strip() or host
+		if config.has_option('INSTANCE_SETTINGS', 'instance_rigctl_port'):
+			try:
+				port = int(config.get('INSTANCE_SETTINGS', 'instance_rigctl_port'))
+			except ValueError:
+				pass
+		return host, port
+
+	def _version(self):
+		for candidate in (os.path.join(_runtime_dir(), "version.txt"),
+					  os.path.join(_resource_dir(), "version.txt")):
+			if os.path.exists(candidate):
+				try:
+					return open(candidate, encoding="utf-8").read().strip()
+				except OSError:
+					pass
+		return ""
+
+	def _env_snapshot(self):
+		"""环境快照：版本/平台/音频设备/rigctld/ATR-1000/热修。"""
+		import support_bundle
+		audio = {}
+		try:
+			import audio_interface
+			audio = audio_interface.device_report()
+		except Exception as exc:
+			audio = {"error": f"{type(exc).__name__}: {exc}"}
+		rigctld = {}
+		try:
+			import rig_models
+			host, port = self._rigctld_endpoint()
+			rigctld = dict(rig_models.cached_rigctld_model(host, port) or {}, host=host, port=port)
+		except Exception as exc:
+			rigctld = {"error": f"{type(exc).__name__}: {exc}"}
+		hotfix = {}
+		try:
+			import patch_overlay
+			hotfix = patch_overlay.describe(with_hash=True)
+		except Exception as exc:
+			hotfix = {"error": f"{type(exc).__name__}: {exc}"}
+		return support_bundle.collect_env_snapshot(version=self._version(), extra={
+			"audio": audio, "rigctld": rigctld, "hotfix": hotfix,
+			"atr1000": {"enabled": bool(ATR1000_ENABLED), "reason": ATR1000_ENABLED_REASON},
+			"cwd": os.getcwd(),
+		})
+
+	def _log_files(self):
+		runtime, base = _runtime_dir(), os.path.dirname(os.path.abspath(config_file))
+		log_name = config.get('SERVER', 'log_file', fallback='MRRC.log')
+		candidates = {
+			"logs/MRRC.log": os.path.join(runtime, log_name),
+			"logs/MRRC.log.prev": os.path.join(runtime, log_name + ".prev"),
+			"logs/server-stdout.log": os.path.join(base, "logs", "server-stdout.log"),
+			"logs/server-stdout.log.prev": os.path.join(base, "logs", "server-stdout.log.prev"),
+			"logs/atr1000.log": os.path.join(runtime, "atr1000_proxy_watchdog.log"),
+		}
+		return {name: path for name, path in candidates.items() if os.path.isfile(path)}
+
+	def _build(self, payload):
+		"""（工作线程）生成诊断包。"""
+		import support_bundle
+		try:
+			config_text = open(config_file, encoding="utf-8", errors="replace").read()
+		except OSError:
+			config_text = ""
+		return support_bundle.build_bundle(
+			out_dir=self._support_dir(),
+			problem=payload.get("problem", ""),
+			contact=payload.get("contact", ""),
+			env=self._env_snapshot(),
+			log_files=self._log_files(),
+			config_text=config_text,
+		)
+
+	def _bundle_path(self, bundle_id):
+		"""只允许读本目录下、id 格式合法的包（防越权读盘）。"""
+		if not re.match(self.BUNDLE_ID_RE, str(bundle_id or '')):
+			return None
+		path = os.path.join(self._support_dir(), f"support-{bundle_id}.zip")
+		return path if os.path.isfile(path) else None
+
+	def _upload(self, bundle_id, problem="", contact=""):
+		"""（工作线程）上传到接收端：create → PUT bundle。"""
+		import urllib.request
+		path = self._bundle_path(bundle_id)
+		if not path:
+			return {"ok": False, "reason": "bundle_not_found"}
+		base = self._support_url().rstrip("/")
+		version = self._version() or "unknown"
+		meta = {"problem": problem[:2000], "contact": contact[:200], "version": version}
+		try:
+			req = urllib.request.Request(
+				base + "/create", data=json.dumps(meta).encode("utf-8"),
+				headers={"Content-Type": "application/json", "User-Agent": f"MRRC/{version}"})
+			with urllib.request.urlopen(req, timeout=30) as resp:
+				created = json.loads(resp.read() or b"{}")
+			remote_id = created.get("id")
+			if not created.get("ok") or not remote_id:
+				return {"ok": False, "reason": "create_failed", "detail": created}
+			with open(path, "rb") as fh:
+				body = fh.read()
+			put = urllib.request.Request(
+				f"{base}/{remote_id}/bundle", data=body, method="PUT",
+				headers={"Content-Type": "application/zip", "User-Agent": f"MRRC/{version}"})
+			with urllib.request.urlopen(put, timeout=120) as resp2:
+				result = json.loads(resp2.read() or b"{}")
+			if not result.get("ok"):
+				return {"ok": False, "reason": "put_failed", "detail": result}
+			return {"ok": True, "remoteId": remote_id, "size": len(body)}
+		except Exception as exc:
+			return {"ok": False, "reason": f"{type(exc).__name__}: {exc}",
+					"localPath": path}
+
+	def _save_local(self, bundle_id):
+		"""（工作线程）返回本地路径；Windows 上顺带打开资源管理器定位。"""
+		path = self._bundle_path(bundle_id)
+		if not path:
+			return {"ok": False, "reason": "bundle_not_found"}
+		if os.name == "nt":
+			try:
+				subprocess.Popen(['explorer', '/select,', path])
+			except Exception:
+				pass
+		return {"ok": True, "path": path, "size": os.path.getsize(path)}
+
+	async def post(self):
+		self.set_header("Content-Type", "application/json")
+		if not self.current_user:
+			self.set_status(403)
+			self.write(json.dumps({"ok": False, "reason": "auth_required"}))
+			return
+		try:
+			payload = json.loads(self.request.body or b"{}") or {}
+			suffix = self.request.path.rstrip('/').rsplit('/', 1)[-1]
+			if suffix == "bundle":
+				result = await tornado.ioloop.IOLoop.current().run_in_executor(
+					None, self._build, payload)
+				self.write(json.dumps({"ok": True, **result}, ensure_ascii=False))
+			elif suffix == "upload":
+				result = await tornado.ioloop.IOLoop.current().run_in_executor(
+					None, self._upload, payload.get("id"),
+					str(payload.get("problem", "")), str(payload.get("contact", "")))
+				self.write(json.dumps(result, ensure_ascii=False))
+			elif suffix == "save":
+				result = await tornado.ioloop.IOLoop.current().run_in_executor(
+					None, self._save_local, payload.get("id"))
+				self.write(json.dumps(result, ensure_ascii=False))
+			else:
+				self.set_status(404)
+				self.write(json.dumps({"ok": False, "reason": "unknown_action"}))
+		except Exception as exc:
+			logger.warning(f"诊断包接口失败: {exc}")
+			self.set_status(500)
+			self.write(json.dumps({"ok": False, "reason": f"{type(exc).__name__}: {exc}"}))
+
+	def get(self):
+		path = self.request.path
+		if '/bundle/' in path:
+			bundle_id = path.rstrip('/').rsplit('/', 1)[-1]
+			local = self._bundle_path(bundle_id)
+			if not local:
+				self.set_status(404)
+				self.write("not found")
+				return
+			self.set_header("Content-Type", "application/zip")
+			self.set_header("Content-Disposition",
+						   f'attachment; filename="support-{bundle_id}.zip"')
+			with open(local, "rb") as fh:
+				self.write(fh.read())
+			return
+		self.set_header("Content-Type", "application/json")
+		self.write(json.dumps({"ok": True, "uploadUrl": self._support_url()},
+						   ensure_ascii=False))
+
+
 ############ Login ##############
 class AuthLoginHandler(BaseHandler):
 
@@ -4820,6 +5030,7 @@ if __name__ == "__main__":
 					(r'/api/recordings', RecordingsListHandler),  # 录音列表API
 					(r'/api/devices', DevicesApiHandler),  # 抽屉式设备配置 API
 					(r'/api/devices/apply', DevicesApiHandler),  # 设备配置保存并重启
+					(r'/api/support/.*', SupportApiHandler),  # 诊断包：生成/上传/保存/下载
 					(r'/recordings/([^/]+)', RecordingsDownloadHandler),  # 录音下载
 					(r'/', MainHandler),
 					(r'/(.*)', AuthenticatedStaticFileHandler, { 'path' : os.path.join(_resource_dir(), 'www') })			],debug=bool(config['SERVER']['debug']), websocket_ping_interval=30, cookie_secret=config['SERVER']['cookie_secret'])
