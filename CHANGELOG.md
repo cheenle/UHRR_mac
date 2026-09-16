@@ -5,7 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [未发布] — 支持诊断包（🐞 遇到问题）
+## [V6.0.10] - 2026-09-16
+
+### 🔧 本轮其它修复
+
+- **空闲关机幂等**：5 分钟无客户端活动后，原先每 60s 都会重复 `setPower(0)` 并打印
+  （Win11 VM 控制台实测每分钟两条，且持续把电台按在 power=0）；改为每个空闲周期只关一次，
+  客户端一有新活动就重新武装，日志改用 logger。
+- **配置 BOM 兼容固化**：PowerShell/记事本保存 UTF-8 会带 BOM，
+  `config_io.read_config` 已按 `utf-8-sig` 优先读取 —— 补测试钉住（Windows 用户常见坑）。
+- **「设备配置」抽屉滚动**：`display:block` 破坏 flexbox 导致保存/重启按钮被顶出屏幕 ——
+  改 `display:flex` + 内容区 `min-height:0` + 按钮区 `flex-shrink:0` + `height:100dvh`（已作为 6.0.8 热修补丁发布）。
 
 ### 🐞 一键诊断包：用户点几下，维护者直接拿到现场
 

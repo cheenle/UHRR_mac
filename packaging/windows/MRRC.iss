@@ -1,5 +1,5 @@
 #define MyAppName "MRRC"
-#define MyAppVersion "6.0.7"
+#define MyAppVersion "6.0.10"
 #define MyAppPublisher "cheenle"
 #define MyAppURL "https://github.com/cheenle/mrrc"
 #define MyAppServerName "MRRC-Server.exe"
