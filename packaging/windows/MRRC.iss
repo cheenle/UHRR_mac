@@ -40,6 +40,9 @@ Name: "desktopicon"; Description: "Create a desktop shortcut"; GroupDescription:
 
 [Run]
 Filename: "{app}\{#MyAppLauncherName}"; Description: "Launch {#MyAppName}"; Flags: nowait postinstall skipifsilent
+; 一键升级走静默安装：postinstall 被 skipifsilent 跳过，这里补一条只对静默模式生效的启动项，
+; 否则升级完成后 MRRC 不会自己回来（用户看到的是浏览器里的死页面）。
+Filename: "{app}\{#MyAppLauncherName}"; Flags: nowait runasoriginaluser; Check: WizardSilent
 
 [Messages]
 FinishedHeadingLabel=Completing {#MyAppName} Setup
