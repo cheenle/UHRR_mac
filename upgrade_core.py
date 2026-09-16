@@ -224,7 +224,9 @@ def download_installer(url, sha256, base_dir, version, timeout=60, progress=None
     返回 `{ok, path, size, sha256} | {ok: False, reason, path}`。
     """
     target = os.path.join(updates_dir(base_dir), installer_filename(version))
-    part = target + ".part"
+    # 临时文件按进程区分：曾出现两个启动器实例同时下同一个 .part，一个下完改名时
+    # 另一个正开着它 → Windows 直接 PermissionError [WinError 32]（VM 实测）。
+    part = target + f".part{os.getpid()}"
     expected = str(sha256 or "").lower()
     # 互斥：启动检查的后台下载与升级请求的下载都调这里，两个线程抢同一个 .part 会互相踩。
     # 但**绝不能无限等锁**：VM 实测后台预下载卡在连接阶段时，升级看护线程会一起被拖死
@@ -255,7 +257,14 @@ def download_installer(url, sha256, base_dir, version, timeout=60, progress=None
                               f"{actual[:12]}… != {expected[:12]}…")
                 return {"ok": False, "reason": f"sha256 不符（{actual[:12]}… != {expected[:12]}…）",
                         "path": target}
-            os.replace(part, target)                      # 原子：只有校验通过才成为正式文件
+            for _try in range(6):                          # 杀软/索引器可能短暂占用
+                try:
+                    os.replace(part, target)               # 原子：只有校验通过才成为正式文件
+                    break
+                except PermissionError:
+                    if _try == 5:
+                        raise
+                    time.sleep(1.0)
             write_state(base_dir, staged={
                 "version": str(version), "sha256": actual, "path": target,
                 "size": os.path.getsize(target), "at": time.strftime("%Y-%m-%dT%H:%M:%S")})
@@ -263,7 +272,7 @@ def download_installer(url, sha256, base_dir, version, timeout=60, progress=None
         except Exception as exc:
             try:
                 if os.path.exists(part):
-                    os.remove(part)
+                    os.remove(part)                        # 只管自己的临时文件
             except OSError:
                 pass
             record_result(base_dir, "download_failed", version, f"{type(exc).__name__}: {exc}")

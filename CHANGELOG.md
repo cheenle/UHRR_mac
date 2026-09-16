@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [V6.1.11] - 2026-09-16
+
+### 🐛 两个启动器实例抢同一个 .part → 下载完成后改名失败（真机实测）
+
+现象：6.1.9 下载到 43/45 MB 后报
+`PermissionError [WinError 32] ... MRRC-Setup-6.1.9.exe.part -> MRRC-Setup-6.1.9.exe`。
+
+根因：`threading.Lock` 只在进程内有效，而现场有两个 `MRRC-Launcher` 进程
+（重启 + 安装器 postinstall 各一个）→ 两个都下同一个 `.part` →
+一个改名的瞬间另一个正开着它 → Windows 拒绝。
+
+修复（`upgrade_core.py`，可热修）：
+- 临时文件按进程命名 `.part<pid>`，互不干扰；
+- `os.replace` 加 6 次重试（杀软/索引器短暂占用也能过去）；
+- 失败只清理自己的临时文件。
+
 ## [V6.1.10] - 2026-09-16
 
 ### 🐛 真机复现：点【立即升级】后毫无反应（已修，可热修下发）
