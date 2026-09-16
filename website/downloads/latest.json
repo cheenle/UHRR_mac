@@ -1,14 +1,15 @@
 {
-  "latest": "6.1.0",
+  "latest": "6.1.8",
   "installer": {
-    "url": "https://www.vlsc.net/mrrc/downloads/MRRC-Setup-6.1.0.exe",
-    "sha256": "2547c0061947e4209ca38ff2704d3c5657eccd22508a82a3694251f0495c2402",
-    "size": 45469067
+    "version": "6.1.8",
+    "url": "https://www.vlsc.net/mrrc/downloads/MRRC-Setup-6.1.8.exe",
+    "sha256": "44afe6983eac7fb981593f9f2da57873fe8268ba4971b290af553238f6854f1f",
+    "size": 45478881
   },
   "minSupported": "6.0.3",
   "mandatory": false,
-  "releasedAt": "2026-09-16T16:29:16",
-  "notes": "一键升级（点一下/按 U 即可升级，自动下载校验+静默安装+自动重启，支持回退上一版）",
+  "releasedAt": "2026-09-16T20:30:00",
+  "notes": "一键升级正式可用（点一下/按 U：自动下载校验、静默安装、自动重启、可回退）+ 「🐞 遇到问题」一键诊断包 + 升级健壮性 8 项修复",
   "hotfix": {
     "url": "https://www.vlsc.net/mrrc/downloads/hotfix-6.0.9.zip",
     "sha256": "e326fd38784119119eabcc3c6262a0a7ae758381ce6ba3e9b169fdab69c805f2",
@@ -16,8 +17,8 @@
     "notes": "新增「🐞 遇到问题」一键诊断包上传（含新模块 support_bundle.py）；空闲关机改为幂等"
   },
   "previous": {
-    "version": "6.0.10",
-    "url": "https://www.vlsc.net/mrrc/downloads/MRRC-Setup-6.0.10.exe",
-    "sha256": "3d1a51862d0d7f25c86a8c441449621b6c8b37ade2542ef6a0a42949022223b9"
+    "version": "6.1.6",
+    "url": "https://www.vlsc.net/mrrc/downloads/MRRC-Setup-6.1.6.exe",
+    "sha256": "694ac5486188e297c0c8f03dafdbb54dedfd093fd3eb91996ea0c5060f0c962f"
   }
 }
