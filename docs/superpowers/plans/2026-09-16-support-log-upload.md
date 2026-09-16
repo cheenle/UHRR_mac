@@ -913,3 +913,18 @@ git commit -m "feat(support): 接收端部署脚本 + 文档 + CHANGELOG"
 
 **类型一致性**：`build_bundle()` 的返回值键（`id/path/size/files/redactions/warnings`）在
 任务 2、4、5 中一致；`describe()`、`cached_rigctld_model()`、`device_report()` 均来自已存在或本计划定义的接口。
+
+---
+
+## 收尾记录（2026-09-17）
+
+**任务 1–7：全部完成**（生成/脱敏、服务端接口、页面与入口、启动器日志 tee、接收端、
+部署脚本、文档）。三层验收通过（Mac 源码 / VM 源码 / VM 冻结安装版）；
+接收端已部署到 `www.vlsc.net`，并在 `dev_tools/test_support_receiver.py` 里留下
+7 项接收端测试（create/put/get/list + 越权/超大/穿越拒绝）。
+
+实测追加的两个修复（原计划没有预见）：
+1. Windows GBK 控制台 emoji 杀死日志转发线程（RC-002 §5）；
+2. PowerShell 发送字符串按本地代码页 → 接收端中文乱码 → 显式 UTF-8 字节。
+
+发布版本：**V6.0.10**（热修 6.0.9 首次下发）。

@@ -150,3 +150,53 @@ channel = stable        ; 预留（beta 可指向 latest-beta.json）
 - [ ] 断网 → 静默跳过，不影响启动
 - [ ] `[UPDATE] enabled = False` / `MRRC_NO_UPDATE_CHECK=1` → 完全不检查
 - [ ] 回退：`previous` 存在时，页面提供「回退到 6.0.7」→ 同一条静默安装路径
+
+---
+
+## 11. 实测修订（as-built，2026-09-17）
+
+> 本节记录**真机端到端验收**（Win11 VM，6.1.8 → 6.1.9）后与原始设计的差异与追加。
+> 逐条根因见 `docs/current/reliability/RC-002-launcher-upgrade-and-shutdown.md`；
+> 面向运维的完整版见 `docs/current/operations/one-click-upgrade.md`。
+
+### §11.1 与 §4 状态机的差异
+
+| 原设计 | 实测后的实现 | 原因 |
+|---|---|---|
+| 统一走 `ShellExecuteW "runas"` | **已提权则直接 `subprocess.Popen`** | 已提权进程走 `runas` 在非交互窗口站会永久卡死（无 UAC、无日志） |
+| 停服务 → 拉安装器 | 停服务**之前**先置 `_UPGRADING`；拉完安装器由 `_exit_for_upgrade()` 延迟 `os._exit(0)` | 停服务会让主线程从 `proc.wait()` 醒来：晚置位 → 解释器收尾 → `Fatal Python error` 打断安装 |
+| 无"成功确认" | 新版启动时 `confirm_pending_upgrade()`：`version.txt ≥ staged.version` → 记 `ok` + 清状态 + 删暂存包 | 老启动器升级时已退出，没人能替它确认 |
+| 只处理 `"latest"` 才下载 | 统一两条路径：**已暂存则离线直接升**，否则拉清单按需下载；失败**保留请求重试** | 页面按钮写的是具体版本号；且已下好的包不该再依赖网络 |
+| 仅 `[Run] postinstall skipifsilent` | 追加一条 `Check: WizardSilent`（`runasoriginaluser`） | 静默升级装完必须自动把 MRRC 拉回来 |
+| `threading.Lock` 保护 `.part` | `.part<pid>` 按进程命名 + `os.replace` 6 次重试 + 锁改 `acquire(timeout=1.0)` + `socket.setdefaulttimeout(30)` | 多启动器实例下线程锁无效；连接/DNS 阶段没有超时会把升级线程拖死 |
+
+### §11.2 与 §3 清单/§6 页面的差异
+
+- `latest.json` 的 `previous` 必须是**站点上真实存在**的包 → **必须 git 入库**
+  （`deploy_website.sh` 是 `rsync --delete`；否则回退按钮 404，2026-09-16 实际发生过）；
+- 页面新增**状态详情**区块（`/api/update` 回显 `state`/`plan`），排障时一眼可见
+  `lastResult` 与 `staged`；
+- 新增 `MRRC_UPDATE_MANIFEST` 环境变量覆盖清单地址（内网镜像 + 可离线验收）。
+
+### §11.3 与 §9 测试/§10 验收的差异
+
+- 单元测试从计划里的 15 项增至 **101 项**（含 watcher 回归、锁不阻塞、BOM 容忍、
+  `_UPGRADING` 顺序、GBK 控制台降级等）；
+- **真机验收用 `file://` 本地清单 + 本地安装包**（`dev_tools/vm_upgrade_e2e.ps1`），
+  完全离线，避免被站点网络波动干扰——原计划里"另建一个版本包"的步骤仍然保留；
+- 验收判定从"看着像成功"改为**可判定证据**：
+  `state.json.lastResult.status == "ok"`（唯一成功态）+ `install-<ver>.log` 结尾
+  `Run entry / Deinitializing Setup`。
+
+### §11.4 实测结果（验收通过）
+
+```
+version.txt = 6.1.9
+state.json : {"staged": null,
+              "lastResult": {"status": "ok", "version": "6.1.9",
+                             "detail": "安装后启动确认成功"}}
+```
+
+六个环节全部走通：点按钮 → 写请求 → 自动下载 + SHA256 → 提权静默安装 → 自动重启 → 新版自证 `ok`。
+验收过程中共发现并修复 12 个问题（10 个在 RC-002，2 个在打包 spec / 日志缓冲），
+其中 2 个（V6.1.10/V6.1.11）通过**热修通道**下发，已装 6.1.8 的用户无需重装即修复。

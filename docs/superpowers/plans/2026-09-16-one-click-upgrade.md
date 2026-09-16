@@ -746,3 +746,29 @@ git commit -m "docs(upgrade): 一键升级文档与 CHANGELOG（任务 8/8）"
 **占位符扫描**：任务 5 的页面片段展示了关键 JS 函数体（`refresh/doUpgrade/doRollback`）与元素 id，实现时按 `support.html` 的既有风格补全样式与错误分支——这是唯一需要照抄邻近文件的地方，已在步骤中指明参照对象。
 
 **类型一致性**：`plan_upgrade()` 返回的 `installer/hotfix/previous` 三个子字典在任务 1、3、4、6 中字段一致（`available/version/url/sha256/size/mandatory`）；`download_installer()` 与 `staged_matches()/read_state()` 的字段（`staged.version/sha256/path`）在任务 2、3、4 一致；`record_result()` 的状态串（`ok/uac_denied/install_failed/sha_mismatch/download_failed/missing_staged`）在任务 2、3、8 一致。
+
+---
+
+## 收尾记录（2026-09-17）
+
+**任务 1–8：全部完成。** 另外追加大量的**实测修复**（原计划没有预见的部分）：
+
+| 追加项 | 归属 |
+|---|---|
+| `_is_elevated()` 直跑安装器 / `_exit_for_upgrade()` 受控退出 | 任务 3（启动器） |
+| `confirm_pending_upgrade()` 新版自证成功 | 任务 3 |
+| `_UPGRADING` 早于停服务置位；`_UPGRADE_BUSY` 防子进程先崩带走升级 | 任务 3 |
+| `watch_upgrade` 统一 latest/具体版本 + 已暂存离线升级 + 失败保留重试 | 任务 3 |
+| `_read_json` 用 `utf-8-sig`（BOM 容忍）；`_safe_print` + UTF-8 stdio + 行缓冲 | 任务 3 |
+| `.part<pid>` + `os.replace` 重试 + 非阻塞下载锁 + `socket.setdefaulttimeout(30)` | 任务 2 |
+| `[Run]` 追加 `Check: WizardSilent` 静默启动项 | 任务 6（打包） |
+| `upgrade_core` 加入 spec 的 `_APP_MODULES`（否则 `/api/update` 报 ModuleNotFoundError） | 任务 6 |
+| 页面新增状态详情区块；`MRRC_UPDATE_MANIFEST` 覆盖清单地址 | 任务 5 |
+| `dev_tools/vm_upgrade_e2e.ps1`（参数化、可 `file://` 离线跑） | 任务 7 |
+
+**验收结果**：真机 6.1.8 → 6.1.9 六个环节全部走通，
+`state.json.lastResult = {"status":"ok","version":"6.1.9"}`；
+单元测试 **101 项全绿**。发布版本：**V6.1.0**（进包）→ 经 V6.1.2–V6.1.11 修复 → **V6.1.11**。
+
+**教训**：见 `docs/current/reliability/RC-002-launcher-upgrade-and-shutdown.md` §7
+与 `docs/current/operations/release-process.md`（VM 自动化陷阱清单）。

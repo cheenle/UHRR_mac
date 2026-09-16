@@ -157,3 +157,24 @@ DELETE 由列表页表单触发（需 Basic Auth）
 2. 上传到线上接收端 → 列表页能看到、能下载、能删除；
 3. 断网时 → 提示已保存本地并给出路径；
 4. 越权测试：手工构造 `PUT /api/../etc/passwd` 之类 → 被拒。
+
+---
+
+## 11. 实测修订（as-built，2026-09-17）
+
+- **接收端已上线**：`https://www.vlsc.net/mrrc/support/`（列表/下载/删除，Basic Auth `user=mrrc`；
+  systemd `support-receiver` 监听 `127.0.0.1:8099`；nginx `location ^~ /mrrc/support/`、
+  `client_max_body_size 25m`；存储 `/var/www/support/<id>/`；部署 `./deploy_support_receiver.sh`）。
+- **口令**：维护者本机 `~/.mrrc-support-credentials.txt`（600）；服务器 `/etc/mrrc-support.env`。
+- **三层验收全部通过**：Mac 源码模式 / VM 源码模式 / **VM 冻结安装版**（含真实采集）。
+- **启动器日志捕获**：`tee_child_output` 把服务端启动期 stdout/stderr 写入
+  `logs\server-stdout.log`（2 MB 滚动 + `.prev`）——"启动就崩、页面打不开"的场景因此可取证。
+- **实测踩到的两个拦路坑（已修）**：
+  1. Windows GBK 控制台遇到服务端日志里的 emoji（🔍）→ `print` 抛 `UnicodeEncodeError`
+     → **转发线程死掉、`server-stdout.log` 悄悄断更** → 启动器 stdio 统一 UTF-8 +
+     `_safe_print()` 降级（RC-002 §5）；
+  2. PowerShell 的 `Invoke-RestMethod/-WebRequest` 默认按本地代码页发送字符串
+     → 中文元数据/正文在接收端成乱码 → **显式用 UTF-8 字节**（`[Text.Encoding]::UTF8.GetBytes(...)`）。
+- **打包提醒**：`support_bundle.py` 这类"函数内 import 的新模块"必须同时加入
+  `packaging/pyinstaller/mrrc_server.spec` 的 `_APP_MODULES`，否则冻结包里
+  `import` 失败（`upgrade_core` 就踩过一次）。
