@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MRRC 问题答复 · 解决办法</title>
+<style>
+  :root{--bg:#0d0d12;--card:#181824;--line:#2c2c38;--fg:#e8e8ee;--muted:#9a9aa8;
+        --ok:#3ecf8e;--warn:#e0b03a;--bad:#e0605a;--acc:#5aa9e6}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.65 -apple-system,"Segoe UI",system-ui,sans-serif}
+  .wrap{max-width:860px;margin:0 auto;padding:22px 16px 60px}
+  h1{font-size:22px;margin:6px 0 4px}
+  h2{font-size:17px;margin:26px 0 10px;padding-bottom:6px;border-bottom:1px solid var(--line)}
+  h3{font-size:15px;margin:16px 0 6px}
+  .sub{color:var(--muted);font-size:13.5px;margin:0 0 18px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:14px 16px;margin:0 0 16px}
+  .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  input[type=search]{flex:1;min-width:240px;background:#0f0f16;color:var(--fg);
+        border:1px solid #444;border-radius:6px;padding:10px 12px;font-size:14px}
+  .pill{display:inline-block;font-size:12px;padding:2px 9px;border-radius:99px;border:1px solid var(--line);color:var(--muted)}
+  .pill.ok{color:var(--ok);border-color:#255e46}
+  .pill.no{color:var(--bad);border-color:#6a2f2c}
+  code{background:#0f0f16;border:1px solid #333;border-radius:4px;padding:1px 6px;font-size:12.5px}
+  pre{background:#0f0f16;border:1px solid #333;border-radius:6px;padding:10px;overflow:auto;font-size:12.5px;color:#cfd6e6}
+  ul,ol{margin:6px 0 6px 22px;padding:0}
+  li{margin:4px 0}
+  a{color:var(--acc)}
+  .muted{color:var(--muted)}
+  .id{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--warn)}
+  .hidden{display:none}
+  table{border-collapse:collapse;width:100%;font-size:13.5px;margin:8px 0}
+  th,td{border:1px solid var(--line);padding:6px 9px;text-align:left;vertical-align:top}
+  th{background:#14141d;color:var(--muted);font-weight:600}
+  .tip{border-left:3px solid var(--acc);padding:8px 12px;background:#12121b;border-radius:0 6px 6px 0;margin:10px 0}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>MRRC 问题答复 · 解决办法</h1>
+  <p class="sub">你在「🐞 遇到问题」里上传诊断包后，会得到一个<strong>上报编号</strong>
+    （形如 <span class="id">20260917-062314-35dc</span>）。维护者分析后会把结论写在本页，
+    按编号查找即可——多数问题用户自己就能解决。</p>
+
+  <div class="card">
+    <div class="row">
+      <input id="q" type="search" placeholder="粘贴你的上报编号（或关键词，如：音频 / 升级 / PTT）">
+      <span class="pill" id="count"></span>
+    </div>
+    <div class="tip" style="margin-bottom:0">
+      也可以直接打开带锚点的地址：<code>https://www.vlsc.net/mrrc/answers/#你的编号</code>
+      —— App 上传成功后会把这个链接直接显示给你。
+    </div>
+  </div>
+
+  <h2>怎么自己先看一眼（30 秒）</h2>
+  <ol>
+    <li>在「🐞 遇到问题」里点 <strong>生成诊断包</strong>（不上传也能看）；</li>
+    <li>打开包里的 <code>diagnostics/summary.txt</code> —— 这是自动体检结论，
+      含<strong>启动次数 / 日志时间跨度</strong>、音频健康、IOLoop 看门狗、发射初始化耗时、ATR 数据新鲜度；</li>
+    <li>对照下面的「常见原因表」；对不上再来查本页答复或上报。</li>
+  </ol>
+
+  <table>
+    <tr><th>体检摘要里的信号</th><th>通常意味着</th><th>先做这个</th></tr>
+    <tr><td><code>音频采集：无 🎧 行</code></td><td>没在采集（没有设备，或设备被独占）</td>
+        <td>确认声卡/USB 声卡已插好且未被其它软件独占；Device Config 里选对设备</td></tr>
+    <tr><td><code>❌ 音频初始化失败 … -9996</code></td><td>Windows 找不到可用输入/输出设备</td>
+        <td>看 <code>env.json</code> 的 <code>audio.devices</code>：空数组＝本机没有音频设备（虚拟机常见）</td></tr>
+    <tr><td><code>rigctld daemon not running</code></td><td>电台后台没起来 → 进入模拟模式</td>
+        <td>用启动器/控制脚本启动 rigctld，确认 <code>[INSTANCE_SETTINGS] instance_rigctl_port</code></td></tr>
+    <tr><td><code>启动次数</code> 很多但无 <code>Traceback</code></td><td>重启过多次，但不是崩溃</td>
+        <td>看时间点是否对得上「升级」或手动重启；升级期间应用会主动退出再自动回来，属正常</td></tr>
+    <tr><td><code>🚨 IOLoop stall</code> / 看门狗告警</td><td>事件循环被阻塞（音频设备抖动等）</td>
+        <td>见仓库 <code>docs/current/reliability/RC-001</code>；排查蓝牙声卡/独占设备</td></tr>
+    <tr><td><code>TX 初始化耗时 &gt; 200ms</code></td><td>发射链路起得慢（可能吞音频）</td>
+        <td>见 <code>RC-001</code> §5；多为音频设备抖动</td></tr>
+  </table>
+
+  <h2>答复列表</h2>
+
+  <div class="card" data-keys="20260917-062314-35dc always stopped abnormally 异常停止 停止 重启 崩溃 虚拟机 无音频设备 升级 6.1.11">
+    <div class="row" style="justify-content:space-between">
+      <h3 style="margin:0">编号 <span class="id">20260917-062314-35dc</span></h3>
+      <span class="pill ok">已答复 · 无需修复</span>
+    </div>
+    <p class="muted" style="margin:8px 0 2px">上报时间 2026-09-16 22:22（UTC） · 描述：<strong>always stopped abnormally</strong>（应用似乎总是异常停止）</p>
+    <p class="muted" style="margin:2px 0 10px">环境：Windows 11 · MRRC 6.1.11 安装版 · 2 核 · <strong>无任何音频设备</strong> · 未运行 rigctld</p>
+
+    <h3>诊断（全部来自你的诊断包）</h3>
+    <ul>
+      <li>崩溃痕迹（<code>Traceback</code> / <code>Fatal</code> / <code>Exception</code>）：<strong>0 条</strong>；</li>
+      <li>日志里共 <strong>25 次启动，全部正常完成</strong>（每次都以 <code>HTTP server started</code> + 看门狗武装结束）；</li>
+      <li>唯一的报错只有两类，都是这台机器的环境：<code>❌ 音频初始化失败 [Errno -9996]</code>（本机没有音频设备）与
+          <code>⚠ rigctld daemon not running</code>（没接电台）；</li>
+      <li>日志里有 <strong>11 次「收到升级请求：6.1.9（当前 6.1.8）」</strong>和
+          <strong>1 次「收到升级请求：6.1.11（当前 6.1.9）」</strong>；</li>
+      <li>包内 <code>env.json</code> 显示 <code>version: 6.1.11</code>、<code>audio.devices: []</code>。</li>
+    </ul>
+
+    <h3>结论</h3>
+    <p><strong>不是异常停止，也没有崩溃</strong>。看到的"停止"来自两件事：</p>
+    <ol>
+      <li><strong>一键升级的正常行为</strong>：点【立即升级】后应用会主动退出 → 静默安装 → <strong>自动重启</strong>
+          （约 10–40 秒）。窗口消失是过程的一部分；</li>
+      <li>维护者当时正在这台机器上排查升级问题，反复重启过若干次（日志里那 25 次启动的大多数来自这里）。</li>
+    </ol>
+    <p>另外：这台机器<strong>没有任何声卡</strong>、也没接电台，所以会以「纯 Web 模式」运行（无音频采集、电台命令为模拟）——
+       这是预期行为，不是故障。</p>
+
+    <h3>你要做的</h3>
+    <ol>
+      <li>升级时看到窗口消失：<strong>等 10–40 秒</strong>，新版会自己回来；期间不要手动重复点；</li>
+      <li>想知道到底重启了几次、是不是崩溃：看诊断包 <code>diagnostics/summary.txt</code> 的
+          「启动次数 / 日志时间跨度」与有没有 <code>Traceback</code>；</li>
+      <li>要定位<strong>真实的</strong>使用问题（音频/发射/仪表），请从<strong>接电台那台机器</strong>上报一次——
+          那台机器的诊断包会带音频设备表和音频健康行，才看得出原因；</li>
+      <li>本机已验证升级成功：<code>env.json</code> 的版本已是 <strong>6.1.11</strong>。</li>
+    </ol>
+  </div>
+
+  <h2>English (short)</h2>
+  <div class="card">
+    <p><strong>Report <span class="id">20260917-062314-35dc</span> — "always stopped abnormally".</strong>
+      Diagnosis from the bundle: <em>zero</em> crash markers; 25 startups, all completed normally;
+      the only errors are environmental (no audio device at all → <code>-9996</code>, and no rigctld running).
+      The "stops" were the expected behaviour of the one-click upgrade (the app exits, installs silently and
+      restarts itself in 10–40 s) plus maintainer test restarts.</p>
+    <p><strong>What to do:</strong> wait 10–40 s after starting an upgrade (don't click again); check
+      <code>diagnostics/summary.txt</code> (startup count / time span / any <code>Traceback</code>) to tell
+      "restarts" from "crashes"; report from the machine that actually has the radio connected when you need
+      a real audio/TX diagnosis. This machine is now on <strong>6.1.11</strong>.</p>
+  </div>
+
+  <p class="muted" style="margin-top:26px;font-size:13px">
+    本页只收录"可公开的结论"，不含任何用户数据；诊断包内容仅维护者可见。
+    找不到你的编号？说明还没分析完，或编号输入有误（格式：<code>YYYYMMDD-HHMMSS-4位</code>）。
+  </p>
+</div>
+
+<script>
+const q = document.getElementById('q');
+const cards = Array.from(document.querySelectorAll('.card[data-keys]'));
+const counter = document.getElementById('count');
+function render(){
+  const k = (q.value || '').trim().toLowerCase();
+  let n = 0;
+  cards.forEach(c => {
+    const hit = !k || c.dataset.keys.toLowerCase().includes(k);
+    c.classList.toggle('hidden', !hit);
+    if (hit) n++;
+  });
+  counter.textContent = n + ' / ' + cards.length + ' 条答复';
+}
+q.addEventListener('input', render);
+render();
+// 允许 #编号 直接定位：滚动到对应卡片并高亮搜索框
+const hash = decodeURIComponent(location.hash.replace(/^#/, ''));
+if (hash) { q.value = hash; render(); }
+</script>
+</body>
+</html>

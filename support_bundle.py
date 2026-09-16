@@ -296,6 +296,28 @@ def summarize_log(text, freshness_hours=None):
     conclusions.append("WDSP：" + ("加载成功" if "WDSP 库加载成功" in (text or "")
                                  else "未见成功记录"))
 
+    # 启动次数 / 时间跨度：把"重启"与"崩溃"分开 —— 这是支持包里最常见的误读
+    # （真实案例：用户报"总是异常停止"，实际是 25 次正常启动、0 条 Traceback，
+    #   其中大部分来自一键升级的正常行为与维护者测试）
+    startups = sum(1 for ln in lines if "HTTP server started" in ln)
+    crashes = sum(1 for ln in lines if "Traceback (most recent call last)" in ln)
+    stamps = [ln[:19] for ln in lines
+              if re.match(r"\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}", ln)]
+    span = f"，时间跨度 {stamps[0]} → {stamps[-1]}" if len(stamps) >= 2 else ""
+    if startups:
+        if crashes:
+            verdict = f"⚠️ 同时有 {crashes} 处 Traceback，按崩溃排查"
+        else:
+            verdict = ("无崩溃痕迹，多为升级/手动重启（升级时应用会主动退出、"
+                       "静默安装后自动回来，属正常）")
+        conclusions.append(f"启动次数：{startups} 次{span} —— {verdict}")
+
+    # 音频设备：区分"设备不存在"与"被独占"（-9996 = Windows 找不到可用设备）
+    if "no default output device" in (text or "") or "-9996" in (text or ""):
+        conclusions.append("音频设备：Windows 报 -9996（找不到可用设备）—— 若 env.json 的 "
+                           "audio.devices 为空数组，说明本机根本没有音频设备（虚拟机常见），"
+                           "将以纯 Web 模式运行，并非故障")
+
     head = ["=== 自动体检结论 ==="] + [f"  * {c}" for c in conclusions] + ["", "=== 命中明细 ==="]
     return "\n".join(head + parts + [""])
 

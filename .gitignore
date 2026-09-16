@@ -91,8 +91,8 @@ dev_tools/nr2_out/
 patch/
 dist/hotfix/
 
-# 「🐞 遇到问题」在本机生成的诊断包（运行时产物，不入库）
-support/
+# 「🐞 遇到问题」在本机生成的诊断包（运行时产物，不入库；只匹配仓库根）
+/support/
 
 # 一键升级的运行时状态（state.json / upgrade.request）：真机在 %LOCALAPPDATA%\MRRC\updates，
 # 只在测试脚本跑错目录时才会落到仓库根 —— 不入库

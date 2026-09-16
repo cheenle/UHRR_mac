@@ -59,6 +59,30 @@ class RedactionTest(unittest.TestCase):
     def test_tail_lines_missing_file_is_empty(self):
         self.assertEqual(sb.tail_lines("/nonexistent/path/xyz.log"), "")
 
+    def test_summary_distinguishes_restarts_from_crashes(self):
+        """真实案例（上报 20260917-062314-35dc）：用户以为"总是异常停止"，
+        其实是 25 次正常启动、0 条 Traceback（升级本身就会重启）。摘要必须一眼说清。"""
+        import support_bundle as sb
+        log = "\n".join([
+            "2026-09-16 08:12:32,100 - MRRC - WARNING - x",
+            "HTTP server started.",
+            "2026-09-16 09:12:32,100 - MRRC - WARNING - x",
+            "HTTP server started.",
+            "❌ 音频初始化失败: [Errno -9996] Invalid input device (no default output device)",
+        ])
+        out = sb.summarize_log(log, freshness_hours=0.02)
+        self.assertIn("启动次数：2 次", out)
+        self.assertIn("无崩溃痕迹", out)
+        self.assertIn("时间跨度 2026-09-16 08:12:32 → 2026-09-16 09:12:32", out)
+        self.assertIn("音频设备：Windows 报 -9996", out)
+
+    def test_summary_flags_real_crashes(self):
+        import support_bundle as sb
+        log = "HTTP server started.\nTraceback (most recent call last):\n"
+        out = sb.summarize_log(log, freshness_hours=0.1)
+        self.assertIn("Traceback", out)
+        self.assertIn("按崩溃排查", out)
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
