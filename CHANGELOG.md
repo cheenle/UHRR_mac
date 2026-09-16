@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [V6.1.8] - 2026-09-16
+
+复盘 9-16 上传的那份 23 KB 诊断包：包内 284 KB 是 8-30 的僵尸日志、活日志一个没进，
+“音频没数据 / WDSP 未见成功”全是误报。逐项修复并补齐自证能力：
+
+- 🐞 诊断包日志解析：多实例按 `mrrc_<name>.log` / `rigctld_<name>.log` / `atr1000_<name>.log`
+  约定收集**正在写的**日志（含 `.prev`），同角色候选按 mtime 最新者取（main 走
+  `MRRC.log`/`mrrc.log`/`rigctld.log`/`atr1000_comm.log`），Windows `logs/server-stdout.log` 照收；
+  缺日志或包内最新日志 >24h 会在体检摘要与 warnings 里显式点名。
+- 🎧 音频健康：`🎧 音频健康` 不再被 `MRRC_AUDIO_DIAG` 开关挡住；修正 paFloat32 立体声输入
+  的帧数计数（旧公式按 int16 `len(data)//2`，帧数放大 4 倍 → 真机恒 400%、“<99%”告警从未触发）。
+- 诊断包版本号源码模式不再上报 `unknown`（`version.txt` → `MRRC.iss` → `CHANGELOG.md`）；
+  `env.json` 增加 `instance`；`writte_log()` 补换行并落到本实例活日志。
+
 ## [V6.1.7] - 2026-09-16
 
 - 一键升级端到端验收目标（仅测试用，不对外发布；走 MRRC_UPDATE_MANIFEST 测试清单）。
