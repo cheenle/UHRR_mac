@@ -5,6 +5,32 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [未发布] — V6.0.4
+
+### 🎛️ Device Config 的电台型号改为 hamlib 实时机型表，并修正“改了型号不生效”
+
+- **问题**：`Device Config` 的型号列表是硬编码 7 个名字（既非 hamlib 实际支持机型），
+  且它写的是 `[HAMLIB] rig_model`（名字，如 `IC_M710`），而 **rigctld 实际读的是
+  `[INSTANCE_SETTINGS] instance_rigctl_model`（数字，如 30003）** —— 两边不通，
+  用户换型号/串口实际不生效，配置与运行中的电台可能长期不一致。
+- **新增 `rig_models.py`**：`rig_load_all_backends()` + `rig_list_foreach()`（ctypes）
+  实时枚举本机 hamlib 的 **312** 个机型（id/名称/厂商/版本/状态），带别名表
+  （`IC_M710`、`FT817`、`FTDX10`… 历史写法都能解析）、进程内缓存、hamlib 不可用时回退小表。
+  另提供 `cached_rigctld_model()`：读 rigctld 的 `\dump_caps` 得到它**实际加载**的机型
+  （后台线程刷新，绝不阻塞 IOLoop）。
+- **写配置时两处同步**（`apply_to_config`）：`[HAMLIB] rig_model` = hamlib 规范名，
+  `[INSTANCE_SETTINGS] instance_rigctl_model` = 数字 id；串口同样镜像
+  （`rig_pathname→instance_rigctl_device`、`rig_rate→speed`、`stop_bits→stop_bits`）。
+  非法型号 400 拒绝且不做半截写入。
+- **`/api/devices`** 现在返回：机型表（含 `statusName`）、当前配置值到 hamlib 机型的对应
+  （含"找不到"原因与候选建议）、`instance_rigctl_model`、以及 rigctld 实报机型。
+- **UI**：型号改为**可搜索**的下拉（按厂商分组、显示 `#id · 名称 · 状态`），下方直接列出
+  “配置 → hamlib 机型”与“rigctld 实报”，**配置与运行不一致时明确标注 ⚠**；支持自定义型号原样写入。
+- **`mrrc_control.sh`** 改为从 MRRC.conf 读取型号/串口/速率等（优先
+  `[INSTANCE_SETTINGS]`，其次 `[HAMLIB]`，最后才是脚本内置默认值），不再与实际配置脱节。
+- 旧 `/CONFIG` 表单同步使用实时机型表（值是 hamlib 机型 ID）。
+- 测试：新增 `tests/test_rig_models.py`（13 例：别名解析、双写、非法值不落盘、`\dump_caps` 解析）。
+
 ## [V6.0.3] - 2026-09-16
 
 ### 🩹 WebSocket 写入健壮性：消除 `WebSocketClosedError` 日志风暴与线程违规

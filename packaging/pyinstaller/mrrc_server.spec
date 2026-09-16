@@ -27,6 +27,7 @@ ROOT = Path(SPECPATH).parents[1]
 _APP_ENTRY = "MRRC"
 _APP_MODULES = [
     "patch_overlay",           # 覆盖层自身也应可被覆盖（后续演进兼容）
+    "rig_models",              # hamlib 机型表（改型号列表/别名时无需重新打包）
     "config_io",
     "audio_interface",
     "hamlib_wrapper",

@@ -8,12 +8,32 @@ ulimit -n 10240
 SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
 
 # Configuration
-RIGCTL_MODEL="30003"  # IC-M710
-RIGCTL_DEVICE="/dev/cu.usbserial-230"  # Modify this to match your device
-RIGCTL_SPEED="4800"
-RIGCTL_STOP_BITS="2"
-RIGCTL_HOST="127.0.0.1"
-RIGCTL_PORT="4532"
+#
+# 默认值可被 MRRC.conf 覆盖：优先读 [INSTANCE_SETTINGS] 里 rigctld 实际使用的键
+# （instance_rigctl_model/device/speed/stop_bits/host/port，即“设备配置”抽屉写入的位置），
+# 其次是 [HAMLIB] 里的 rig_model/rig_pathname/rig_rate/stop_bits,
+# 最后才是下面这些硬编码默认值。
+MRRC_CONF="${MRRC_CONF:-$SCRIPT_DIR/MRRC.conf}"
+_conf_get() {  # _conf_get <section> <key> [默认值]
+    [ -f "$MRRC_CONF" ] || return 0
+    python3 - "$MRRC_CONF" "$1" "$2" "${3:-}" <<'PY' 2>/dev/null
+import configparser, sys
+cfg = configparser.ConfigParser()
+cfg.read(sys.argv[1], encoding='utf-8')
+section, key, default = sys.argv[2], sys.argv[3], sys.argv[4]
+try:
+    value = cfg.get(section, key).strip()
+except Exception:
+    value = ''
+print(value or default)
+PY
+}
+RIGCTL_MODEL="$(_conf_get INSTANCE_SETTINGS instance_rigctl_model "$(_conf_get HAMLIB rig_model 30003)")"
+RIGCTL_DEVICE="$(_conf_get INSTANCE_SETTINGS instance_rigctl_device "$(_conf_get HAMLIB rig_pathname /dev/cu.usbserial-230)")"
+RIGCTL_SPEED="$(_conf_get INSTANCE_SETTINGS instance_rigctl_speed "$(_conf_get HAMLIB rig_rate 4800)")"
+RIGCTL_STOP_BITS="$(_conf_get INSTANCE_SETTINGS instance_rigctl_stop_bits "$(_conf_get HAMLIB stop_bits 2)")"
+RIGCTL_HOST="$(_conf_get INSTANCE_SETTINGS instance_rigctl_host 127.0.0.1)"
+RIGCTL_PORT="$(_conf_get INSTANCE_SETTINGS instance_rigctl_port 4532)"
 MRRC_PORT="8877"
 LOG_DIR="$SCRIPT_DIR"
 RIGCTLD_LOG="$LOG_DIR/rigctld.log"

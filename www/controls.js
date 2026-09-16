@@ -2458,6 +2458,14 @@ async function loadDeviceSettings() {
         const data = await res.json();
         _deviceSettingsData = data;
         renderDeviceSettings(data);
+        // rigctld 探针是后台刷新的：首次打开抽屉时可能还没结果，补取一次
+        if (!data.rigctld || !data.rigctld.name) {
+            setTimeout(function () {
+                if (document.getElementById('device-drawer').style.display === 'block') {
+                    loadDeviceSettings();
+                }
+            }, 2500);
+        }
     } catch (e) {
         content.innerHTML = '<p class="device-drawer-hint">Failed to load device settings: ' + e.message + '</p>';
     }
@@ -2476,7 +2484,6 @@ function renderDeviceSettings(data) {
     const audio = cfg.AUDIO || {};
     const serials = data.serial_devices || [];
     const audioDevs = data.audio_devices || [];
-    const rigModels = data.rig_models || [];
     const baudRates = data.baud_rates || [];
     const pttActive = data.ptt_active;
 
@@ -2485,18 +2492,64 @@ function renderDeviceSettings(data) {
         html += '<p class="device-drawer-warning">TX is active. Device settings are locked during transmit.</p>';
     }
 
-    // Radio model
-    const currentModel = ham.rig_model || '';
-    const isCustomModel = currentModel && !rigModels.includes(currentModel);
-    html += '<label class="device-drawer-row"><span>Radio model</span>';
+    // Radio model：hamlib 实时机型表（312 项）+ 搜索 + 与配置/rigctld 的对应关系
+    const rigModelList = data.rig_models || [];
+    const rigMeta = data.rig_models_meta || {};
+    const modelCurrent = data.rig_model_current || {};
+    const rigctld = data.rigctld || {};
+    const instanceModel = data.instance_rigctl_model || '';
+    _deviceRigModels = rigModelList;
+    html += '<div class="device-drawer-row"><span>Radio model</span>';
+    html += '<input type="text" id="dev-rig-model-filter" placeholder="搜索型号 / 厂商（共 ' + rigModelList.length + ' 个 hamlib 机型）" oninput="onRigModelFilter()">';
+    html += '</div>';
+    html += '<div class="device-drawer-row"><span></span>';
     html += '<select id="dev-rig-model" onchange="onDeviceModelChange();">';
-    rigModels.forEach(function(m) {
-        html += '<option value="' + escHtml(m) + '" ' + (m === currentModel ? 'selected' : '') + '>' + escHtml(m) + '</option>';
-    });
-    html += '<option value="__custom__" ' + (isCustomModel ? 'selected' : '') + '>Custom...</option>';
-    html += '</select></label>';
-    html += '<div id="dev-rig-model-custom-wrap" class="device-drawer-row" style="' + (isCustomModel ? '' : 'display:none;') + '">';
-    html += '<span>Custom model</span><input type="text" id="dev-rig-model-custom" value="' + escHtml(isCustomModel ? currentModel : '') + '">';
+    html += _rigModelOptionsHtml(rigModelList, modelCurrent);
+    html += '<option value="__custom__" ' + (modelCurrent.value && !modelCurrent.matched ? 'selected' : '') + '>✎ 自定义（原样写入配置）</option>';
+    html += '</select></div>';
+
+    // 对应关系说明：配置里的值 ↔ hamlib 机型 ↔ rigctld 实际加载的机型
+    html += '<div class="device-drawer-hint" id="dev-rig-model-match">';
+    if (modelCurrent.value) {
+        if (modelCurrent.matched) {
+            html += '配置：<code>' + escHtml(modelCurrent.value) + '</code> → hamlib #' + modelCurrent.id + ' · ' +
+                    escHtml(modelCurrent.mfg + ' ' + modelCurrent.name) + ' · ' + escHtml(modelCurrent.status || '');
+        } else {
+            html += '<b>⚠ 配置里的 <code>' + escHtml(modelCurrent.value) + '</code> 在 hamlib 机型表里找不到对应机型。</b>';
+            if ((modelCurrent.suggestions || []).length) {
+                html += '<br>你是不是想要：';
+                modelCurrent.suggestions.forEach(function(s) {
+                    html += '<a href="#" onclick="pickRigModel(' + s.id + ');return false;">' + escHtml(s.mfg + ' ' + s.name) + ' (#' + s.id + ')</a> ';
+                });
+            }
+        }
+    } else {
+        html += '配置里没写 rig_model（将使用默认值）。';
+    }
+    html += '</div>';
+
+    // rigctld 实报（证明“配置真的生效了”——rigctld -m 用的是 instance_rigctl_model）
+    html += '<div class="device-drawer-hint" id="dev-rigctld-state">';
+    if (rigctld && rigctld.name) {
+        const same = String(rigctld.id || '') === String(instanceModel || '') ||
+                     String(rigctld.name) === String(modelCurrent.name || '');
+        html += '运行中的 rigctld @' + escHtml((rigctld.host || '') + ':' + (rigctld.port || '')) + '：#' +
+                (rigctld.id || '?') + ' · ' + escHtml((rigctld.mfg || '') + ' ' + (rigctld.name || '')) +
+                (same ? ' <b>✓ 与配置一致</b>' : ' <b>⚠ 与配置不一致</b>');
+    } else {
+        html += '未检测到 rigctld @' + escHtml((rigctld.host || '127.0.0.1') + ':' + (rigctld.port || '')) +
+                '（该实例可能使用内置串口控制，或 rigctld 未启动）';
+    }
+    if (instanceModel) {
+        html += '<br>rigctld 使用的型号（<code>instance_rigctl_model</code>）：<code>' + escHtml(instanceModel) + '</code>';
+    }
+    html += '</div>';
+    if (rigMeta.fallback) {
+        html += '<div class="device-drawer-warning">载入不了本地 hamlib（' + escHtml(rigMeta.error || '') +
+                '），下面是内置回退列表。</div>';
+    }
+    html += '<div id="dev-rig-model-custom-wrap" class="device-drawer-row" style="' + (modelCurrent.value && !modelCurrent.matched ? '' : 'display:none;') + '">';
+    html += '<span>自定义型号</span><input type="text" id="dev-rig-model-custom" value="' + escHtml(modelCurrent.value && !modelCurrent.matched ? modelCurrent.value : '') + '">';
     html += '</div>';
 
     // Serial port
@@ -2580,6 +2633,50 @@ function renderDeviceSettings(data) {
     }
 }
 
+// ---- 电台型号（hamlib 实时机型表）----
+let _deviceRigModels = [];
+
+function _rigModelOptionsHtml(list, current) {
+    // 按厂商分组，值用数字 id（rigctld -m 只认数字，这样最准）
+    const groups = {};
+    (list || []).forEach(function(m) {
+        (groups[m.mfg] = groups[m.mfg] || []).push(m);
+    });
+    let html = '<option value="">-- 不修改 --</option>';
+    Object.keys(groups).sort().forEach(function(mfg) {
+        html += '<optgroup label="' + escHtml(mfg) + '">';
+        groups[mfg].sort(function(a, b) { return a.name.localeCompare(b.name); }).forEach(function(m) {
+            const isCurrent = current && current.matched && String(current.id) === String(m.id);
+            const status = (m.statusName && m.statusName !== 'Stable') ? ' · ' + m.statusName : '';
+            html += '<option value="' + m.id + '" ' + (isCurrent ? 'selected' : '') + '>#' + m.id + ' · ' +
+                    escHtml(m.name) + status + '</option>';
+        });
+        html += '</optgroup>';
+    });
+    return html;
+}
+
+function onRigModelFilter() {
+    const input = document.getElementById('dev-rig-model-filter');
+    const sel = document.getElementById('dev-rig-model');
+    if (!input || !sel) return;
+    const q = String(input.value || '').trim().toLowerCase();
+    if (!q) {
+        sel.innerHTML = _rigModelOptionsHtml(_deviceRigModels, null);
+        return;
+    }
+    const hits = _deviceRigModels.filter(function(m) {
+        return (m.name + ' ' + m.mfg + ' #' + m.id).toLowerCase().indexOf(q) >= 0;
+    });
+    sel.innerHTML = _rigModelOptionsHtml(hits, null);
+}
+
+function pickRigModel(id) {
+    const sel = document.getElementById('dev-rig-model');
+    if (sel) { sel.value = String(id); onDeviceModelChange(); }
+    return false;
+}
+
 function onDeviceModelChange() {
     const sel = document.getElementById('dev-rig-model');
     const wrap = document.getElementById('dev-rig-model-custom-wrap');
@@ -2604,8 +2701,10 @@ function getDeviceFormPayload() {
 
     const modelSel = document.getElementById('dev-rig-model');
     let rigModel = modelSel ? modelSel.value : '';
+    let rigModelCustom = false;
     if (rigModel === '__custom__') {
         rigModel = document.getElementById('dev-rig-model-custom') ? document.getElementById('dev-rig-model-custom').value : '';
+        rigModelCustom = true;
     }
 
     const serialSel = document.getElementById('dev-rig-pathname');
@@ -2620,6 +2719,7 @@ function getDeviceFormPayload() {
     };
 
     if (rigModel) payload.HAMLIB.rig_model = rigModel;
+    if (rigModelCustom) payload.HAMLIB.rig_model_custom = true;
     if (rigPathname) payload.HAMLIB.rig_pathname = rigPathname;
     const baud = getVal('dev-rig-rate');
     if (baud) payload.HAMLIB.rig_rate = baud;

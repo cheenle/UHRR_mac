@@ -3815,13 +3815,18 @@ class ConfigHandler(BaseHandler):
 			audiodevicesoutput=[s for s in alsaaudio.pcms(0) if "plughw" in s]
 			audiodevicesinput=[s for s in alsaaudio.pcms(1) if "plughw" in s]
 		comports=list(comports())
-		# Use cross-platform approach for rig models
-		if HAMLIB_AVAILABLE:
-			# Provide common rig models
-			rig_models = ["FT817", "IC_M710", "FT991", "FTDX10", "TS590", "IC706", "IC7300"]
-		else:
-			# Fallback list of common rig models
-			rig_models = ["FT817", "IC_M710", "FT991", "FTDX10", "TS590", "IC706", "IC7300"]
+		# 电台型号表：从 hamlib 实时枚举（312 个真实机型），不可用时回退
+		# 见 rig_models.py。列表项写 "id|名称"，值取 id：只有数字 id 才是 rigctld 真正认的。
+		try:
+			import rig_models
+			_rm_info = rig_models.available()
+			rig_models = [f"{m['id']}|{m['name']} ({m['mfg']})" for m in _rm_info['models']]
+			if not rig_models:
+				raise RuntimeError("empty")
+		except Exception:
+			rig_models = [f"{m['id']}|{m['name']}" for m in
+					  [{"id": 30003, "name": "IC-M710"}, {"id": 3073, "name": "IC-7300"},
+					   {"id": 1020, "name": "FT-817"}, {"id": 2031, "name": "TS-590S"}]]
 		self.write("""<html><form method="POST" action="/CONFIG">""")
 		self.write("""[SERVER]<br/><br/>""")
 		self.write("""SERVER TCP/IP port:<input type="text" name="SERVER.port" value="""+config['SERVER']['port']+""">Defautl:<b>8888</b>.The server port<br/><br/>""")
@@ -3848,12 +3853,25 @@ class ConfigHandler(BaseHandler):
 
 		self.write("""[HAMLIB]<br/><br/>""")
 	
+		current_model = config['HAMLIB']['rig_model'] if config.has_option('HAMLIB', 'rig_model') else ''
 		self.write("""HAMLIB radio model:<select name="HAMLIB.rig_model">""")
-		if(config['HAMLIB']['rig_model']!=""):
-			self.write("""<option value="""+config['HAMLIB']['rig_model']+""" selected>"""+config['HAMLIB']['rig_model']+"""</option>""")
+		if current_model:
+			# 当前值放在选项里（旁边标出它对应 hamlib 的哪个机型，方便核对）
+			_label = current_model
+			try:
+				import rig_models as _rm
+				_desc = _rm.describe(current_model)
+				if _desc['matched']:
+					_label = f"{_desc['id']}|{_desc['name']} ({_desc['mfg']}) ← 当前:{current_model}"
+				else:
+					_label = f"{current_model} ← 当前（hamlib 里找不到对应机型）"
+			except Exception:
+				pass
+			self.write("""<option value=""" + current_model + """ selected>""" + _label + """</option>""")
 		for c in rig_models:
-			self.write("""<option value="""+c+""">"""+c+"""</option>""")
-		self.write("""</select> Hamlib trx model.<br/><br/>""")
+			value = c.split('|', 1)[0] if '|' in c else c
+			self.write("""<option value=""" + value + """>""" + c + """</option>""")
+		self.write("""</select> Hamlib trx model（值是 hamlib 机型 ID，rigctld -m 用它）。<br/><br/>""")
 		
 		self.write("""HAMLIB serial port:<select name="HAMLIB.rig_pathname">""")
 		if(config['HAMLIB']['rig_pathname']!=""):
@@ -3975,6 +3993,16 @@ class ConfigHandler(BaseHandler):
 			print(s,o,v)
 			if config.has_option(s,o):
 				config[s][o]=v
+		# 型号表已改为 hamlib 实时枚举（值是数字 id）：这里同样把它归一化成 hamlib 规范名，
+		# 并把 rigctld 实际读的 instance_rigctl_model 一起更新，否则“改了型号不生效”。
+		if config.has_option('HAMLIB', 'rig_model'):
+			try:
+				import rig_models
+				_name, _err = rig_models.apply_to_config(config, config['HAMLIB']['rig_model'])
+				if _err:
+					print(f"⚠ 型号归一化失败（保持原值）: {_err}")
+			except Exception as _exc:
+				print(f"⚠ 型号归一化异常（保持原值）: {_exc}")
 		config_io.write_config(config, config_file)
 		self.write("""<html><head><script>window.setTimeout(function() {window.location.href = 'https://'+window.location.hostname+':'+ '"""+config['SERVER']['port']+"""';}, 10000);</script><head><body>You will be redirected automatically. Please wait...<br><img width="40px" height=40px" src="../img/spinner.gif"></body></html>""")
 		self.flush() 
@@ -3991,9 +4019,30 @@ class DevicesApiHandler(BaseHandler):
 	POST /api/devices/apply -> 保存配置并重启 MRRC 服务
 	"""
 
-	# 与 /CONFIG 页面一致的常用电台型号
+	# 历史遗留的常用型号（hamlib 不可用时的回退；实际型号表从 hamlib 实时枚举，见 rig_models.py）
 	RIG_MODELS = ["FT817", "IC_M710", "FT991", "FTDX10", "TS590", "IC706", "IC7300"]
 	BAUD_RATES = [150, 300, 600, 1200, 2400, 4800, 9600, 19200, 38400, 57600, 115200, 230400]
+
+	# [HAMLIB] 键 → [INSTANCE_SETTINGS] 里 rigctld 实际读的键。
+	# 这个镜像很关键：mrrc_multi.sh 起 rigctld 用的是 INSTANCE_SETTINGS 的值
+	# （-m/-r/-s/-C stop_bits），而本 UI 一直只写 [HAMLIB] → 改了型号/串口实际不生效。
+	INSTANCE_MIRROR = {
+		"rig_pathname": "instance_rigctl_device",
+		"rig_rate": "instance_rigctl_speed",
+		"stop_bits": "instance_rigctl_stop_bits",
+	}
+
+	# rigctld 探针用的 host/port（读 INSTANCE_SETTINGS，缺省与 mrrc_multi.sh 一致）
+	def _rigctld_endpoint(self):
+		host, port = "127.0.0.1", 4532
+		if config.has_option('INSTANCE_SETTINGS', 'instance_rigctl_host'):
+			host = config.get('INSTANCE_SETTINGS', 'instance_rigctl_host').strip() or host
+		if config.has_option('INSTANCE_SETTINGS', 'instance_rigctl_port'):
+			try:
+				port = int(config.get('INSTANCE_SETTINGS', 'instance_rigctl_port'))
+			except ValueError:
+				pass
+		return host, port
 
 	# 允许通过此 API 修改的键，按节分组
 	CONFIG_KEYS = {
@@ -4034,17 +4083,96 @@ class DevicesApiHandler(BaseHandler):
 			cfg[section] = section_cfg
 		return cfg
 
+	def _rig_model_payload(self):
+		"""hamlib 真实机型表 + 当前配置型号的对应情况 + rigctld 实报机型。"""
+		try:
+			import rig_models
+		except Exception as exc:
+			return {"rig_models": [], "rig_models_meta": {
+				"count": 0, "fallback": True, "error": f"{type(exc).__name__}: {exc}"}}
+
+		info = rig_models.available()
+		models = [dict(m, statusName=rig_models.status_name(m.get("status"))) for m in info["models"]]
+		config_value = config.get('HAMLIB', 'rig_model', fallback='') if config.has_section('HAMLIB') else ''
+		instance_value = (config.get('INSTANCE_SETTINGS', 'instance_rigctl_model', fallback='')
+					  if config.has_option('INSTANCE_SETTINGS', 'instance_rigctl_model') else '')
+		current = rig_models.describe(config_value)
+		current["suggestions"] = [
+			{"id": m["id"], "name": m["name"], "mfg": m["mfg"]}
+			for m in rig_models.suggest(config_value, info["models"]) if not current["matched"]
+		]
+		host, port = self._rigctld_endpoint()
+		live = rig_models.cached_rigctld_model(host, port)
+		return {
+			"rig_models": models,
+			"rig_models_meta": {"count": len(info["models"]), "fallback": info["fallback"],
+								"error": info["error"]},
+			"rig_model_current": current,
+			"instance_rigctl_model": instance_value,
+			"instance_rigctl_model_current": rig_models.describe(instance_value),
+			"rigctld": dict(live, host=host, port=port) if live else {"host": host, "port": port},
+		}
+
 	def get(self):
 		self.set_header("Content-Type", "application/json")
 		data = {
 			"config": self._current_config(),
 			"serial_devices": self._serial_devices(),
 			"audio_devices": self._audio_devices(),
-			"rig_models": self.RIG_MODELS,
 			"baud_rates": self.BAUD_RATES,
 			"ptt_active": self._ptt_active(),
 		}
-		self.write(json.dumps(data))
+		data.update(self._rig_model_payload())
+		self.write(json.dumps(data, ensure_ascii=False))
+
+	def _normalize_rig_model(self, payload):
+		"""把 UI 传的型号归一化为 hamlib 机型，并把实例（rigctld）会读的值镜像过去。
+
+		返回 (错误信息 or None)。错误信息非空时调用方应 400 返回。
+		UI 约定：选中列表里的机型时传**数字 id**（最准确）；手工输入时额外带
+		`rig_model_custom: true`。
+		"""
+		section = payload.get("HAMLIB") or {}
+		if "rig_model" not in section:
+			return self._mirror_instance_keys(payload, resolve_model=False)
+		raw = str(section.get("rig_model") or "").strip()
+		if not raw:
+			return None                      # 留空 = 不改
+		try:
+			import rig_models
+		except Exception as exc:
+			return f"hamlib 机型模块不可用（{type(exc).__name__}: {exc}）"
+		model = rig_models.resolve(raw)
+		if model:
+			# 写配置：规范名 → [HAMLIB]，数字 id → [INSTANCE_SETTINGS]（rigctld -m 用它）
+			try:
+				name, err = rig_models.apply_to_config(config, raw)
+				if err:
+					return err
+				section["rig_model"] = name
+				payload["HAMLIB"] = section
+				logger.info(f"设备配置：电台型号 {raw} → {model['id']} {model['name']}"
+							f"（已同步 instance_rigctl_model）")
+			except Exception as exc:
+				logger.warning(f"写入电台型号失败: {exc}")
+				return f"写入电台型号失败: {exc}"
+			return self._mirror_instance_keys(payload, resolve_model=True)
+		if section.get("rig_model_custom"):
+			return None                                   # 显式自定义：原样写入
+		return (f"hamlib 机型表里找不到“{raw}”。请从列表里选择，"
+				f"或勾选自定义型号后原样保存。")
+
+	def _mirror_instance_keys(self, payload, resolve_model):
+		"""把 [HAMLIB] 里的串口参数同步到 rigctld 实际读取的 instance_* 键。"""
+		section = payload.get("HAMLIB") or {}
+		if not section:
+			return None
+		if not config.has_section('INSTANCE_SETTINGS'):
+			return None                                   # 非多实例部署：不需要镜像
+		for hamlib_key, instance_key in self.INSTANCE_MIRROR.items():
+			if hamlib_key in section and str(section[hamlib_key]).strip() != "":
+				config.set('INSTANCE_SETTINGS', instance_key, str(section[hamlib_key]).strip())
+		return None
 
 	def _write_config(self, payload):
 		"""原子写 MRRC.conf，只更新已知键。"""
@@ -4076,6 +4204,12 @@ class DevicesApiHandler(BaseHandler):
 			self.set_status(400)
 			self.write(json.dumps({"ok": False, "reason": "bad_json"}))
 			return
+		error = self._normalize_rig_model(payload)
+		if error:
+			self.set_status(400)
+			self.write(json.dumps({"ok": False, "reason": "unknown_rig_model",
+						"message": error}, ensure_ascii=False))
+			return
 		try:
 			self._write_config(payload)
 		except Exception as e:
@@ -4095,6 +4229,12 @@ class DevicesApiHandler(BaseHandler):
 			self.set_status(400)
 			self.write(json.dumps({"ok": False, "reason": "bad_json"}))
 			return
+		error = self._normalize_rig_model(payload)
+		if error:
+			self.set_status(400)
+			self.write(json.dumps({"ok": False, "reason": "unknown_rig_model",
+						"message": error}, ensure_ascii=False))
+			return
 		try:
 			self._write_config(payload)
 		except Exception as e:
@@ -4112,18 +4252,6 @@ class DevicesApiHandler(BaseHandler):
 		if self.request.path.rstrip('/').endswith('/apply'):
 			return self.post_apply()
 		return self.post_save()
-		payload = self._parse_body()
-		if payload is None:
-			self.set_status(400)
-			self.write(json.dumps({"ok": False, "reason": "bad_json"}))
-			return
-		try:
-			self._write_config(payload)
-		except Exception as e:
-			self.set_status(500)
-			self.write(json.dumps({"ok": False, "reason": "write_failed", "message": str(e)}))
-			return
-		self.write(json.dumps({"ok": True, "config": self._current_config()}))
 		
 ############ Login ##############
 class AuthLoginHandler(BaseHandler):
@@ -4634,4 +4762,26 @@ if __name__ == "__main__":
 	http_server.listen(int(config['SERVER']['port']))
 	print('HTTP server started.')
 	arm_ioloop_watchdog()
+
+	# 后台预热 hamlib 机型表与 rigctld 探针：rig_load_all_backends() 会加载 50+ 后端，
+	# 放在请求路径上会拖慢首次打开"设备配置"抽屉；探针是网络 I/O 更不能在 IOLoop 上做。
+	def _prewarm_rig_models():
+		try:
+			import rig_models as _rm
+			_rm.available()
+			host, port = "127.0.0.1", 4532
+			if config.has_option('INSTANCE_SETTINGS', 'instance_rigctl_host'):
+				host = config.get('INSTANCE_SETTINGS', 'instance_rigctl_host').strip() or host
+			if config.has_option('INSTANCE_SETTINGS', 'instance_rigctl_port'):
+				try:
+					port = int(config.get('INSTANCE_SETTINGS', 'instance_rigctl_port'))
+				except ValueError:
+					pass
+			for _ in range(3):                     # 探针带缓存：多跑几次让后台刷新落地
+				_rm.cached_rigctld_model(host, port)
+				time.sleep(2)
+		except Exception as _exc:
+			print(f"⚠ 机型表预热失败（不影响服务）: {_exc}")
+
+	threading.Thread(target=_prewarm_rig_models, name="rig-models-prewarm", daemon=True).start()
 	tornado.ioloop.IOLoop.instance().start()
