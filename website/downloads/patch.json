@@ -1,13 +1,12 @@
 {
-  "latest": "6.0.4",
-  "url": "https://www.vlsc.net/mrrc/downloads/hotfix-6.0.4.zip",
-  "sha256": "72e2a8245efc5fe600c32d48626efc1817c70aa7fbc64955307a599a447c4be1",
-  "size": 90256,
+  "latest": "6.0.5",
+  "url": "https://www.vlsc.net/mrrc/downloads/hotfix-6.0.5.zip",
+  "sha256": "2f0d1b351ec60a28620f2c3c0eb6183d8b4d8e5d9958ac36f18440d6496d940c",
+  "size": 70526,
   "requires": "6.0.3",
-  "notes": "Device Config 电台型号改用 hamlib 实时机型表；修正型号/串口改了对 rigctld 不生效",
+  "notes": "Windows 音频设备改按主机 API 优先（默认 WASAPI，避免 MME 秒级成块丢帧）；ATR-1000 频率同步在 Windows 走 TCP；新增采集诊断",
   "files": [
     "app/MRRC",
-    "app/rig_models.py",
-    "www/controls.js"
+    "app/audio_interface.py"
   ]
 }
