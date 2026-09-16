@@ -448,6 +448,45 @@
                 <a href="docs.html" class="btn btn-secondary" data-i18n="cta_docs">阅读技术文档</a>
             </div>
         </div>
+                <h2><span class="feature-icon">⬆️</span> 一键升级（Windows 安装版）</h2>
+                <p>自 <strong>V6.1.0</strong> 起内建，<strong>V6.1.11</strong> 真机端到端验证通过。启动器启动时读取
+                SHA256 固定校验的清单，发现新版本就在后台下载（<em>不打断收听</em>），然后等你触发：</p>
+                <ul>
+                    <li>页面 → 菜单 → <strong>⬆️ 软件更新</strong> → 【立即升级】，或</li>
+                    <li>启动器窗口 → 输入 <code>U</code> 回车。</li>
+                </ul>
+                <p>随后：弹一次管理员确认（UAC）→ 静默安装 → 自动重启到新版本。<strong>新版启动时自己确认成功</strong>，
+                所以“到底成功没有”是事实而不是猜测；上一版保留在服务器上，【回退到上一版】同样一键。</p>
+                <h3>为什么在 Windows 上不简单</h3>
+                <p>控制台程序没有消息循环（安装器的 RestartManager 关不掉它）、已提权进程再用 <code>runas</code>
+                启动会在非交互窗口站永久卡住、控制台代码页是 GBK（日志里的 emoji 会杀死转发线程）、
+                <code>threading.Lock</code> 只在<strong>进程内</strong>有效（两个启动器实例会抢同一个临时文件）。
+                这十类陷阱都由真机验收抓出并修复。</p>
+
+                <h2><span class="feature-icon">🐞</span> 一键诊断包</h2>
+                <p>出问题时用户不必看懂日志：菜单 → <strong>🐞 遇到问题</strong> 一键收集维护者真正需要的东西——
+                启动器/服务端输出、<code>state.json</code>、安装器日志、音频设备表、性能采样、以及
+                <strong>脱敏后的配置</strong>（白名单；密钥替换；证书与用户数据库永不打包），
+                并附带<strong>自动体检摘要</strong>（IOLoop 看门狗、发射初始化耗时、音频健康、天调数据新鲜度）。
+                可一键上传给维护者，也可只保存到本地。</p>
+
+                <h2><span class="feature-icon">🎛️</span> 电台机型表与 hamlib 实时对齐</h2>
+                <p>设备配置不再硬编码机型：<code>rig_models.py</code> 运行时枚举本机 hamlib 的
+                <strong>312 个机型</strong>，并同时写入协议栈真正读取的两个键
+                （<code>[HAMLIB] rig_model</code> 与 <code>[INSTANCE_SETTINGS] instance_rigctl_model</code>），
+                与 <code>rigctld</code> 实报不一致时在界面上给出提示。</p>
+
+                <h2><span class="feature-icon">🛟</span> 产品支持生命周期</h2>
+                <p>MRRC 是当作产品维护的：<strong>发版 → 升级 → 诊断 → AI 分诊 → 答复</strong> 形成闭环，最后一步你可以自己看：</p>
+                <table class="hardware-table">
+                    <tr><td>发版</td><td>单测 + 内联脚本语法守卫 + 产物级热修验收 3/3 三道闸门；站点维护
+                        <code>latest.json</code>（升级）与 <code>patch.json</code>（热修）；发布字节以<strong>服务器侧 SHA256</strong> 为准</td></tr>
+                    <tr><td>升级</td><td>一键（页面按钮或按 <code>U</code>）→ 下载 + 校验 → 一次 UAC → 静默安装 → 自动重启；成功判据 = 新版自证 <code>lastResult = ok</code></td></tr>
+                    <tr><td>诊断</td><td>🐞 一键生成脱敏诊断包（含自动体检摘要）</td></tr>
+                    <tr><td>AI 分诊</td><td>定时任务取出新上报、生成摘要，交由项目 AI 按<strong>固定判定纪律</strong>分析（材料不足就写“需要补充信息”，绝不下没有证据的结论）</td></tr>
+                    <tr><td>答复</td><td>结论发布到 <a href="../../answers/">公开答复页</a>（按编号/关键词可搜）；确认是缺陷时：先给临时规避，再修代码——能热修的重启即生效</td></tr>
+                </table>
+
     </section>
 
     <!-- Footer -->

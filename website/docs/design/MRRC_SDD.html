@@ -153,6 +153,18 @@
         <div class="container">
             <div class="content">
 <h1>MRRC 软件设计方案 (SDD)</h1>
+<div style="border-left:3px solid #22d3ee;background:#0d1117;padding:10px 14px;border-radius:0 6px 6px 0;margin:1em 0">
+  <p style="margin:0 0 6px"><strong>更新说明（2026-09-17，当前版本 V6.1.13）</strong>：本文正文是 V5.8 时代的设计说明，
+  仍准确描述整体架构与数据流；此后新增的<strong>产品支持能力</strong>见
+  <a href="../features.html">功能页 → 产品支持生命周期</a> 与
+  <a href="../docs.html#support">技术文档 → 产品支持</a>：</p>
+  <ul style="margin:0">
+    <li><strong>一键升级</strong>（V6.1.0 起）：清单驱动、SHA256 校验、静默安装、自动重启、可回退；</li>
+    <li><strong>热修覆盖层</strong>（V6.0.3 起）：<code>www/**</code>、可热修模块与 <code>vendor</code> 的修复无需重装；</li>
+    <li><strong>🐞 一键诊断包</strong>（V6.0.10 起）：脱敏打包 + 自动体检摘要 + 一键上传；</li>
+    <li><strong>AI 分诊 + 公开答复页</strong>（V6.1.12 起）：上报 → 分析 → 答复卡发布到 <a href="../answers/">/answers/</a>。</li>
+  </ul>
+</div>
 <h2>Mobile Remote Radio Control - Software Design Description</h2>
 <p><strong>文档版本</strong>: V1.0<br />
 <strong>日期</strong>: 2026-06-19<br />
@@ -2266,7 +2278,7 @@
 <tr>
 <td>技术可行</td>
 <td>✅ 高</td>
-<td>核心功能已在V5.8.5实现</td>
+<td>核心功能已在V6.1.13实现</td>
 </tr>
 <tr>
 <td>市场可行</td>
