@@ -61,7 +61,10 @@ Note "=== DONE ==="
 try {
   $body = Get-Content $log -Raw -Encoding utf8
   $meta = '{"problem":"VM 一键升级端到端验收报告","contact":"vm-e2e","version":"6.1.1"}'
-  $created = Invoke-RestMethod -Uri 'https://www.vlsc.net/mrrc/support/api/create' -Method Post -Body $meta -ContentType 'application/json' -TimeoutSec 60
-  Invoke-WebRequest -Uri ("https://www.vlsc.net/mrrc/support/api/" + $created.id + "/bundle") -Method Put -Body $body -ContentType 'text/plain' -TimeoutSec 180 | Out-Null
+  # PowerShell 默认编码会把中文变乱码：显式用 UTF-8 字节
+  $metaBytes = [Text.Encoding]::UTF8.GetBytes($meta)
+  $created = Invoke-RestMethod -Uri 'https://www.vlsc.net/mrrc/support/api/create' -Method Post -Body $metaBytes -ContentType 'application/json; charset=utf-8' -TimeoutSec 60
+  $bodyBytes = [Text.Encoding]::UTF8.GetBytes($body)
+  Invoke-WebRequest -Uri ("https://www.vlsc.net/mrrc/support/api/" + $created.id + "/bundle") -Method Put -Body $bodyBytes -ContentType 'text/plain; charset=utf-8' -TimeoutSec 180 | Out-Null
   Write-Host "报告已上传到接收端（条目 $($created.id)）"
 } catch { Write-Host ("报告上传失败: " + $_.Exception.Message) }
