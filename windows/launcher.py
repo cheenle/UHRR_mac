@@ -496,6 +496,199 @@ def stop_process(proc: subprocess.Popen) -> None:
         proc.kill()
 
 
+def check_for_upgrade(cfg: Path, data_dir: Path):
+    """启动时检查升级（见 docs/superpowers/specs/2026-09-16-one-click-upgrade-design.md）。
+
+    返回 plan（可能为 None）。行为：
+      * 仅提示 + 可选的**后台预下载**，绝不打断收听；
+      * 已就绪（state.staged 同版本同 sha）则不重复下载；
+      * 任何失败只打印一行，不影响启动。
+    """
+    import upgrade_core as up
+    if not _update_enabled(cfg):
+        return None
+    manifest, error = up.fetch_manifest(up.DEFAULT_MANIFEST_URL)
+    if not manifest:
+        print(f"[update] 检查更新失败（忽略）: {error}")
+        return None
+    plan = up.plan_upgrade(_installed_version(), manifest,
+                           applied_hotfixes=applied_hotfix_versions(patch_dir()))
+    info = plan.get("installer") or {}
+    if not info.get("available"):
+        return plan
+    print(f"[update] 发现新版本 {info['version']}（本机 {plan['installed']}）"
+          f"{'【强制升级】' if info.get('mandatory') else ''}"
+          + (f"：{plan.get('notes')}" if plan.get("notes") else ""))
+    if up.staged_matches(up.read_state(data_dir), info["version"], info["sha256"]):
+        print("[update] 安装包已就绪，按 U 立即升级")
+        return plan
+    if not _auto_download_enabled(cfg):
+        print("[update] 自动下载已关闭（[UPDATE] autoDownload=False）")
+        return plan
+
+    def _bg():
+        result = up.download_installer(info["url"], info["sha256"], data_dir, info["version"])
+        if result.get("ok"):
+            print(f"[update] 已下载 {info['version']}（{result['size'] // 1024} KB），"
+                  f"按 U 立即升级")
+        else:
+            print(f"[update] 下载失败（忽略，可用旧版）: {result.get('reason')}")
+
+    threading.Thread(target=_bg, name="update-download", daemon=True).start()
+    return plan
+
+
+def run_upgrade(data_dir: Path, version: str) -> str:
+    """提权静默安装（一次 UAC）+ 验证版本。返回状态串（见 upgrade_core.record_result）。"""
+    import upgrade_core as up
+    state = up.read_state(data_dir)
+    staged = state.get("staged") or {}
+    setup = str(staged.get("path") or "")
+    if str(staged.get("version")) != str(version) or not os.path.isfile(setup):
+        up.record_result(data_dir, "missing_staged", version,
+                         "安装包尚未下载完成（稍后重试或检查网络）")
+        return "missing_staged"
+    log_path = str(Path(data_dir) / "updates" / f"install-{version}.log")
+    params = (f'/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /CLOSEAPPLICATIONS /LOG="{log_path}"')
+    try:
+        import ctypes
+        rc = ctypes.windll.shell32.ShellExecuteW(
+            None, "runas", setup, params, str(Path(data_dir) / "updates"), 1)
+    except Exception as exc:
+        up.record_result(data_dir, "install_failed", version, f"{type(exc).__name__}: {exc}")
+        return "install_failed"
+    if rc <= 32:                       # 5 = ERROR_ACCESS_DENIED（用户拒绝 UAC）
+        status = "uac_denied" if rc == 5 else "install_failed"
+        up.record_result(data_dir, status, version, f"ShellExecute 返回 {rc}")
+        return status
+    print(f"[update] 安装程序已启动（等待完成，最多 10 分钟）… 日志：{log_path}")
+    deadline = time.time() + 600
+    while time.time() < deadline:
+        time.sleep(2)
+        if _installed_version() == str(version):
+            break
+    ok = _installed_version() == str(version)
+    up.record_result(data_dir, "ok" if ok else "install_failed", version,
+                     "" if ok else "安装后 version.txt 未更新，见 install 日志")
+    return "ok" if ok else "install_failed"
+
+
+def server_allows_upgrade(port: str, timeout: float = 3.0):
+    """问一下本地服务端是否允许升级（发射中拒绝）。
+
+    服务端 /api/update 在**仅本机**访问时免口令（见 MRRC 的 UpdateApiHandler），
+    返回 {"pttActive": bool}。服务端不可达时返回 (True, "server_unreachable")：这时它
+    本来就没在跑，升级是安全的。
+    """
+    import ssl as _ssl
+    import urllib.request
+    ctx = _ssl.create_default_context()
+    ctx.check_hostname = False
+    ctx.verify_mode = _ssl.CERT_NONE
+    try:
+        with urllib.request.urlopen(f"https://127.0.0.1:{port}/api/update",
+                                    context=ctx, timeout=timeout) as resp:
+            data = json.loads(resp.read().decode("utf-8") or "{}")
+        if data.get("pttActive"):
+            return False, "ptt_active"
+        return True, "ok"
+    except Exception as exc:
+        return True, f"server_unreachable: {type(exc).__name__}"
+
+
+def wait_for_upgrade_key(data_dir: Path, stop_event: threading.Event) -> None:
+    """控制台按 U（+回车）请求升级。
+
+    用行读而不是原始单键：Windows 上不需要 msvcrt，且与 Ctrl-C 共存最稳；
+    提示文案里写清楚"输入 U 再回车"。
+    """
+    import upgrade_core as up
+    while not stop_event.is_set():
+        try:
+            line = input()
+        except (EOFError, KeyboardInterrupt):
+            return
+        except Exception:
+            return
+        if line.strip().lower().startswith("u"):
+            up.write_upgrade_request(data_dir, "latest")
+            print("[update] 已收到升级指令，准备中…（如需最新版本号，请用页面里的按钮）")
+
+
+def watch_upgrade(data_dir: Path, pending_version: str = "", poll_seconds: float = 1.0,
+                  port: str = "") -> None:
+    """轮询哨兵文件（页面里的「立即升级」按钮会写它）并执行升级；成功后重启启动器。"""
+    import upgrade_core as up
+    while True:
+        request = up.read_upgrade_request(data_dir)
+        target = str((request or {}).get("version") or "").strip()
+        if target:
+            up.clear_upgrade_request(data_dir)          # 先清，避免重复触发
+        elif pending_version:
+            target, pending_version = pending_version, ""   # 启动检查已经知道有新版本
+        if target == "latest":
+            manifest, _err = up.fetch_manifest(up.DEFAULT_MANIFEST_URL)
+            plan = up.plan_upgrade(_installed_version(), manifest) if manifest else {}
+            info = (plan or {}).get("installer") or {}
+            if not info.get("available"):
+                print("[update] 清单里没有可用新版本（可能已是最新或网络失败）")
+                time.sleep(poll_seconds)
+                continue
+            if not up.staged_matches(up.read_state(data_dir), info["version"], info["sha256"]):
+                print(f"[update] 正在下载 {info['version']} …")
+                result = up.download_installer(info["url"], info["sha256"], data_dir, info["version"])
+                if not result.get("ok"):
+                    print(f"[update] 下载失败：{result.get('reason')}")
+                    time.sleep(poll_seconds)
+                    continue
+            target = info["version"]
+        if target:
+            if port:
+                allowed, why = server_allows_upgrade(port)
+                if not allowed:
+                    print(f"[update] 现在不能升级：{why}（发射中请先松开 PTT，稍后再按 U）")
+                    up.record_result(data_dir, "ptt_active", target, why)
+                    pending_version = ""
+                    time.sleep(poll_seconds)
+                    continue
+            status = run_upgrade(data_dir, target)
+            print(f"[update] 升级结果：{status}")
+            if status == "ok":
+                print("[update] 升级完成，正在重启…")
+                try:
+                    os.execv(sys.executable, [sys.executable] + sys.argv)
+                except Exception as exc:               # 重启失败也不能崩
+                    print(f"[update] 自动重启失败（请手动重开）：{exc}")
+                return
+            pending_version = ""
+        time.sleep(poll_seconds)
+
+
+def _update_enabled(cfg: Path) -> bool:
+    """[UPDATE] enabled=False 或 MRRC_NO_UPDATE_CHECK=1 时完全不检查（含热修）。"""
+    if os.environ.get("MRRC_NO_UPDATE_CHECK"):
+        return False
+    parser = configparser.ConfigParser()
+    try:
+        config_io.read_config(parser, cfg)
+    except Exception:
+        return True
+    if parser.has_section("UPDATE"):
+        return parser.getboolean("UPDATE", "enabled", fallback=True)
+    return True
+
+
+def _auto_download_enabled(cfg: Path) -> bool:
+    parser = configparser.ConfigParser()
+    try:
+        config_io.read_config(parser, cfg)
+    except Exception:
+        return True
+    if parser.has_section("UPDATE"):
+        return parser.getboolean("UPDATE", "autoDownload", fallback=True)
+    return True
+
+
 def main() -> int:
     data_dir = user_data_dir()
     data_dir.mkdir(parents=True, exist_ok=True)
@@ -509,6 +702,7 @@ def main() -> int:
     cfg = ensure_config(ssl_pair[0], ssl_pair[1])
     apply_simple_defaults(cfg)
     check_for_hotfix(cfg)
+    upgrade_plan = check_for_upgrade(cfg, data_dir)
     login_user, login_password, generated_login = ensure_users()
     write_quick_start(login_user, login_password)
     port, host = _read_config_port_host(cfg)
@@ -558,6 +752,15 @@ def main() -> int:
     server_log = data_dir / "logs" / "server-stdout.log"
     threading.Thread(target=tee_child_output, args=(proc, server_log),
                      name="server-stdout-tee", daemon=True).start()
+    # 升级看护：页面按钮（哨兵文件，带具体版本）或控制台按 U（取清单里的 latest）
+    # → 停服务（安装器 /CLOSEAPPLICATIONS）→ 静默安装（一次 UAC）→ 自动重启
+    upgrade_stop = threading.Event()
+    threading.Thread(target=watch_upgrade, args=(data_dir, "", 1.0, port),
+                     name="update-watch", daemon=True).start()
+    threading.Thread(target=wait_for_upgrade_key, args=(data_dir, upgrade_stop),
+                     name="update-key", daemon=True).start()
+    if (upgrade_plan or {}).get("installer", {}).get("available"):
+        print("提示：有新版本待安装 —— 在此窗口输入 U 回车即可升级（会弹一次 UAC）。")
     if wait_for_server(url, proc, secure=True):
         webbrowser.open(url)
     elif proc.poll() is not None:
