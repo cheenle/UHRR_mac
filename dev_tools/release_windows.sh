@@ -100,9 +100,24 @@ fi
 
 # ---------- 3. 提交 + 部署 + 线上验证 ----------
 if [ "$NO_DEPLOY" = 0 ]; then
+    log "产物归档（带版本名）并生成升级清单 latest.json"
+    if [ "$DRY_RUN" = 0 ]; then
+        PREV="$(python3 -c "import json;print(json.load(open('website/downloads/latest.json')).get('latest',''))" 2>/dev/null || true)"
+        # 上一版安装包留档，供 latest.json 的 previous 段（回退入口）
+        if [ -n "$PREV" ] && [ -f "website/downloads/MRRC-Setup-${VERSION}.exe" ] = "0" ]; then :; fi
+        if [ -n "$PREV" ] && [ "$PREV" != "$VERSION" ] && [ -f website/downloads/MRRC-Setup.exe ]; then
+            cp -f website/downloads/MRRC-Setup.exe "website/downloads/MRRC-Setup-${PREV}.exe"
+            ok "已把当前线上包归档为 MRRC-Setup-${PREV}.exe（回退用）"
+        fi
+        venv/bin/python3 dev_tools/make_latest_json.py --version "$VERSION" \
+            --installer "$LOCAL_EXE" --previous "${PREV:-}" --notes "${RELEASE_NOTES:-Windows 安装包 $VERSION}" \
+            | tail -20
+        ok "latest.json 已生成（installer 指向带版本名产物）"
+    fi
+
     log "提交并推送"
     run "git add -A packaging/windows/MRRC.iss www/ README.md CHANGELOG.md website/ dist/RELEASE-${VERSION}.md 2>/dev/null || true"
-    run "git add -A website/downloads/MRRC-Setup.exe"
+    run "git add -A website/downloads/MRRC-Setup.exe website/downloads/MRRC-Setup-*.exe website/downloads/latest.json"
     run "git commit -q -m 'release: Windows V${VERSION} 安装包\n\n产物 $(stat -f%z "$LOCAL_EXE" 2>/dev/null || echo ?) bytes\nSHA256 $(shasum -a 256 "$LOCAL_EXE" 2>/dev/null | awk '{print $1}')\nCo-Authored-By: Pi <noreply@pi.dev>' || true"
     run "git push -q origin main"
 
@@ -116,6 +131,11 @@ if [ "$NO_DEPLOY" = 0 ]; then
         if [ "$LIVE_SHA" = "$SHA" ]; then ok "线上文件与本地逐字节一致（$LIVE_SHA）"; else
             echo "❌ 线上 SHA256 不一致：$LIVE_SHA"; exit 1; fi
         curl -s https://www.vlsc.net/mrrc/ | grep -oE "V${VERSION}[^<]*" | head -3 || true
+        curl -s https://www.vlsc.net/mrrc/downloads/latest.json | python3 -c "
+import json, sys
+m = json.load(sys.stdin)
+print('线上 latest.json →', m.get('latest'), '| installer', m.get('installer', {}).get('url', '')[-28:],
+      '| previous', (m.get('previous') or {}).get('version'))" || true
     fi
 fi
 

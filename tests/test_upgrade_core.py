@@ -144,3 +144,42 @@ class DownloadTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
+
+
+class MakeLatestJsonTest(unittest.TestCase):
+    """升级清单生成器（发布流程用）：sha256 必须对应带版本名的产物。"""
+
+    def setUp(self):
+        import importlib.util
+        import tempfile
+        self.tmp = tempfile.mkdtemp(prefix="mrrc-manifest-")
+        path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                            "dev_tools", "make_latest_json.py")
+        spec = importlib.util.spec_from_file_location("make_latest_json", path)
+        self.mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(self.mod)
+        self.exe = os.path.join(self.tmp, "MRRC-Setup.exe")
+        with open(self.exe, "wb") as fh:
+            fh.write(b"PK\x03\x04 fake")
+
+    def test_manifest_uses_versioned_name_and_hash(self):
+        import json
+        manifest = self.mod.build_manifest("6.0.10", self.exe, self.tmp, notes="x")
+        self.assertEqual(manifest["latest"], "6.0.10")
+        self.assertTrue(manifest["installer"]["url"].endswith("MRRC-Setup-6.0.10.exe"))
+        self.assertEqual(manifest["installer"]["sha256"], self.mod.sha256_file(self.exe))
+        self.assertEqual(manifest["installer"]["size"], os.path.getsize(self.exe))
+        self.assertNotIn("hotfix", manifest)
+        self.assertNotIn("previous", manifest)
+
+    def test_hotfix_and_previous_sections(self):
+        import json
+        json.dump({"url": "https://x/h.zip", "sha256": "a" * 64, "requires": "6.0.3",
+                   "notes": "h"}, open(os.path.join(self.tmp, "patch.json"), "w"))
+        with open(os.path.join(self.tmp, "MRRC-Setup-6.0.7.exe"), "wb") as fh:
+            fh.write(b"old")
+        manifest = self.mod.build_manifest("6.0.10", self.exe, self.tmp, previous="6.0.7")
+        self.assertEqual(manifest["hotfix"]["sha256"], "a" * 64)
+        self.assertEqual(manifest["previous"]["version"], "6.0.7")
+        self.assertEqual(manifest["previous"]["sha256"], self.mod.sha256_file(
+            os.path.join(self.tmp, "MRRC-Setup-6.0.7.exe")))
