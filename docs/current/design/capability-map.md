@@ -22,6 +22,11 @@ This map lists capabilities that are implemented in the current codebase and ide
 | Recording | Implemented | `audio_interface.py`, `MRRC`, `www/mobile_modern.js`, `www/recordings.html` | `WSCTRX` `startRecording/stopRecording`, `/api/recordings`, `/recordings/<file>` |
 | Multi-instance operation | Implemented in scripts/config convention | `mrrc_multi.sh`, `MRRC.radio*.conf`, `MRRC` | separate web/rigctld ports and Unix sockets |
 | Docker single instance | Implemented | `Dockerfile`, `docker-compose.yml` | maps host `8877:8877`, mounts config/certs/data |
+| One-click upgrade (Windows installer) | Implemented from V6.1.0 | `windows/launcher.py`, `upgrade_core.py`, `MRRC` (`UpdateApiHandler`), `www/update.html` | 页面菜单「⬆️ 软件更新」/ 桌面 ⬆️；启动器窗口按 `U`；`/api/update*`；清单 `downloads/latest.json` |
+| Hotfix overlay (no-reinstall patching) | Implemented from V6.0.3 | `patch_overlay.py`, `windows/launcher.py`, `packaging/hotfix/` | `%LOCALAPPDATA%\MRRC\patch\{app,www,vendor}`；清单 `downloads/patch.json` |
+| Support bundle (one-click diagnostics upload) | Implemented from V6.0.10 | `support_bundle.py`, `MRRC` (`SupportApiHandler`), `www/support.html`, `tools/support_receiver/server.py` | 页面/移动端「🐞 遇到问题」；`/api/support/{bundle,upload,save}`；接收端 `https://www.vlsc.net/mrrc/support/` |
+| Rig model catalog (hamlib-aligned) | Implemented from V6.0.4 | `rig_models.py`, `MRRC` (`/api/devices`), `www/index.html` | 机型下拉（312 个，实时枚举本机 hamlib）+ `[HAMLIB] rig_model` 与 `[INSTANCE_SETTINGS] instance_rigctl_model` 双写 |
+| Audio device diagnostics | Implemented | `audio_interface.py`, `MRRC` | `[AUDIO] diag`/`MRRC_AUDIO_DIAG`、`device_report()`、30s 音频健康行、`_match_devices` 主机 API 优先级 |
 
 ## Optional Or Peripheral Capabilities
 

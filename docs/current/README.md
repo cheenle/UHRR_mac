@@ -18,12 +18,18 @@ docs/current/
 │   ├── vibe-coding-practice.md
 │   └── project-retrospective-2026-09.md   (全历程复盘：阶段/问题图谱/方法验证/展望)
 ├── operations/
-│   └── runtime-and-verification.md
+│   ├── runtime-and-verification.md
+│   ├── one-click-upgrade.md               (一键升级：机制/排障/发布/安全边界)
+│   ├── release-process.md                 (发版清单：构建→验收→清单→部署→线上复核)
+│   ├── hotfix-and-patching.md            (热修通道：哪些文件可热修)
+│   ├── support-bundle.md                 (🐞 一键诊断包：脱敏/接收端/口令)
+│   └── windows-installer-config-guide.md (Windows 安装版配置向导)
 ├── audit/
 │   └── documentation-cross-check.md
 └── reliability/
     ├── README.md                          (可靠性/安全性案例索引)
-    └── RC-001-ioloop-wedge-and-tx-silence.md
+    ├── RC-001-ioloop-wedge-and-tx-silence.md
+    └── RC-002-launcher-upgrade-and-shutdown.md  (启动器升级/退出链路的 Windows 陷阱)
 ```
 
 ## Source Of Truth
@@ -47,6 +53,9 @@ The original SDD is a special case: `docs/legacy/sdd/original-sdd/` is preserved
 - Static assets: `www/`.
 - Auth: `FILE` by default through `MRRC_users.db`.
 - Key backends: `audio_interface.py`, `hamlib_wrapper.py`, `wdsp_wrapper.py`, `atr1000_proxy.py`, `atr1000_tuner.py`.
+- Windows 安装版附加：`windows/launcher.py`（启动器/热修/一键升级）、`upgrade_core.py`（升级纯逻辑）、
+  `patch_overlay.py`（热修覆盖层）、`support_bundle.py`（诊断包）、`rig_models.py`（hamlib 机型表）、
+  `packaging/pyinstaller/`（打包）与 `packaging/hotfix/`（热修包生成/应用/验收）。
 
 ## Migration Policy
 
