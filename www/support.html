@@ -78,11 +78,13 @@ async function uploadBundle(){
   try {
     const d = await api('/api/support/upload', {id: currentId, problem: $('problem').value,
                                                 contact: $('contact').value});
-    if (d.ok) setStatus('✅ 已上传（编号 <b>' + d.remoteId + '</b>，' + (d.size/1024).toFixed(0) +
-                        ' KB）。维护者能直接看到你填的问题描述，谢谢！' +
-                        '<br>💡 答复会发布在：<a href="https://www.vlsc.net/mrrc/answers/#" + d.remoteId +
-                        '" target="_blank" rel="noopener">www.vlsc.net/mrrc/answers/#' + d.remoteId + '</a>' +
-                        '（已把这个编号填进搜索框；多数问题那里直接有解决办法）', 'ok');
+    if (d.ok) {
+      const ansUrl = 'https://www.vlsc.net/mrrc/answers/#' + d.remoteId;
+      setStatus('✅ 已上传（编号 <b>' + d.remoteId + '</b>，' + (d.size/1024).toFixed(0) +
+                ' KB）。维护者能直接看到你填的问题描述，谢谢！' +
+                '<br>💡 答复会发布在：<a href="' + ansUrl + '" target="_blank" rel="noopener">' +
+                ansUrl + '</a>（多数问题那里直接有解决办法）', 'ok');
+    }
     else setStatus('上传失败：' + (d.reason || '未知原因') +
                    '<br>诊断包仍在本地：<code>' + (d.localPath || '') + '</code>，可点「只保存到本地」。', 'bad');
   } catch (e) { setStatus('上传失败：' + e.message, 'bad'); }

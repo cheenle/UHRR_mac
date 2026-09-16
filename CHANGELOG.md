@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [V6.1.13] - 2026-09-17
+
+### 🐛 紧急修复：🐞 诊断包页面所有按钮失效（我上一步引入，已随热修下发）
+
+现象：用户报"客户端生成诊断包咋不工作了"——生成/上传/只存本地全部无反应。
+
+根因：V6.1.12 为"答复页链接"拼接字符串时多了一个引号，把单引号字符串提前终结
+（`'<a href="…/answers/#" + d.remoteId + '" …'`）→ 页面唯一的 `<script>` **语法错误**
+→ 整个页面的 JS 全废。该文件随 6.1.12 热修下发给了所有用户。
+
+修复与防复发：
+- 修好拼接（改用 `const ansUrl = …` 再嵌入）；
+- 新增 **`tests/test_web_inline_js.py`**：对 `www/*.html` 与 `website/**/*.html` 的
+  **内联脚本**逐个跑 `node --check`（无 node 时跳过）——这类"整页按钮失效"的错误以后进不了仓库。
+
 ## [V6.1.12] - 2026-09-17
 
 ### ✅ 问题答复闭环：上报 → 答复页 → 客户自查自解
