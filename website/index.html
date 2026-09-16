@@ -61,7 +61,7 @@
         </h1>
         <p class="hero-subtitle">
             MRRC is the universal HF route in the VLSC remote radio ecosystem. Control your HF radio from phone, tablet, or computer.
-            V6.1.11: hotfix channel — ship UI / Python / DLL fixes without repackaging or reinstalling
+            V6.1.11: one-click upgrade — detect, download, SHA256-verify, silently install and restart in place; plus a hotfix channel that ships UI / Python / DLL fixes without repackaging or reinstalling
             playback with watermark buffering, WDSP 48kHz NR2 with musical-noise AE tuning, fidelity-first TX
             (0dB preamp, transparent compressor), reliable ATR-1000 live power/SWR telemetry, and fixed
             smart tuner auto-learning — TX is detected by measured power, so front-panel / external
@@ -92,9 +92,24 @@
     <div class="container">
         <div class="section-header">
             <span class="section-label">What's New</span>
-            <h2 class="section-title">V6.1.11 · Hotfix Channel (No Repackaging)</h2>
+            <h2 class="section-title">V6.1.11 · One-Click Upgrade &amp; Hotfix Channel</h2>
         </div>
         <div class="features-grid">
+            <div class="feature-card animate">
+                <div class="icon"><i class="fas fa-cloud-download-alt"></i></div>
+                <h3>One-Click Upgrade</h3>
+                <p>New version available? The launcher tells you, fetches the installer in the background,
+                verifies its SHA256, then waits for one click (page button or <code>U</code> in the launcher
+                window). One UAC prompt, silent install, automatic restart — and a one-click rollback to the
+                previous version. Proven end-to-end on a real Windows machine.</p>
+            </div>
+            <div class="feature-card animate">
+                <div class="icon"><i class="fas fa-bug"></i></div>
+                <h3>🐞 One-Click Diagnostics</h3>
+                <p>&quot;Something went wrong&quot; button collects logs, state files and a redacted config
+                into a single bundle — plus an automatic health summary (IOLoop watchdog, TX init timing,
+                audio health, ATR freshness). Upload to the maintainer endpoint with one click, or keep it local.</p>
+            </div>
             <div class="feature-card animate">
                 <div class="icon"><i class="fas fa-microphone-alt"></i></div>
                 <h3>TX AudioWorklet Capture</h3>
