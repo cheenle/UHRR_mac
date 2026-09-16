@@ -5,7 +5,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [未发布] — 热补丁 6.0.4 / 6.0.5 / 6.0.6
+## [V6.0.7] - 2026-09-16
+
+> 这是自 V6.0.3 以来的**汇总安装包**：其中的设备配置/音频/ATR/日志修复与热补丁
+> 6.0.4 / 6.0.5 / 6.0.6 内容一致（热补丁内容已通过更新通道发给 6.0.3+ 安装）。
 
 > 这两版以**热补丁**形式发布（`website/downloads/patch.json` → 6.0.3+ 安装启动时自动应用），
 > 不重新出安装包：6.0.4 = Device Config 型号对应；6.0.5 = Windows 音频设备按主机 API 优先 + ATR 开关。
@@ -38,8 +41,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - 见上条 6.0.5 说明；另新增采集健康日志（每 30s 一行“采集样本数 vs 应有样本数”）与
   `[AUDIO] diag = True` / `MRRC_AUDIO_DIAG=1` 逐秒诊断，便于定位“秒级卡顿”。
-
-## [未发布] — V6.0.4
 
 ### 🎛️ Device Config 的电台型号改为 hamlib 实时机型表，并修正“改了型号不生效”
 

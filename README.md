@@ -1,8 +1,8 @@
-# Mobile Remote Radio Control (MRRC) V6.0.3
+# Mobile Remote Radio Control (MRRC) V6.0.7
 
 [![English](https://img.shields.io/badge/lang-English-blue.svg)](README_en.md)
 [![中文](https://img.shields.io/badge/lang-中文-red.svg)](README_CN.md)
-[![Version](https://img.shields.io/badge/version-V6.0.3-green.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-V6.0.7-green.svg)](CHANGELOG.md)
 
 ---
 
@@ -13,6 +13,10 @@
 A modern web-based remote control system optimized for mobile devices, enabling flexible operation of your amateur radio station from anywhere.
 
 基于现代Web技术的远程电台控制系统，专为移动端优化，让您随时随地灵活操控业余电台。
+
+> 🎉 **V6.0.7 更新**: 汇总包 —— Device Config 型号对齐 hamlib 实时机型表（含 rigctld 实报对照）、
+> Windows 音频设备按主机 API 优先（默认 WASAPI）、ATR-1000 可配置关闭+日志限流、
+> Windows 日志改 UTF-8 且行缓冲、热修补丁通道（6.0.3+ 自动应用）。
 
 > 🎉 **V6.0.3 更新**: 新增**热修补丁通道** —— 前端（`www/`）、服务端 Python（`app/*.py`）、
 > 本地库（`vendor/*.dll`）三类修复都可以用一个几十 KB 的热修包完成，用户不重装、
