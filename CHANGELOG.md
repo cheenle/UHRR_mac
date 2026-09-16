@@ -19,6 +19,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 诊断包版本号源码模式不再上报 `unknown`（`version.txt` → `MRRC.iss` → `CHANGELOG.md`）；
   `env.json` 增加 `instance`；`writte_log()` 补换行并落到本实例活日志。
 
+## [V6.1.8] - 2026-09-16
+
+### ✅ 一键升级：VM 真机第三轮（正式发布版）
+
+在 6.1.4 的 4 项修复之后，第三轮又抓到并修掉 4 项：
+
+1. **`_UPGRADING` 必须在停服务之前置位**（顺序 race）：停服务会让主线程立刻从
+   `proc.wait()` 醒来检查标志，晚一步就走正常退出 → `Fatal Python error` → 安装被打断。
+   失败路径显式 `clear()`。新增顺序回归测试。
+2. **启动器日志丢行**：`_force_utf8_stdio` 没开行缓冲，而升级收尾是 `os._exit`
+   （不刷新缓冲）→ 用户在窗口里看不到任何升级进度。改为 `line_buffering=True`。
+3. **已暂存也必须能离线升级**：原先即使包已校验暂存在本地，也要先拉清单，
+   清单拉不动就卡住不动。改为"已暂存就直接升"，清单只在需要下载时才拉。
+4. **下载无超时、且可与后台预下载撞车**：VM 实测被 CDN stall 卡死 5 分钟以上。
+   加读超时（默认 60s，失败自动重试）+ 进程内下载互斥（`_DOWNLOAD_LOCK`）。
+
 ## [V6.1.7] - 2026-09-16
 
 - 一键升级端到端验收目标（仅测试用，不对外发布；走 MRRC_UPDATE_MANIFEST 测试清单）。

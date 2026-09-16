@@ -30,7 +30,7 @@ def _force_utf8_stdio() -> None:
     for name in ("stdout", "stderr"):
         stream = getattr(sys, name, None)
         try:
-            stream.reconfigure(encoding="utf-8", errors="replace")
+            stream.reconfigure(encoding="utf-8", errors="replace", line_buffering=True)
         except Exception:
             pass
 
@@ -757,30 +757,38 @@ def watch_upgrade(data_dir: Path, pending_version: str = "", poll_seconds: float
             time.sleep(poll_seconds)
             continue
 
-        manifest, _err = up.fetch_manifest()
-        plan = up.plan_upgrade(_installed_version(), manifest) if manifest else {}
-        info = (plan or {}).get("installer") or {}
-        if target == "latest":
-            if not info.get("available"):
-                print("[update] 清单里没有可用新版本（可能已是最新或网络失败）")
+        state = up.read_state(data_dir)
+        staged = state.get("staged") or {}
+        info = {}
+        if (str(staged.get("version") or "") == target
+                and os.path.isfile(str(staged.get("path") or ""))):
+            # 已经下好了：不必再依赖清单或网络 —— 离线也能升级（VM 网络不稳时尤其重要）
+            info = {"available": True, "version": target, "sha256": staged.get("sha256", ""),
+                    "url": "", "size": staged.get("size", 0)}
+        else:
+            manifest, _err = up.fetch_manifest()
+            plan = up.plan_upgrade(_installed_version(), manifest) if manifest else {}
+            info = (plan or {}).get("installer") or {}
+            if target == "latest":
+                if not info.get("available"):
+                    print("[update] 清单里没有可用新版本（可能已是最新或网络失败）")
+                    target = ""
+                    time.sleep(poll_seconds)
+                    continue
+                target = info["version"]
+            if not info.get("available") or str(info.get("version") or "") != target:
+                print(f"[update] 清单里没有 {target}（可能已下线或已装上），跳过")
                 target = ""
                 time.sleep(poll_seconds)
                 continue
-            target = info["version"]
-        if not info.get("available") or str(info.get("version") or "") != target:
-            print(f"[update] 清单里没有 {target}（可能已下线或已装上），跳过")
-            target = ""
-            time.sleep(poll_seconds)
-            continue
-
-        if not up.staged_matches(up.read_state(data_dir), target, info.get("sha256", "")):
-            print(f"[update] 正在下载 {target} …")
-            result = up.download_installer(info["url"], info["sha256"], data_dir, target)
-            if not result.get("ok"):
-                print(f"[update] 下载失败（稍后自动重试）：{result.get('reason')}")
-                time.sleep(max(poll_seconds, 10))
-                continue
-            print(f"[update] 已下载 {target}（{result.get('size', 0) // 1024} KB）")
+            if not up.staged_matches(state, target, info.get("sha256", "")):
+                print(f"[update] 正在下载 {target} …")
+                result = up.download_installer(info["url"], info["sha256"], data_dir, target)
+                if not result.get("ok"):
+                    print(f"[update] 下载失败（稍后自动重试）：{result.get('reason')}")
+                    time.sleep(max(poll_seconds, 10))
+                    continue
+                print(f"[update] 已下载 {target}（{result.get('size', 0) // 1024} KB）")
 
         if port:
             allowed, why = server_allows_upgrade(port)

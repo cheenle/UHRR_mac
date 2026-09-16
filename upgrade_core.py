@@ -140,6 +140,7 @@ def state_path(base_dir):
 # 下载线程与升级线程都会读-改-写 state.json：不加锁会互相覆盖
 # （2026-09-16 VM 实测：下载完成覆盖了 lastResult，失败时无痕可查）。
 _STATE_LOCK = threading.RLock()
+_DOWNLOAD_LOCK = threading.Lock()      # 同一时刻只允许一个下载（避免两个线程抢同一个 .part）
 
 
 def request_path(base_dir):
@@ -211,7 +212,7 @@ def sha256_file(path):
     return digest.hexdigest()
 
 
-def download_installer(url, sha256, base_dir, version, timeout=300, progress=None):
+def download_installer(url, sha256, base_dir, version, timeout=60, progress=None):
     """下载 → 校验 → 原子落盘，并写 `state.staged`。
 
     失败时：删除 `.part`、记录 `lastResult`、**绝不动已有安装**。
@@ -220,42 +221,44 @@ def download_installer(url, sha256, base_dir, version, timeout=300, progress=Non
     target = os.path.join(updates_dir(base_dir), installer_filename(version))
     part = target + ".part"
     expected = str(sha256 or "").lower()
-    try:
-        with urllib.request.urlopen(url, timeout=timeout) as resp, open(part, "wb") as fh:
-            total = int(resp.headers.get("Content-Length") or 0)
-            done = 0
-            while True:
-                chunk = resp.read(262144)
-                if not chunk:
-                    break
-                fh.write(chunk)
-                done += len(chunk)
-                if progress:
-                    try:
-                        progress(done, total)
-                    except Exception:
-                        pass
-        actual = sha256_file(part)
-        if expected and actual != expected:
-            os.remove(part)
-            record_result(base_dir, "sha_mismatch", version,
-                          f"{actual[:12]}… != {expected[:12]}…")
-            return {"ok": False, "reason": f"sha256 不符（{actual[:12]}… != {expected[:12]}…）",
-                    "path": target}
-        os.replace(part, target)                      # 原子：只有校验通过才成为正式文件
-        write_state(base_dir, staged={
-            "version": str(version), "sha256": actual, "path": target,
-            "size": os.path.getsize(target), "at": time.strftime("%Y-%m-%dT%H:%M:%S")})
-        return {"ok": True, "path": target, "size": os.path.getsize(target), "sha256": actual}
-    except Exception as exc:
+    # 互斥：启动检查的后台下载与升级请求的下载都调这里，两个线程抢同一个 .part 会互相踩。
+    # timeout 是读超时（VM 实测被 CDN stall 卡死过，没超时就是永久挂住）。
+    with _DOWNLOAD_LOCK:
         try:
-            if os.path.exists(part):
+            with urllib.request.urlopen(url, timeout=timeout) as resp, open(part, "wb") as fh:
+                total = int(resp.headers.get("Content-Length") or 0)
+                done = 0
+                while True:
+                    chunk = resp.read(262144)
+                    if not chunk:
+                        break
+                    fh.write(chunk)
+                    done += len(chunk)
+                    if progress:
+                        try:
+                            progress(done, total)
+                        except Exception:
+                            pass
+            actual = sha256_file(part)
+            if expected and actual != expected:
                 os.remove(part)
-        except OSError:
-            pass
-        record_result(base_dir, "download_failed", version, f"{type(exc).__name__}: {exc}")
-        return {"ok": False, "reason": f"{type(exc).__name__}: {exc}", "path": target}
-
+                record_result(base_dir, "sha_mismatch", version,
+                              f"{actual[:12]}… != {expected[:12]}…")
+                return {"ok": False, "reason": f"sha256 不符（{actual[:12]}… != {expected[:12]}…）",
+                        "path": target}
+            os.replace(part, target)                      # 原子：只有校验通过才成为正式文件
+            write_state(base_dir, staged={
+                "version": str(version), "sha256": actual, "path": target,
+                "size": os.path.getsize(target), "at": time.strftime("%Y-%m-%dT%H:%M:%S")})
+            return {"ok": True, "path": target, "size": os.path.getsize(target), "sha256": actual}
+        except Exception as exc:
+            try:
+                if os.path.exists(part):
+                    os.remove(part)
+            except OSError:
+                pass
+            record_result(base_dir, "download_failed", version, f"{type(exc).__name__}: {exc}")
+            return {"ok": False, "reason": f"{type(exc).__name__}: {exc}", "path": target}
 
 def staged_matches(state, version, sha256=None):
     """`state.staged` 是否就是目标版本且文件仍在（用于跳过重复下载）。"""
