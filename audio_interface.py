@@ -293,6 +293,41 @@ def get_default_output_device():
         print(f"Error getting default output device: {e}")
         return None
 
+def capture_frame_count(byte_length, channels=1, sample_bytes=4):
+    """把一次 read() 的字节数换算成**帧数**（RX 采集是 paFloat32，sample_bytes=4）。
+
+    不能再用 len(data)//2 的 int16 假设：立体声 float32 每帧 8 字节，那会把帧数放大 4 倍，
+    健康度永远显示 400%、"<99% 告警"永远不触发（2026-09-16 真机实测 360%/400%）。
+    """
+    frame_bytes = sample_bytes * max(1, int(channels))
+    return int(byte_length) // frame_bytes if byte_length > 0 else 0
+
+
+def accumulate_capture_health(diag, samples, read_seconds, now=None, window_seconds=30.0,
+                              sample_rate=48000):
+    """累计采集健康度；满 window_seconds 返回一条 🎧 音频健康 行（未到点返回 None）。
+
+    diag 需要 summary_since/summary_reads/summary_samples/summary_max 四个键（采集线程
+    初始化时给，见 PyAudioCapture.capture）。**不受 MRRC_AUDIO_DIAG 开关影响**：诊断包
+    靠这行判断采集是否跟得上，放到开关里等于默认永远没有健康数据。
+    """
+    now = time.time() if now is None else now
+    diag['summary_reads'] += 1
+    diag['summary_samples'] += samples
+    diag['summary_max'] = max(diag['summary_max'], read_seconds)
+    elapsed = now - diag['summary_since']
+    if elapsed < window_seconds:
+        return None
+    expected = elapsed * sample_rate
+    ratio = diag['summary_samples'] / expected if expected else 0.0
+    line = (f"🎧 音频健康: {elapsed:.0f}s 采集 {diag['summary_samples']} 样本"
+            f"（应有 {int(expected)}，{ratio * 100:.1f}%）, 单次读取最大 "
+            f"{diag['summary_max'] * 1000:.1f}ms"
+            + ("  ⚠ 明显跟不上，检查 CPU/WDSP 设置或主机 API" if ratio < 0.99 else ""))
+    diag.update(summary_since=now, summary_reads=0, summary_samples=0, summary_max=0.0)
+    return line
+
+
 class PyAudioCapture(threading.Thread):
     """PyAudio-based replacement for ALSA capture
     
@@ -530,6 +565,7 @@ class PyAudioCapture(threading.Thread):
         _diag = {'reads': 0, 'total': 0.0, 'max': 0.0, 'samples': 0, 'since': time.time(),
                  'summary_since': time.time(), 'summary_reads': 0, 'summary_samples': 0,
                  'summary_max': 0.0}
+        _rx_channels = 2 if self.stereo_mode else 1
         
         # Opus 编码累积缓冲区
         opus_accumulator = np.array([], dtype=np.int16)
@@ -554,7 +590,7 @@ class PyAudioCapture(threading.Thread):
                     _diag['reads'] += 1
                     _diag['total'] += _dt
                     _diag['max'] = max(_diag['max'], _dt)
-                    _diag['samples'] += len(data) // 2
+                    _diag['samples'] += capture_frame_count(len(data), _rx_channels)
                     if time.time() - _diag['since'] >= 1.0:
                         try:
                             _avail = self.stream.get_read_available()
@@ -566,24 +602,13 @@ class PyAudioCapture(threading.Thread):
                               f"{_diag['max'] * 1000:.1f}ms, 已采{_diag['samples']}样本"
                               f"（应有{int(_elapsed * 48000)}）, 待读样本 {_avail}")
                         _diag.update(reads=0, total=0.0, max=0.0, samples=0, since=time.time())
-                    # 常驻健康摘要（每 30s 一行，无需开关）：实际采样数 vs 应有采样数，
-                    # 低于 ~99% 说明采集流水线跟不上（Windows 弱机跑 WDSP/NR2 时常见）。
-                    _diag['summary_reads'] += 1
-                    _diag['summary_samples'] += len(data) // 2
-                    _diag['summary_max'] = max(_diag['summary_max'], time.time() - _t_read0)
-                    _summary_elapsed = time.time() - _diag['summary_since']
-                    if _summary_elapsed >= 30.0:
-                        _expected = _summary_elapsed * 48000
-                        _ratio = _diag['summary_samples'] / _expected if _expected else 0
-                        PyAudioCapture.last_health = (f"{_summary_elapsed:.0f}s 采集 "
-                            f"{_diag['summary_samples']} 样本（应有 {int(_expected)}，"
-                            f"{_ratio * 100:.1f}%），单次读取最大 {_diag['summary_max'] * 1000:.1f}ms")
-                        print(f"🎧 音频健康: {_summary_elapsed:.0f}s 采集 {_diag['summary_samples']} 样本"
-                              f"（应有 {int(_expected)}，{_ratio * 100:.1f}%）, 单次读取最大 "
-                              f"{_diag['summary_max'] * 1000:.1f}ms"
-                              + ("  ⚠ 明显跟不上，检查 CPU/WDSP 设置或主机 API" if _ratio < 0.99 else ""))
-                        _diag.update(summary_since=time.time(), summary_reads=0,
-                                     summary_samples=0, summary_max=0.0)
+                # 常驻健康摘要（每 30s 一行，无需 MRRC_AUDIO_DIAG 开关）：实际采样数 vs
+                # 应有采样数，低于 ~99% 说明采集流水线跟不上（Windows 弱机跑 WDSP/NR2 时常见）。
+                _health_line = accumulate_capture_health(
+                    _diag, capture_frame_count(len(data), _rx_channels), time.time() - _t_read0)
+                if _health_line:
+                    PyAudioCapture.last_health = _health_line
+                    print(_health_line)
                 capture_end_ns = time.monotonic_ns()
                 
                 if len(data) > 0:
