@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>工程文档（SDD/ADR/需求/规格/接口/上下文/架构） · MRRC</title>
+    <link rel="stylesheet" href="../../css/style.css">
+    <link rel="stylesheet" href="../../css/octen.css?v=2">
+    <link rel="stylesheet" href="../../css/docs.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container navbar-content">
+            <a href="../../../index.html" class="logo">
+                <span class="logo-icon">&#x1f4fb;</span>
+                <span>MRRC</span>
+            </a>
+            <ul class="nav-links">
+                <li><a href="../../../index.html">Home</a></li>
+                <li><a href="../features.html">Features</a></li>
+                <li><a href="../../../index.html#demo">Demo</a></li>
+                <li><a href="../installation.html">Installation</a></li>
+                <li><a href="../design.html">Design &amp; Architecture</a></li>
+                <li><a href="../docs.html">Docs</a></li>
+                <li><a href="../../../agentic.html">Agentic</a></li>
+                <li><a href="../../../aladdin-v2.html">Aladdin V2</a></li>
+                <li><a href="../../../retrospective.html">Retrospective</a></li>
+                <li><a href="../../../efhw/index.html">EFHW</a></li>
+                <li><a href="https://github.com/cheenle/UHRR_mac" target="_blank" rel="noopener">
+                    <i class="fab fa-github"></i> GitHub
+                </a></li>
+            </ul>
+            <div class="nav-actions">
+                <a href="../../../docs/design.html" class="lang-btn">English</a>
+                <button class="mobile-menu-toggle"><i class="fas fa-bars"></i></button>
+            </div>
+        </div>
+    </nav>
+    <section class="hero">
+        <div class="container">
+            <h1 class="hero-title">工程文档</h1>
+            <p class="hero-subtitle">MRRC 的软件设计说明（SDD）体系：架构、架构决策（ADR）、需求矩阵、项目规格、接口、系统上下文。
+            这些文档<strong>正文即为中文</strong>，与本页同一套主站风格。</p>
+        </div>
+    </section>
+
+    <section class="section">
+        <div class="container">
+            <div class="doc-section" id="docs">
+                <h2><span class="feature-icon">📚</span> 文档清单</h2>
+                <table class="hardware-table">
+                    <tr><th>文档</th><th>内容</th><th>体量</th></tr>
+                    <tr>
+                        <td><a href="../../../docs/design/MRRC_SDD.html"><strong>SDD 软件设计说明</strong></a> <span class="pill ok">★ 首读</span></td>
+                        <td>14 章完整设计说明：执行摘要、业务方向、项目定义、系统上下文、非功能需求、用例模型、主题域模型、架构决策、架构概览、服务模型、组件模型、运营模型、可行性评估、版本历史</td>
+                        <td class="muted">105 KB</td>
+                    </tr>
+                    <tr>
+                        <td><a href="../../../docs/design/architecture.html"><strong>架构说明（SDD-MRR-2026-001）</strong></a></td>
+                        <td>整体架构与分层、数据流、部署形态；配套架构图</td>
+                        <td class="muted">31 KB</td>
+                    </tr>
+                    <tr>
+                        <td><a href="../../../docs/design/ARCH-DECISIONS.html"><strong>架构决策记录（ADR）</strong></a></td>
+                        <td>AD-001…AD-008：WebSocket 实时协议、Tornado 选型、Int16 音频编码、WDSP NR2 集成、多实例部署、语音助手架构、PTT 三层安全防护…</td>
+                        <td class="muted">19 KB</td>
+                    </tr>
+                    <tr>
+                        <td><a href="../../../docs/design/REQUIREMENTS.html"><strong>需求矩阵</strong></a></td>
+                        <td>功能需求矩阵、非功能需求、需求验证方式、需求状态追踪</td>
+                        <td class="muted">18 KB</td>
+                    </tr>
+                    <tr>
+                        <td><a href="../../../docs/design/SPEC.html"><strong>项目规格说明书</strong></a></td>
+                        <td>项目概述、业务背景、目标与成功标准、范围、技术约束、风险与假设、利益相关者、里程碑 + 功能特性清单</td>
+                        <td class="muted">19 KB</td>
+                    </tr>
+                    <tr>
+                        <td><a href="../../../docs/design/API.html"><strong>接口文档</strong></a></td>
+                        <td>WebSocket API、HTTP API、错误码、ATR-1000 协议</td>
+                        <td class="muted">24 KB</td>
+                    </tr>
+                    <tr>
+                        <td><a href="../../../docs/design/CONTEXT.html"><strong>系统上下文</strong></a></td>
+                        <td>系统上下文图、外部实体、数据流设计、边界接口定义、安全性边界</td>
+                        <td class="muted">44 KB</td>
+                    </tr>
+                </table>
+                <p class="muted">口径：这些文档描述<strong>整体架构与设计决策</strong>；此后新增的
+                <a href="features.html">一键升级 / 一键诊断包 / AI 分诊与答复页</a>等产品支持能力，
+                见功能页「产品支持生命周期」与 <a href="docs.html#support">技术文档 → 产品支持</a>。
+                当前版本以安装目录 <code>version.txt</code> 与站点页脚为准（本页随版本一同更新）。</p>
+            </div>
+        </div>
+    </section>
+
+    <footer class="footer">
+        <div class="container">
+            <p class="muted" style="text-align:center">MRRC · GPLv3 · 工程文档入口</p>
+        </div>
+    </footer>
+    <script src="../../js/main.js"></script>
+</body>
+</html>
