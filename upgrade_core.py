@@ -17,6 +17,7 @@
 import hashlib
 import json
 import os
+import socket
 import threading
 import time
 import urllib.request
@@ -142,6 +143,10 @@ def state_path(base_dir):
 _STATE_LOCK = threading.RLock()
 _DOWNLOAD_LOCK = threading.Lock()      # 同一时刻只允许一个下载（避免两个线程抢同一个 .part）
 
+# 默认 socket 超时：VM 实测过一次“0 字节 .part 挂死”（DNS/连接阶段卡住，不是读超时），
+# 没有这个的话后台预下载线程会永久占着 _DOWNLOAD_LOCK，把升级看护线程也拖死。
+socket.setdefaulttimeout(30)
+
 
 def request_path(base_dir):
     return os.path.join(updates_dir(base_dir), "upgrade.request")
@@ -222,8 +227,12 @@ def download_installer(url, sha256, base_dir, version, timeout=60, progress=None
     part = target + ".part"
     expected = str(sha256 or "").lower()
     # 互斥：启动检查的后台下载与升级请求的下载都调这里，两个线程抢同一个 .part 会互相踩。
-    # timeout 是读超时（VM 实测被 CDN stall 卡死过，没超时就是永久挂住）。
-    with _DOWNLOAD_LOCK:
+    # 但**绝不能无限等锁**：VM 实测后台预下载卡在连接阶段时，升级看护线程会一起被拖死
+    # → 用户点了【立即升级】毫无反应（2026-09-16 真机复现）。拿不到就返回 busy，让上层重试。
+    if not _DOWNLOAD_LOCK.acquire(timeout=1.0):
+        return {"ok": False, "reason": "download_busy（另一次下载正在进行，稍后自动重试）",
+                "path": target}
+    try:
         try:
             with urllib.request.urlopen(url, timeout=timeout) as resp, open(part, "wb") as fh:
                 total = int(resp.headers.get("Content-Length") or 0)
@@ -259,6 +268,8 @@ def download_installer(url, sha256, base_dir, version, timeout=60, progress=None
                 pass
             record_result(base_dir, "download_failed", version, f"{type(exc).__name__}: {exc}")
             return {"ok": False, "reason": f"{type(exc).__name__}: {exc}", "path": target}
+    finally:
+        _DOWNLOAD_LOCK.release()
 
 def staged_matches(state, version, sha256=None):
     """`state.staged` 是否就是目标版本且文件仍在（用于跳过重复下载）。"""

@@ -148,6 +148,19 @@ class DownloadTest(unittest.TestCase):
         self.assertEqual(last["version"], "6.1.0")
         self.assertIn("cancelled", last["detail"])
 
+    def test_download_busy_does_not_block_forever(self):
+        """锁被占用时必须立刻返回 busy，不能无限等：VM 实测后台预下载卡死时
+        升级看护线程被一起拖死，用户点【立即升级】毫无反应。"""
+        target = os.path.join(uc.updates_dir(self.tmp), uc.installer_filename("6.1.9"))
+        uc._DOWNLOAD_LOCK.acquire()
+        try:
+            result = uc.download_installer("https://x/a.exe", "a" * 64, self.tmp, "6.1.9")
+        finally:
+            uc._DOWNLOAD_LOCK.release()
+        self.assertFalse(result["ok"])
+        self.assertIn("busy", result["reason"])
+        self.assertFalse(os.path.exists(target))
+
     def test_installer_filename_has_version(self):
         self.assertEqual(uc.installer_filename("6.1.0"), "MRRC-Setup-6.1.0.exe")
 

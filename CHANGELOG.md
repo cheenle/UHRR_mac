@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [V6.1.10] - 2026-09-16
+
+### 🐛 真机复现：点【立即升级】后毫无反应（已修，可热修下发）
+
+真机现象：页面显示 v6.1.8 → v6.1.9 可升级、服务端也写了哨兵
+（日志 `收到升级请求: 6.1.9（当前 6.1.8）`），但 `upgrade.request` 一直没人消费，
+`MRRC-Setup-6.1.9.exe.part` 停在 0 字节。
+
+根因（6.1.8 引入的回归）：`_DOWNLOAD_LOCK` 是**阻塞锁**，而启动检查的后台预下载
+线程卡在**连接/DNS 阶段**（读超时管不到）→ 永久占着锁 → 升级看护线程拿到第一个
+请求后**无限等锁** → 之后再点也没人理。
+
+修复（都在可热修的 `upgrade_core.py` 里）：
+1. 锁改 `acquire(timeout=1.0)`，拿不到就返回 `download_busy` 让上层**自动重试**（绝不阻塞）。
+2. `socket.setdefaulttimeout(30)`：连接/DNS 阶段也会超时，不再产生 0 字节 `.part` 挂死。
+
 ## [V6.1.9] - 2026-09-16
 
 ### ✅ 一键升级：真机首次实升验证版
