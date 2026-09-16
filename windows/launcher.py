@@ -653,14 +653,17 @@ def run_upgrade(data_dir: Path, version: str) -> str:
                          "安装包尚未下载完成（稍后重试或检查网络）")
         return "missing_staged"
     log_path = str(Path(data_dir) / "updates" / f"install-{version}.log")
+    elevated = _is_elevated()
+    # 置位必须在停服务**之前**：停服务会让主线程立刻从 proc.wait() 醒来并检查这个标志，
+    # 晚一步就会走正常退出 → 解释器收尾 → Fatal Python error（VM 实测两次）。
+    _UPGRADING.set()
     _stop_server_for_upgrade()
     args = ["/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART",
             "/CLOSEAPPLICATIONS", "/FORCECLOSEAPPLICATIONS", f"/LOG={log_path}"]
     try:
         import ctypes
-        if _is_elevated():
+        if elevated:
             # 已提权：直接跑（不再弹 UAC）——也避免 ShellExecuteW 在非交互窗口站上卡死。
-            _UPGRADING.set()
             subprocess.Popen([setup] + args, cwd=str(Path(data_dir) / "updates"),
                              close_fds=True)
             up.record_result(data_dir, "installing", version, "已启动静默安装（提权直跑）")
@@ -670,9 +673,11 @@ def run_upgrade(data_dir: Path, version: str) -> str:
         rc = ctypes.windll.shell32.ShellExecuteW(
             None, "runas", setup, params, str(Path(data_dir) / "updates"), 1)
     except Exception as exc:
+        _UPGRADING.clear()
         up.record_result(data_dir, "install_failed", version, f"{type(exc).__name__}: {exc}")
         return "install_failed"
     if rc <= 32:                       # 5 = ERROR_ACCESS_DENIED（用户拒绝 UAC）
+        _UPGRADING.clear()
         status = "uac_denied" if rc == 5 else "install_failed"
         up.record_result(data_dir, status, version, f"ShellExecute 返回 {rc}")
         return status

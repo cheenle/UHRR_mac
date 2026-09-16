@@ -251,6 +251,13 @@ class UpgradeWatcherTest(unittest.TestCase):
         self.assertIn(("run", "6.1.4"), calls, "下载完必须真的执行升级")
         self.assertIn(("exit", ""), calls, "拉起安装器后要走受控退出")
 
+    def test_flag_set_before_stopping_server(self):
+        """_UPGRADING 必须在停服务之前置位：停服务会让主线程立刻醒来检查（VM 实测两次崩）。"""
+        import inspect
+        src = inspect.getsource(self.launcher.run_upgrade)
+        self.assertLess(src.index("_UPGRADING.set()"), src.index("_stop_server_for_upgrade()"))
+        self.assertIn("_UPGRADING.clear()", src)
+
     def test_main_blocked_normally_while_upgrading(self):
         """升级中主线程不能正常退出：否则解释器收尾会 Fatal Python error 打断安装。"""
         import inspect
