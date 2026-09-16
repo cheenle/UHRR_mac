@@ -3427,6 +3427,8 @@ class WS_ControlTRX(AuthenticatedWebSocketHandler):
 			
 			yield self.send_to_all_clients("getPTT:"+str(result))
 			LastPing = time.time()
+			global _idle_shutdown_done
+			_idle_shutdown_done = False          # 有新活动：重新武装空闲关机
 			return  # Exit immediately after PTT to avoid delays
 			
 		if(action == "PING"):
@@ -3869,11 +3871,23 @@ class WS_ControlTRX(AuthenticatedWebSocketHandler):
 			ControlTRXHandlerClients.remove(self)	
 		gc.collect()
 
+# 空闲关机只做一次：每 60s 轮询时若仍超时会反复 setPower(0) 并刷日志（实测每分钟两条，且会
+# 持续把电台按在 power=0）。用 _idle_shutdown_done 记录"本轮空闲已关机"，客户端一有新
+# 活动（WS ping 更新 LastPing）就重新武装。
+_idle_shutdown_done = False
+
+
 def timeoutTRXshutdown():
-	global LastPing
+	global LastPing, _idle_shutdown_done
+	if _idle_shutdown_done:
+		return
 	if(LastPing+300) < time.time():
-		print("Shutdown TRX")
-		CTRX.setPower(0)
+		_idle_shutdown_done = True
+		logger.info("空闲超时（>300s 无客户端活动），关闭电台")
+		try:
+			CTRX.setPower(0)
+		except Exception as exc:
+			logger.warning(f"空闲关机失败: {exc}")
 
 class threadtimeoutTRXshutdown(threading.Thread):
 
