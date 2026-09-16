@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [V6.1.9] - 2026-09-16
+
+### ✅ 一键升级：真机首次实升验证版
+
+用户已在真机装好 6.1.8（含全部 8 项修复），本版作为"被升级"的目标：
+点页面【立即升级】或启动器窗口按 U → 静默安装 → 自动重启到 6.1.9。
+
 ## [V6.1.8] - 2026-09-16
 
 复盘 9-16 上传的那份 23 KB 诊断包：包内 284 KB 是 8-30 的僵尸日志、活日志一个没进，
