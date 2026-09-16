@@ -1,12 +1,11 @@
 {
-  "latest": "6.1.12",
-  "url": "https://www.vlsc.net/mrrc/downloads/hotfix-6.1.12.zip",
-  "sha256": "60249723960ee92c7691ae3e3d4b6541806154a545096db8954b181503adaa0b",
-  "size": 10932,
+  "latest": "6.1.13",
+  "url": "https://www.vlsc.net/mrrc/downloads/hotfix-6.1.13.zip",
+  "sha256": "91444198a042096eef1e1873964b7143ef9334744a97a53429a7dcd6339b5246",
+  "size": 3168,
   "requires": "6.0.3",
-  "notes": "问题答复闭环：🐞 上传后给出 /answers/ 答复地址（带编号）；体检摘要新增启动次数/时间跨度（区分重启与崩溃）与无音频设备判定",
+  "notes": "紧急修复：🐞 遇到问题页面所有按钮失效（内联 JS 语法错误）",
   "files": [
-    "app/support_bundle.py",
     "www/support.html"
   ]
 }
