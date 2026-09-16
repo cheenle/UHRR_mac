@@ -1,15 +1,15 @@
 {
-  "latest": "6.1.12",
+  "latest": "6.1.13",
   "installer": {
-    "version": "6.1.12",
-    "url": "https://www.vlsc.net/mrrc/downloads/MRRC-Setup-6.1.12.exe",
-    "sha256": "12ce139e2020981d984737141ed5910cc88e3731b3b510430de9c2fc124d434f",
-    "size": 45482733
+    "version": "6.1.13",
+    "url": "https://www.vlsc.net/mrrc/downloads/MRRC-Setup-6.1.13.exe",
+    "sha256": "cb17995794eb19ceccf7f51b1b82138859696ee064ea505fa7f3b0e0a69f6908",
+    "size": 45487366
   },
   "minSupported": "6.0.3",
   "mandatory": false,
-  "releasedAt": "2026-09-17T08:35:00",
-  "notes": "问题答复闭环：🐞 上传后给出 /answers/ 答复地址（带编号）；体检摘要新增启动次数/时间跨度（区分重启与崩溃）与无音频设备判定；一键升级（真机验证）",
+  "releasedAt": "2026-09-17T09:10:00",
+  "notes": "紧急修复：🐞 遇到问题页面所有按钮失效（6.1.12 引入的内联 JS 语法错误，已随热修修好）；另含问题答复闭环与一键升级",
   "hotfix": {
     "url": "https://www.vlsc.net/mrrc/downloads/hotfix-6.0.9.zip",
     "sha256": "e326fd38784119119eabcc3c6262a0a7ae758381ce6ba3e9b169fdab69c805f2",
