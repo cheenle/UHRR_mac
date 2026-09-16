@@ -22,8 +22,35 @@ import config_io
 import ssl_bootstrap
 
 
+def _force_utf8_stdio() -> None:
+    """Windows 控制台默认 GBK：日志里的 emoji（🔍 等）会让 print 抛 UnicodeEncodeError，
+    轻则日志乱码、重则杀死输出转发线程（server-stdout.log 从此断更）。
+    统一把 stdio 切到 UTF-8，并用 errors='replace' 保证任何字符都不抛异常。"""
+    os.environ.setdefault("PYTHONIOENCODING", "utf-8")
+    for name in ("stdout", "stderr"):
+        stream = getattr(sys, name, None)
+        try:
+            stream.reconfigure(encoding="utf-8", errors="replace")
+        except Exception:
+            pass
+
+
+def _safe_print(text: str) -> None:
+    """print 的保险版：编码不支持（GBK 遇到 emoji）时降级，绝不让调用线程崩掉。"""
+    try:
+        print(text, flush=True)
+    except UnicodeEncodeError:
+        try:
+            print(text.encode("ascii", "replace").decode("ascii"), flush=True)
+        except Exception:
+            pass
+    except Exception:
+        pass
+
+
 APP_NAME = "MRRC"
 DEFAULT_PORT = "8877"
+_SERVER_PROC = None      # 主流程拉起的服务子进程（升级前必须先停，见 _stop_server_for_upgrade）
 DEFAULT_LOGIN_USER = "admin"
 KNOWN_DEFAULT_ACCOUNTS = {("BG1SB", "abcd1234"), ("admin", "uhrr2024")}
 
@@ -467,7 +494,7 @@ def tee_child_output(proc: subprocess.Popen, log_path, max_bytes: int = 2 * 1024
     try:
         for raw in proc.stdout or ():
             text = raw.rstrip("\n")
-            print(text, flush=True)      # 控制台保持可见（用户习惯看这个窗口）
+            _safe_print(text)            # 控制台保持可见（用户习惯看这个窗口）
             lines.append(text)
             if sink is not None:
                 try:
@@ -494,6 +521,33 @@ def stop_process(proc: subprocess.Popen) -> None:
         proc.wait(timeout=5)
     except Exception:
         proc.kill()
+
+
+def confirm_pending_upgrade(data_dir: Path) -> None:
+    """安装后首次启动：确认升级成功（写结果 + 清掉暂存安装包）。
+
+    升级时启动器会主动退出（安装器要替换它占用的文件），所以“成功”只能由新版自己确认。
+    """
+    import upgrade_core as up
+    try:
+        state = up.read_state(data_dir)
+        staged = state.get("staged") or {}
+        version = str(staged.get("version") or "")
+        if not version:
+            return
+        current = _installed_version()
+        if up.version_tuple(current) >= up.version_tuple(version):
+            up.record_result(data_dir, "ok", version, "安装后启动确认成功")
+            try:
+                os.remove(str(staged.get("path") or ""))
+            except OSError:
+                pass
+            up.write_state(data_dir, staged=None)
+            print(f"[update] 已升级到 {version}（当前 {current}）")
+        else:
+            print(f"[update] 上次升级 {version} 似乎没完成（当前 {current}），可重试")
+    except Exception as exc:                     # 确认失败不能影响启动
+        print(f"[update] 升级结果确认跳过：{type(exc).__name__}: {exc}")
 
 
 def check_for_upgrade(cfg: Path, data_dir: Path):
@@ -539,6 +593,54 @@ def check_for_upgrade(cfg: Path, data_dir: Path):
     return plan
 
 
+def _is_elevated() -> bool:
+    """当前进程是否已提权（提权时无需再弹 UAC，直接跑安装器更稳）。"""
+    if os.name != "nt":
+        return False
+    try:
+        import ctypes
+        return bool(ctypes.windll.shell32.IsUserAnAdmin())
+    except Exception:
+        return False
+
+
+def _exit_for_upgrade(delay: float = 1.0) -> None:
+    """安装器要替换本进程占用的文件：必须真的退出。
+
+    Inno 的 /CLOSEAPPLICATIONS 靠 Restart Manager 发 WM_CLOSE；控制台进程没有消息循环，
+    它关不掉（6.1.0 实测日志：“Some applications could not be shut down.” → 静默模式自动
+    选 Abort → 升级失败）。所以启动器拉完安装器就自己放手。
+    """
+    def _later():
+        time.sleep(delay)
+        os._exit(0)                     # 不走 atexit/清理：马上放开被占的文件
+    threading.Thread(target=_later, name="exit-for-upgrade", daemon=True).start()
+
+
+def _stop_server_for_upgrade(timeout: float = 15.0) -> None:
+    """升级前停掉本启动器拉起的服务进程。
+
+    安装器要替换 MRRC-Server.exe / 依赖 DLL，文件被占用时 Inno 会失败：
+    「DeleteFile failed; code 5」（6.1.0 端到端测试实测）。先停再装最稳，
+    /FORCECLOSEAPPLICATIONS 只做兜底。
+    """
+    proc = _SERVER_PROC
+    if proc is None or proc.poll() is not None:
+        return
+    print("[update] 先停止正在运行的服务…")
+    try:
+        proc.terminate()
+    except Exception:
+        pass
+    try:
+        proc.wait(timeout=timeout)
+    except Exception:
+        try:
+            stop_process(proc)
+        except Exception:
+            pass
+
+
 def run_upgrade(data_dir: Path, version: str) -> str:
     """提权静默安装（一次 UAC）+ 验证版本。返回状态串（见 upgrade_core.record_result）。"""
     import upgrade_core as up
@@ -550,9 +652,20 @@ def run_upgrade(data_dir: Path, version: str) -> str:
                          "安装包尚未下载完成（稍后重试或检查网络）")
         return "missing_staged"
     log_path = str(Path(data_dir) / "updates" / f"install-{version}.log")
-    params = (f'/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /CLOSEAPPLICATIONS /LOG="{log_path}"')
+    _stop_server_for_upgrade()
+    args = ["/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART",
+            "/CLOSEAPPLICATIONS", "/FORCECLOSEAPPLICATIONS", f"/LOG={log_path}"]
     try:
         import ctypes
+        if _is_elevated():
+            # 已提权：直接跑（不再弹 UAC）——也避免 ShellExecuteW 在非交互窗口站上卡死。
+            subprocess.Popen([setup] + args, cwd=str(Path(data_dir) / "updates"),
+                             close_fds=True)
+            up.record_result(data_dir, "installing", version, "已启动静默安装（提权直跑）")
+            print("[update] 已启动静默安装；本窗口即将退出，安装完成后会自动打开新版本。")
+            _exit_for_upgrade()
+            return "installing"
+        params = " ".join(f'"{a}"' if " " in a else a for a in args)
         rc = ctypes.windll.shell32.ShellExecuteW(
             None, "runas", setup, params, str(Path(data_dir) / "updates"), 1)
     except Exception as exc:
@@ -691,6 +804,7 @@ def _auto_download_enabled(cfg: Path) -> bool:
 
 
 def main() -> int:
+    _force_utf8_stdio()
     data_dir = user_data_dir()
     data_dir.mkdir(parents=True, exist_ok=True)
 
@@ -703,6 +817,7 @@ def main() -> int:
     cfg = ensure_config(ssl_pair[0], ssl_pair[1])
     apply_simple_defaults(cfg)
     check_for_hotfix(cfg)
+    confirm_pending_upgrade(data_dir)
     upgrade_plan = check_for_upgrade(cfg, data_dir)
     login_user, login_password, generated_login = ensure_users()
     write_quick_start(login_user, login_password)
@@ -750,6 +865,8 @@ def main() -> int:
         errors="replace",
         bufsize=1,
     )
+    global _SERVER_PROC
+    _SERVER_PROC = proc
     server_log = data_dir / "logs" / "server-stdout.log"
     threading.Thread(target=tee_child_output, args=(proc, server_log),
                      name="server-stdout-tee", daemon=True).start()

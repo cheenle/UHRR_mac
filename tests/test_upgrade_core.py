@@ -131,6 +131,16 @@ class DownloadTest(unittest.TestCase):
         uc.clear_upgrade_request(self.tmp)
         self.assertIsNone(uc.read_upgrade_request(self.tmp))
 
+    def test_bom_tolerated(self):
+        """带 BOM 的 JSON 必须能读：记事本 / PowerShell(Set-Content -Encoding utf8) 默认写 BOM，
+        而 json.load 遇 BOM 直接抛错 → 升级被静默忽略（6.1.0 端到端实测）。"""
+        with open(uc.request_path(self.tmp), "w", encoding="utf-8-sig") as fh:
+            fh.write('{"version": "6.1.0", "at": "x"}')
+        self.assertEqual(uc.read_upgrade_request(self.tmp)["version"], "6.1.0")
+        with open(uc.state_path(self.tmp), "w", encoding="utf-8-sig") as fh:
+            fh.write('{"staged": {"version": "6.1.0"}}')
+        self.assertEqual(uc.read_state(self.tmp)["staged"]["version"], "6.1.0")
+
     def test_record_result(self):
         uc.record_result(self.tmp, "uac_denied", version="6.1.0", detail="user cancelled")
         last = uc.read_state(self.tmp)["lastResult"]

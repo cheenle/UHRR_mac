@@ -142,7 +142,9 @@ def request_path(base_dir):
 
 def _read_json(path):
     try:
-        with open(path, encoding="utf-8") as fh:
+        # utf-8-sig：容忍 BOM。Windows 工具（记事本 / PowerShell 的 Set-Content -Encoding utf8）
+        # 默认会写 BOM，而 json.load 遇到 BOM 直接抛错 → 升级会被静默忽略（6.1.0 端到端实测）。
+        with open(path, encoding="utf-8-sig") as fh:
             data = json.load(fh)
         return data if isinstance(data, dict) else None
     except Exception:

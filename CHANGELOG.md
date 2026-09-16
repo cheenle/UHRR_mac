@@ -5,6 +5,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [V6.1.2] - 2026-09-16
+
+### 🐛 一键升级：端到端实测暴露的 5 个 Windows 陷阱（全部修复）
+
+在 Win11 VM 上真机跑「6.0.10 → 6.1.0 → 6.1.1」验收，装到第 3 轮才升上去 —— 抓到并修掉：
+
+1. **升级后卡死在中止**（最致命）：Inno 的 `/CLOSEAPPLICATIONS` 靠 Restart Manager 发
+   `WM_CLOSE`，而控制台进程没有消息循环 → 关不掉 → 静默模式自动选 Abort → 安装回滚
+   （实测日志：`Some applications could not be shut down.` → `User canceled`）。
+   → 启升级前**先停自己的服务子进程**（`_stop_server_for_upgrade`），并**启动器拉完安装器
+   立刻 `os._exit` 放手文件**（`_exit_for_upgrade`）；命令加 `/FORCECLOSEAPPLICATIONS` 兜底。
+2. **提权时不该弹 UAC**：已提权的启动器再走 `ShellExecuteW("runas")` 在非交互窗口站上会
+   **永久卡住**（实测：哨兵被消费、无 consent.exe、无安装日志）。
+   → `_is_elevated()` 为真时**直接 `Popen` 跑安装器**。
+3. **升级成功没人确认**：启动器退出后由新版自己确认 —— 启动时若
+   `version.txt >= state.staged.version` → 记 `ok` + 清状态 + 删暂存包（`confirm_pending_upgrade`）。
+4. **BOM 让哨兵失效**：`_read_json` 改用 `utf-8-sig`。记事本 / PowerShell
+   `Set-Content -Encoding utf8` 默认写 BOM，而 `json.load` 遇 BOM 直接抛错 → 升级被静默忽略。
+5. **Windows 控制台 GBK 杀线程**：服务端日志里的 emoji（🔍）让 `print` 抛
+   `UnicodeEncodeError`，**杀死日志转发线程** → 诊断包里的 `server-stdout.log` 断更。
+   → 启动器 stdio 统一切 UTF-8（`_force_utf8_stdio`）+ 转发用 `_safe_print` 降级不抛。
+
+另：一键升级脚本/自报上传显式用 UTF-8 字节（PowerShell 默认编码会把中文元数据写成乱码）。
+
 ## [V6.1.1] - 2026-09-16
 
 ### 🔧 升清单地址可覆盖（测试/内网镜像）

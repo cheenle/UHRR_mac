@@ -61,6 +61,44 @@ class TeeTest(unittest.TestCase):
         self.assertIn("🧩", content)
         self.assertIn("补丁覆盖层已启用", content)
 
+    def test_safe_print_survives_gbk_console(self):
+        """Windows 控制台默认 GBK：转发带 emoji 的服务端日志不能让线程崩
+        （6.1.0 端到端实测：UnicodeEncodeError 杀死 server-stdout-tee → 日志断更）。"""
+
+        class GbkStdout:
+            encoding = "gbk"
+
+            def __init__(self):
+                self.written = []
+
+            def write(self, text):
+                text.encode("gbk")        # 模拟 GBK 控制台：emoji 直接抛
+                self.written.append(text)
+
+            def flush(self):
+                pass
+
+        fake = GbkStdout()
+        old = sys.stdout
+        sys.stdout = fake
+        try:
+            self.launcher._safe_print("🔍 音频设备枚举 48kHz")     # 不得抛异常
+        finally:
+            sys.stdout = old
+        self.assertTrue(fake.written, "降级后仍应写出可编码的文本")
+        self.assertIn("?", "".join(fake.written))
+
+    def test_force_utf8_stdio_sets_child_encoding(self):
+        old_pio = os.environ.pop("PYTHONIOENCODING", None)
+        try:
+            self.launcher._force_utf8_stdio()
+            self.assertEqual(os.environ.get("PYTHONIOENCODING"), "utf-8")
+        finally:
+            if old_pio is None:
+                os.environ.pop("PYTHONIOENCODING", None)
+            else:
+                os.environ["PYTHONIOENCODING"] = old_pio
+
     def test_rolls_when_exceeding_limit(self):
         open(self.log, "w", encoding="utf-8").write("x" * 500)
         self._run_child("print('after-roll')", max_bytes=200)
@@ -72,6 +110,99 @@ class TeeTest(unittest.TestCase):
         """日志目录不存在时不抛异常（只丢日志）。"""
         code, _ = self._run_child("print('ok')", log_path=os.path.join(self.tmp, "nope", "x.log"))
         self.assertEqual(code, 0)
+
+
+class UpgradeRobustnessTest(unittest.TestCase):
+    """升级健壮性：6.1.0 端到端实测暴露的两个 Windows 陷阱。"""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.launcher = load_launcher()
+
+    def test_installer_forces_close_and_stops_server_first(self):
+        """安装器替换被占用的 exe/dll 会「DeleteFile failed; code 5」——
+        必须升级前先停服务 + 命令里强关占用进程。"""
+        import inspect
+        src = inspect.getsource(self.launcher.run_upgrade)
+        self.assertIn("FORCECLOSEAPPLICATIONS", src)
+        self.assertIn("_stop_server_for_upgrade()", src)
+
+    def test_stop_server_for_upgrade_really_stops_child(self):
+        proc = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(60)"])
+        old = self.launcher._SERVER_PROC
+        self.launcher._SERVER_PROC = proc
+        try:
+            self.launcher._stop_server_for_upgrade(timeout=10)
+            self.assertIsNotNone(proc.poll(), "升级前必须真的把服务停掉")
+        finally:
+            self.launcher._SERVER_PROC = old
+            if proc.poll() is None:
+                proc.kill()
+
+    def test_stop_server_tolerates_no_child(self):
+        old = self.launcher._SERVER_PROC
+        self.launcher._SERVER_PROC = None
+        try:
+            self.launcher._stop_server_for_upgrade(timeout=1)   # 不得抛异常
+        finally:
+            self.launcher._SERVER_PROC = old
+
+    def test_installer_has_elevated_direct_run_path(self):
+        """已提权时必须直跑安装器：ShellExecuteW(runas) 在非交互窗口站会永远卡住
+        （6.1.0 实测：哨兵被消费、无 UAC 弹窗、无安装日志）。"""
+        import inspect
+        src = inspect.getsource(self.launcher.run_upgrade)
+        self.assertIn("_is_elevated()", src)
+        self.assertIn("_exit_for_upgrade()", src)
+        self.assertIn("subprocess.Popen", src)
+
+    def test_is_elevated_is_bool(self):
+        self.assertIsInstance(self.launcher._is_elevated(), bool)
+
+    def test_confirm_pending_upgrade_marks_ok_and_clears(self):
+        """安装后首次启动确认：写 ok + 清状态 + 删暂存包（升级时启动器已自行退出）。"""
+        import json
+        import tempfile
+        with tempfile.TemporaryDirectory() as tmp:
+            data = Path(tmp)
+            (data / "updates").mkdir(parents=True)
+            pkg = data / "updates" / "MRRC-Setup-6.1.2.exe"
+            pkg.write_bytes(b"x")
+            (data / "updates" / "state.json").write_text(json.dumps({
+                "staged": {"version": "6.1.2", "path": str(pkg), "sha256": "a" * 64,
+                           "size": 1, "at": "t"}}), encoding="utf-8")
+            app = data / "app"
+            app.mkdir()
+            (app / "version.txt").write_text("6.1.2", encoding="utf-8")
+            old = self.launcher.app_dir
+            self.launcher.app_dir = lambda: app
+            try:
+                self.launcher.confirm_pending_upgrade(data)
+            finally:
+                self.launcher.app_dir = old
+            state = json.loads((data / "updates" / "state.json").read_text(encoding="utf-8"))
+            self.assertEqual(state["lastResult"]["status"], "ok")
+            self.assertIsNone(state.get("staged"))
+            self.assertFalse(pkg.exists(), "确认成功后应删掉暂存安装包")
+
+    def test_confirm_pending_upgrade_handles_not_upgraded(self):
+        import json
+        import tempfile
+        with tempfile.TemporaryDirectory() as tmp:
+            data = Path(tmp)
+            (data / "updates").mkdir(parents=True)
+            (data / "updates" / "state.json").write_text(json.dumps({
+                "staged": {"version": "9.9.9", "path": "C:/nope.exe", "at": "t"}}),
+                encoding="utf-8")
+            app = data / "app"
+            app.mkdir()
+            (app / "version.txt").write_text("6.1.2", encoding="utf-8")
+            old = self.launcher.app_dir
+            self.launcher.app_dir = lambda: app
+            try:
+                self.launcher.confirm_pending_upgrade(data)      # 不得抛异常
+            finally:
+                self.launcher.app_dir = old
 
 
 if __name__ == "__main__":
