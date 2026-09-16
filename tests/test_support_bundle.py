@@ -62,3 +62,66 @@ class RedactionTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
+
+
+class BundleTest(unittest.TestCase):
+    """打包与自动体检摘要（任务 2）。"""
+
+    def setUp(self):
+        import tempfile
+        self.tmp = tempfile.mkdtemp(prefix="sb-bundle-")
+        self.log = os.path.join(self.tmp, "MRRC.log")
+        with open(self.log, "w", encoding="utf-8") as fh:
+            fh.write("普通行\n")
+            fh.write("Traceback (most recent call last):\n" * 3)
+            fh.write("2026-09-16 ERROR 电台无响应\n")
+            fh.write("🎧 音频健康: 30s 采集 1430000 样本（应有 1440000，98.5%）  ⚠ 明显跟不上\n")
+            fh.write("补丁覆盖层已启用: xxx\nWDSP 库加载成功\n")
+
+    def test_bundle_contains_expected_files_and_no_secrets(self):
+        import json as _json
+        import zipfile
+        result = sb.build_bundle(
+            out_dir=self.tmp, problem="接收声音每秒卡一下",
+            contact="BG1SB", env={"version": "6.0.7", "platform": "Windows-11"},
+            log_files={"logs/MRRC.log": self.log},
+            config_text="[SERVER]\nport = 8877\ncookie_secret = TOP_SECRET\n"
+                        "[AUDIO]\ninputdevice = USB Audio CODEC\n")
+        self.assertTrue(os.path.isfile(result["path"]))
+        self.assertEqual(result["id"], os.path.basename(result["path"]).split("support-")[1][:-4])
+        with zipfile.ZipFile(result["path"]) as z:
+            names = set(z.namelist())
+            for expected in ("manifest.json", "README.txt", "problem.txt",
+                             "diagnostics/summary.txt", "diagnostics/env.json",
+                             "state/config-redacted.ini", "logs/MRRC.log"):
+                self.assertIn(expected, names)
+            blob = b"".join(z.read(n) for n in names)
+            self.assertNotIn(b"TOP_SECRET", blob, "密钥绝不能进包")
+            self.assertNotIn(b"cookie_secret", blob)
+            self.assertIn(b"USB Audio CODEC", blob, "白名单内的键要保留")
+            summary = z.read("diagnostics/summary.txt").decode("utf-8")
+            self.assertIn("Traceback", summary)
+            self.assertIn("98.5", summary)
+            self.assertIn("音频采集", summary)
+            manifest = _json.loads(z.read("manifest.json"))
+            self.assertEqual(manifest["problem"], "接收声音每秒卡一下")
+            self.assertGreaterEqual(manifest["redactions"], 1)
+            self.assertEqual(manifest["warnings"], [])
+
+    def test_missing_log_yields_warning_and_minimal_bundle(self):
+        result = sb.build_bundle(out_dir=self.tmp, problem="", contact="", env={},
+                                 log_files={"logs/MRRC.log": os.path.join(self.tmp, "nope.log")},
+                                 config_text="")
+        self.assertTrue(result["warnings"], "缺日志要给出 warnings")
+        self.assertTrue(os.path.isfile(result["path"]))
+
+    def test_forbidden_log_names_are_skipped(self):
+        result = sb.build_bundle(out_dir=self.tmp, problem="", contact="", env={},
+                                 log_files={"certs/server.key": self.log}, config_text="")
+        self.assertTrue(any("受限" in w for w in result["warnings"]))
+
+    def test_collect_env_snapshot_shape(self):
+        snap = sb.collect_env_snapshot(version="6.0.7", extra={"audio": {"api": "Windows WASAPI"}})
+        for key in ("version", "platform", "python", "frozen", "cpuCount", "audio"):
+            self.assertIn(key, snap)
+        self.assertEqual(snap["audio"]["api"], "Windows WASAPI")
