@@ -36,13 +36,19 @@ def version_tuple(text):
     return tuple(parts[:4])
 
 
-def fetch_manifest(url=DEFAULT_MANIFEST_URL, timeout=10, fallback_url=LEGACY_PATCH_URL):
+def manifest_url():
+    """清单地址：允许 MRRC_UPDATE_MANIFEST 覆盖（内网镜像 / 测试用）。"""
+    return (os.environ.get("MRRC_UPDATE_MANIFEST") or "").strip() or DEFAULT_MANIFEST_URL
+
+
+def fetch_manifest(url=None, timeout=10, fallback_url=LEGACY_PATCH_URL):
     """拉取升级清单；返回 (manifest|None, 失败原因)。latest.json 不可用时回退 patch.json。
 
     回退是为了向后兼容：老的 patch.json 只有 latest/hotfix 语义，plan_upgrade() 会把它
     当成"只有热修"，行为与今天一致。
     """
     reason = "未尝试"
+    url = url or manifest_url()
     for candidate in (url, fallback_url):
         if not candidate:
             continue

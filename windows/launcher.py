@@ -507,7 +507,8 @@ def check_for_upgrade(cfg: Path, data_dir: Path):
     import upgrade_core as up
     if not _update_enabled(cfg):
         return None
-    manifest, error = up.fetch_manifest(up.DEFAULT_MANIFEST_URL)
+    manifest, error = up.fetch_manifest()          # 可用 MRRC_UPDATE_MANIFEST 覆盖
+    print(f"[update] 清单: {up.manifest_url()}")
     if not manifest:
         print(f"[update] 检查更新失败（忽略）: {error}")
         return None
@@ -627,7 +628,7 @@ def watch_upgrade(data_dir: Path, pending_version: str = "", poll_seconds: float
         elif pending_version:
             target, pending_version = pending_version, ""   # 启动检查已经知道有新版本
         if target == "latest":
-            manifest, _err = up.fetch_manifest(up.DEFAULT_MANIFEST_URL)
+            manifest, _err = up.fetch_manifest()
             plan = up.plan_upgrade(_installed_version(), manifest) if manifest else {}
             info = (plan or {}).get("installer") or {}
             if not info.get("available"):

@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [V6.1.1] - 2026-09-16
+
+### 🔧 升清单地址可覆盖（测试/内网镜像）
+
+- `upgrade_core.manifest_url()`：可用环境变量 `MRRC_UPDATE_MANIFEST` 覆盖 `latest.json` 地址
+  （便于在隔离网络里指向内网镜像，也用于端到端测试时不动生产清单）。启动器日志会打印实际清单地址。
+
 ## [V6.1.0] - 2026-09-16
 
 ### ⬆️ 一键升级到最新版（Windows 安装版）
