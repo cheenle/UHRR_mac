@@ -7,6 +7,7 @@ import os
 import secrets
 import signal
 import subprocess
+import threading
 import sys
 import time
 import urllib.error
@@ -439,6 +440,49 @@ def build_command(cfg: Path) -> list[str] | None:
     return [sys.executable, str(server), str(cfg)]
 
 
+def tee_child_output(proc: subprocess.Popen, log_path, max_bytes: int = 2 * 1024 * 1024):
+    """把子进程输出**既转发到本进程控制台、又落盘一份**（超限滚动成 .prev）。
+
+    为什么必须有：服务端的启动期报错（PyInstaller/依赖缺失/WDSP 加载失败）只在 stdout，
+    不落盘就没法进诊断包；而改成纯文件重定向用户又看不到控制台。
+    另外必须持续读取管道，否则管道写满会让服务端阻塞（与 F4b 同类的问题）。
+
+    返回本进程捕获到的行（测试断言用；生产调用忽略返回值）。
+    """
+    log_path = Path(log_path)
+    lines = []
+    sink = None
+    try:
+        if max_bytes and log_path.exists() and log_path.stat().st_size > max_bytes:
+            backup = log_path.with_name(log_path.name + ".prev")
+            try:
+                backup.unlink(missing_ok=True)
+                log_path.replace(backup)
+            except OSError:
+                pass
+        log_path.parent.mkdir(parents=True, exist_ok=True)
+        sink = open(log_path, "a", encoding="utf-8", errors="replace", buffering=1)
+    except OSError:
+        sink = None                      # 落盘失败不影响转发
+    try:
+        for raw in proc.stdout or ():
+            text = raw.rstrip("\n")
+            print(text, flush=True)      # 控制台保持可见（用户习惯看这个窗口）
+            lines.append(text)
+            if sink is not None:
+                try:
+                    sink.write(text + "\n")
+                except OSError:
+                    sink = None
+    finally:
+        if sink is not None:
+            try:
+                sink.close()
+            except OSError:
+                pass
+    return lines
+
+
 def stop_process(proc: subprocess.Popen) -> None:
     if proc.poll() is not None:
         return
@@ -497,12 +541,23 @@ def main() -> int:
     creationflags = 0
     if os.name == "nt":
         creationflags = getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
+    # stdout/stderr 走管道 → tee 线程同时打印到控制台并写 logs/server-stdout.log，
+    # 这样「🐞 遇到问题」的诊断包才能带上启动期报错（见 support_bundle）。
     proc = subprocess.Popen(
         command,
         cwd=str(app_dir()),
         env=env,
         creationflags=creationflags,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        bufsize=1,
     )
+    server_log = data_dir / "logs" / "server-stdout.log"
+    threading.Thread(target=tee_child_output, args=(proc, server_log),
+                     name="server-stdout-tee", daemon=True).start()
     if wait_for_server(url, proc, secure=True):
         webbrowser.open(url)
     elif proc.poll() is not None:
