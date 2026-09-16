@@ -1,10 +1,10 @@
 {
-  "latest": "6.1.10",
-  "url": "https://www.vlsc.net/mrrc/downloads/hotfix-6.1.10.zip",
-  "sha256": "c9e59ec856f8bcdbc3720f80ba3dfb1639241a2ddd8fed032b472954a2ef4a1a",
-  "size": 5004,
+  "latest": "6.1.11",
+  "url": "https://www.vlsc.net/mrrc/downloads/hotfix-6.1.11.zip",
+  "sha256": "eb44503a7ddff072b5d05b003fdd12ad63badc50045789c71650fd9a20f9342a",
+  "size": 5201,
   "requires": "6.0.3",
-  "notes": "修复真机点【立即升级】无反应：下载锁阻塞 + 连接阶段无超时（upgrade_core 可热修）",
+  "notes": "修复两个启动器实例抢同一 .part 导致改名失败（WinError 32）",
   "files": [
     "app/upgrade_core.py"
   ]
