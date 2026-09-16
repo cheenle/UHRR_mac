@@ -52,6 +52,9 @@ APP_NAME = "MRRC"
 DEFAULT_PORT = "8877"
 _SERVER_PROC = None      # 主流程拉起的服务子进程（升级前必须先停，见 _stop_server_for_upgrade）
 _UPGRADING = threading.Event()   # 已在拉安装器：主线程不得正常退出（见 main 尾部保护）
+_UPGRADE_BUSY = threading.Event()  # watch 线程已接到升级请求：主线程要等它收尾再退
+                                   #（VM 实测：服务恰好自己先崩了 → main 立刻返回 → 
+                                   #  进程退出把处理到一半的 watch 线程带死 → 升级静默丢失）
 DEFAULT_LOGIN_USER = "admin"
 KNOWN_DEFAULT_ACCOUNTS = {("BG1SB", "abcd1234"), ("admin", "uhrr2024")}
 
@@ -750,6 +753,7 @@ def watch_upgrade(data_dir: Path, pending_version: str = "", poll_seconds: float
         request = up.read_upgrade_request(data_dir)
         target = str((request or {}).get("version") or "").strip()
         if target:
+            _UPGRADE_BUSY.set()                         # 有活儿在处理：主线程别走
             up.clear_upgrade_request(data_dir)          # 先清，避免重复触发
         elif pending_version:
             target, pending_version = pending_version, ""   # 启动检查已经知道有新版本
@@ -922,11 +926,14 @@ def main() -> int:
     except KeyboardInterrupt:
         stop_process(proc)
         return 0
-    if _UPGRADING.is_set():
-        # 升级进行中：绝不能正常退出。解释器收尾会和 input()/转发线程抢缓冲区，
-        # 触发 “Fatal Python error: _enter_buffered_busy”，安装被当场打断
-        # （2026-09-16 VM 实测）。由 _exit_for_upgrade 里的 os._exit 收尾。
-        while True:
+    if _UPGRADING.is_set() or _UPGRADE_BUSY.is_set():
+        # 升级进行中：绝不能正常退出。
+        #  * 正常退出会让解释器收尾与 input()/转发线程抢缓冲区 → “Fatal Python error”；
+        #  * 服务子进程自己先崩时，proc.wait() 会立刻返回，同样会把处理到一半的
+        #    watch 线程带死 → 升级静默丢失（两个坑都是 2026-09-16 VM 实测）。
+        # 等升级收尾（成功后由 _exit_for_upgrade 的 os._exit 结束进程）。
+        deadline = time.time() + 900
+        while time.time() < deadline:
             time.sleep(0.5)
     return rc
 

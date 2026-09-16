@@ -264,6 +264,15 @@ class UpgradeWatcherTest(unittest.TestCase):
         src = inspect.getsource(self.launcher.main)
         self.assertIn("_UPGRADING.is_set()", src)
 
+    def test_main_waits_for_inflight_upgrade_request(self):
+        """服务子进程自己先崩时，proc.wait() 立刻返回也不能把 watch 线程带死
+        （VM 实测：sentinel 被消费但升级静默丢失）。"""
+        import inspect
+        src = inspect.getsource(self.launcher.main)
+        self.assertIn("_UPGRADE_BUSY.is_set()", src)
+        watch = inspect.getsource(self.launcher.watch_upgrade)
+        self.assertIn("_UPGRADE_BUSY.set()", watch)
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
