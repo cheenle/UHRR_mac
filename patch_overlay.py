@@ -41,6 +41,7 @@ PyInstaller 6 的 onedir 包把应用自己的模块打进 exe 里的 PYZ。2026
 """
 
 import hashlib
+import json
 import os
 
 PATCH_DIR_ENV = "MRRC_PATCH_DIR"
@@ -208,6 +209,32 @@ def _sha256(path, limit=None):
     except OSError:
         return None
     return h.hexdigest()
+
+
+def applied_versions():
+    """已应用过的热修版本集合（读覆盖层里的 applied.json；供升级/热修判重）。"""
+    _ensure()
+    patch = _state["patch_dir"]
+    if not patch:
+        return set()
+    try:
+        with open(os.path.join(patch, "applied.json"), encoding="utf-8") as fh:
+            history = json.load(fh)
+    except Exception:
+        return set()
+    if isinstance(history, dict):
+        history = [history]
+    if not isinstance(history, list):
+        return set()
+    versions = set()
+    for item in history:
+        if not isinstance(item, dict):
+            continue
+        for key in ("version", "hotfixVersion"):
+            if item.get(key):
+                versions.add(str(item[key]))
+        # files 形态（apply_hotfix.ps1 写的是 {appliedAt, version, files}）
+    return versions
 
 
 def list_overlay_files(with_hash=False):

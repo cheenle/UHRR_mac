@@ -4362,6 +4362,126 @@ class DevicesApiHandler(BaseHandler):
 			return self.post_apply()
 		return self.post_save()
 		
+############ 一键升级（/api/update）################
+class UpdateApiHandler(BaseHandler):
+	"""一键升级的状态与触发（见 docs/superpowers/specs/2026-09-16-one-click-upgrade-design.md）。
+
+	GET  /api/update           状态：installed / latest / plan / state / pttActive
+	                           **仅本机（127.0.0.1/::1）访问时免登录** —— 启动器要读它判断
+	                           是否在发射（它没有 cookie）。外部访问仍按常规鉴权。
+	POST /api/update/upgrade   写哨兵 updates/upgrade.request（PTT 活跃时 423 拒绝）
+	POST /api/update/rollback  写哨兵指向 previous 版本（同一条静默安装路径）
+	"""
+
+	LOCAL_IPS = ("127.0.0.1", "::1", "::ffff:127.0.0.1")
+
+	def prepare(self):
+		"""仅本机（127.0.0.1/::1）免登录：启动器没有 cookie，但要读 PTT 状态判断能否升级。
+
+		其余来源一律交给基类做鉴权重定向/403；POST 仍要求真实登录
+		（本机已登录的浏览器会带 cookie，因此页面按钮照常可用）。
+		"""
+		if self.request.remote_ip in self.LOCAL_IPS:
+			return
+		return super().prepare()
+
+	def _data_dir(self):
+		return os.path.dirname(os.path.abspath(config_file))
+
+	def _installed(self):
+		for candidate in (os.path.join(_runtime_dir(), "version.txt"),
+					  os.path.join(_resource_dir(), "version.txt")):
+			if os.path.exists(candidate):
+				try:
+					return open(candidate, encoding="utf-8").read().strip()
+				except OSError:
+					pass
+		return ""
+
+	def _plan(self):
+		try:
+			import upgrade_core as up
+			import patch_overlay
+			manifest, error = up.fetch_manifest()
+			if not manifest:
+				return {}, error
+			applied = set()
+			try:
+				applied = set(patch_overlay.applied_versions())
+			except Exception:
+				pass
+			return up.plan_upgrade(self._installed(), manifest, applied_hotfixes=applied), None
+		except Exception as exc:
+			return {}, f"{type(exc).__name__}: {exc}"
+
+	def _state(self):
+		try:
+			import upgrade_core as up
+			return up.read_state(self._data_dir())
+		except Exception:
+			return {}
+
+	def get(self):
+		self.set_header("Content-Type", "application/json")
+		if self.request.remote_ip not in self.LOCAL_IPS and not self.current_user:
+			self.set_status(403)
+			self.write(json.dumps({"ok": False, "reason": "auth_required"}))
+			return
+		plan, error = self._plan()
+		self.write(json.dumps({
+			"ok": True,
+			"installed": self._installed(),
+			"latest": (plan or {}).get("latest", ""),
+			"plan": plan or {},
+			"state": self._state(),
+			"notes": (plan or {}).get("notes", ""),
+			"pttActive": bool(CTRX and getattr(CTRX, 'mrrc_ptt_active', False)),
+			"error": error,
+		}, ensure_ascii=False, default=str))
+
+	def post(self):
+		self.set_header("Content-Type", "application/json")
+		if not self.current_user:
+			self.set_status(403)
+			self.write(json.dumps({"ok": False, "reason": "auth_required"}))
+			return
+		import upgrade_core as up
+		data_dir = self._data_dir()
+		path = self.request.path.rstrip("/")
+		if path.endswith("rollback"):
+			plan, _err = self._plan()
+			previous = (plan or {}).get("previous") or {}
+			if not previous.get("available"):
+				self.write(json.dumps({"ok": False, "reason": "no_previous"}))
+				return
+			logger.warning(f"收到回退请求：{previous['version']}")
+			up.write_upgrade_request(data_dir, previous["version"])
+			self.write(json.dumps({"ok": True, "queued": previous["version"],
+								   "note": "启动器会下载并静默安装上一版；会弹一次 UAC"},
+								  ensure_ascii=False))
+			return
+		if CTRX and getattr(CTRX, 'mrrc_ptt_active', False):
+			self.set_status(423)
+			self.write(json.dumps({"ok": False, "reason": "ptt_active",
+								   "message": "发射中不升级，请先松开 PTT"}, ensure_ascii=False))
+			return
+		payload = {}
+		try:
+			payload = json.loads(self.request.body or b"{}") or {}
+		except Exception:
+			payload = {}
+		plan, _err = self._plan()
+		version = str(payload.get("version") or (plan or {}).get("latest") or "").strip()
+		if not version:
+			self.write(json.dumps({"ok": False, "reason": "unknown_version"}))
+			return
+		logger.warning(f"收到升级请求：{version}（当前 {self._installed()}）")
+		up.write_upgrade_request(data_dir, version)
+		self.write(json.dumps({"ok": True, "queued": version,
+						   "note": "启动器会在 1 秒内接手；请在弹出的 UAC 窗口点『是』"},
+						  ensure_ascii=False))
+
+
 ############ 诊断包 / 一键上传 ################
 class SupportApiHandler(BaseHandler):
 	"""「🐞 遇到问题」用的一键诊断包接口。
@@ -5045,6 +5165,7 @@ if __name__ == "__main__":
 					(r'/api/devices', DevicesApiHandler),  # 抽屉式设备配置 API
 					(r'/api/devices/apply', DevicesApiHandler),  # 设备配置保存并重启
 					(r'/api/support/.*', SupportApiHandler),  # 诊断包：生成/上传/保存/下载
+					(r'/api/update.*', UpdateApiHandler),  # 一键升级：状态/升级/回退
 					(r'/recordings/([^/]+)', RecordingsDownloadHandler),  # 录音下载
 					(r'/', MainHandler),
 					(r'/(.*)', AuthenticatedStaticFileHandler, { 'path' : os.path.join(_resource_dir(), 'www') })			],debug=bool(config['SERVER']['debug']), websocket_ping_interval=30, cookie_secret=config['SERVER']['cookie_secret'])
