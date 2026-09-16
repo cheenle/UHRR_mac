@@ -5,6 +5,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [V6.1.7] - 2026-09-16
+
+- 一键升级端到端验收目标（仅测试用，不对外发布；走 MRRC_UPDATE_MANIFEST 测试清单）。
+
 ## [V6.1.6] - 2026-09-16
 
 - 一键升级端到端验收目标版（与 6.1.5 同样的代码；发布版就是被升级流程实测过的这一包）。
