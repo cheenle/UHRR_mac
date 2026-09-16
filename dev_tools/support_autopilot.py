@@ -476,9 +476,13 @@ CRON_MARK = "# MRRC support autopilot"
 
 def cmd_install_cron(args) -> int:
     minutes = max(1, int(args.install_cron))
-    cmd = (f"cd {REPO} && /usr/bin/env python3 dev_tools/support_autopilot.py --once --publish "
-           f">> {RUN_LOG} 2>&1")
-    line = f"*/{minutes} * * * * {cmd} {CRON_MARK}"
+    # cron 的 PATH 很窄：python 用仓库 venv 的绝对路径，PATH 里显式带上 pi 所在目录，
+    # 否则会拿到系统 Python（版本/依赖不同）并且找不到 pi。
+    py = REPO / "venv" / "bin" / "python3"
+    py = str(py) if py.exists() else "/usr/bin/env python3"
+    path = f"{Path.home()}/.hermes/node/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin"
+    line = (f"*/{minutes} * * * * cd {REPO} && PATH={path} {py} dev_tools/support_autopilot.py "
+            f"--once --publish >> {RUN_LOG} 2>&1 {CRON_MARK}")
     cur = subprocess.run(["crontab", "-l"], capture_output=True, text=True).stdout
     kept = [l for l in cur.splitlines() if CRON_MARK not in l]
     new = "\n".join(kept + [line]).strip() + "\n"
