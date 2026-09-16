@@ -306,6 +306,19 @@ class PyAudioCapture(threading.Thread):
         # daemon=True：进程退出时不因本线程阻塞而挂起；_stop_event 控制 run() 循环退出
         self.daemon = True
         self._stop_event = threading.Event()
+
+        # 音频侧配置（注意：run() 里没有 config，必须在 __init__ 取好）
+        # - hostapi_preference: Windows 同名设备在 MME/DirectSound/WASAPI 下重复出现，按优先度选
+        # - diag: 采集诊断（等价于环境变量 MRRC_AUDIO_DIAG=1）
+        try:
+            set_hostapi_preference(config['AUDIO'].get('hostapi_preference', ''))
+        except Exception:
+            pass
+        try:
+            _diag_cfg = str(config['AUDIO'].get('diag', '')).strip().lower()
+        except Exception:
+            _diag_cfg = ''
+        self._audio_diag = (os.environ.get('MRRC_AUDIO_DIAG') == '1') or _diag_cfg in ('1', 'true', 'yes', 'on')
         self.config = config
         
         # Opus 编码器实例（延迟初始化）
@@ -468,17 +481,13 @@ class PyAudioCapture(threading.Thread):
         frame_count = 0
         last_log_time = time.time()
 
-        # 主机 API 优先顺序（Windows 上同名设备会重复出现，默认 WASAPI > DirectSound > MME）
-        try:
-            set_hostapi_preference(config['AUDIO'].get('hostapi_preference', ''))
-        except Exception:
-            pass
-
         # MRRC_AUDIO_DIAG=1 时每秒输出采集侧诊断（读取耗时/样本数/待读样本），
         # 用于定位「秒级卡顿」：读取耗时接近 1s = 主机 API 按驱动周期成块返数据；
         # 待读样本持续增长 = 处理跟不上（overflow 被 exception_on_overflow=False 吞掉）。
-        _audio_diag = os.environ.get('MRRC_AUDIO_DIAG') == '1'
-        _diag = {'reads': 0, 'total': 0.0, 'max': 0.0, 'samples': 0, 'since': time.time()}
+        _audio_diag = self._audio_diag
+        _diag = {'reads': 0, 'total': 0.0, 'max': 0.0, 'samples': 0, 'since': time.time(),
+                 'summary_since': time.time(), 'summary_reads': 0, 'summary_samples': 0,
+                 'summary_max': 0.0}
         
         # Opus 编码累积缓冲区
         opus_accumulator = np.array([], dtype=np.int16)
@@ -515,6 +524,21 @@ class PyAudioCapture(threading.Thread):
                               f"{_diag['max'] * 1000:.1f}ms, 已采{_diag['samples']}样本"
                               f"（应有{int(_elapsed * 48000)}）, 待读样本 {_avail}")
                         _diag.update(reads=0, total=0.0, max=0.0, samples=0, since=time.time())
+                    # 常驻健康摘要（每 30s 一行，无需开关）：实际采样数 vs 应有采样数，
+                    # 低于 ~99% 说明采集流水线跟不上（Windows 弱机跑 WDSP/NR2 时常见）。
+                    _diag['summary_reads'] += 1
+                    _diag['summary_samples'] += len(data) // 2
+                    _diag['summary_max'] = max(_diag['summary_max'], time.time() - _t_read0)
+                    _summary_elapsed = time.time() - _diag['summary_since']
+                    if _summary_elapsed >= 30.0:
+                        _expected = _summary_elapsed * 48000
+                        _ratio = _diag['summary_samples'] / _expected if _expected else 0
+                        print(f"🎧 音频健康: {_summary_elapsed:.0f}s 采集 {_diag['summary_samples']} 样本"
+                              f"（应有 {int(_expected)}，{_ratio * 100:.1f}%）, 单次读取最大 "
+                              f"{_diag['summary_max'] * 1000:.1f}ms"
+                              + ("  ⚠ 明显跟不上，检查 CPU/WDSP 设置或主机 API" if _ratio < 0.99 else ""))
+                        _diag.update(summary_since=time.time(), summary_reads=0,
+                                     summary_samples=0, summary_max=0.0)
                 capture_end_ns = time.monotonic_ns()
                 
                 if len(data) > 0:

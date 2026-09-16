@@ -3207,6 +3207,12 @@ const ATR1000 = {
                 // 停止心跳
                 this._stopHeartbeat();
                 
+                // 未启用就别重连了
+                if (this._atr1000Disabled) {
+                    console.log('ℹ️ ATR-1000 未启用，停止重连');
+                    return;
+                }
+
                 // 自动重连（最多尝试 10 次，每次间隔 3 秒）
                 if (this._reconnectAttempts < this._maxReconnectAttempts) {
                     this._reconnectAttempts++;
@@ -3260,6 +3266,21 @@ const ATR1000 = {
     handleMessage: function(data) {
         try {
             const msg = JSON.parse(data.trim());
+
+            // 服务端说明 ATR-1000 未启用（[ATR1000] enabled = false / 未配设备）：
+            // 隐藏电表面板、标记状态、不再重连——没接天调的部署不该看到一堆报错。
+            if (msg.type === 'atr1000_status' && msg.enabled === false) {
+                this._atr1000Disabled = true;
+                const section = document.getElementById('atr-meter-section');
+                if (section) {
+                    section.classList.add('hidden');
+                    section.classList.remove('visible');
+                }
+                try { this.updateStatus('未启用'); } catch (e) {}
+                if (typeof setWSStatus === 'function') { setWSStatus('status-atu', 'off'); }
+                console.log('ℹ️ ATR-1000 未启用：' + (msg.reason || ''));
+                return;
+            }
 
             if (msg.type === 'atr1000_meter') {
                 this._msgCount++;

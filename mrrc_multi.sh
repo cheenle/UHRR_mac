@@ -362,6 +362,16 @@ stop_mrrc() {
 
 # 启动 ATR-1000 代理
 start_atr1000() {
+    # [ATR1000] enabled = auto|true|false（auto = 配了设备才启用），环境变量 MRRC_ATR1000 可覆盖
+    local atr_setting="${MRRC_ATR1000:-$(cat "$config_file" 2>/dev/null | awk -F= '/^\[ATR1000\]/{f=1;next} /^\[/{f=0} f&&/^[[:space:]]*enabled[[:space:]]*=/{gsub(/[[:space:]]/,"",$2);print $2; exit}')}"
+    atr_setting=$(echo "${atr_setting:-auto}" | tr 'A-Z' 'a-z')
+    case "$atr_setting" in
+        0|false|no|off|disabled)
+            print_status "  ATR-1000: 配置已关闭（[ATR1000] enabled=false），不启动代理"
+            return 0 ;;
+        1|true|yes|on|always) ;;
+        *) ;;   # auto：按下面的设备判断
+    esac
     if [ -z "$INSTANCE_ATR1000_DEVICE" ]; then
         print_info "ATR-1000 not configured, skipping..."
         return 0

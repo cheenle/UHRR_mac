@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [未发布] — 热补丁 6.0.4 / 6.0.5
+
+> 这两版以**热补丁**形式发布（`website/downloads/patch.json` → 6.0.3+ 安装启动时自动应用），
+> 不重新出安装包：6.0.4 = Device Config 型号对应；6.0.5 = Windows 音频设备按主机 API 优先 + ATR 开关。
+
+### 📡 ATR-1000 改为配置项（可选组件）
+
+- ATR-1000 是可选设备，但没接它的部署会持续刷“代理连接失败/重连/看守拉起”。新增
+  `[ATR1000] enabled = auto|true|false`（auto 默认：配了 `instance_atr1000_device` 才启用），
+  也可用 `MRRC_ATR1000=0/1` 覆盖；关闭后不连代理、不拉进程、不轮询，启动只留一行说明。
+- 连接失败/重连/看守找不到代理的日志改为**限流**（首次 + 每 5 分钟一条，附窗口内次数）。
+- `mrrc_multi.sh` 同步识别该开关。
+- **Windows 安装版现在能自动拉起代理**：看守原先只找 `atr1000_proxy.py`（安装包不带 .py），
+  改为优先使用打包好的 `ATR1000-Proxy.exe`。
+- 前端：收到 `atr1000_status{enabled:false}` 时隐藏 ATR 面板并停止重连。
+
+### 🔊 Windows 音频：设备按主机 API 优先（默认 WASAPI）
+
+- 见上条 6.0.5 说明；另新增采集健康日志（每 30s 一行“采集样本数 vs 应有样本数”）与
+  `[AUDIO] diag = True` / `MRRC_AUDIO_DIAG=1` 逐秒诊断，便于定位“秒级卡顿”。
+
 ## [未发布] — V6.0.4
 
 ### 🎛️ Device Config 的电台型号改为 hamlib 实时机型表，并修正“改了型号不生效”

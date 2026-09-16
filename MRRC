@@ -229,6 +229,35 @@ def _www_file(*parts):
             pass
     return os.path.join(_resource_dir(), "www", rel)
 
+############ ATR-1000 是否启用（可选组件）################################
+# ATR-1000 功率/SWR 表 + 天调是**可选**设备。没接它的部署里，代理连不上会不断刷
+# “连接失败/重连/看守拉起”，日志很难看。所以把启用与否显式放进配置：
+#
+#   [ATR1000]
+#   enabled = auto      # auto(默认) = 配了 instance_atr1000_device 才启用
+#                       # true/false   = 强制启用/关闭
+#
+# 也可用环境变量 MRRC_ATR1000 临时覆盖（0/1）。
+def _compute_atr1000_enabled():
+	raw = os.environ.get('MRRC_ATR1000')
+	if raw is None and config.has_option('ATR1000', 'enabled'):
+		raw = config.get('ATR1000', 'enabled')
+	raw = (raw or 'auto').strip().lower()
+	device = ''
+	if config.has_option('INSTANCE_SETTINGS', 'instance_atr1000_device'):
+		device = config.get('INSTANCE_SETTINGS', 'instance_atr1000_device').strip()
+	if raw in ('0', 'false', 'no', 'off', 'disabled'):
+		return False, '[ATR1000] enabled=false'
+	if raw in ('1', 'true', 'yes', 'on', 'always'):
+		return True, '[ATR1000] enabled=true'
+	if device:
+		return True, f'auto（已配置设备 {device}）'
+	return False, 'auto（未配置 instance_atr1000_device）'
+
+
+ATR1000_ENABLED, ATR1000_ENABLED_REASON = _compute_atr1000_enabled()
+print(f"📡 ATR-1000: {'已启用' if ATR1000_ENABLED else '未启用'}（{ATR1000_ENABLED_REASON}）")
+
 # ATR-1000 proxy IPC. Unix Domain Socket is preferred on Unix-like systems;
 # Windows builds use localhost TCP because AF_UNIX is not always available.
 INSTANCE_UNIX_SOCKET = "/tmp/atr1000_proxy.sock"
@@ -1810,11 +1839,31 @@ class ATR1000ProxyManager:
         self._first_fail_time = None  # V5.8.6: 本轮持续连接失败的起始时间（看守用）
         self._last_spawn_time = 0  # V5.8.6: 上次自动拉起代理进程的时间（冷却用）
         self._spawn_lock = threading.Lock()  # V5.8.6: 防止并发重连链同时拉起两个代理
+        self._log_state = {}  # 日志限流状态（key → {last, count}），避免连不上时刷屏
 
         logger.info("📡 ATR-1000 代理管理器已初始化")
     
+    def _log_throttled(self, key, level, message, interval=300.0):
+        """按 key 限流打日志：首次立刻输出，之后每 interval 秒最多一条，末尾附累计次数。
+
+        没接 ATR-1000 又忘了关的人，日志里原本每几秒刷一条“连接失败/正在重连”；
+        限流后只留首条 + 每 5 分钟一条摘要。
+        """
+        now = time.time()
+        state = self._log_state.setdefault(key, {'last': 0.0, 'suppressed': 0})
+        if now - state['last'] < interval:
+            state['suppressed'] += 1          # 窗口内：只计数，不打日志
+            return
+        extra = f"（窗口内另有 {state['suppressed']} 次）" if state['suppressed'] else ""
+        getattr(logger, level, logger.info)(f"{message}{extra}")
+        state['last'] = now
+        state['suppressed'] = 0
+
     def start(self):
-        """启动代理连接"""
+        """启动代理连接（ATR-1000 未启用时不启动任何连接/轮询/看守线程）"""
+        if not ATR1000_ENABLED:
+            logger.debug(f"ATR-1000 未启用（{ATR1000_ENABLED_REASON}），跳过代理管理器启动")
+            return
         if self.running:
             return
         
@@ -1873,7 +1922,9 @@ class ATR1000ProxyManager:
             self._start_data_refresh()
         except Exception as e:
             endpoint = INSTANCE_UNIX_SOCKET if ATR1000_PROXY_TRANSPORT == 'unix' else f"{ATR1000_PROXY_HOST}:{ATR1000_PROXY_PORT}"
-            logger.warning(f"⚠️ ATR-1000 代理连接失败 ({ATR1000_PROXY_TRANSPORT}: {endpoint}): {e}")
+            self._log_throttled('connect_fail', 'warning',
+                                f"⚠️ ATR-1000 代理连接失败 ({ATR1000_PROXY_TRANSPORT}: {endpoint}): {e}；"
+                                f"若该实例不用 ATR-1000，请在配置里设 [ATR1000] enabled = false 关掉")
             self.unix_socket = None
             # 清除重连状态
             if hasattr(self, '_reconnecting'):
@@ -1884,7 +1935,8 @@ class ATR1000ProxyManager:
             # 指数退避重试: 0.5s → 1s → 2s → 4s → 5s (上限)
             if self.running:
                 delay = self._reconnect_delay
-                logger.info(f"🔄 {delay:.1f}秒后重连 ATR-1000 代理...")
+                self._log_throttled('reconnect', 'info',
+                                    f"🔄 {delay:.1f}秒后重连 ATR-1000 代理...")
                 threading.Timer(delay, self._connect).start()
                 self._reconnect_delay = min(delay * 2, 5.0)
 
@@ -1921,8 +1973,14 @@ class ATR1000ProxyManager:
             port = config.get('INSTANCE_SETTINGS', 'instance_atr1000_port', fallback='60001')
             script_dir = _runtime_dir()
             script = os.path.join(script_dir, 'atr1000_proxy.py')
+            # Windows 安装版不带 .py 源码（PyInstaller 打包成 ATR1000-Proxy.exe），
+            # 原先这里找不到脚本就放弃拉起 → 安装版永远没有代理。优先用 exe。
+            packaged = os.path.join(script_dir, 'ATR1000-Proxy.exe')
+            if not os.path.exists(script) and os.path.exists(packaged):
+                script = packaged
             if not os.path.exists(script):
-                logger.warning(f"⚠️ 看守找不到代理脚本: {script}")
+                self._log_throttled('no_proxy', 'warning',
+                                    f"⚠️ 看守找不到可拉起的代理（{script}）")
                 return
 
             # 防重复：已有进程命令行带本 socket 路径则跳过（刚启动/socket 未就绪等场景）
@@ -1947,7 +2005,7 @@ class ATR1000ProxyManager:
                     stdout=lf, stderr=subprocess.STDOUT,
                     start_new_session=True,
                 )
-            logger.warning(f"🛡️ ATR-1000 看守：代理持续不可达，已自动拉起 atr1000_proxy.py (PID {proc.pid})")
+            logger.info(f"🛡️ ATR-1000 看守：代理持续不可达，已自动拉起代理进程 (PID {proc.pid})")
         except Exception as e:
             logger.error(f"❌ ATR-1000 看守拉起代理失败: {e}")
 
@@ -2256,7 +2314,9 @@ class ATR1000ProxyManager:
             logger.info(f"📤 ATR-1000 广播到前端: power={power}W, SWR={swr:.2f}, 发送={sent_count}/{current_client_count}")
     
     def send_to_proxy(self, message):
-        """发送消息到代理"""
+        """发送消息到代理（ATR-1000 未启用时直接返回 False，前端可据此隐藏面板）"""
+        if not ATR1000_ENABLED:
+            return False
         if self.unix_socket:
             try:
                 # 必须以 \n 结尾：proxy 按行解析，前端 sync/set_relay 等命令本身不带换行
@@ -2319,6 +2379,16 @@ class WS_ATR1000Handler(AuthenticatedWebSocketHandler):
             ATR1000HandlerClients.append(self)
         logger.info(f"🔌 ATR-1000 客户端连接，当前 {len(ATR1000HandlerClients)} 个")
         
+        # 未启用：告诉前端，让它隐藏 ATR 面板并停止重连，然后不再做任何事
+        if not ATR1000_ENABLED:
+            try:
+                safe_ws_write(self, json.dumps({
+                    "type": "atr1000_status", "enabled": False,
+                    "reason": ATR1000_ENABLED_REASON}, ensure_ascii=False))
+            except Exception:
+                pass
+            return
+
         # 确保代理管理器已启动
         atr1000_proxy_manager.start()
         
