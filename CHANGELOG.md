@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [V6.1.3] - 2026-09-16
+
+- 一键升级端到端验收版：承接 6.1.2 的 6 项修复（RestartManager 关不掉控制台进程导致的
+  静默 Abort、提权时 ShellExecuteW 卡死、升级成功确认、BOM 哨兵、GBK emoji 杀转发线程、
+  静默安装后不自动重启）。
+
 ## [V6.1.2] - 2026-09-16
 
 ### 🐛 一键升级：端到端实测暴露的 5 个 Windows 陷阱（全部修复）
