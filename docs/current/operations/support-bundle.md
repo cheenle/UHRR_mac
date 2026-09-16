@@ -45,3 +45,36 @@
 | 上传 413 | 诊断包超过 20 MB：调 `SUPPORT_MAX_MB`（同时改 nginx `client_max_body_size`） |
 | 上传 429 | 触发限速；等 1 分钟或调 `SUPPORT_RATE_PER_MINUTE` |
 | 用户说"上传失败" | 包仍在本地 `%LOCALAPPDATA%\MRRC\support\`，让用户点「只保存到本地」把路径发你 |
+
+---
+
+## 当前部署状态（2026-09-16 起）
+
+| 项 | 值 |
+|---|---|
+| 用户入口 | 移动端菜单 / 桌面工具栏 **🐞 遇到问题** → `www/support.html` |
+| 服务端接口 | `/api/support/{bundle,upload,save}`（IO 全走 executor；`bundle` 生成、`upload` 上传、`save` 只存本地） |
+| 接收端 | `https://www.vlsc.net/mrrc/support/`（列表页 + 下载 + 删除；需 Basic Auth，`user=mrrc`） |
+| 接收端实现 | `tools/support_receiver/server.py`（纯标准库；systemd `support-receiver` 监听 `127.0.0.1:8099`；nginx `location ^~ /mrrc/support/`、`client_max_body_size 25m`） |
+| 部署 | 仓库根 `./deploy_support_receiver.sh` |
+| 口令 | 维护者本机 `~/.mrrc-support-credentials.txt`（600）；服务器 `/etc/mrrc-support.env` |
+| 存储 | 服务器 `/var/www/support/<id>/`（含 `bundle.zip` 与 `meta.json`） |
+
+## 验收记录（三层，全部通过）
+
+1. **Mac 本机（源码模式）**：生成 → 上传 → 接收端可见；
+2. **VM 源码模式**：同上，且包含新模块 `support_bundle.py` 的真实采集；
+3. **VM 冻结版（安装包）**：安装版里运行、生成并上传成功。
+
+另外：`windows/launcher.py` 的 `tee_child_output` 会把服务端启动期 stdout/stderr
+落到 `%LOCALAPPDATA%\MRRC\logs\server-stdout.log`（2 MB 滚动，`.prev` 保留上一份），
+这样"启动就崩、页面打不开"的场景也能取到日志。
+
+## 已知注意事项
+
+- **打包遗漏 `upgrade_core`** 曾导致 `/api/update` 报 `ModuleNotFoundError`
+  → 提醒：往 `MRRC` 里加"函数内 import 的新模块"时，必须同时加进
+  `packaging/pyinstaller/mrrc_server.spec` 的 `_APP_MODULES`（`support_bundle.py` 就是这样加的）；
+- 控制台编码：Windows GBK 下 emoji 会让转发线程抛 `UnicodeEncodeError`
+  → 已在启动器修掉（RC-002 §5），否则 `server-stdout.log` 会悄悄断更；
+- 上传是**用户主动点击**才发生；「只保存到本地」永远保留。

@@ -134,3 +134,32 @@ cp dist/hotfix/* website/downloads/ && ./deploy_website.sh
 - 覆盖层里的 Python 代码以服务进程权限运行 —— 信任锚等同于安装包本身（同一来源、同一 HTTPS）。
 - 覆盖层与安装目录分离，出问题只需删掉 `%LOCALAPPDATA%\MRRC\patch` 即可回退到内置版本；
   就地模式则用 `*.bak-<版本>` 回滚。
+
+---
+
+## 已发布热修一览（截至 V6.1.11）
+
+| 版本 | 内容 | 触发场景 |
+|---|---|---|
+| 6.0.4 | Device Config 型号对齐 hamlib（`rig_models.py`） | 机型表硬编码失真 |
+| 6.0.5 | Windows 音频主机 API 优先级 + 音频健康诊断 | 秒级卡顿排查 |
+| 6.0.6 | ATR-1000 改为可选（`[ATR1000] enabled`） | 未接天调的装机 |
+| 6.0.8 | 设备配置抽屉滚动修复（4 文件） | 前端可用性 |
+| 6.0.9 | 🐞 一键诊断包上传（含 `support_bundle.py`）+ 空闲关机幂等 | 用户报障无日志 |
+| 6.1.10 | 修复点【立即升级】无反应：下载锁阻塞 + 连接阶段无超时 | 真机端到端验收 |
+| 6.1.11 | 修复两个启动器实例抢同一 `.part` 导致改名失败（WinError 32） | 真机端到端验收 |
+
+## 可热修范围（决定"要不要重新打包"）
+
+| 位置 | 能否热修 | 说明 |
+|---|---|---|
+| `www/**`（前端） | ✅ | 覆盖层优先，tornado 静态路由也走覆盖层 |
+| `_APP_MODULES` 里的模块（`patch_overlay`/`rig_models`/`support_bundle`/`upgrade_core`/`config_io`/`audio_interface`/`hamlib_wrapper`/`wdsp_wrapper`/`atu_*`/`atr1000_tuner`/`recording_session`/`mrrc_perf_monitor`/`ssl_bootstrap`/`tci_client`） | ✅ | 松散文件在 `_internal\app\`，覆盖层目录位于 `sys.path` 最前 |
+| 其它 Python（`MRRC` 主脚本、`windows/launcher.py`） | ❌ | 在 PyInstaller 的 PYZ 里 → 必须重发安装包 |
+| 原生库 / 第三方依赖 | ✅（`vendor`） | 覆盖层 `vendor` 在 DLL 搜索路径最前 |
+
+**实践结论**：判断"能不能热修"看文件落在哪一层即可。例如 V6.1.10/6.1.11 的修复都在
+`upgrade_core.py` → 可热修（已装 6.1.8 的用户重启即生效，无需重装）；
+而 `windows/launcher.py` 里的改动（`_UPGRADING` 顺序、UTF-8 stdio）只能随安装包发布。
+
+详细发版与热修流程见 `docs/current/operations/release-process.md`。

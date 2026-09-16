@@ -123,3 +123,51 @@ These may look peripheral but are used by active routes or linked entrypoints:
 - `MRRC_users.db`
 - `recordings/`
 - `certs/`
+
+---
+
+## 一键升级 / 热修清单的验证方法（Windows 安装版）
+
+**前提**：`version.txt` 是唯一权威版本；所有升级状态在 `%LOCALAPPDATA%\MRRC\updates\`。
+
+### 现状快照（一条命令）
+
+```powershell
+$p = "$env:LOCALAPPDATA\MRRC\updates"
+"version.txt = " + (Get-Content 'C:\Program Files\MRRC\version.txt')
+Get-Content "$p\state.json" -Raw -Encoding UTF8          # staged + lastResult
+Get-ChildItem $p | Select-Object Name,Length,LastWriteTime
+Get-ChildItem "$env:LOCALAPPDATA\MRRC\patch" -Recurse   # 热修覆盖层是否已应用
+```
+
+### 判定表
+
+| 想确认什么 | 看哪里 | 正常表现 |
+|---|---|---|
+| 服务端升级接口是否正常 | 本机 `GET https://127.0.0.1:8877/api/update` | `{"ok": true, "installed": "6.1.x", "latest": "6.1.y", "pttActive": false}`（本机免口令） |
+| 是否已下载好安装包 | `updates\state.json` 的 `staged` | `{version, sha256, path, size, at}`，且文件存在、大小一致 |
+| 升级请求有没有被处理 | `updates\upgrade.request` 是否存在 | **正常会被立刻消费掉**；长期存在 = 启动器没在处理（见 RC-002 §6） |
+| 下载是否在推进 | `updates\*.part<pid>` 的字节数 | 持续增长；**长期 0 字节 = 连接阶段卡住** |
+| 安装是否真的跑了 | `updates\install-<ver>.log` | Inno 日志；结尾应有 `Installation process succeeded` / `Run entry` / `Deinitializing Setup` |
+| 成败结论 | `updates\state.json` 的 `lastResult` | `{"status": "ok", "version": "6.1.y", "detail": "安装后启动确认成功"}` 才算成功 |
+| 热修是否生效 | `%LOCALAPPDATA%\MRRC\patch\applied.json` + `patch\app\*.py` | 版本号与 `patch.json` 的 `latest` 一致，且文件内容含新代码 |
+
+### 线上清单复核（维护者/排障）
+
+```bash
+curl -s https://www.vlsc.net/mrrc/downloads/latest.json | python3 -m json.tool
+curl -s https://www.vlsc.net/mrrc/downloads/patch.json  | python3 -m json.tool
+# 服务器侧哈希（权威；本机下载链路可能很慢）
+ssh cheenle@www.vlsc.net 'cd /var/www/vlsc.net/mrrc/downloads && sha256sum MRRC-Setup*.exe'
+```
+
+### 真机端到端（可离线）
+
+`dev_tools/vm_upgrade_e2e.ps1` + `MRRC_UPDATE_MANIFEST=file:///…/test-latest.json`
+可完全不依赖站点网络地跑通"下载→校验→安装→重启→自证"。
+详见 `docs/current/operations/release-process.md` §6。
+
+### 用户报障时向用户要什么
+
+启动器窗口里的 `[update]` 行 + `updates\state.json` + `updates\install-<ver>.log`；
+最省事的办法是让用户点页面 **🐞 遇到问题 → 生成并上传**（会一并带走上述文件与服务端日志）。
