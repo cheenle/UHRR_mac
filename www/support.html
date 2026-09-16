@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MRRC · 遇到问题</title>
+<link rel="stylesheet" type="text/css" href="mobile_modern.css?v=6.0.9">
+<style>
+  body{background:#12121a;color:#e0e0e0;font-family:tahoma,sans-serif;margin:0;padding:16px;line-height:1.6}
+  h2{margin:0 0 4px}
+  .muted{color:#8a8a96;font-size:12.5px}
+  textarea,input[type=text]{width:100%;box-sizing:border-box;background:#0f0f16;color:#fff;
+    border:1px solid #444;border-radius:4px;padding:9px;font-size:13.5px}
+  textarea{min-height:112px;resize:vertical}
+  button{padding:11px 16px;border:0;border-radius:4px;background:#4a9eff;color:#fff;
+    font-weight:bold;font-size:14px;margin:6px 8px 0 0;cursor:pointer}
+  button[disabled]{background:#39414d;color:#8a8a96;cursor:not-allowed}
+  pre{background:#0f0f16;border:1px solid #333;border-radius:4px;padding:10px;
+    white-space:pre-wrap;word-break:break-all;font-size:12px;max-height:260px;overflow:auto}
+  .ok{color:#5ad07a}.warn{color:#e8c25a}.bad{color:#e86464}
+  .card{background:#181824;border:1px solid #2c2c38;border-radius:6px;padding:14px;margin-bottom:14px}
+</style>
+</head>
+<body>
+  <h2>🐞 遇到问题</h2>
+  <p class="muted">生成一个诊断包（日志尾部 + 脱敏配置 + 环境快照 + 自动体检结论）并上传给维护者。
+  <b>不会包含</b>登录数据库、证书私钥、任何密码或令牌。</p>
+
+  <div class="card">
+    <label class="muted">① 问题描述（越具体越好：什么现象、什么时候开始、电台型号/频率）</label>
+    <textarea id="problem" placeholder="例如：接收声音每隔约 1 秒卡一下；IC-M710，14.265MHz；今天换到 Windows 服务器后开始"></textarea>
+    <label class="muted">联系方式（可选）</label>
+    <input type="text" id="contact" placeholder="呼号 / 邮箱 / 微信">
+    <div>
+      <button id="btnBuild" onclick="buildBundle()">② 生成诊断包</button>
+      <button id="btnUp" onclick="uploadBundle()" disabled>③ 上传给维护者</button>
+      <button id="btnSave" onclick="saveLocal()" disabled>只保存到本地</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div id="status" class="muted">尚未生成。</div>
+    <pre id="listing" style="display:none"></pre>
+  </div>
+
+<script>
+let currentId = null;
+const $ = (id) => document.getElementById(id);
+function setStatus(html, cls){ const s = $('status'); s.className = cls || 'muted'; s.innerHTML = html; }
+async function api(path, payload){
+  const res = await fetch(path, {method:'POST', headers:{'Content-Type':'application/json'},
+                                 body: JSON.stringify(payload || {})});
+  if (res.status === 401 || res.status === 403) throw new Error('请先登录本机 MRRC 界面');
+  let data = {};
+  try { data = await res.json(); } catch (e) { data = {ok:false, reason:'HTTP ' + res.status}; }
+  return data;
+}
+async function buildBundle(){
+  $('btnBuild').disabled = true;
+  setStatus('正在收集（读取日志、设备与配置快照）…');
+  try {
+    const d = await api('/api/support/bundle', {problem: $('problem').value, contact: $('contact').value});
+    if (!d.ok) { setStatus('生成失败：' + (d.reason || '未知原因'), 'bad'); return; }
+    currentId = d.id;
+    $('listing').style.display = 'block';
+    $('listing').textContent = d.files.map(f => '  ' + f).join('\n') +
+      '\n\n合计 ' + (d.size/1024).toFixed(0) + ' KB，已脱敏 ' + d.redactions + ' 处' +
+      (d.warnings.length ? '\n提示：\n' + d.warnings.map(w => '  ⚠ ' + w).join('\n') : '');
+    $('btnUp').disabled = $('btnSave').disabled = false;
+    setStatus('已生成。确认清单没问题就可以上传（或只保存到本地）。', 'ok');
+  } catch (e) { setStatus('生成失败：' + e.message, 'bad'); }
+  finally { $('btnBuild').disabled = false; }
+}
+async function uploadBundle(){
+  if (!currentId) return;
+  $('btnUp').disabled = true;
+  setStatus('正在上传…');
+  try {
+    const d = await api('/api/support/upload', {id: currentId, problem: $('problem').value,
+                                                contact: $('contact').value});
+    if (d.ok) setStatus('✅ 已上传（编号 ' + d.remoteId + '，' + (d.size/1024).toFixed(0) +
+                        ' KB）。维护者能直接看到你填的问题描述，谢谢！', 'ok');
+    else setStatus('上传失败：' + (d.reason || '未知原因') +
+                   '<br>诊断包仍在本地：<code>' + (d.localPath || '') + '</code>，可点「只保存到本地」。', 'bad');
+  } catch (e) { setStatus('上传失败：' + e.message, 'bad'); }
+  finally { $('btnUp').disabled = false; }
+}
+async function saveLocal(){
+  if (!currentId) return;
+  try {
+    const d = await api('/api/support/save', {id: currentId});
+    setStatus(d.ok ? '已保存到：<code>' + d.path + '</code>' : '保存失败：' + (d.reason || ''), d.ok ? 'ok' : 'bad');
+  } catch (e) { setStatus('保存失败：' + e.message, 'bad'); }
+}
+</script>
+</body>
+</html>
