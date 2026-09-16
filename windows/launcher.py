@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import configparser
+import hashlib
+import json
 import os
 import secrets
 import signal
@@ -10,6 +12,7 @@ import time
 import urllib.error
 import urllib.request
 import webbrowser
+import zipfile
 from pathlib import Path
 
 # ssl_bootstrap lives at the repo root; PyInstaller bundles it via pathex.
@@ -23,6 +26,11 @@ DEFAULT_PORT = "8877"
 DEFAULT_LOGIN_USER = "admin"
 KNOWN_DEFAULT_ACCOUNTS = {("BG1SB", "abcd1234"), ("admin", "uhrr2024")}
 
+# 热修补丁：小幅 bugfix 不必重装（见 patch_overlay.py / docs/.../hotfix-and-patching.md）。
+# 只从本站 HTTPS 拉取，且必须通过 patch.json 里的 SHA256 校验；失败一律忽略不影响启动。
+PATCH_MANIFEST_URL = "https://www.vlsc.net/mrrc/downloads/patch.json"
+PATCH_CHECK_TIMEOUT = 10
+
 
 def app_dir() -> Path:
     if getattr(sys, "frozen", False):
@@ -35,6 +43,125 @@ def user_data_dir() -> Path:
     if root:
         return Path(root) / "MRRC"
     return Path.home() / ".mrrc"
+
+
+def patch_dir() -> Path:
+    """热修覆盖层目录（与 MRRC/patch_overlay.py 的默认规则一致：配置文件同级的 patch/）。"""
+    return user_data_dir() / "patch"
+
+
+def _sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with open(path, "rb") as fh:
+        for chunk in iter(lambda: fh.read(262144), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _hotfix_enabled(cfg: Path) -> bool:
+    """配置开关：\
+    [HOTFIX] enabled = False 可彻底关掉；环境变量 MRRC_NO_UPDATE_CHECK=1 同样关掉。"""
+    if os.environ.get("MRRC_NO_UPDATE_CHECK"):
+        return False
+    parser = configparser.ConfigParser()
+    try:
+        config_io.read_config(parser, cfg)
+    except Exception:
+        return True
+    if parser.has_section("HOTFIX"):
+        return parser.getboolean("HOTFIX", "enabled", fallback=True)
+    return True
+
+
+def _installed_version() -> str:
+    """本安装的版本号：取 dist 里写入的 version.txt（构建时生成），取不到就回退 0.0.0。"""
+    marker = app_dir() / "version.txt"
+    try:
+        return marker.read_text(encoding="utf-8").strip() or "0.0.0"
+    except OSError:
+        return "0.0.0"
+
+
+def _version_tuple(text: str) -> tuple:
+    parts = []
+    for chunk in str(text).replace("v", "").split("."):
+        digits = "".join(ch for ch in chunk if ch.isdigit())
+        parts.append(int(digits) if digits else 0)
+    return tuple(parts[:4])
+
+
+def apply_hotfix_pack(zip_path: Path, patch_root: Path) -> list[str]:
+    """把热修包解到覆盖层目录。返回写入的相对路径列表。
+
+    包内布局与覆盖层同构（app/、www/、vendor/），额外可选 manifest.json。
+    安全：拒绝绝对路径与 ../ 穿越；不允许写入覆盖层以外的位置。
+    """
+    patch_root.mkdir(parents=True, exist_ok=True)
+    written: list[str] = []
+    with zipfile.ZipFile(zip_path) as archive:
+        for info in archive.infolist():
+            if info.is_dir():
+                continue
+            name = info.filename.replace("\\", "/")
+            if name == "manifest.json":
+                continue
+            target = (patch_root / name).resolve()
+            if not str(target).startswith(str(patch_root.resolve()) + os.sep):
+                raise ValueError(f"热修包路径非法: {name}")
+            target.parent.mkdir(parents=True, exist_ok=True)
+            with archive.open(info) as src, open(target, "wb") as dst:
+                dst.write(src.read())
+            written.append(name)
+    # 记录已应用内容，供 support 查证
+    record = patch_root / "applied.json"
+    try:
+        history = json.loads(record.read_text(encoding="utf-8")) if record.exists() else []
+    except Exception:
+        history = []
+    history.append({"appliedAt": time.strftime("%Y-%m-%d %H:%M:%S"), "files": written})
+    record.write_text(json.dumps(history[-20:], indent=2), encoding="utf-8")
+    return written
+
+
+def check_for_hotfix(cfg: Path) -> None:
+    """启动前检查并应用热补丁（失败一律只打印一句警告，不影响启动）。"""
+    if not _hotfix_enabled(cfg):
+        return
+    try:
+        with urllib.request.urlopen(PATCH_MANIFEST_URL, timeout=PATCH_CHECK_TIMEOUT) as response:
+            manifest = json.loads(response.read().decode("utf-8"))
+    except Exception as exc:
+        print(f"[hotfix] 跳过检查（{type(exc).__name__}: {exc}）")
+        return
+    try:
+        latest = str(manifest.get("latest") or "").strip()
+        url = str(manifest.get("url") or "").strip()
+        expected = str(manifest.get("sha256") or "").strip().lower()
+        requires = str(manifest.get("requires") or "").strip()
+        if not (latest and url and expected):
+            return
+        if _version_tuple(latest) <= _version_tuple(_installed_version()):
+            return
+        # requires 必须满足：否则（如 6.0.2 安装包收到含 app/ 的补丁）会“假装修好了”
+        if requires and _version_tuple(_installed_version()) < _version_tuple(requires):
+            print(f"[hotfix] 跳过 {latest}：需要安装版本 >= {requires}（本机 {_installed_version()}），"
+                  f"请先安装新版完整安装包")
+            return
+        print(f"[hotfix] 发现热补丁 {latest}（本机 {_installed_version()}）: {manifest.get('notes', '')}")
+        tmp = user_data_dir() / f"hotfix-{latest}.zip.part"
+        tmp.parent.mkdir(parents=True, exist_ok=True)
+        with urllib.request.urlopen(url, timeout=60) as response, open(tmp, "wb") as out:
+            out.write(response.read())
+        actual = _sha256_file(tmp)
+        if actual != expected:
+            print(f"[hotfix] SHA256 不符，已放弃（期望 {expected[:12]}…，实际 {actual[:12]}…）")
+            tmp.unlink(missing_ok=True)
+            return
+        written = apply_hotfix_pack(tmp, patch_dir())
+        tmp.unlink(missing_ok=True)
+        print(f"[hotfix] 已应用 {latest}：{len(written)} 个文件 -> {patch_dir()}")
+    except Exception as exc:
+        print(f"[hotfix] 应用失败（忽略，继续启动）: {type(exc).__name__}: {exc}")
 
 
 def config_path() -> Path:
@@ -214,6 +341,11 @@ def _vendor_bin_dirs() -> list[Path]:
 
 def _environ_with_vendor_path(env: dict[str, str]) -> dict[str, str]:
     extra = [str(d) for d in _vendor_bin_dirs()]
+    # 热修覆盖层里的 DLL 优先（patch/vendor/... 或直接 patch/libwdsp.dll）
+    patch_root = patch_dir()
+    for candidate in (patch_root / "vendor", patch_root):
+        if candidate.is_dir():
+            extra.insert(0, str(candidate))
     if not extra:
         return env
     separator = ";" if os.name == "nt" else ":"
@@ -311,6 +443,7 @@ def main() -> int:
 
     cfg = ensure_config(ssl_pair[0], ssl_pair[1])
     apply_simple_defaults(cfg)
+    check_for_hotfix(cfg)
     login_user, login_password, generated_login = ensure_users()
     write_quick_start(login_user, login_password)
     port, host = _read_config_port_host(cfg)
@@ -333,6 +466,8 @@ def main() -> int:
     env = os.environ.copy()
     env["MRRC_MEMORY_CHANNELS_FILE"] = str(data_dir / "memory_channels.json")
     env["MRRC_ATR1000_STORE"] = str(data_dir / "atr1000_tuner.json")
+    # 让服务端与入口用同一个覆盖层目录（patch_overlay.py 默认也会推出这个路径）
+    env["MRRC_PATCH_DIR"] = str(patch_dir())
     if login_user and login_password:
         env["MRRC_FIRST_RUN_LOGIN_USER"] = login_user
         env["MRRC_FIRST_RUN_LOGIN_PASSWORD"] = login_password

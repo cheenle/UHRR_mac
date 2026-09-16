@@ -183,6 +183,34 @@ if config_io.should_migrate(_loaded_encoding):
     print(f"配置文件原始编码为 {_loaded_encoding}，已自动迁移为 UTF-8"
           f"（原文件备份: {config_file}.bak）")
 
+# ---- 补丁覆盖层（hotfix overlay）------------------------------------------------
+# patch/ 目录（默认 = 配置文件同级的 patch/，冻结安装即 %LOCALAPPDATA%\MRRC\patch）
+# 里的文件优先于内置资源，用于不重新打包就修 bug：见 patch_overlay.py 头部说明。
+try:
+    import patch_overlay
+    patch_overlay.configure(config_path=config_file, resource_dir=_resource_dir(),
+                            runtime_dir=_runtime_dir())
+    patch_overlay.apply_python_path()
+    PATCH_OVERLAY_INFO = patch_overlay.log_status()
+except Exception as _patch_err:
+    patch_overlay = None
+    PATCH_OVERLAY_INFO = {'active': False, 'patchDir': None, 'fileCount': 0, 'files': [],
+                          'error': str(_patch_err)}
+    print(f"⚠️ 补丁覆盖层初始化失败（继续使用内置资源）: {_patch_err}")
+
+
+def _www_file(*parts):
+    """www 下某资源的实际路径：补丁覆盖层优先，其次内置资源。"""
+    rel = os.path.join(*parts) if parts else ""
+    if patch_overlay is not None:
+        try:
+            overlay = patch_overlay.www_candidate(rel)
+            if overlay:
+                return overlay
+        except Exception:
+            pass
+    return os.path.join(_resource_dir(), "www", rel)
+
 # ATR-1000 proxy IPC. Unix Domain Socket is preferred on Unix-like systems;
 # Windows builds use localhost TCP because AF_UNIX is not always available.
 INSTANCE_UNIX_SOCKET = "/tmp/atr1000_proxy.sock"
@@ -356,7 +384,15 @@ class AuthenticatedWebSocketHandler(tornado.websocket.WebSocketHandler):
 			self.set_status(403)
 			self.finish('Authentication required')
 
-class AuthenticatedStaticFileHandler(tornado.web.StaticFileHandler):
+# 覆盖层 mixin 定义在 patch_overlay 里（无 tornado 依赖，可单测）
+_OverlayMixin = patch_overlay.OverlayStaticFilesMixin if patch_overlay is not None else object
+
+
+class OverlayStaticFileHandler(_OverlayMixin, tornado.web.StaticFileHandler):
+	"""未启用鉴权时使用的 www 处理器（同样支持覆盖层）。"""
+
+
+class AuthenticatedStaticFileHandler(_OverlayMixin, tornado.web.StaticFileHandler):
 	def get_current_user(self):
 		return self.get_secure_cookie("user")
 
@@ -3616,6 +3652,29 @@ class WS_ControlTRX(AuthenticatedWebSocketHandler):
 			}
 			yield self.send_to_all_clients(f"wdspStatus:{json.dumps(status)}")
 		
+		elif(action == "getPatchStatus"):
+			# 补丁覆盖层状态：让用户/支持能确认热修是否生效（不重新打包即可查）
+			info = dict(PATCH_OVERLAY_INFO)
+			if patch_overlay is not None:
+				try:
+					info.update(patch_overlay.describe(with_hash=True))
+				except Exception as e:
+					info['error'] = str(e)
+			# 覆盖层里是否包含入口本体（MRRC）——即“连服务端主程序也被热修”
+			info['entryOverridden'] = any(f == 'app/MRRC' for f in info.get('files', []))
+			info['frozen'] = bool(getattr(sys, 'frozen', False))
+			yield self.send_to_all_clients(f"patchStatus:{json.dumps(info, default=str)}")
+		
+		elif(action == "patchList"):
+			# 只回文件清单（体积小，UI 轮询用）
+			files = []
+			if patch_overlay is not None:
+				try:
+					files = patch_overlay.list_overlay_files()
+				except Exception:
+					files = []
+			yield self.send_to_all_clients(f"patchList:{json.dumps([f['path'] for f in files], default=str)}")
+		
 		elif(action == "startRecording"):
 			# 开始录音
 			freq = CTRX.getFreq() if CTRX else 0
@@ -4354,7 +4413,7 @@ class MobileHandler(BaseHandler):
 		self.set_header('X-Mobile-Interface', 'true')
 		# Serve the modern mobile HTML file
 		try:
-			mobile_path = os.path.join(_resource_dir(), "www", "mobile_modern.html")
+			mobile_path = _www_file("mobile_modern.html")
 			print(f"Attempting to read {mobile_path}")
 			with open(mobile_path, "r", encoding="utf-8") as f:
 				content = f.read()
@@ -4535,7 +4594,7 @@ if __name__ == "__main__":
 		app = tornado.web.Application([
 		(r'/CONFIG', ConfigHandler),
 		(r'/', ConfigHandler),
-		(r'/(.*)', tornado.web.StaticFileHandler, { 'path' : os.path.join(_resource_dir(), 'www') })
+		(r'/(.*)', OverlayStaticFileHandler, { 'path' : os.path.join(_resource_dir(), 'www') })
 	],debug=bool(config['SERVER']['debug']))
 
 	# Use explicit SSLContext to avoid PEM parsing quirks

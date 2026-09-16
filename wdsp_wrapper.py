@@ -96,6 +96,16 @@ def _load_wdsp_library():
         ".",
     ]
 
+    # 补丁覆盖层优先：%LOCALAPPDATA%\MRRC\patch\vendor\... 或 patch\libwdsp.dll
+    # （热修 DLL 不必重新打包/重装，见 patch_overlay.py）
+    try:
+        import patch_overlay
+        overlay_dirs = [d for d in patch_overlay.dll_dirs() if d not in search_paths]
+        if overlay_dirs:
+            search_paths = overlay_dirs + search_paths
+    except Exception:
+        pass
+
     if system == "Darwin":
         lib_names = ["libwdsp.dylib"]
     elif system == "Windows":

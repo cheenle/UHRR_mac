@@ -25,6 +25,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [V6.0.3] - 2026-09-14
+
+### 🧩 热修补丁通道 —— 小 bug 不再需要重新打包
+
+- **背景（实测）**：PyInstaller 6 的 onedir 包把应用代码打进 exe 里的 PYZ；实验证明同名 `.py`
+  放在 exe 同目录 / `_internal/` / cwd / `PYTHONPATH` **全部无效**，`sitecustomize.py` 也不执行
+  （冻结运行时连 `site` 都不导入）。根因是 `PyiFrozenFinder` 被插进 `sys.path_hooks`，
+  PYZ 内模块名一律先被截走。
+- **打包改造**：应用自身代码（`MRRC`、`config_io`、`audio_interface`、`hamlib_wrapper`、
+  `wdsp_wrapper`、`atu_auto_tuner`、`patch_overlay` 等）不再进 PYZ，作为数据文件放到
+  `_internal/app/`，由新入口 `packaging/pyinstaller/frozen_entry.py` 加入 `sys.path`
+  （依赖分析仍由 hiddenimports 保住）。未被冻结的模块才能从磁盘加载 —— 这是热修的前提。
+- **覆盖层**：`%LOCALAPPDATA%\MRRC\patch\{app,www,vendor}`（无需管理员，与安装目录分离，
+  删掉即回退）。www 资源由 `patch_overlay.OverlayStaticFilesMixin` 经 tornado 的
+  `validate_absolute_path` 扩展点优先读覆盖层；WDSP 等 DLL 的搜索路径也把覆盖层排在最前。
+- **投递方式**：① `MRRC-Launcher.exe` 启动时读 `https://www.vlsc.net/mrrc/downloads/patch.json`，
+  满足版本要求且 SHA256 匹配才自动应用（失败只警告，不影响启动；`[HOTFIX] enabled=False`
+  或 `MRRC_NO_UPDATE_CHECK=1` 可关闭）；② `packaging/hotfix/apply_hotfix.ps1` 手动/离线；
+  ③ 6.0.2 及更早的安装可用就地模式（仅 `www/` 与 DLL，需要管理员；遇到 `app/*` 会明确拒绝，
+  不"假装修好了"）。
+- **制作补丁**：`packaging/hotfix/make_hotfix.py` 生成 `hotfix-<ver>.zip`（含逐文件 SHA256 的
+  `manifest.json`）+ `patch.json`；按 spec 里的 `_APP_MODULES` 校验，只接受真正可热修的文件
+  （新增依赖 / C 扩展 / 启动器 → 拒绝并提示必须重新打包）。
+- **可观测**：启动日志打印 `🧩 补丁覆盖层已启用 …`；WebSocket 新增 `getPatchStatus` / `patchList`；
+  覆盖层内记录 `applied.json`。文档见 [docs/current/operations/hotfix-and-patching.md]。
+- **测试**：新增 `tests/test_patch_overlay.py`（16 例），含真实 tornado 服务验证覆盖层替换；
+  Windows 打包脚本 `build.ps1` 会自动跑这套测试，失败即中止打包。
+
 ## [V6.0.2] - 2026-09-14
 
 ### 🪟 Windows 安装包发布（首个内置 WDSP 库的版本）

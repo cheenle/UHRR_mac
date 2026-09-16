@@ -86,3 +86,7 @@ vendor/**/*.so
 
 # NR2 探针输出的试听 WAV（生成物）
 dev_tools/nr2_out/
+
+# 源码模式下的热修覆盖层（运行时目录，不入库）
+patch/
+dist/hotfix/

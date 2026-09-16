@@ -63,6 +63,18 @@ FFTW 用静态 `libfftw3.a` 链接（`-static`），所以不需要额外 Window
 > 经验：NR2 最关键的一半修复（估计器固定 MMSE）在 Python 侧，不依赖新 DLL；
 > 但“每 bin 最大衰减”“SSB 带通走 nbp0（消除 NR2 关闭后静音）”“干湿混合”必须有新 DLL。
 
+### 2.2 应用代码是"松散文件"（热修前提）
+
+`packaging/pyinstaller/mrrc_server.spec` 把应用自己的模块排除出 PYZ（`_APP_MODULES`），
+作为数据文件放进 `_internal/app/`，入口为 `packaging/pyinstaller/frozen_entry.py`。
+**别把它们挪回 PYZ**：PyInstaller 6 的 `PyiFrozenFinder` 会截走 PYZ 内所有同名模块，
+一旦冻结，磁盘覆盖就失效，热修通道（见 `docs/current/operations/hotfix-and-patching.md`）即失效。
+
+打包脚本会写 `version.txt`（取自 `MRRC.iss` 的 `MyAppVersion`），启动器用它判断是否需要
+应用热补丁。
+
+> PowerShell 脚本若含中文注释，**必须存为 UTF-8 with BOM**（PS 5.1 会按 GBK 读，否则语法崩）。
+
 ## 3. 每次打包
 
 ```powershell

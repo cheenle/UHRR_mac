@@ -12,6 +12,38 @@ import sys
 ROOT = Path(SPECPATH).parents[1]
 
 
+# ---------------------------------------------------------------------------
+# 应用自身的代码（MRRC + 同级模块）不进 PYZ，而是作为数据文件放到 _internal/app/。
+#
+# 原因（2026-09-14 实测，见 patch_overlay.py 头部）：PyInstaller 6 的 PyiFrozenFinder
+# 会截走 PYZ 内所有同名模块，磁盘上的 .py 覆盖无效；没进 PYZ 的模块才能被
+# %LOCALAPPDATA%\MRRC\patch\app 里的同名文件覆盖 → 不重新打包即可修 bug。
+#
+# 依赖发现不能降级：这些模块名仍然写进 hiddenimports，让 Analysis 照常追踪
+# pyaudio/serial/… 等第三方依赖，只是最后从 PYZ 归档内容里过滤掉它们自己。
+# ---------------------------------------------------------------------------
+_APP_ENTRY = "MRRC"
+_APP_MODULES = [
+    "patch_overlay",           # 覆盖层自身也应可被覆盖（后续演进兼容）
+    "config_io",
+    "audio_interface",
+    "hamlib_wrapper",
+    "wdsp_wrapper",
+    "atu_auto_tuner",
+    "atu_fuchs_handler",
+    "atr1000_tuner",
+    "recording_session",
+    "mrrc_perf_monitor",
+    "ssl_bootstrap",
+    "tci_client",
+]
+_APP_DATA = [(str(ROOT / _APP_ENTRY), "app")]
+for _name in _APP_MODULES:
+    _src = ROOT / f"{_name}.py"
+    if _src.exists():
+        _APP_DATA.append((str(_src), "app"))
+
+
 # Vendor runtime files are platform-specific.  Missing vendor files are non-fatal:
 # the corresponding feature gracefully degrades (WDSP disabled, Opus fallback,
 # Hamlib unavailable until the user supplies a DLL).
@@ -29,7 +61,7 @@ elif sys.platform == "darwin":
 
 
 a = Analysis(
-    [str(ROOT / "MRRC")],
+    [str(ROOT / "packaging" / "pyinstaller" / "frozen_entry.py")],
     pathex=[str(ROOT)],
     binaries=[],
     datas=[
@@ -38,9 +70,12 @@ a = Analysis(
         (str(ROOT / "MRRC_users.db"), "."),
         (str(ROOT / "windows" / "MRRC.conf.template"), "windows"),
         (str(ROOT / "windows" / "launcher.py"), "windows"),
+        *_APP_DATA,
         *_vendor_data,
     ],
     hiddenimports=[
+        # 应用模块：仅为让 Analysis 追踪它们的第三方依赖（随后会从 PYZ 里剔除）
+        *_APP_MODULES,
         # Web server / async
         "tornado",
         "tornado.web",
@@ -78,7 +113,7 @@ a = Analysis(
     noarchive=False,
     optimize=0,
 )
-pyz = PYZ(a.pure)
+pyz = PYZ([entry for entry in a.pure if entry[0] not in set(_APP_MODULES)])
 exe = EXE(
     pyz,
     a.scripts,

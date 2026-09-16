@@ -1,4 +1,4 @@
-$ErrorActionPreference = "Stop"
+﻿$ErrorActionPreference = "Stop"
 
 # $ErrorActionPreference does NOT apply to native commands (python, pyinstaller,
 # iscc) — check $LASTEXITCODE explicitly so a failing test or build aborts the
@@ -69,6 +69,16 @@ if (Test-Path $AppRoot) {
     Remove-Item $AppRoot -Recurse -Force
 }
 New-Item -ItemType Directory -Path $AppRoot | Out-Null
+
+# 版本标记：启动器读它来判断是否需要应用热补丁（package-hotfix 通道）
+$appVersion = (Select-String -Path (Join-Path $PSScriptRoot "MRRC.iss") -Pattern 'MyAppVersion "([^"]+)"' `
+    | ForEach-Object { $_.Matches[0].Groups[1].Value } | Select-Object -First 1)
+if ($appVersion) {
+    Set-Content -Path (Join-Path $AppRoot "version.txt") -Value $appVersion -Encoding ASCII -NoNewline
+    Write-Host "Version marker: version.txt = $appVersion"
+} else {
+    Write-Warning "Could not read MyAppVersion from MRRC.iss; version.txt not written"
+}
 
 Copy-Item (Join-Path $PyInstallerRoot "MRRC-Server\*") $AppRoot -Recurse -Force
 Copy-Item (Join-Path $PyInstallerRoot "MRRC-Launcher.exe") $AppRoot -Force
