@@ -1,0 +1,23 @@
+{
+  "latest": "6.0.10",
+  "installer": {
+    "url": "https://www.vlsc.net/mrrc/downloads/MRRC-Setup-6.0.10.exe",
+    "sha256": "3d1a51862d0d7f25c86a8c441449621b6c8b37ade2542ef6a0a42949022223b9",
+    "size": 45361607
+  },
+  "minSupported": "6.0.3",
+  "mandatory": false,
+  "releasedAt": "2026-09-16T16:11:03",
+  "notes": "「🐞 遇到问题」一键诊断包上传 + 启动器日志 tee + 空闲关机幂等 + 设备配置抽屉滚动修复",
+  "hotfix": {
+    "url": "https://www.vlsc.net/mrrc/downloads/hotfix-6.0.9.zip",
+    "sha256": "e326fd38784119119eabcc3c6262a0a7ae758381ce6ba3e9b169fdab69c805f2",
+    "requires": "6.0.3",
+    "notes": "新增「🐞 遇到问题」一键诊断包上传（含新模块 support_bundle.py）；空闲关机改为幂等"
+  },
+  "previous": {
+    "version": "6.0.7",
+    "url": "https://www.vlsc.net/mrrc/downloads/MRRC-Setup-6.0.7.exe",
+    "sha256": "81f85c7cc35fadd17eca1b50964efc8a5491c1a9024ffa00e84bd162bda97c06"
+  }
+}
