@@ -438,6 +438,39 @@ Response Example: ff050701031b1e000e01
                 <a href="docs.html" class="btn btn-secondary">Technical Documentation</a>
             </div>
         </div>
+        <h2><span class="feature-icon">⬆️</span> One-Click Upgrade (Windows Installer)</h2>
+        <p>Shipped from <strong>V6.1.0</strong>, validated end-to-end on a real Windows machine in <strong>V6.1.11</strong>.
+        The launcher checks a SHA256-pinned manifest at startup and downloads the new installer in the background
+        (<em>without interrupting your listening</em>), then waits for you:</p>
+        <ul>
+            <li><strong>Web UI</strong> → menu → <strong>⬆️ Software Update</strong> → <em>Install Now</em>, or</li>
+            <li><strong>Launcher window</strong> → type <code>U</code> and press Enter.</li>
+        </ul>
+        <p>Then: one UAC prompt → silent install → automatic restart onto the new version. The new version
+        confirms the upgrade itself, so "did it work?" is a recorded fact rather than a guess, and
+        <em>Roll back to the previous version</em> is one click too.</p>
+        <h3>Why this is non-trivial on Windows</h3>
+        <p>Console processes have no message loop (so the installer's RestartManager cannot close them);
+        an elevated process re-launching via <code>runas</code> can hang forever on a non-interactive window
+        station; the console code page is GBK (an emoji in a log line kills the log-forwarding thread); and
+        <code>threading.Lock</code> is <em>per-process</em> — with two launcher instances both download the same
+        temporary file. All ten of these traps were found by real-machine acceptance testing and are fixed;
+        the full case study is RC-002 in the docs.</p>
+
+        <h2><span class="feature-icon">🐞</span> One-Click Diagnostics Bundle</h2>
+        <p>Menu → <strong>🐞 Something went wrong</strong> collects what a maintainer actually needs:
+        launcher/server output, <code>state.json</code>, installer logs, the audio-device report,
+        performance sampling and a <strong>redacted</strong> config (whitelist only; secrets replaced;
+        certificates and the user database are never packaged), plus an automatic health summary
+        (IOLoop watchdog, TX init timing, audio health, ATR freshness). One click to upload to the
+        maintainer endpoint — or keep it local.</p>
+
+        <h2><span class="feature-icon">🎛️</span> Rig Model Catalog Aligned with Hamlib</h2>
+        <p>Device Config no longer hard-codes a model list: <code>rig_models.py</code> enumerates the
+        <strong>312 models</strong> of the locally installed hamlib at runtime and writes <em>both</em> keys the
+        stack reads (<code>[HAMLIB] rig_model</code> and <code>[INSTANCE_SETTINGS] instance_rigctl_model</code>),
+        flagging in the UI when they disagree with what <code>rigctld</code> reports.</p>
+
     </section>
 
     <!-- Footer -->

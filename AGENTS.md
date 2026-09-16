@@ -43,6 +43,21 @@
 - **IOLoop thread-safety (V5.8.2)**: `tornado.ioloop.IOLoop.instance()` is a thread-dependent alias of `IOLoop.current()` in tornado 6.5. Background threads (ATR-1000 reconnect `Timer`, rigctld executor via `run_in_executor`, `PTTSafetyMonitor`) MUST use the main-thread-pinned global `MAIN_IOLOOP` (defined at module top) for `add_callback`/`add_timeout`, never `IOLoop.instance()` — calling it from a worker thread creates a separate asyncio loop whose queued callbacks never run (ATR meter/PTT broadcasts silently die, frontend shows only the initial snapshot).
 - **TX init is async (F4/F4b, V6.0.2)**: `WS_AudioTXHandler` `m:` → `_start_tx_init_async` runs `TX_init` (incl. blocking `p.open()`) on a `run_in_executor` worker — never call `TX_init` synchronously from `on_message`. Frames arriving during init buffer into `_tx_pending_frames` (250-frame cap) and flush on completion; `s:`/`on_close` set `_tx_init_cancel` and clear the buffer; the discard path force-releases PTT. `audio_interface.py` caches the output-device index (`_output_device_index_cache`, validated by name on each hit). A heartbeat watchdog (`arm_ioloop_watchdog`, 2s/8s) dumps all thread stacks if the IOLoop wedges. Full story: `docs/current/reliability/RC-001-ioloop-wedge-and-tx-silence.md`.
 
+## Windows Installer / One-Click Upgrade
+- 安装版本唯一权威 = 安装目录 `version.txt`；升级逻辑在 `windows/launcher.py` + `upgrade_core.py`，
+  运行时状态在 `%LOCALAPPDATA%\MRRC\updates\`（`state.json` / `upgrade.request` / `MRRC-Setup-<ver>.exe` / `install-<ver>.log`）。
+- **唯一成功判据**：`state.json` 的 `lastResult.status == "ok"`（由新版启动时 `confirm_pending_upgrade()` 自证）。
+- V6.0.10 及更早**没有**升级逻辑（需手动装一次 6.1.x）；发布时 `latest.json` 的 `previous` 必须在站点上真实存在
+  —— 站点部署是 `rsync --delete`，**没进 git 的服务器文件会被清掉**。
+- 热修通道只覆盖 `www/**`、`_APP_MODULES`（含 `upgrade_core.py`）与 `vendor`；
+  `MRRC` 主脚本与 `windows/launcher.py` 在 PYZ 里，改动必须重发安装包。
+- 发版流程见 `docs/current/operations/release-process.md`；升级排障见 `docs/current/operations/one-click-upgrade.md`；
+  根因与 Windows 陷阱见 `docs/current/reliability/RC-002-launcher-upgrade-and-shutdown.md`。
+- **VM 自动化实测陷阱**：SSH 会话结束会回收 `Start-Process` 的子进程（长任务用
+  `schtasks /create … /RL HIGHEST /RU <user> /IT` 再 `/run`）；含中文的 `.ps1` 必须 **UTF-8 单 BOM**；
+  `Tee-Object` 没有 `-Encoding`；`schtasks /tr` 里**别塞引号**；服务器 `/tmp` 是 454 MB tmpfs
+  （大文件传 `~` 再 `sudo mv`）；VM 网络对 45 MB 下载不稳（验收可用 `MRRC_UPDATE_MANIFEST=file://…` 离线跑）。
+
 ## Audio/PTT Guardrails
 - TX/PTT timing is fragile; preserve the flow documented in `docs/legacy/audio/PTT_Audio_Postmortem_and_Best_Practices.md` and implemented in `www/tx_button_optimized.js`.
 - `rx_worklet_processor.js` uses a **millisecond watermark** buffer (not legacy frame counts). Normal RX needs `prebufferMs` well above one frame; safe desktop config is `prebufferMs: 200, recoveryMs: 80, maxMs: 600`.
