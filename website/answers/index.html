@@ -99,6 +99,46 @@
 
   <h2>答复列表</h2>
 
+  <div class="card" data-keys="20260917-073700-14ef FT-891还是无法连接上，音频同步正常，S表偏大过电台机显，大概差1到1.5个S。 环境 20260917-073700-14ef bg7zhs FT-891 无法连接 rigctld daemon not running rigctld.exe S表偏大 1到1.5个S COM8 rig_model 1036 38400 音频同步正常 Windows 10 CAT 连接">
+    <div class="row" style="justify-content:space-between">
+      <h3 style="margin:0">编号 <span class="id">20260917-073700-14ef</span></h3>
+      <span class="pill ok">已答复 · 环境</span>
+    </div>
+    <p class="muted" style="margin:8px 0 2px">上报时间 2026-09-17T07:36:29 · 描述：<strong>FT-891还是无法连接上，音频同步正常，S表偏大过电台机显，大概差1到1.5个S。</strong></p>
+    <p class="muted" style="margin:2px 0 10px">上报版本 6.1.12 · 包体积 8 KB</p>
+
+    <h3>结论</h3>
+    <p>FT-891连不上是rigctld未启动，先手动启动rigctld.exe再复查S表</p>
+
+    <h3>诊断</h3>
+    <ul>
+      <li>两次启动均报『rigctld daemon not running: timed out』（06:42:28、07:31:16），MRRC 没连上电台后台，FT-891 因此无法连接。</li>
+      <li>配置已指向 FT-891（rig_model=1036、rig_pathname=COM8、rig_rate=38400），但 Windows 安装版不会自动拉起 rigctld.exe，需手动启动。</li>
+      <li>S 表读数来自 rigctld 的 l STRENGTH 命令（前端 getSignalLevel），rigctld 未连接时 S 表不可靠，偏大 1–1.5 S 应在连接成功后实测复查。</li>
+      <li>音频通道正常：日志尾部『30s 采集 1440960 样本（100.0%）』、Opus 编码正常，与『音频同步正常』一致，问题只在 CAT/电台控制侧。</li>
+      <li>体检显示启动 2 次、无 Traceback/崩溃痕迹，属正常重启而非软件故障。</li>
+    </ul>
+
+    <h3>你要做的</h3>
+    <ol>
+      <li>以管理员身份打开 PowerShell，启动 rigctld：rigctld.exe -m 1036 -r COM8 -s 38400 -T 127.0.0.1 -t 4532（串口/速率按设备管理器与电台 CAT 菜单核实）。</li>
+      <li>确认 FT-891 已开机、CAT 串口线接到 COM8，且 CAT 菜单速率=38400、数据位=8、停止位/校验与上面命令一致。</li>
+      <li>确认 rigctld 已监听：运行 Test-NetConnection 127.0.0.1 -Port 4532 应成功；再重启 MRRC，日志出现『✓ rigctld daemon responding!』即连接成功。</li>
+      <li>检查 COM8 未被其他 CAT 软件（如 FT8/JTDX、电台原厂软件）占用，占用时 rigctld 打不开串口。</li>
+      <li>连接成功后，在同一信号下对比 MRRC 与电台机显的 S 值；若仍偏 1–1.5 S，请再次🐞上报并写明『电台显示 S几 / MRRC 显示 S几』及对应频率。</li>
+    </ol>
+
+    <h3>证据（原始行）</h3>
+    <ul>
+      <li>ERROR - ⚠ rigctld daemon not running: timed out（06:42:28 与 07:31:16 各一次）</li>
+      <li>rig_model = 1036 / rig_pathname = COM8 / rig_rate = 38400（脱敏配置）</li>
+      <li>音频健康: 30s 采集 1440960 样本（应有 1440925，100.0%）</li>
+      <li>启动次数：2 次，时间跨度 2026-09-17 06:42:28 → 07:33:17 —— 无崩溃痕迹</li>
+      <li>platform: Windows-10-10.0.19041-SP0</li>
+    </ul>
+
+  </div>
+
   <div class="card" data-keys="20260917-065232-5735 lll-testing 环境 20260917-065232-5735 lll-testing -9996 Invalid input device USB Audio rigctld daemon not running simulation mode audio.devices 空 虚拟机 无声卡 自签名证书 SSL Error FT991 Windows 11">
     <div class="row" style="justify-content:space-between">
       <h3 style="margin:0">编号 <span class="id">20260917-065232-5735</span></h3>
