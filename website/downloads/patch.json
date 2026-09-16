@@ -1,14 +1,15 @@
 {
-  "latest": "6.0.8",
-  "url": "https://www.vlsc.net/mrrc/downloads/hotfix-6.0.8.zip",
-  "sha256": "424fbca8ddeed52527bbaad5659f8c4c58e509198a169ea6f81df3fc1502528e",
-  "size": 51257,
+  "latest": "6.0.9",
+  "url": "https://www.vlsc.net/mrrc/downloads/hotfix-6.0.9.zip",
+  "sha256": "e326fd38784119119eabcc3c6262a0a7ae758381ce6ba3e9b169fdab69c805f2",
+  "size": 72784,
   "requires": "6.0.3",
-  "notes": "设备配置抽屉加滚动条 + 保存/重启按钮固定",
+  "notes": "新增「🐞 遇到问题」一键诊断包上传（含新模块 support_bundle.py）；空闲关机改为幂等",
   "files": [
-    "www/controls.js",
-    "www/mobile_modern.css",
+    "app/MRRC",
+    "app/support_bundle.py",
+    "www/index.html",
     "www/mobile_modern.html",
-    "www/style.css"
+    "www/support.html"
   ]
 }
