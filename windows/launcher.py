@@ -123,6 +123,21 @@ def apply_hotfix_pack(zip_path: Path, patch_root: Path) -> list[str]:
     return written
 
 
+def applied_hotfix_versions(patch_root: Path) -> set:
+    """读过 patch/applied.json，返回已经应用过的补丁版本集合。
+
+    没有这个检查时，每次启动都会因为“安装版本号没变”而反复下载/重放同一个补丁。
+    """
+    record = patch_root / "applied.json"
+    try:
+        history = json.loads(record.read_text(encoding="utf-8"))
+    except Exception:
+        return set()
+    if not isinstance(history, list):
+        history = [history]
+    return {str(item.get("version")) for item in history if isinstance(item, dict) and item.get("version")}
+
+
 def check_for_hotfix(cfg: Path) -> None:
     """启动前检查并应用热补丁（失败一律只打印一句警告，不影响启动）。"""
     if not _hotfix_enabled(cfg):
@@ -151,6 +166,8 @@ def check_for_hotfix(cfg: Path) -> None:
             print(f"[hotfix] 跳过 {latest}：需要安装版本 >= {requires}（本机 {_installed_version()}），"
                   f"请先安装新版完整安装包")
             return
+        if latest in applied_hotfix_versions(patch_dir()):
+            return                                   # 已应用过，不再重复下载/重放
         print(f"[hotfix] 发现热补丁 {latest}（本机 {_installed_version()}）: {manifest.get('notes', '')}")
         tmp = user_data_dir() / f"hotfix-{latest}.zip.part"
         tmp.parent.mkdir(parents=True, exist_ok=True)
