@@ -1,6 +1,8 @@
-﻿# MRRC 一键升级端到端验收（在 VM 上以**管理员** PowerShell 运行）
+﻿﻿# MRRC 一键升级端到端验收（在 VM 上以**管理员** PowerShell 运行）
 # 流程：装 6.1.0 → 起启动器（后台）→ 等它下载 6.1.1 → 写哨兵触发升级 → 校验 version.txt
 # 结果自动上传到 https://www.vlsc.net/mrrc/support/（维护者列表页可见）
+param([string]$Base = "6.1.2", [string]$Target = "6.1.3")
+
 $ErrorActionPreference = 'Continue'
 $log = 'C:\tmp\upgrade_e2e_report.txt'
 function Note($m) { Write-Host $m; Add-Content -Path $log -Value $m -Encoding UTF8 }
@@ -9,17 +11,17 @@ Note ("elevated: " + (New-Object Security.Principal.WindowsPrincipal([Security.P
 Note ("before: version.txt = " + (Get-Content 'C:\Program Files\MRRC\version.txt' -ErrorAction SilentlyContinue))
 
 # 1) 装 6.1.0（第一个自带升级逻辑的版本）
-$setup = 'C:\tmp\MRRC-Setup-6.1.0.exe'
+$setup = 'C:\tmp\MRRC-Setup-$Base.exe'
 if (-not (Test-Path $setup)) {
   Note "下载 6.1.0 安装包…"
-  Invoke-WebRequest -Uri 'https://www.vlsc.net/mrrc/downloads/MRRC-Setup-6.1.0.exe' -OutFile $setup -TimeoutSec 900
+  Invoke-WebRequest -Uri 'https://www.vlsc.net/mrrc/downloads/MRRC-Setup-$Base.exe' -OutFile $setup -TimeoutSec 900
 }
 Note "静默安装 6.1.0 …"
 $p = Start-Process -FilePath $setup -ArgumentList '/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART',"/LOG=C:\tmp\install610.log" -PassThru -Wait
 Note ("installer exit=" + $p.ExitCode)
 Note ("after install: version.txt = " + (Get-Content 'C:\Program Files\MRRC\version.txt' -ErrorAction SilentlyContinue))
 Note ("upgrade_core present = " + (Test-Path 'C:\Program Files\MRRC\_internal\app\upgrade_core.py'))
-if ((Get-Content 'C:\Program Files\MRRC\version.txt' -ErrorAction SilentlyContinue) -ne '6.1.0') { Note "❌ 6.1.0 安装未成功，终止"; }
+if ((Get-Content 'C:\Program Files\MRRC\version.txt' -ErrorAction SilentlyContinue) -ne $Base) { Note "❌ 6.1.0 安装未成功，终止"; }
 
 # 2) 清掉旧状态，后台起启动器（它会看到 latest.json 的 6.1.1）
 Get-Process MRRC-Server,MRRC-Launcher -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
@@ -32,7 +34,7 @@ $staged = $null
 for ($i = 0; $i -lt 40; $i++) {
   Start-Sleep -Seconds 6
   try { $state = Get-Content "$env:LOCALAPPDATA\MRRC\updates\state.json" -Raw -Encoding utf8 | ConvertFrom-Json } catch { $state = $null }
-  if ($state -and $state.staged -and $state.staged.version -eq '6.1.1') { $staged = $state.staged; break }
+  if ($state -and $state.staged -and $state.staged.version -eq $Target) { $staged = $state.staged; break }
 }
 if ($staged) { Note ("✅ 已下载并暂存: " + $staged.version + " (" + [Math]::Round($staged.size/1MB,1) + " MB, sha " + $staged.sha256.Substring(0,12) + "…)") }
 else { Note "❌ 超时：启动器没有暂存 6.1.1（看 launcher_test.log）" }
@@ -40,11 +42,11 @@ else { Note "❌ 超时：启动器没有暂存 6.1.1（看 launcher_test.log）
 # 4) 写哨兵触发升级（等价于页面点【立即升级】或按 U）
 if ($staged) {
   Note "触发升级（写 upgrade.request）…"
-  '{"version":"6.1.1","at":"e2e"}' | Set-Content "$env:LOCALAPPDATA\MRRC\updates\upgrade.request" -Encoding utf8
+  '{"version":$Target,"at":"e2e"}' | Set-Content "$env:LOCALAPPDATA\MRRC\updates\upgrade.request" -Encoding utf8
   for ($i = 0; $i -lt 50; $i++) {
     Start-Sleep -Seconds 6
     $v = Get-Content 'C:\Program Files\MRRC\version.txt' -ErrorAction SilentlyContinue
-    if ($v -eq '6.1.1') { break }
+    if ($v -eq $Target) { break }
   }
 }
 
@@ -60,7 +62,7 @@ Note "=== DONE ==="
 # 6) 自动回传报告
 try {
   $body = Get-Content $log -Raw -Encoding utf8
-  $meta = '{"problem":"VM 一键升级端到端验收报告","contact":"vm-e2e","version":"6.1.1"}'
+  $meta = '{"problem":"VM 一键升级端到端验收报告","contact":"vm-e2e","version":$Target}'
   # PowerShell 默认编码会把中文变乱码：显式用 UTF-8 字节
   $metaBytes = [Text.Encoding]::UTF8.GetBytes($meta)
   $created = Invoke-RestMethod -Uri 'https://www.vlsc.net/mrrc/support/api/create' -Method Post -Body $metaBytes -ContentType 'application/json; charset=utf-8' -TimeoutSec 60
