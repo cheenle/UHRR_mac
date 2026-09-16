@@ -90,3 +90,6 @@ dev_tools/nr2_out/
 # 源码模式下的热修覆盖层（运行时目录，不入库）
 patch/
 dist/hotfix/
+
+# 「🐞 遇到问题」在本机生成的诊断包（运行时产物，不入库）
+support/

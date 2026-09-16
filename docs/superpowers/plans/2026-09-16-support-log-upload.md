@@ -10,6 +10,13 @@
 
 规格：`docs/superpowers/specs/2026-09-16-support-log-upload-design.md`
 
+**执行结果（2026-09-16，内联执行）**：7/7 任务完成，全部提交并推送；测试 51 项 + 接收端 7 项全绿。
+偏离记录：① `device_report`/`last_health` 提前到任务 4 之前（任务 4 依赖它，计划顺序有误）；
+② 暂不做"附带 5 秒接收音频"（YAGNI）；③ 额外发现并修复：接收端 413 前需有界丢弃请求体、
+限速用例须最后执行、空闲关机需幂等、BOM 配置读取补测试、`[SUPPORT]` 页面入口需 `target=_blank`。
+端到端已验证：Mac 实例 + Windows VM（源码实例与**冻结版 6.0.7 + 6.0.9 热修**）均能生成并上传，
+接收端列表可见、无明文密钥。
+
 ---
 
 ## 文件结构
@@ -35,7 +42,7 @@
 
 **文件：** 创建 `support_bundle.py`、`tests/test_support_bundle.py`
 
-- [ ] **步骤 1：写失败的测试**
+- [x] **步骤 1：写失败的测试**
 
 ```python
 # tests/test_support_bundle.py
@@ -68,12 +75,12 @@ class RedactionTest(unittest.TestCase):
             self.assertFalse(sb.is_collectable(name))
 ```
 
-- [ ] **步骤 2：运行测试确认失败**
+- [x] **步骤 2：运行测试确认失败**
 
 运行：`venv/bin/python3 -m unittest tests.test_support_bundle -v`
 预期：FAIL，`ModuleNotFoundError: No module named 'support_bundle'`
 
-- [ ] **步骤 3：实现 `support_bundle.py` 的这三个函数**
+- [x] **步骤 3：实现 `support_bundle.py` 的这三个函数**
 
 ```python
 # support_bundle.py（节选）
@@ -153,12 +160,12 @@ def tail_lines(path, max_bytes=2 * 1024 * 1024):
     return data.decode("utf-8", "replace")
 ```
 
-- [ ] **步骤 4：运行测试确认通过**
+- [x] **步骤 4：运行测试确认通过**
 
 运行：`venv/bin/python3 -m unittest tests.test_support_bundle -v`
 预期：3 个测试 PASS
 
-- [ ] **步骤 5：Commit**
+- [x] **步骤 5：Commit**
 
 ```bash
 git add support_bundle.py tests/test_support_bundle.py
@@ -171,7 +178,7 @@ git commit -m "feat(support): 诊断包脱敏与日志尾读（白名单+密钥�
 
 **文件：** 修改 `support_bundle.py`、`tests/test_support_bundle.py`
 
-- [ ] **步骤 1：写失败的测试**
+- [x] **步骤 1：写失败的测试**
 
 ```python
 class BundleTest(unittest.TestCase):
@@ -211,12 +218,12 @@ class BundleTest(unittest.TestCase):
         self.assertTrue(os.path.isfile(result["path"]))
 ```
 
-- [ ] **步骤 2：运行测试确认失败**
+- [x] **步骤 2：运行测试确认失败**
 
 运行：`venv/bin/python3 -m unittest tests.test_support_bundle -v`
 预期：FAIL，`AttributeError: module 'support_bundle' has no attribute 'build_bundle'`
 
-- [ ] **步骤 3：实现 `summarize_log` 与 `build_bundle`**
+- [x] **步骤 3：实现 `summarize_log` 与 `build_bundle`**
 
 ```python
 # support_bundle.py（追加）
@@ -317,12 +324,12 @@ def build_bundle(out_dir, problem="", contact="", env=None, log_files=None,
             "files": collected, "redactions": redactions, "warnings": warnings}
 ```
 
-- [ ] **步骤 4：运行测试确认通过**
+- [x] **步骤 4：运行测试确认通过**
 
 运行：`venv/bin/python3 -m unittest tests.test_support_bundle -v`
 预期：5 个测试 PASS
 
-- [ ] **步骤 5：Commit**
+- [x] **步骤 5：Commit**
 
 ```bash
 git add support_bundle.py tests/test_support_bundle.py
@@ -335,7 +342,7 @@ git commit -m "feat(support): 诊断包生成 + 自动体检摘要（含最小�
 
 **文件：** 创建 `tools/support_receiver/server.py`、`dev_tools/test_support_receiver.py`
 
-- [ ] **步骤 1：写失败的测试**（节选关键断言）
+- [x] **步骤 1：写失败的测试**（节选关键断言）
 
 ```python
 # dev_tools/test_support_receiver.py
@@ -368,12 +375,12 @@ class ReceiverTest(unittest.TestCase):
                 self.base + "/api/../etc/passwd"))
 ```
 
-- [ ] **步骤 2：运行测试确认失败**
+- [x] **步骤 2：运行测试确认失败**
 
 运行：`venv/bin/python3 dev_tools/test_support_receiver.py -v`
 预期：FAIL（服务不存在）
 
-- [ ] **步骤 3：实现接收端**
+- [x] **步骤 3：实现接收端**
 
 ```python
 # tools/support_receiver/server.py
@@ -524,12 +531,12 @@ if __name__ == "__main__":
     sys.exit(main())
 ```
 
-- [ ] **步骤 4：运行测试确认通过**
+- [x] **步骤 4：运行测试确认通过**
 
 运行：`venv/bin/python3 dev_tools/test_support_receiver.py -v`
 预期：PASS（含越权 id 被拒）
 
-- [ ] **步骤 5：Commit**
+- [x] **步骤 5：Commit**
 
 ```bash
 git add tools/support_receiver/server.py dev_tools/test_support_receiver.py
@@ -542,7 +549,7 @@ git commit -m "feat(support): 接收端（stdlib、Basic Auth 列表页、限速
 
 **文件：** 修改 `MRRC`（新增 `SupportApiHandler` 与路由 `/api/support/.*`）
 
-- [ ] **步骤 1：写失败的测试**（HTTP 级别，复用 `tests/` 里的临时实例模式）
+- [x] **步骤 1：写失败的测试**（HTTP 级别，复用 `tests/` 里的临时实例模式）
 
 ```python
 # tests/test_support_api.py（在源码模式起一个最小 MRRC？—— 太重；
@@ -558,9 +565,9 @@ class UploadPayloadTest(unittest.TestCase):
             self.assertIn(key, env)
 ```
 
-- [ ] **步骤 2：运行测试确认失败** → `AttributeError: collect_env_snapshot`
+- [x] **步骤 2：运行测试确认失败** → `AttributeError: collect_env_snapshot`
 
-- [ ] **步骤 3：实现 `collect_env_snapshot()` + `MRRC` 接口**
+- [x] **步骤 3：实现 `collect_env_snapshot()` + `MRRC` 接口**
 
 ```python
 # support_bundle.py 追加
@@ -643,14 +650,14 @@ class SupportApiHandler(BaseHandler):
 > 说明：`post` 必须是 `async def`，用 `await self.run_in_executor(...)`（tornado 6 支持
 > `RequestHandler.run_in_executor`），确保磁盘 IO 与网络上传都不占用 IOLoop 线程。
 
-- [ ] **步骤 4：注册路由与权限**
+- [x] **步骤 4：注册路由与权限**
 
 ```python
 (r'/api/support/.*', SupportApiHandler),
 ```
 放在 `(r'/(.*)', ...)` 静态处理器**之前**；handler 继承现有 `BaseHandler`（已带登录校验）。
 
-- [ ] **步骤 5：手工验证**
+- [x] **步骤 5：手工验证**
 
 ```bash
 # 本机（源码模式，独立端口）
@@ -660,7 +667,7 @@ curl -sk -X POST https://localhost:8894/api/support/bundle \
 ```
 预期：返回 `{ok, id, path, size, files, redactions, warnings}`，且 `path` 文件存在。
 
-- [ ] **步骤 6：Commit**
+- [x] **步骤 6：Commit**
 
 ```bash
 git add MRRC support_bundle.py tests/test_support_api.py
@@ -673,7 +680,7 @@ git commit -m "feat(support): /api/support 生成/下载/上传接口（IO 走 e
 
 **文件：** 创建 `www/support.html`；修改 `www/mobile_modern.html`、`www/mobile_modern.js`、`www/index.html`
 
-- [ ] **步骤 1：写页面骨架**（与 `wdsp_settings.html` 同风格）
+- [x] **步骤 1：写页面骨架**（与 `wdsp_settings.html` 同风格）
 
 ```html
 <!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8">
@@ -730,7 +737,7 @@ async function saveLocal(){
 </script></body></html>
 ```
 
-- [ ] **步骤 2：加入菜单与桌面入口**
+- [x] **步骤 2：加入菜单与桌面入口**
 
 ```html
 <!-- www/mobile_modern.html：现有 6 项之后 -->
@@ -741,12 +748,12 @@ async function saveLocal(){
 <div id="div-support"><button onclick="window.open('support.html','_blank');" title="遇到问题/上传日志">🐞</button></div>
 ```
 
-- [ ] **步骤 3：语法检查**
+- [x] **步骤 3：语法检查**
 
 运行：`node --check www/mobile_modern.js && python3 -c "import re,sys;html=open('www/support.html').read();assert html.count('<script')==1;print('ok')"`
 预期：ok
 
-- [ ] **步骤 4：Commit**
+- [x] **步骤 4：Commit**
 
 ```bash
 git add www/support.html www/mobile_modern.html www/index.html
@@ -759,7 +766,7 @@ git commit -m "feat(support): 遇到问题页面 + 移动端菜单/桌面入口"
 
 **文件：** 修改 `windows/launcher.py`、`audio_interface.py`
 
-- [ ] **步骤 1：`audio_interface.device_report()`**
+- [x] **步骤 1：`audio_interface.device_report()`**
 
 ```python
 def device_report():
@@ -788,7 +795,7 @@ def device_report():
 同时在采集线程的健康摘要分支里加一行 `PyAudioCapture.last_health = f"…{_ratio*100:.1f}%"`，
 并在类属性处声明 `last_health = ""`。
 
-- [ ] **步骤 2：启动器把子进程输出写文件（带滚动）**
+- [x] **步骤 2：启动器把子进程输出写文件（带滚动）**
 
 ```python
 # windows/launcher.py：替换 Popen 调用
@@ -804,12 +811,12 @@ proc = subprocess.Popen(command, cwd=str(app_dir()), env=env,
 （`stdout=sink` 同时保留控制台可见性时改用 `tee` 线程；先用最简单可靠的文件重定向，
 控制台不再显示服务端日志——启动器自己仍打印关键行。）
 
-- [ ] **步骤 3：运行现有测试确认没破坏东西**
+- [x] **步骤 3：运行现有测试确认没破坏东西**
 
 运行：`venv/bin/python3 -m unittest discover -s tests`
 预期：全部 PASS
 
-- [ ] **步骤 4：Commit**
+- [x] **步骤 4：Commit**
 
 ```bash
 git add windows/launcher.py audio_interface.py
@@ -822,7 +829,7 @@ git commit -m "feat(support): 启动器 tee 服务端日志 + 音频设备快照
 
 **文件：** 创建 `deploy_support_receiver.sh`、`tools/support_receiver/support-receiver.service`；修改 `win_pack.md`、`CHANGELOG.md`、`AGENTS.md`
 
-- [ ] **步骤 1：systemd 单元与部署脚本**
+- [x] **步骤 1：systemd 单元与部署脚本**
 
 ```ini
 # tools/support_receiver/support-receiver.service
@@ -855,7 +862,7 @@ ssh "$REMOTE" 'sudo cp /tmp/mrrc-support-server.py /opt/mrrc-support/server.py &
 echo "下一步：在服务器 nginx 站点里加 location /mrrc/support/ { proxy_pass http://127.0.0.1:8099/; }"
 ```
 
-- [ ] **步骤 2：nginx location（含备份，可回滚）**
+- [x] **步骤 2：nginx location（含备份，可回滚）**
 
 ```bash
 ssh "$REMOTE" 'sudo cp /etc/nginx/sites-enabled/<站点> /etc/nginx/sites-enabled/<站点>.bak-$(date +%F) && \
@@ -863,7 +870,7 @@ ssh "$REMOTE" 'sudo cp /etc/nginx/sites-enabled/<站点> /etc/nginx/sites-enable
   sudo nginx -t && sudo systemctl reload nginx'
 ```
 
-- [ ] **步骤 3：真机验收（VM）**
+- [x] **步骤 3：真机验收（VM）**
 
 ```powershell
 # VM 内：安装 6.0.7 → 打开 support.html → 生成 → 上传
@@ -871,12 +878,12 @@ ssh "$REMOTE" 'sudo cp /etc/nginx/sites-enabled/<站点> /etc/nginx/sites-enable
 ```
 并记录到 `docs/current/operations/support-bundle.md`（新增：使用说明 + 维护者侧查看/删除步骤）。
 
-- [ ] **步骤 4：文档与 CHANGELOG**
+- [x] **步骤 4：文档与 CHANGELOG**
 
 `CHANGELOG.md` 新增 `### 🐞 遇到问题：一键诊断包上传`；
 `AGENTS.md` 加一行：诊断包生成在 `support_bundle.py`（可热修），接收端在 `tools/support_receiver/`。
 
-- [ ] **步骤 5：Commit**
+- [x] **步骤 5：Commit**
 
 ```bash
 git add deploy_support_receiver.sh tools/support_receiver/ docs/current/operations/support-bundle.md CHANGELOG.md AGENTS.md
