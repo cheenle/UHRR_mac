@@ -80,6 +80,46 @@
 
   <h2>答复列表</h2>
 
+  <div class="card" data-keys="20260916-184958-f8aa 目前还可以，你看下日志有咩有异常和潜在风险 其他 20260916-184958-f8aa 无服务端日志 看日志有没有异常 潜在风险 体检正常 rigctld Stable IC-M710 macOS-26.3 源码运行 8891 USB Audio CODEC ATR-1000 需要补充日志">
+    <div class="row" style="justify-content:space-between">
+      <h3 style="margin:0">编号 <span class="id">20260916-184958-f8aa</span></h3>
+      <span class="pill ">需要补充信息 · 其他</span>
+    </div>
+    <p class="muted" style="margin:8px 0 2px">上报时间 2026-09-16T18:49:55 · 描述：<strong>目前还可以，你看下日志有咩有异常和潜在风险</strong></p>
+    <p class="muted" style="margin:2px 0 10px">上报版本 ? · 包体积 ?</p>
+
+    <h3>结论</h3>
+    <p>本次未采集到服务端日志，无法排查异常；体检快照各项正常。</p>
+
+    <h3>诊断</h3>
+    <ul>
+      <li>自动体检摘要与「服务端日志末尾40行」均为空，用户要求看日志异常，但包内无日志可查。</li>
+      <li>环境快照正常：rigctld IC-M710 状态 Stable（127.0.0.1:4531），与配置 instance_rigctl_port=4531 一致。</li>
+      <li>音频设备齐全（5个，含 USB Audio CODEC 输入/输出、BlackHole 2ch），无 -9996 无效设备报错。</li>
+      <li>version 为空、frozen=false、cwd 指向仓库源码目录，属源码方式运行（非安装版），无升级/安装版日志属正常。</li>
+      <li>ATR-1000 已启用（auto，设备 192.168.1.63），SERVER 端口 8891 为自定义端口，均非异常。</li>
+    </ul>
+
+    <h3>你要做的</h3>
+    <ol>
+      <li>确认本次上报是从实际运行 MRRC 的那台机器发起，并保证 MRRC 正在运行、已产生日志。</li>
+      <li>重新生成诊断包，或直接把 MRRC 运行日志（stdout/stderr 或 logs/ 目录关键片段）发上来。</li>
+      <li>在描述里补充具体担心点（如音频卡顿、TX 无声、断连、CPU 高、面板不更新等），便于针对性排查。</li>
+      <li>日常自检：启动日志应有「IOLoop watchdog armed」标记；TX 时应有「TX audio init」标记。</li>
+      <li>确认访问地址端口与配置 8891 一致（MRRC 默认端口为 8877）。</li>
+    </ol>
+
+    <h3>证据（原始行）</h3>
+    <ul>
+      <li>自动体检摘要（工具生成，可信）：（无服务端日志）</li>
+      <li># 服务端日志末尾 40 行：（无）</li>
+      <li>"rigctld": {"id": 30003, "name": "IC-M710", "status": "Stable", "host": "127.0.0.1", "port": 4531}</li>
+      <li>"version": "", "frozen": false, "cwd": "/Users/cheenle/HAM/mrrc"</li>
+      <li>"atr1000": {"enabled": true, "reason": "auto（已配置设备 192.168.1.63）"}</li>
+    </ul>
+
+  </div>
+
   <div class="card" data-keys="20260917-062314-35dc always stopped abnormally 异常停止 停止 重启 崩溃 虚拟机 无音频设备 升级 6.1.11">
     <div class="row" style="justify-content:space-between">
       <h3 style="margin:0">编号 <span class="id">20260917-062314-35dc</span></h3>
