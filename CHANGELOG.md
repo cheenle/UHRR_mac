@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [V6.1.12] - 2026-09-17
+
+### ✅ 问题答复闭环：上报 → 答复页 → 客户自查自解
+
+- 新增公开答复页 **`/mrrc/answers/`**：每条答复含"编号 / 症状 / 诊断（证据）/ 结论 / 解决办法"，
+  支持按编号或关键词搜索、`#编号` 直达（自动填入搜索框）；
+  并附"30 秒自查法"与"体检摘要信号 → 常见原因 → 先做什么"对照表。
+- **App 上传后直接给出答复地址**：`🐞 遇到问题` 上传成功时显示编号 + 带 `#编号` 的链接。
+- **体检摘要更能自证**（`support_bundle.summarize_log`）：
+  * 新增 **启动次数 / 日志时间跨度**，并明确区分"重启"与"崩溃"
+    （真实案例：用户报"总是异常停止"，实际 25 次正常启动、0 条 Traceback）；
+  * 新增 **-9996 无音频设备**判定：提示若 `env.json` 的 `audio.devices` 为空数组，
+    说明本机没有音频设备（虚拟机常见），纯 Web 模式属预期而非故障。
+- 首条答复即真实上报 `20260917-062314-35dc`。
+
 ## [V6.1.11] - 2026-09-16
 
 ### 🐛 两个启动器实例抢同一个 .part → 下载完成后改名失败（真机实测）
