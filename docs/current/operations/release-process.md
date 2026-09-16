@@ -1,5 +1,8 @@
 # 发版流程（Windows 安装版 + 站点清单）
 
+> 上下游：本文是《[产品支持生命周期](product-support-lifecycle.md)》的**第 1 步（开发发版）**实施细则；
+> 下一步是 [版本升级](one-click-upgrade.md)。
+
 > 适用范围：发布 `MRRC-Setup.exe`（Windows 安装版）、`latest.json`（一键升级清单）、
 > `patch.json`（热修清单）到 `https://www.vlsc.net/mrrc/`。
 > 相关：`docs/current/operations/one-click-upgrade.md`、`hotfix-and-patching.md`、

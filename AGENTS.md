@@ -59,6 +59,8 @@
   （大文件传 `~` 再 `sudo mv`）；VM 网络对 45 MB 下载不稳（验收可用 `MRRC_UPDATE_MANIFEST=file://…` 离线跑）。
 
 ## 支持自动化（support autopilot）
+- **产品支持生命周期总览**（开发发版 → 版本升级 → 问题诊断 → AI 分析 → 回复解决 + 闭环不变量 8 条 + 事故驱动的守卫清单）：
+  `docs/current/operations/product-support-lifecycle.md` —— 改这条链路前先读它。
 - 端到端闭环：**轮询接收端 → 取诊断包 → 调用 `pi` 分析 → 生成答复卡 → 发布公开答复页**，实现于
   `dev_tools/support_autopilot.py`；配套 skill `.pi/skills/mrrc-support-triage/SKILL.md`（判定规则/答复格式）。
 - 命令：`--once [--publish]`、`--id <编号> [--force] [--publish]`、`--inspect <编号>`、`--status`、

@@ -1,5 +1,7 @@
 # Runtime And Verification
 
+> 在生命周期中的位置：**验证方法库**（发版复核、升级验证、诊断判读）—— 见《[产品支持生命周期](product-support-lifecycle.md)》。
+
 ## Run Locally
 
 Default direct startup:

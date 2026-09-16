@@ -1,5 +1,8 @@
 # 一键升级（Windows 安装版）
 
+> 上下游：本文是《[产品支持生命周期](product-support-lifecycle.md)》的**第 2 步（版本升级）**实施细则；
+> 上游 [发版流程](release-process.md)，下游 [诊断包](support-bundle.md)。
+
 > 实现版本：**V6.1.0 起进包**；V6.1.2–V6.1.11 修复了 10 个在真机端到端验收中暴露的坑
 > （见下面"排障"表与 `docs/current/reliability/RC-002-launcher-upgrade-and-shutdown.md`）。
 > **V6.0.10 及更早没有升级逻辑**：那些用户需要手动装一次 6.1.x，之后才能一键升。

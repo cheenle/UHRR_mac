@@ -1,5 +1,7 @@
 # 热修补丁（hotfix）与不重新打包修 bug
 
+> 在生命周期中的位置：**升级/修复的快速通道**（不改安装版本）—— 见《[产品支持生命周期](product-support-lifecycle.md)》§2 与 §6。
+
 > 目标：**修一个小 bug 不再需要重新打包、重新上传 45 MB、让用户重装**。
 > 适用范围与硬限制都写在这里，配套工具在 `packaging/hotfix/`，核心机制在 `patch_overlay.py`。
 

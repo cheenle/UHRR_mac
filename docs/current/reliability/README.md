@@ -9,6 +9,9 @@
 | [RC-001](RC-001-ioloop-wedge-and-tx-silence.md) | 2026-09-14 | IOLoop 楔死致端口无响应 + 蓝牙 DAC 抖动致 TX 静默发射 | 可用性 + 发射安全 | 已修复（V6.0.2，F4/F4b） |
 | [RC-002](RC-002-launcher-upgrade-and-shutdown.md) | 2026-09-16 | 启动器升级/退出链路的五类 Windows 陷阱（控制台进程关不掉、解释器收尾打断升级、跨进程抢 .part、BOM/GBK 编码、连接阶段无超时） | 升级可用性 + 诊断可用性 | 已修复（V6.1.2–V6.1.11，真机实测通过） |
 
+支持链路里每次事故都要在《[产品支持生命周期](../operations/product-support-lifecycle.md)》§6
+留下一条守卫（守卫清单见该文档）。
+
 ## 使用约定
 
 - 新案例按 `RC-NNN-short-title.md` 命名，编号递增。

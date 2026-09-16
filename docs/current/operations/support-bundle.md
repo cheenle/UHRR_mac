@@ -1,5 +1,8 @@
 # 支持诊断包（「🐞 遇到问题」一键上传）
 
+> 上下游：本文覆盖《[产品支持生命周期](product-support-lifecycle.md)》的**第 3–4 步（问题诊断 + AI 分析）**；
+> 上游 [版本升级](one-click-upgrade.md)，下游公开答复页 <https://www.vlsc.net/mrrc/answers/>。
+
 用户侧：移动端菜单 **🐞 遇到问题** 或桌面工具栏 **🐞** → 填问题描述 → 生成 → 上传/只保存本地。
 维护者侧：`https://www.vlsc.net/mrrc/support/api/list`（Basic Auth，口令见下）。
 

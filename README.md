@@ -14,6 +14,22 @@ A modern web-based remote control system optimized for mobile devices, enabling 
 
 基于现代Web技术的远程电台控制系统，专为移动端优化，让您随时随地灵活操控业余电台。
 
+### 产品支持能力（端到端闭环）
+
+从**开发发版**到**用户自助解决**，MRRC 有一条可运行的闭环链路（详见
+[docs/current/operations/product-support-lifecycle.md](docs/current/operations/product-support-lifecycle.md)）：
+
+| 阶段 | 用户侧 | 维护者侧 |
+|---|---|---|
+| 开发发版 | 下载 `MRRC-Setup.exe` | 单测 + 内联 JS 守卫 + 产物热修验收 → `latest.json` / `patch.json` → **服务器侧 SHA256 复核** |
+| 版本升级 | 页面【立即升级】或启动器按 `U`（一次 UAC，自动重启，可回退） | 全自动；成功判据 `lastResult.status == "ok"`（新版自证） |
+| 问题诊断 | 菜单 **🐞 遇到问题** → 一键生成/上传（脱敏 + 自动体检摘要） | 接收端 `/support/`（口令） |
+| AI 分析 | — | **crontab 每 10 分钟**：取包 → `pi` + skill 分析 → 结论 JSON → 渲染答复卡 |
+| 回复解决 | 打开 **<https://www.vlsc.net/mrrc/answers/>** 按编号/关键词查，自己就能解决 | 定期把结论发布到公开答复页；需改代码时按"能否热修"走热修或发版 |
+
+热修通道：`www/**`、`_APP_MODULES`（含 `upgrade_core.py`/`support_bundle.py`）与 `vendor` 的修复**无需重装**，
+用户重启即生效。
+
 > 🎉 **V6.1.13 更新**: **一键升级**（有新版本时点一下/按 U 即可，自动下载校验 + 静默安装 + 自动重启，支持回退上一版）。
 
 > 🎉 **V6.0.10 更新**: 新增「🐞 遇到问题」一键诊断包上传（脱敏 + 自动体检摘要，维护者可直接看到问题与日志）、
