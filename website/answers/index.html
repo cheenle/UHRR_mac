@@ -95,6 +95,46 @@
 
   <h2>答复列表</h2>
 
+  <div class="card" data-keys="20260917-065232-5735 lll-testing 环境 20260917-065232-5735 lll-testing -9996 Invalid input device USB Audio rigctld daemon not running simulation mode audio.devices 空 虚拟机 无声卡 自签名证书 SSL Error FT991 Windows 11">
+    <div class="row" style="justify-content:space-between">
+      <h3 style="margin:0">编号 <span class="id">20260917-065232-5735</span></h3>
+      <span class="pill ok">已答复 · 环境</span>
+    </div>
+    <p class="muted" style="margin:8px 0 2px">上报时间 2026-09-16T22:52:04 · 描述：<strong>lll-testing</strong></p>
+    <p class="muted" style="margin:2px 0 10px">上报版本 6.1.12 · 包体积 9 KB</p>
+
+    <h3>结论</h3>
+    <p>本机无声卡且 rigctld 未启动（虚拟机常见），属环境预期而非缺陷</p>
+
+    <h3>诊断</h3>
+    <ul>
+      <li>env.json 中 audio.devices 为空数组，日志反复报 -9996 Invalid input device（no default output device），说明本机无可用音频设备（虚拟机常见），应用已自动降级为纯 Web 模式</li>
+      <li>配置里 inputdevice/outputdevice=USB Audio，但日志显示 Device 'USB Audio' not found，设备名与实测不符</li>
+      <li>rigctld daemon not running: timed out 导致进入 simulation mode，电台命令均为模拟（未启动 rigctld 或未接电台）</li>
+      <li>29 次启动、无任何 Traceback/Fatal，多为升级/手动重启，无崩溃痕迹</li>
+      <li>SSL Error SSLV3_ALERT_CERTIFICATE_UNKNOWN 为自签名证书的正常噪声，可忽略；ATR-1000 未启用为 auto 缺省行为</li>
+    </ul>
+
+    <h3>你要做的</h3>
+    <ol>
+      <li>若要音频：给本机接入真实声卡/USB Audio CODEC（虚拟机需在宿主设置里直通声卡），然后重启 MRRC</li>
+      <li>若要控制电台：启动 rigctld，并接好 FT-991（COM1），确认端口与速率（38400）</li>
+      <li>在 Device Config 里把 [AUDIO] inputdevice/outputdevice 改成实际设备名，或留空以使用系统默认设备</li>
+      <li>自签名证书告警可忽略：浏览器提示不安全时点“继续/信任”即可访问 https://127.0.0.1:8877/mobile</li>
+      <li>若本次只是测试上传（描述为 lll-testing）：无音频+模拟电台+纯 Web 即当前预期，无需处理</li>
+    </ol>
+
+    <h3>证据（原始行）</h3>
+    <ul>
+      <li>env.json: "audio":{"devices":[],...}</li>
+      <li>❌ 音频初始化失败: [Errno -9996] Invalid input device (no default output device)</li>
+      <li>Device 'USB Audio' not found, using default input device</li>
+      <li>ERROR - ⚠ rigctld daemon not running: timed out</li>
+      <li>Running in simulation mode - radio commands will be simulated</li>
+    </ul>
+
+  </div>
+
   <div class="card" data-keys="20260916-161305-a7c6 aaa 环境 20260916-161305-a7c6 aaa -9996 Invalid input device 音频初始化失败 USB Audio not found rigctld daemon not running simulation mode Windows 11 虚拟机 无音频设备 纯Web模式 FT-991">
     <div class="row" style="justify-content:space-between">
       <h3 style="margin:0">编号 <span class="id">20260916-161305-a7c6</span></h3>
