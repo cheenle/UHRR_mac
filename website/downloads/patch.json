@@ -1,12 +1,13 @@
 {
-  "latest": "6.0.5",
-  "url": "https://www.vlsc.net/mrrc/downloads/hotfix-6.0.5.zip",
-  "sha256": "2f0d1b351ec60a28620f2c3c0eb6183d8b4d8e5d9958ac36f18440d6496d940c",
-  "size": 70526,
+  "latest": "6.0.6",
+  "url": "https://www.vlsc.net/mrrc/downloads/hotfix-6.0.6.zip",
+  "sha256": "b1c853f281185dc4ffbeca8ec1f966d2fe3debedae81345c61d48b3a629fc357",
+  "size": 116677,
   "requires": "6.0.3",
-  "notes": "Windows 音频设备改按主机 API 优先（默认 WASAPI，避免 MME 秒级成块丢帧）；ATR-1000 频率同步在 Windows 走 TCP；新增采集诊断",
+  "notes": "ATR-1000 可配置关闭+日志限流；音频初始化失败去堆栈噪音；Windows 日志改 UTF-8+行缓冲；修 apply_hotfix.ps1 分层 bug",
   "files": [
     "app/MRRC",
-    "app/audio_interface.py"
+    "app/audio_interface.py",
+    "www/mobile_modern.js"
   ]
 }
