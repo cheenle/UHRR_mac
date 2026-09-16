@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MRRC · 软件更新</title>
+<link rel="stylesheet" type="text/css" href="mobile_modern.css?v=6.0.10">
+<style>
+  body{background:#12121a;color:#e0e0e0;font-family:tahoma,sans-serif;margin:0;padding:16px;line-height:1.6}
+  h2{margin:0 0 4px}
+  .muted{color:#8a8a96;font-size:12.5px}
+  .card{background:#181824;border:1px solid #2c2c38;border-radius:6px;padding:14px;margin-bottom:14px}
+  button{padding:11px 16px;border:0;border-radius:4px;background:#4a9eff;color:#fff;font-weight:bold;
+    font-size:14px;margin:6px 8px 0 0;cursor:pointer}
+  button[disabled]{background:#39414d;color:#8a8a96;cursor:not-allowed}
+  button.ghost{background:#2c2c38}
+  pre{background:#0f0f16;border:1px solid #333;border-radius:4px;padding:10px;
+    white-space:pre-wrap;word-break:break-all;font-size:12px;max-height:280px;overflow:auto}
+  .ok{color:#5ad07a}.warn{color:#e8c25a}.bad{color:#e86464}
+  .ver{font-size:20px;font-weight:bold}
+</style>
+</head>
+<body>
+  <h2>⬆️ 软件更新</h2>
+  <p class="muted">新版本会自动在后台下载并校验（不打断收听）；安装时弹一次管理员确认（UAC），
+  安装完成后服务会自动重启。</p>
+
+  <div class="card">
+    <div id="state" class="muted">正在检查…</div>
+    <div>
+      <button id="btnUp" onclick="doUpgrade()" disabled>立即升级</button>
+      <button id="btnRollback" class="ghost" onclick="doRollback()" disabled>回退到上一版</button>
+      <button class="ghost" onclick="refresh()">重新检查</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="muted">状态详情（升级结果、下载进度、失败原因）</div>
+    <pre id="detail">—</pre>
+  </div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+function setState(html, cls){ const s = $('state'); s.className = cls || 'muted'; s.innerHTML = html; }
+function fmtVersion(v){ return v ? 'v' + v : '未知'; }
+
+async function refresh(){
+  setState('正在检查…');
+  try {
+    const res = await fetch('/api/update');
+    if (res.status === 401 || res.status === 403) { setState('请先登录本机 MRRC 界面', 'bad'); return; }
+    const d = await res.json();
+    const plan = d.plan || {};
+    const inst = plan.installer || {};
+    const prev = plan.previous || {};
+    const staged = (d.state || {}).staged || {};
+    const last = (d.state || {}).lastResult || {};
+    let html = '当前版本 <span class="ver">' + fmtVersion(d.installed || '未标记') + '</span>';
+    if (d.latest) html += '　最新 <span class="ver">' + fmtVersion(d.latest) + '</span>';
+    if (inst.available) {
+      html += '<br><span class="warn">有新版本可升级到 ' + fmtVersion(inst.version) + '</span>';
+      if (staged.version === inst.version) html += '<br><span class="ok">安装包已下载并校验通过，可以立即升级</span>';
+      else html += '<br><span class="muted">正在后台下载（或尚未开始）…</span>';
+      if (d.notes) html += '<br><span class="muted">' + d.notes + '</span>';
+    } else if (d.error) {
+      html += '<br><span class="muted">检查更新失败：' + d.error + '</span>';
+    } else {
+      html += '<br><span class="ok">已是最新版本</span>';
+    }
+    if (d.pttActive) html += '<br><span class="bad">正在发射（TX）：升级会等 PTT 松开</span>';
+    setState(html, inst.available ? 'warn' : 'ok');
+    $('btnUp').disabled = !inst.available;
+    $('btnRollback').disabled = !prev.available;
+    $('detail').textContent = JSON.stringify({
+      安装版本: d.installed, 最新版本: d.latest, 已下载: staged, 上次结果: last,
+      可回退到: prev.version || null, 热修: (plan.hotfix || {}).available ? plan.hotfix.version : null
+    }, null, 2);
+  } catch (e) { setState('检查失败：' + e.message, 'bad'); }
+}
+
+async function doUpgrade(){
+  $('btnUp').disabled = true;
+  setState('已通知启动器…请在服务窗口确认 UAC');
+  try {
+    const res = await fetch('/api/update/upgrade', {method:'POST', headers:{'Content-Type':'application/json'}, body:'{}'});
+    const d = await res.json();
+    if (d.ok) setState('已通知启动器升级到 ' + fmtVersion(d.queued) + '：<br>' + (d.note || ''), 'ok');
+    else setState('不能升级：' + (d.message || d.reason || ''), 'bad');
+  } catch (e) { setState('升级请求失败：' + e.message, 'bad'); }
+  finally { setTimeout(refresh, 3000); }
+}
+
+async function doRollback(){
+  try {
+    const res = await fetch('/api/update/rollback', {method:'POST', headers:{'Content-Type':'application/json'}, body:'{}'});
+    const d = await res.json();
+    setState(d.ok ? '已通知启动器回退到 ' + fmtVersion(d.queued) : '回退不可用：' + (d.reason || ''), d.ok ? 'ok' : 'bad');
+  } catch (e) { setState('回退请求失败：' + e.message, 'bad'); }
+}
+
+refresh();
+setInterval(refresh, 15000);
+</script>
+</body>
+</html>
