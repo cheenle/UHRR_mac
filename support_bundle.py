@@ -118,6 +118,131 @@ def tail_lines(path, max_bytes=DEFAULT_TAIL_BYTES):
 
 
 # --------------------------------------------------------------------------- #
+# 本实例日志解析（多实例命名约定）
+# --------------------------------------------------------------------------- #
+# 事故背景（2026-09-16）：诊断包曾固定收集 MRRC.log / atr1000_proxy_watchdog.log，
+# 而多实例实际把日志写在 mrrc_<name>.log / rigctld_<name>.log / atr1000_<name>.log
+# （mrrc_multi.sh；main 实例则是 MRRC.log / mrrc.log / rigctld.log / atr1000_comm.log），
+# 结果包里全是历史遗留文件，维护者据此得出“没问题”的错误结论。
+STALE_LOG_HOURS = 24.0
+
+
+def _candidate_log_names(role, instance_name):
+    """某个角色（app/rigctld/atr1000）在当前实例下的候选文件名，按约定排序。"""
+    name = str(instance_name or "").strip()
+    if role == "app":
+        return (f"mrrc_{name}.log",) if name else ("MRRC.log", "mrrc.log")
+    if role == "rigctld":
+        return (f"rigctld_{name}.log",) if name else ("rigctld.log",)
+    if role == "atr1000":
+        if name:
+            return (f"atr1000_{name}.log", "atr1000_proxy_watchdog.log")
+        return ("atr1000_comm.log", "atr1000_proxy.log", "atr1000_proxy_watchdog.log")
+    raise KeyError(role)
+
+
+def _pick_freshest(directory, names):
+    """目录下这些候选名中 mtime 最新且存在的文件；都不存在返回 ''。
+
+    多个候选（如 MRRC.log 与 mrrc.log）同时存在时取最新写的那个 —— 老文件可能只是
+    历史遗留（writte_log 的 MRRC.log 就是典型），不能靠固定优先级赌哪一个是活的。
+    """
+    best, best_mtime = "", None
+    for name in names:
+        path = os.path.join(directory, name)
+        if not os.path.isfile(path):
+            continue
+        try:
+            mtime = os.path.getmtime(path)
+        except OSError:
+            continue
+        if best_mtime is None or mtime > best_mtime:
+            best, best_mtime = path, mtime
+    return best
+
+
+def resolve_log_files(log_dir, base_dir="", instance_name=""):
+    """挑出**本实例实际存在**的日志，返回 {角色: 路径}。
+
+    角色：app/app_prev、rigctld/rigctld_prev、atr1000/atr1000_prev、stdout/stdout_prev。
+    Windows 安装版的 `logs/server-stdout.log`（启动器 tee）挂在配置目录 base_dir 下。
+    只返回存在的文件；一个都没有就返回 {}（调用方可据此给出 warnings）。
+    """
+    resolved = {}
+    for role in ("app", "rigctld", "atr1000"):
+        picked = _pick_freshest(log_dir, _candidate_log_names(role, instance_name))
+        if not picked:
+            continue
+        resolved[role] = picked
+        prev = picked + ".prev"
+        if os.path.isfile(prev):
+            resolved[role + "_prev"] = prev
+    if base_dir:
+        stdout_dir = os.path.join(base_dir, "logs")
+        for role, name in (("stdout", "server-stdout.log"),
+                           ("stdout_prev", "server-stdout.log.prev")):
+            path = os.path.join(stdout_dir, name)
+            if os.path.isfile(path):
+                resolved[role] = path
+    return resolved
+
+
+# --------------------------------------------------------------------------- #
+# 版本探测（源码模式也要能报版本，否则上传显示 unknown）
+# --------------------------------------------------------------------------- #
+_ISS_VERSION_RE = re.compile(r'MyAppVersion\s+"([^"]+)"')
+_CHANGELOG_VERSION_RE = re.compile(r"^##\s*\[?V?([0-9]+\.[0-9]+\.[0-9]+)", re.M)
+
+
+def detect_version(runtime_dir, resource_dir=""):
+    """版本号：version.txt（安装版）→ MRRC.iss（源码树）→ CHANGELOG.md 首个版本。"""
+    for directory in (runtime_dir, resource_dir):
+        if not directory:
+            continue
+        try:
+            with open(os.path.join(directory, "version.txt"),
+                      encoding="utf-8", errors="replace") as fh:
+                text = fh.read().strip()
+        except OSError:
+            continue
+        if text:
+            return text
+    if runtime_dir:
+        try:
+            with open(os.path.join(runtime_dir, "packaging", "windows", "MRRC.iss"),
+                      encoding="utf-8", errors="replace") as fh:
+                match = _ISS_VERSION_RE.search(fh.read())
+            if match:
+                return match.group(1)
+        except OSError:
+            pass
+        try:
+            with open(os.path.join(runtime_dir, "CHANGELOG.md"),
+                      encoding="utf-8", errors="replace") as fh:
+                match = _CHANGELOG_VERSION_RE.search(fh.read())
+            if match:
+                return match.group(1)
+        except OSError:
+            pass
+    return ""
+
+
+# --------------------------------------------------------------------------- #
+# 日志追加（writte_log 用：补换行 + 自动建目录）
+# --------------------------------------------------------------------------- #
+def append_log_line(path, message):
+    """向 path 追加一行（结尾补 \\n，父目录不存在则创建）；path 为空则不动。"""
+    if not path:
+        return ""
+    parent = os.path.dirname(path)
+    if parent:
+        os.makedirs(parent, exist_ok=True)
+    with open(path, "a", encoding="utf-8", errors="replace") as fh:
+        fh.write(str(message).rstrip("\n") + "\n")
+    return path
+
+
+# --------------------------------------------------------------------------- #
 # 自动体检摘要（维护者第一眼看的文件）
 # --------------------------------------------------------------------------- #
 SUMMARY_PATTERNS = [
@@ -133,8 +258,12 @@ SUMMARY_PATTERNS = [
 AUDIO_HEALTH_RE = re.compile(r"🎧 音频健康.*?([0-9]+\.[0-9])%")
 
 
-def summarize_log(text):
-    """把日志尾部归类计数（每类最近 3 条）+ 结论区（音频/热修/WDSP）。"""
+def summarize_log(text, freshness_hours=None):
+    """把日志尾部归类计数（每类最近 3 条）+ 结论区（新鲜度/音频/热修/WDSP）。
+
+    freshness_hours：包内最新日志距今小时数（build_bundle 算好传入）；过旧时要在结论区
+    显式提醒 —— 否则"拿错/拿旧文件"会被读成"设备没问题"。
+    """
     lines = (text or "").splitlines()
     parts = []
     for label, pattern in SUMMARY_PATTERNS:
@@ -146,6 +275,14 @@ def summarize_log(text):
         parts.append("")
 
     conclusions = []
+    if freshness_hours is not None:
+        if freshness_hours > STALE_LOG_HOURS:
+            conclusions.append(f"数据新鲜度：最新日志约 {freshness_hours / 24:.1f} 天前"
+                               "（>24h，可能不是本次故障现场，下列结论仅供参考）")
+        elif freshness_hours >= 1:
+            conclusions.append(f"数据新鲜度：最新日志约 {freshness_hours:.1f} 小时前")
+        else:
+            conclusions.append(f"数据新鲜度：最新日志 {max(1, int(freshness_hours * 60))} 分钟前")
     percents = [float(p) for p in AUDIO_HEALTH_RE.findall(text or "")]
     if percents:
         worst = min(percents)
@@ -194,7 +331,7 @@ README_TEXT = (
 
 def build_bundle(out_dir, problem="", contact="", env=None, log_files=None,
                  config_text="", include_audio=None, extra_files=None,
-                 manifest_extra=None):
+                 manifest_extra=None, initial_warnings=None):
     """生成诊断包。
 
     返回 {id, path, size, files, redactions, warnings}；任何单项失败只记 warning，
@@ -207,8 +344,9 @@ def build_bundle(out_dir, problem="", contact="", env=None, log_files=None,
     os.makedirs(out_dir, exist_ok=True)
     bundle_id = time.strftime("%Y%m%d-%H%M%S") + "-" + os.urandom(2).hex()
     zip_path = os.path.join(out_dir, f"support-{bundle_id}.zip")
-    warnings, redactions, collected = [], 0, []
+    warnings, redactions, collected = list(initial_warnings or []), 0, []
     hashes = {}
+    newest_mtime = None
 
     with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED, compresslevel=9) as archive:
         def add(name, data):
@@ -235,11 +373,23 @@ def build_bundle(out_dir, problem="", contact="", env=None, log_files=None,
             redactions += hits
             summary_source += cleaned
             add(name, cleaned)
+            try:
+                mtime = os.path.getmtime(path)
+                newest_mtime = mtime if newest_mtime is None else max(newest_mtime, mtime)
+            except OSError:
+                pass
+
+        freshness_hours = None
+        if newest_mtime:
+            freshness_hours = max(0.0, (time.time() - newest_mtime) / 3600.0)
+            if freshness_hours > STALE_LOG_HOURS:
+                warnings.append(f"日志可能过旧：包内最新日志写于 {freshness_hours / 24:.1f} 天前，"
+                                "可能不是本次问题的现场")
 
         cleaned_cfg, hits = redact_text(redact_config_text(config_text))
         redactions += hits + count_omitted_config_keys(config_text)
         add("state/config-redacted.ini", cleaned_cfg)
-        add("diagnostics/summary.txt", summarize_log(summary_source))
+        add("diagnostics/summary.txt", summarize_log(summary_source, freshness_hours=freshness_hours))
         add("diagnostics/env.json", json.dumps(env or {}, ensure_ascii=False, indent=2))
 
         for name, data in (extra_files or {}).items():

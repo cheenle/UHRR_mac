@@ -126,6 +126,152 @@ class BundleTest(unittest.TestCase):
             self.assertIn(key, snap)
         self.assertEqual(snap["audio"]["api"], "Windows WASAPI")
 
+    def test_stale_logs_are_flagged(self):
+        """老日志（>24h）要在 warnings 与 summary 里显式提示，避免"拿错文件还得出没问题"。"""
+        import time
+        import zipfile
+        stamp = time.time() - 3 * 86400
+        os.utime(self.log, (stamp, stamp))
+        result = sb.build_bundle(out_dir=self.tmp, problem="", contact="", env={},
+                                 log_files={"logs/MRRC.log": self.log}, config_text="")
+        self.assertTrue(any("过旧" in w for w in result["warnings"]), result["warnings"])
+        with zipfile.ZipFile(result["path"]) as z:
+            summary = z.read("diagnostics/summary.txt").decode("utf-8")
+        self.assertIn("新鲜度", summary)
+
+    def test_initial_warnings_are_merged(self):
+        result = sb.build_bundle(out_dir=self.tmp, problem="", contact="", env={},
+                                 log_files={"logs/MRRC.log": self.log}, config_text="",
+                                 initial_warnings=["未找到本实例日志"])
+        self.assertIn("未找到本实例日志", result["warnings"])
+
+
+class LogResolutionTest(unittest.TestCase):
+    """日志解析：必须拿"本实例正在写的"日志，而不是历史遗留文件。
+
+    事故背景（2026-09-16）：多实例 radio1 上传的诊断包里塞的是 8-30 的 MRRC.log 与
+    atr1000_proxy_watchdog.log，活日志 mrrc_radio1.log / atr1000_radio1.log 一个没进去，
+    维护者据此得出"没问题"的错误结论。
+    """
+
+    def setUp(self):
+        import tempfile
+        self.tmp = tempfile.mkdtemp(prefix="sb-logres-")
+        self.log_dir = os.path.join(self.tmp, "runtime")
+        self.base_dir = os.path.join(self.tmp, "base")
+        os.makedirs(self.log_dir)
+        os.makedirs(os.path.join(self.base_dir, "logs"))
+
+    def _make(self, directory, name, age_days=0.0):
+        import time
+        path = os.path.join(directory, name)
+        with open(path, "w", encoding="utf-8") as fh:
+            fh.write(f"{name}\n")
+        if age_days:
+            stamp = time.time() - age_days * 86400
+            os.utime(path, (stamp, stamp))
+        return path
+
+    def _names(self, resolved):
+        return {os.path.basename(p) for p in resolved.values()}
+
+    def test_named_instance_prefers_live_logs_over_legacy(self):
+        self._make(self.log_dir, "MRRC.log", age_days=17)
+        self._make(self.log_dir, "atr1000_proxy_watchdog.log", age_days=17)
+        live_app = self._make(self.log_dir, "mrrc_radio1.log")
+        live_rig = self._make(self.log_dir, "rigctld_radio1.log")
+        live_atr = self._make(self.log_dir, "atr1000_radio1.log")
+        got = sb.resolve_log_files(log_dir=self.log_dir, base_dir=self.base_dir,
+                                   instance_name="radio1")
+        self.assertEqual(got.get("app"), live_app)
+        self.assertEqual(got.get("rigctld"), live_rig)
+        self.assertEqual(got.get("atr1000"), live_atr)
+        self.assertNotIn("MRRC.log", self._names(got), "遗留 MRRC.log 不该再进包")
+
+    def test_prev_of_chosen_app_log_is_included(self):
+        live = self._make(self.log_dir, "mrrc_radio1.log")
+        prev = self._make(self.log_dir, "mrrc_radio1.log.prev")
+        got = sb.resolve_log_files(log_dir=self.log_dir, base_dir=self.base_dir,
+                                   instance_name="radio1")
+        self.assertEqual(got.get("app"), live)
+        self.assertEqual(got.get("app_prev"), prev)
+
+    def test_main_instance_uses_mrrc_log_and_comm_atr(self):
+        app = self._make(self.log_dir, "MRRC.log")
+        rig = self._make(self.log_dir, "rigctld.log")
+        atr = self._make(self.log_dir, "atr1000_comm.log")
+        got = sb.resolve_log_files(log_dir=self.log_dir, base_dir=self.base_dir,
+                                   instance_name="")
+        self.assertEqual(got.get("app"), app)
+        self.assertEqual(got.get("rigctld"), rig)
+        self.assertEqual(got.get("atr1000"), atr)
+
+    def test_watchdog_log_is_last_resort_for_atr(self):
+        watchdog = self._make(self.log_dir, "atr1000_proxy_watchdog.log")
+        got = sb.resolve_log_files(log_dir=self.log_dir, base_dir=self.base_dir,
+                                   instance_name="radio2")
+        self.assertEqual(got.get("atr1000"), watchdog)
+
+    def test_windows_stdout_tee_is_always_collected(self):
+        out = self._make(os.path.join(self.base_dir, "logs"), "server-stdout.log")
+        prev = self._make(os.path.join(self.base_dir, "logs"), "server-stdout.log.prev")
+        got = sb.resolve_log_files(log_dir=self.log_dir, base_dir=self.base_dir,
+                                   instance_name="")
+        self.assertEqual(got.get("stdout"), out)
+        self.assertEqual(got.get("stdout_prev"), prev)
+
+    def test_missing_everything_yields_empty_dict(self):
+        self.assertEqual(sb.resolve_log_files(log_dir=self.log_dir, base_dir=self.base_dir,
+                                              instance_name="radio3"), {})
+
+
+class AppendLogLineTest(unittest.TestCase):
+    """writte_log 的落盘约定：补换行、自动建目录（旧实现会黏行 + 依赖 CWD）。"""
+
+    def test_appends_with_newline_and_creates_parent_dirs(self):
+        import tempfile
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "deep", "nested", "MRRC.log")
+            self.assertEqual(sb.append_log_line(path, "first"), path)
+            sb.append_log_line(path, "second")
+            with open(path, encoding="utf-8") as fh:
+                self.assertEqual(fh.read(), "first\nsecond\n")
+
+    def test_empty_path_is_noop(self):
+        self.assertEqual(sb.append_log_line("", "ignored"), "")
+
+
+class VersionDetectTest(unittest.TestCase):
+    """源码模式也要能报版本：version.txt → MRRC.iss → CHANGELOG（否则上传显示 unknown）。"""
+
+    def test_version_txt_wins(self):
+        import tempfile
+        with tempfile.TemporaryDirectory() as tmp:
+            with open(os.path.join(tmp, "version.txt"), "w", encoding="utf-8") as fh:
+                fh.write("6.2.0\n")
+            self.assertEqual(sb.detect_version(tmp), "6.2.0")
+
+    def test_iss_fallback(self):
+        import tempfile
+        with tempfile.TemporaryDirectory() as tmp:
+            iss_dir = os.path.join(tmp, "packaging", "windows")
+            os.makedirs(iss_dir)
+            with open(os.path.join(iss_dir, "MRRC.iss"), "w", encoding="utf-8") as fh:
+                fh.write('#define MyAppVersion "6.1.6"\n')
+            self.assertEqual(sb.detect_version(tmp), "6.1.6")
+
+    def test_changelog_fallback(self):
+        import tempfile
+        with tempfile.TemporaryDirectory() as tmp:
+            with open(os.path.join(tmp, "CHANGELOG.md"), "w", encoding="utf-8") as fh:
+                fh.write("# Changelog\n\n## [V6.1.6] - 2026-09-16\n\n- x\n")
+            self.assertEqual(sb.detect_version(tmp), "6.1.6")
+
+    def test_nothing_found_is_empty(self):
+        import tempfile
+        with tempfile.TemporaryDirectory() as tmp:
+            self.assertEqual(sb.detect_version(tmp), "")
+
 
 class WindowsEditorCompatTest(unittest.TestCase):
     """Windows 记事本/PS 保存 UTF-8 会带 BOM —— 配置读取必须容忍（否则服务器起不来）。"""

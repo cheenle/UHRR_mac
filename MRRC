@@ -355,12 +355,49 @@ except ImportError as e:
     logger.warning(f"ATU 自动调谐模块不可用: {e}")
 
 ############ Global functions ##################################
+def _instance_name():
+	"""命名实例名（多实例）；主实例返回 ''。"""
+	try:
+		return (config.get('INSTANCE_SETTINGS', 'instance_name', fallback='') or '').strip()
+	except Exception:
+		return ""
+
+
+def _instance_log_dir():
+	"""本实例日志目录：INSTANCE_LOG_DIR（可相对运行目录）→ 运行目录。"""
+	runtime = _runtime_dir()
+	try:
+		log_dir = (config.get('INSTANCE_SETTINGS', 'INSTANCE_LOG_DIR', fallback='') or '').strip()
+	except Exception:
+		log_dir = ''
+	log_dir = log_dir or runtime
+	if not os.path.isabs(log_dir):
+		log_dir = os.path.join(runtime, log_dir)
+	return log_dir
+
+
+def _resolve_logs():
+	"""本实例实际存在的日志 {角色: 路径}；角色见 support_bundle.resolve_log_files。"""
+	import support_bundle
+	return support_bundle.resolve_log_files(
+		log_dir=_instance_log_dir(),
+		base_dir=os.path.dirname(os.path.abspath(config_file)),
+		instance_name=_instance_name())
+
+
 def writte_log(logmsg):
-	logfile = open(config['SERVER']['log_file'],"a", encoding="utf-8", errors="replace") 
 	msg = str(datetime.datetime.now())+":"+str(logmsg)
-	logfile.write(msg) 
+	# 旧实现：相对路径（依赖 CWD）+ 不写换行 → 多条记录黏成一行；多实例下还写进了没人
+	# 再看的遗留文件 MRRC.log（诊断包拿到的是旧文件，见 2026-09-16 诊断包事故）。
+	# 现在落到本实例真正在写的日志上，并补换行。
+	try:
+		import support_bundle
+		path = _resolve_logs().get("app") or os.path.join(
+			_runtime_dir(), config.get('SERVER', 'log_file', fallback='MRRC.log'))
+		support_bundle.append_log_line(path, msg)
+	except Exception as exc:
+		logger.debug(f"writte_log 落盘失败: {exc}")
 	print(msg)
-	logfile.close()
 
 ############ BaseHandler tornado ##############
 def auth_enabled():
@@ -4525,14 +4562,10 @@ class SupportApiHandler(BaseHandler):
 		return host, port
 
 	def _version(self):
-		for candidate in (os.path.join(_runtime_dir(), "version.txt"),
-					  os.path.join(_resource_dir(), "version.txt")):
-			if os.path.exists(candidate):
-				try:
-					return open(candidate, encoding="utf-8").read().strip()
-				except OSError:
-					pass
-		return ""
+		# version.txt（安装版）→ MRRC.iss（源码树）→ CHANGELOG.md；源码模式也要能报版本，
+		# 否则诊断包上传显示 unknown，维护者无法把包对应到发布版。
+		import support_bundle
+		return support_bundle.detect_version(_runtime_dir(), _resource_dir())
 
 	def _env_snapshot(self):
 		"""环境快照：版本/平台/音频设备/rigctld/ATR-1000/热修。"""
@@ -4557,22 +4590,15 @@ class SupportApiHandler(BaseHandler):
 		except Exception as exc:
 			hotfix = {"error": f"{type(exc).__name__}: {exc}"}
 		return support_bundle.collect_env_snapshot(version=self._version(), extra={
+			"instance": _instance_name(),
 			"audio": audio, "rigctld": rigctld, "hotfix": hotfix,
 			"atr1000": {"enabled": bool(ATR1000_ENABLED), "reason": ATR1000_ENABLED_REASON},
 			"cwd": os.getcwd(),
 		})
 
 	def _log_files(self):
-		runtime, base = _runtime_dir(), os.path.dirname(os.path.abspath(config_file))
-		log_name = config.get('SERVER', 'log_file', fallback='MRRC.log')
-		candidates = {
-			"logs/MRRC.log": os.path.join(runtime, log_name),
-			"logs/MRRC.log.prev": os.path.join(runtime, log_name + ".prev"),
-			"logs/server-stdout.log": os.path.join(base, "logs", "server-stdout.log"),
-			"logs/server-stdout.log.prev": os.path.join(base, "logs", "server-stdout.log.prev"),
-			"logs/atr1000.log": os.path.join(runtime, "atr1000_proxy_watchdog.log"),
-		}
-		return {name: path for name, path in candidates.items() if os.path.isfile(path)}
+		"""本实例日志（按 mrrc_multi.sh 命名约定解析，见 support_bundle.resolve_log_files）。"""
+		return {"logs/" + os.path.basename(path): path for path in _resolve_logs().values()}
 
 	def _build(self, payload):
 		"""（工作线程）生成诊断包。"""
@@ -4581,6 +4607,11 @@ class SupportApiHandler(BaseHandler):
 			config_text = open(config_file, encoding="utf-8", errors="replace").read()
 		except OSError:
 			config_text = ""
+		logs = _resolve_logs()
+		warnings = []
+		for role, label in (("app", "服务端（MRRC）"), ("rigctld", "rigctld"), ("atr1000", "ATR-1000")):
+			if role not in logs:
+				warnings.append(f"未找到{label}日志（本实例可能未启动，或日志命名与约定不同）")
 		return support_bundle.build_bundle(
 			out_dir=self._support_dir(),
 			problem=payload.get("problem", ""),
@@ -4588,6 +4619,7 @@ class SupportApiHandler(BaseHandler):
 			env=self._env_snapshot(),
 			log_files=self._log_files(),
 			config_text=config_text,
+			initial_warnings=warnings,
 		)
 
 	def _bundle_path(self, bundle_id):
