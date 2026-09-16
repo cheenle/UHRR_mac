@@ -233,6 +233,38 @@ def _match_devices(p, name_fragment, need_input=False, need_output=False, prefer
     return [(i, api, info) for _rank, i, api, info in matches]
 
 
+def device_report():
+    """设备快照（给诊断包用）：名字/主机 API/延迟/通道数 + 最近音频健康行。
+
+    构建机/CI 上常常没有音频硬件，因此任何失败都返回 {"error": …} 而不是抛异常。
+    """
+    try:
+        p = pyaudio.PyAudio()
+        rows = []
+        for i in range(p.get_device_count()):
+            info = p.get_device_info_by_index(i)
+            rows.append({
+                "index": i,
+                "name": info.get("name"),
+                "api": _hostapi_name(p, info.get("hostApi", 0)),
+                "in": info.get("maxInputChannels"),
+                "out": info.get("maxOutputChannels"),
+                "latLowInMs": round(info.get("defaultLowInputLatency", 0) * 1000, 1),
+                "latHighInMs": round(info.get("defaultHighInputLatency", 0) * 1000, 1),
+            })
+        p.terminate()
+        return {
+            "devices": rows,
+            "lastHealth": PyAudioCapture.last_health,
+            "hostapiPreference": _HOSTAPI_PREFERENCE_OVERRIDE
+                                 or os.environ.get("MRRC_HOSTAPI_PREFERENCE")
+                                 or _HOSTAPI_PREFERENCE_DEFAULT,
+        }
+    except Exception as exc:
+        return {"error": f"{type(exc).__name__}: {exc}",
+                "lastHealth": PyAudioCapture.last_health}
+
+
 def _describe_device(api, info):
     """一行可粘贴到日志的设备信息（含主机 API 与延迟，Windows 上排查卡顿靠它）。"""
     return (f"'{info.get('name')}' (index {info.get('index')}, API={api}, "
@@ -274,6 +306,9 @@ class PyAudioCapture(threading.Thread):
     """
     
     # 类级别的 Opus 编码设置（由客户端协商后设置）
+    # 最近一条音频健康摘要（供诊断包采集，见 support_bundle）
+    last_health = ""
+
     rx_opus_encode = False
     rx_opus_rate = 16000  # Opus 采样率
     rx_opus_frame_dur = 20  # Opus 帧时长 (ms)
@@ -540,6 +575,9 @@ class PyAudioCapture(threading.Thread):
                     if _summary_elapsed >= 30.0:
                         _expected = _summary_elapsed * 48000
                         _ratio = _diag['summary_samples'] / _expected if _expected else 0
+                        PyAudioCapture.last_health = (f"{_summary_elapsed:.0f}s 采集 "
+                            f"{_diag['summary_samples']} 样本（应有 {int(_expected)}，"
+                            f"{_ratio * 100:.1f}%），单次读取最大 {_diag['summary_max'] * 1000:.1f}ms")
                         print(f"🎧 音频健康: {_summary_elapsed:.0f}s 采集 {_diag['summary_samples']} 样本"
                               f"（应有 {int(_expected)}，{_ratio * 100:.1f}%）, 单次读取最大 "
                               f"{_diag['summary_max'] * 1000:.1f}ms"

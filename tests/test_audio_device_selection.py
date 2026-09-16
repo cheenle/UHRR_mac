@@ -111,3 +111,23 @@ class HostApiPreferenceTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
+
+
+@unittest.skipIf(ai is None, f"audio_interface 不可用（{_IMPORT_ERROR}）")
+class DeviceReportTest(unittest.TestCase):
+    """诊断包用的设备快照：形状稳定，无音频硬件时降级为 error 字段。"""
+
+    def test_shape(self):
+        report = ai.device_report()
+        self.assertIn("lastHealth", report)
+        self.assertIn("hostapiPreference", report)
+        if "error" in report:
+            self.assertIsInstance(report["error"], str)
+        else:
+            self.assertIsInstance(report["devices"], list)
+            for row in report["devices"]:
+                for key in ("index", "name", "api", "in", "out"):
+                    self.assertIn(key, row)
+
+    def test_last_health_is_class_attribute(self):
+        self.assertEqual(ai.PyAudioCapture.last_health, getattr(ai.PyAudioCapture, "last_health", ""))
