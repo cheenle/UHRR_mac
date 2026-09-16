@@ -1,9 +1,9 @@
-# MRRC 一键升级端到端验收（在 VM 上以**管理员** PowerShell 运行）
+﻿# MRRC 一键升级端到端验收（在 VM 上以**管理员** PowerShell 运行）
 # 流程：装 6.1.0 → 起启动器（后台）→ 等它下载 6.1.1 → 写哨兵触发升级 → 校验 version.txt
 # 结果自动上传到 https://www.vlsc.net/mrrc/support/（维护者列表页可见）
 $ErrorActionPreference = 'Continue'
 $log = 'C:\tmp\upgrade_e2e_report.txt'
-function Note($m) { $m | Tee-Object -FilePath $log -Append -Encoding utf8 | Out-Null; Write-Host $m }
+function Note($m) { Write-Host $m; Add-Content -Path $log -Value $m -Encoding UTF8 }
 "=== MRRC 升级端到端验收 $(Get-Date -Format 'HH:mm:ss') ===" | Out-File $log -Encoding utf8
 Note ("elevated: " + (New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator))
 Note ("before: version.txt = " + (Get-Content 'C:\Program Files\MRRC\version.txt' -ErrorAction SilentlyContinue))
