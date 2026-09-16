@@ -62,7 +62,7 @@
 - **产品支持生命周期总览**（开发发版 → 版本升级 → 问题诊断 → AI 分析 → 回复解决 + 闭环不变量 8 条 + 事故驱动的守卫清单）：
   `docs/current/operations/product-support-lifecycle.md` —— 改这条链路前先读它。
 - 端到端闭环：**轮询接收端 → 取诊断包 → 调用 `pi` 分析 → 生成答复卡 → 发布公开答复页**，实现于
-  `dev_tools/support_autopilot.py`；配套 skill `.pi/skills/mrrc-support-triage/SKILL.md`（判定规则/答复格式）。
+  `dev_tools/support_autopilot.py`；配套 skill `.pi/skills/mrrc-product-support/SKILL.md`（判定规则/答复格式）。
 - 命令：`--once [--publish]`、`--id <编号> [--force] [--publish]`、`--inspect <编号>`、`--status`、
   `--install-cron 10`（macOS crontab）；默认**不发布**（只出草稿到 `dist/support_answers/`）。
 - 状态/日志：`~/.mrrc-support-autopilot/{state.json,autopilot.log}`；已处理 id 幂等跳过，半包（非 zip）标记 skip。

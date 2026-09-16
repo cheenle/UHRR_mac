@@ -124,7 +124,7 @@
 
 ```
 轮询 /mrrc/support/api/list → 发现新编号 → 下载并解包 → 生成摘要 →
-调用 pi（非交互，读 .pi/skills/mrrc-support-triage/SKILL.md）→ 拿 JSON 结论 →
+调用 pi（非交互，读 .pi/skills/mrrc-product-support/SKILL.md）→ 拿 JSON 结论 →
 渲染答复卡 → 插入 website/answers/index.html → git commit + deploy_website.sh
 ```
 
@@ -153,7 +153,7 @@ python3 dev_tools/support_autopilot.py --install-cron 10     # 安装/更新 cro
 - 半包（只有元数据、不是 zip）标记 `skip`，不会反复重试；
 - 单轮最多处理 `MAX_PER_RUN=2` 条（防涌入时长时间占用）；
 - 模型只拿到**摘要**（不是整包）；答复页是公开页面 → 只放可公开结论；
-- 判定规则与答复格式集中在 skill `.pi/skills/mrrc-support-triage/SKILL.md`（改规则改那里即可）；
+- 判定规则与答复格式集中在 skill `.pi/skills/mrrc-product-support/SKILL.md`（改规则改那里即可）；
 - 需要改代码时，模型会置 `needs_code_change` + `code_hint`，日志里出现 `⚠️ 需改代码` —— 此时走正常修复流程
   （并遵守"能不能热修"的判定，见 `hotfix-and-patching.md`）。
 

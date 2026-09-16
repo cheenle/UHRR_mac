@@ -3,7 +3,7 @@
 
 端到端闭环：**轮询接收端 → 取最新上报 → 交给 pi 分析 → 生成答复卡 → 发布答复页**。
 
-配套 skill：`.pi/skills/mrrc-support-triage/SKILL.md`（判定规则与答复格式）
+配套 skill：`.pi/skills/mrrc-product-support/SKILL.md`（判定规则与答复格式）
 
 用法
 ----
@@ -59,7 +59,7 @@ DATA_DIR = Path.home() / ".mrrc-support-autopilot"
 STATE = DATA_DIR / "state.json"
 RUN_LOG = DATA_DIR / "autopilot.log"
 DRAFTS = REPO / "dist" / "support_answers"
-SKILL = ".pi/skills/mrrc-support-triage/SKILL.md"
+SKILL = ".pi/skills/mrrc-product-support/SKILL.md"
 
 class NonBundlePayload(RuntimeError):
     """该上报没有可分析的诊断包主体（半包/仅元数据）。"""

@@ -100,7 +100,7 @@ crontab */10 ─► support_autopilot.py --once --publish
    ① 轮询接收端列表（凭据仅本地读取）
    ② 新编号 → 下载解包 → 生成摘要（复用 support_bundle.summarize_log）
    ③ pi 非交互分析：pi --thinking high --tools read,grep,find,ls -p "<prompt>"
-        prompt 指定读 skill：.pi/skills/mrrc-support-triage/SKILL.md
+        prompt 指定读 skill：.pi/skills/mrrc-product-support/SKILL.md
    ④ 拿结构化 JSON：verdict / status / category / diagnosis / solution / evidence / keys
    ⑤ 渲染答复卡 → 插入 website/answers/index.html 顶部
    ⑥ git commit + deploy_website.sh → 公开答复页
@@ -116,7 +116,7 @@ crontab */10 ─► support_autopilot.py --once --publish
 **工程化护栏**：幂等（`state.json` 记已处理编号）· 默认不发布（`--publish` 才发）·
 半包（非 zip）跳过不重试 · 单轮上限 2 条 · pi 超时 9 分钟 · cron 用 venv 绝对路径 + 显式 PATH。
 
-> 细则：`support-bundle.md` §自动化分诊、skill `.pi/skills/mrrc-support-triage/SKILL.md`
+> 细则：`support-bundle.md` §自动化分诊、skill `.pi/skills/mrrc-product-support/SKILL.md`
 
 ## 5. 回复解决（用户侧自助）
 
