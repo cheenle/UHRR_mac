@@ -109,6 +109,25 @@
                    结论以「编号 / 症状 / 诊断（附证据）/ 结论 / 你要做的」发布到
                    <a href="../answers/">公开答复页</a>——按编号或关键词就能搜到，多数问题自己就能解决。</p>
             </div>
+            <div class="feature-card animate">
+                <div class="icon"><i class="fas fa-microphone-alt"></i></div>
+                <h3>TX AudioWorklet 采集</h3>
+                <p>发射采集跑在 AudioWorklet 线程（960 样本 / 20ms 一帧），主线程不再被音频回调拖住；
+                   iOS/旧浏览器自动降级到 ScriptProcessor，两条路径都保持可用。</p>
+            </div>
+            <div class="feature-card animate">
+                <div class="icon"><i class="fas fa-wave-square"></i></div>
+                <h3>干净 RX 音频</h3>
+                <p>RX 侧用<strong>毫秒水位线</strong>缓冲（桌面安全值 prebuffer 200ms / recovery 80ms / max 600ms），
+                   发射切换 RX 时短暂降水位换取低延迟，200ms 后自动恢复；配合 WDSP NR2 降噪与 AGC。</p>
+            </div>
+            <div class="feature-card animate">
+                <div class="icon"><i class="fas fa-tachometer-alt"></i></div>
+                <h3>ATR-1000 + AGC/RF 增益</h3>
+                <p>ATR-1000 实时功率/SWR 遥测与天调学习（可选组件，未接时不启动代理不轮询）；
+                   移动端快捷栏提供 IC-M710 的 AGC 与 9 档 RF 增益（rigctld <code>L AGC</code> / <code>L RF</code>）。</p>
+            </div>
+
         </div>
     </div>
 </section>
@@ -269,6 +288,19 @@
             <a href="../docs/installation.html" class="btn btn-secondary btn-large">
                 <i class="fas fa-book"></i> 安装指南
             </a>
+        <p style="text-align:center;margin:1.1rem auto 0;max-width:820px;font-size:.92rem;color:var(--text-muted,#8b949e)">
+            <i class="fas fa-cloud-download-alt" style="color:var(--accent,#22d3ee)"></i>
+            <strong>已经装过（V6.1.0 及以后）？</strong>不用再下载 —— 打开应用 → 菜单
+            <strong>⬆️ 软件更新</strong>（或在启动器窗口输入 <code>U</code> 回车）：它会自己下载、校验、静默安装并重启。
+            V6.0.10 及更早没有升级功能，装一次本安装包即可启用。
+            遇到问题先看 <a href="../answers/">公开答复页</a>（按上报编号搜索）。
+        </p>
+        <p style="text-align:center;margin:.9rem auto 0;max-width:820px;font-size:.88rem;color:var(--text-muted,#8b949e)">
+            <i class="fas fa-life-ring" style="color:var(--accent,#22d3ee)"></i>
+            <strong>产品支持闭环</strong>：发版 → 一键升级 → 🐞 一键诊断包 → AI 分诊 →
+            <a href="../answers/">公开答复页</a>。详见
+            <a href="docs/features.html">功能页 → 产品支持生命周期</a>。
+        </p>
             <p style="margin-top:1.25rem;font-size:0.95rem;">
                 <i class="fas fa-triangle-exclamation"></i>
                 Windows 上启动报 <code>UnicodeDecodeError</code>？无需重装，看
