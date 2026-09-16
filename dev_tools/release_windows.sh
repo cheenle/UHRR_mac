@@ -79,7 +79,7 @@ PY"
     run "scp -q $SRC_ZIP $HOST:/tmp/mrrc_build_src.zip"
     run "ssh $HOST 'scp -q -o BatchMode=yes /tmp/mrrc_build_src.zip ${VM_USER}@${VM_IP}:C:/tmp/mrrc_build_src.zip'"
 
-    log "VM 上构建（解压 → $([ -x /dev/null ] && echo spec) PyInstaller+Inno）"
+    log "VM 上构建（解压 → PyInstaller → Inno Setup）"
     run "vm_ps \"Set-Location '${VM_REPO}'; Expand-Archive -Path C:\\tmp\\mrrc_build_src.zip -DestinationPath '${VM_REPO}' -Force; \$env:PATH='${VM_REPO}\\venv\\Scripts;'+\$env:PATH; powershell -NoProfile -ExecutionPolicy Bypass -File packaging\\windows\\build.ps1 > C:\\tmp\\build_release.log 2>&1; \\\"build exit=\$LASTEXITCODE\\\"; Get-Content C:\\tmp\\build_release.log -Tail 3\""
 
     log "VM 上跑热修通道验收（在打包产物上）"
