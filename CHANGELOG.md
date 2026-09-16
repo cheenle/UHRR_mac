@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [V6.0.3] - 2026-09-16
 
 ### 🩹 WebSocket 写入健壮性：消除 `WebSocketClosedError` 日志风暴与线程违规
 
@@ -23,9 +23,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **打包**：`config_io` 加入两个 PyInstaller spec 的 hiddenimports，Dockerfile 同步 `COPY config_io.py`。
 - **客户机就地修复工具**：新增 `packaging/windows/fix_mrrc_encoding.ps1` + `fix_mrrc_encoding.bat` + `fix_and_start_mrrc.bat`（免安装，`dist/mrrc-windows-config-fix.zip`）——已发布的 V6.0.2 安装包无需重装，在客户机上双击即可把 GBK 配置转为 UTF-8（保留 `.bak`），`fix_and_start_mrrc.bat` 可“先修后启”。支持 `-DryRun` / `-IncludeAux` / `-SelfTest` / `-CreateShortcut`。流程见 `win_pack.md` §5。
 
----
 
-## [V6.0.3] - 2026-09-14
+### 🪟 Windows 安装包发布（含热修通道）
+
+- 本版 `MRRC-Setup.exe` 起，应用代码以松散文件交付（`_internal/app/*.py`），因此**前端/服务端/DLL 三类 bug 都可以用热修包修，不必重新打包或重装**。
+- 制作：`python3 packaging/hotfix/make_hotfix.py --version <ver> <files…>`；
+  验收：`python3 packaging/hotfix/verify_hotfix.py --app <安装目录>`；
+  发布：`cp dist/hotfix/* website/downloads/ && ./deploy_website.sh`。
 
 ### 🧩 热修补丁通道 —— 小 bug 不再需要重新打包
 

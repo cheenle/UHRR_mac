@@ -8,6 +8,8 @@ desktop launcher.
 from pathlib import Path
 import sys
 
+from PyInstaller.utils.hooks import collect_data_files
+
 
 ROOT = Path(SPECPATH).parents[1]
 
@@ -44,6 +46,17 @@ for _name in _APP_MODULES:
         _APP_DATA.append((str(_src), "app"))
 
 
+# 可选包的数据文件：pyrnnoise（RNNoise 降噪）会 import audiolab，而 audiolab 靠
+# 自带的 jinja2 模板（format.txt）初始化 —— 不收集数据文件时冻结包会在 import 阶段
+# 报 TemplateNotFound（2026-09-16 在 macOS 冻结产物上实测）。包不存在则跳过。
+_optional_pkg_data = []
+for _pkg in ("pyrnnoise", "audiolab"):
+    try:
+        _optional_pkg_data += collect_data_files(_pkg)
+    except Exception as _exc:            # 未安装或没有数据文件都不影响构建
+        print(f"[spec] 跳过 {_pkg} 的数据文件: {_exc}")
+
+
 # Vendor runtime files are platform-specific.  Missing vendor files are non-fatal:
 # the corresponding feature gracefully degrades (WDSP disabled, Opus fallback,
 # Hamlib unavailable until the user supplies a DLL).
@@ -71,6 +84,7 @@ a = Analysis(
         (str(ROOT / "windows" / "MRRC.conf.template"), "windows"),
         (str(ROOT / "windows" / "launcher.py"), "windows"),
         *_APP_DATA,
+        *_optional_pkg_data,
         *_vendor_data,
     ],
     hiddenimports=[

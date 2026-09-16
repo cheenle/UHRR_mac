@@ -1,8 +1,8 @@
-# Mobile Remote Radio Control (MRRC) V6.0.2
+# Mobile Remote Radio Control (MRRC) V6.0.3
 
 [![English](https://img.shields.io/badge/lang-English-blue.svg)](README_en.md)
 [![中文](https://img.shields.io/badge/lang-中文-red.svg)](README_CN.md)
-[![Version](https://img.shields.io/badge/version-V6.0.2-green.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-V6.0.3-green.svg)](CHANGELOG.md)
 
 ---
 
@@ -13,6 +13,11 @@
 A modern web-based remote control system optimized for mobile devices, enabling flexible operation of your amateur radio station from anywhere.
 
 基于现代Web技术的远程电台控制系统，专为移动端优化，让您随时随地灵活操控业余电台。
+
+> 🎉 **V6.0.3 更新**: 新增**热修补丁通道** —— 前端（`www/`）、服务端 Python（`app/*.py`）、
+> 本地库（`vendor/*.dll`）三类修复都可以用一个几十 KB 的热修包完成，用户不重装、
+> 无需管理员（覆盖层在 `%LOCALAPPDATA%\MRRC\patch`，删掉即回退）。制作与验收见
+> `docs/current/operations/hotfix-and-patching.md`。
 
 > 🎉 **V6.0.2 更新**: 修复 8891 端口假死（PTT 时 IOLoop 被同步 `p.open()` 楔死）与
 > TX 间歇静默发射（`p.open` 阻塞期帧静默丢弃）——TX 初始化异步化 + 帧缓存补放 +
