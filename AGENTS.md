@@ -58,6 +58,16 @@
   `Tee-Object` 没有 `-Encoding`；`schtasks /tr` 里**别塞引号**；服务器 `/tmp` 是 454 MB tmpfs
   （大文件传 `~` 再 `sudo mv`）；VM 网络对 45 MB 下载不稳（验收可用 `MRRC_UPDATE_MANIFEST=file://…` 离线跑）。
 
+## 支持自动化（support autopilot）
+- 端到端闭环：**轮询接收端 → 取诊断包 → 调用 `pi` 分析 → 生成答复卡 → 发布公开答复页**，实现于
+  `dev_tools/support_autopilot.py`；配套 skill `.pi/skills/mrrc-support-triage/SKILL.md`（判定规则/答复格式）。
+- 命令：`--once [--publish]`、`--id <编号> [--force] [--publish]`、`--inspect <编号>`、`--status`、
+  `--install-cron 10`（macOS crontab）；默认**不发布**（只出草稿到 `dist/support_answers/`）。
+- 状态/日志：`~/.mrrc-support-autopilot/{state.json,autopilot.log}`；已处理 id 幂等跳过，半包（非 zip）标记 skip。
+- 答复页：<https://www.vlsc.net/mrrc/answers/>（`website/answers/index.html`，可搜索、`#编号` 直达）。
+- 约定：答复页是**公开**页面——只放可公开结论，不放用户数据；每条答复必须含"你要做的"可执行步骤；
+  保守判定（材料不足 → `need_more_info`）；环境类问题（无声卡/无 rigctld/虚拟机）不判成产品缺陷。
+
 ## Audio/PTT Guardrails
 - TX/PTT timing is fragile; preserve the flow documented in `docs/legacy/audio/PTT_Audio_Postmortem_and_Best_Practices.md` and implemented in `www/tx_button_optimized.js`.
 - `rx_worklet_processor.js` uses a **millisecond watermark** buffer (not legacy frame counts). Normal RX needs `prebufferMs` well above one frame; safe desktop config is `prebufferMs: 200, recoveryMs: 80, maxMs: 600`.

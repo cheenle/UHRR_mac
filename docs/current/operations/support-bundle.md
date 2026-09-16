@@ -112,3 +112,48 @@
   这类误报的判据；
 - 首个案例：`20260917-062314-35dc`（"always stopped abnormally" → 实为 25 次正常启动 +
   升级行为，无崩溃）。
+
+---
+
+## 自动化分诊（support autopilot）
+
+维护者侧的定时闭环（**crontab 驱动**，默认每 10 分钟）：
+
+```
+轮询 /mrrc/support/api/list → 发现新编号 → 下载并解包 → 生成摘要 →
+调用 pi（非交互，读 .pi/skills/mrrc-support-triage/SKILL.md）→ 拿 JSON 结论 →
+渲染答复卡 → 插入 website/answers/index.html → git commit + deploy_website.sh
+```
+
+```bash
+python3 dev_tools/support_autopilot.py --once                # 分析新上报（不发布）
+python3 dev_tools/support_autopilot.py --once --publish      # 分析并自动发布
+python3 dev_tools/support_autopilot.py --id <编号> --force [--publish]
+python3 dev_tools/support_autopilot.py --inspect <编号>      # 只看摘要（不调模型）
+python3 dev_tools/support_autopilot.py --status              # 已处理清单/最近运行
+python3 dev_tools/support_autopilot.py --install-cron 10     # 安装/更新 crontab
+```
+
+**产物与状态**
+
+| 路径 | 内容 |
+|---|---|
+| `dist/support_answers/<编号>.digest.md` | 喂给模型的摘要（含自动体检 + env + 脱敏配置 + 日志尾部） |
+| `dist/support_answers/<编号>.answer.json` | 模型返回的结构化结论（verdict/status/category/diagnosis/solution/evidence/keys） |
+| `dist/support_answers/<编号>.card.html` | 渲染好的答复卡（答复页片段） |
+| `~/.mrrc-support-autopilot/state.json` | 已处理编号（幂等）、最近运行时间 |
+| `~/.mrrc-support-autopilot/autopilot.log` | 运行日志（cron 也追加到这里） |
+
+**安全与边界**
+
+- 默认**不发布**（必须显式 `--publish`）；`--publish` 会 `git commit` 并 `deploy_website.sh`；
+- 半包（只有元数据、不是 zip）标记 `skip`，不会反复重试；
+- 单轮最多处理 `MAX_PER_RUN=2` 条（防涌入时长时间占用）；
+- 模型只拿到**摘要**（不是整包）；答复页是公开页面 → 只放可公开结论；
+- 判定规则与答复格式集中在 skill `.pi/skills/mrrc-support-triage/SKILL.md`（改规则改那里即可）；
+- 需要改代码时，模型会置 `needs_code_change` + `code_hint`，日志里出现 `⚠️ 需改代码` —— 此时走正常修复流程
+  （并遵守"能不能热修"的判定，见 `hotfix-and-patching.md`）。
+
+**首次实测**（2026-09-17）：对真实上报 `20260916-184958-f8aa`（"看下日志有没有异常和潜在风险"）
+自动产出结论并发布；模型正确发现"包内无服务端日志 → 需要补充信息"，同时指出两个真实配置风险
+（macOS 上残留 Windows 主机 API 名、两个同名 USB Audio CODEC 导致设备选择歧义）。
