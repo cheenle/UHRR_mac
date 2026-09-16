@@ -149,12 +149,18 @@ class UpgradeRobustnessTest(unittest.TestCase):
 
     def test_installer_has_elevated_direct_run_path(self):
         """已提权时必须直跑安装器：ShellExecuteW(runas) 在非交互窗口站会永远卡住
-        （6.1.0 实测：哨兵被消费、无 UAC 弹窗、无安装日志）。"""
+        （6.1.0 实测：哨兵被消费、无 UAC 弹窗、无安装日志）。
+
+        受控退出由 watch_upgrade 负责（run_upgrade 只负责拉起来并置 _UPGRADING）。
+        """
         import inspect
         src = inspect.getsource(self.launcher.run_upgrade)
         self.assertIn("_is_elevated()", src)
-        self.assertIn("_exit_for_upgrade()", src)
+        self.assertIn("_UPGRADING.set()", src)
         self.assertIn("subprocess.Popen", src)
+        watch = inspect.getsource(self.launcher.watch_upgrade)
+        self.assertIn("_exit_for_upgrade(", watch)
+        self.assertIn("installing", watch)
 
     def test_is_elevated_is_bool(self):
         self.assertIsInstance(self.launcher._is_elevated(), bool)
