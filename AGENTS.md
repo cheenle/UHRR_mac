@@ -29,6 +29,7 @@
 
 ## Architecture Notes
 - 电台型号有两套键、必须同步：UI/配置里的 `[HAMLIB] rig_model`（hamlib 规范名，如 `IC-M710`）与 rigctld 实际读取的 `[INSTANCE_SETTINGS] instance_rigctl_model`（数字，如 30003）。Device Config 保存时由 `rig_models.apply_to_config()` 两处一起写；机型表由 `rig_models.py` 从本机 hamlib 实时枚举（312 个），不要再硬编码型号列表。
+- 「🐞 遇到问题」一键诊断包：生成/脱敏在 `support_bundle.py`（纯标准库、松散模块，可热修），服务端接口在 `MRRC` 的 `SupportApiHandler`（`/api/support/*`，IO 全走 executor），页面 `www/support.html`；接收端 `tools/support_receiver/server.py` 部署在 www.vlsc.net（`./deploy_support_receiver.sh`），维护者列表页与口令见 `docs/current/operations/support-bundle.md`。
 - Radio control goes through `rigctld`/Hamlib via `hamlib_wrapper.py`; audio I/O goes through PyAudio abstractions in `audio_interface.py`.
 - WebSocket endpoints are defined near the bottom of `MRRC`: `/WSaudioRX`, `/WSaudioTX`, `/WSCTRX`, `/WSpanFFT`, `/WSATR1000`, and `/WSATU`.
 - `www/controls.js` owns shared browser control/audio behavior; `www/mobile_modern.js` depends on `controls.js` and should not redeclare its globals.

@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [未发布] — 支持诊断包（🐞 遇到问题）
+
+### 🐞 一键诊断包：用户点几下，维护者直接拿到现场
+
+- 移动端菜单 / 桌面工具栏新增 **🐞 遇到问题**（`www/support.html`）：填问题描述 → 生成诊断包 →
+  预览清单 → 上传给维护者（或只保存到本地）。
+- 包内容：日志尾部（MRRC.log + 上一份 + 启动器 tee 的 server-stdout + 天调日志）、**脱敏后**的配置快照、
+  环境快照（Windows 版本/CPU/音频设备表含主机 API 与延迟/rigctld 实报/ATR 状态/热修覆盖层）、
+  `diagnostics/summary.txt`（自动体检结论：音频健康度最低值、热修是否生效、WDSP 是否加载、异常归类计数）。
+- **脱敏硬规则**（`support_bundle.py`）：配置白名单、密钥键值替换为 `<redacted>` 并计数、
+  用户库/证书/私钥永不打包、日志按行边界截断 ≤2 MB。
+- 服务端 `/api/support/*`（生成/上传/保存/下载），磁盘与网络 IO 全走 executor，不阻塞 IOLoop；
+  上传只走 HTTPS 且由用户主动触发。
+- 接收端 `tools/support_receiver/`（stdlib + systemd + nginx 反代）部署在 www.vlsc.net：
+  带口令的列表页可直接看问题描述并下载/删除，限速（每 IP 每分钟 ≤5 次）与单包上限（20 MB）。
+- 启动器把服务端 stdout/stderr **tee** 到 `%LOCALAPPDATA%\MRRC\logs\server-stdout.log`
+  （2 MB 滚动），启动期报错终于能进诊断包。
+
 ## [V6.0.7] - 2026-09-16
 
 > 这是自 V6.0.3 以来的**汇总安装包**：其中的设备配置/音频/ATR/日志修复与热补丁

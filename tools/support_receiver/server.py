@@ -77,7 +77,31 @@ class Handler(BaseHTTPRequestHandler):
 
     # ---- POST /api/create ----
     def do_POST(self):
-        if self.path.rstrip("/") != "/api/create":
+        path = self.path.rstrip("/")
+        if path.endswith("/delete"):                      # 列表页的删除按钮走这里
+            if not self._require_auth():
+                return
+            match = re.match(r"^/api/([^/]+)/delete$", path)
+            if not match or not ID_RE.match(match.group(1)):
+                return self._json(400, {"ok": False, "reason": "bad_id"})
+            folder = os.path.join(DIR, match.group(1))
+            if not os.path.isdir(folder):
+                return self._json(404, {"ok": False, "reason": "unknown_id"})
+            for name in os.listdir(folder):
+                try:
+                    os.remove(os.path.join(folder, name))
+                except OSError:
+                    pass
+            try:
+                os.rmdir(folder)
+            except OSError:
+                pass
+            self.send_response(303)                       # 删完回列表页
+            self.send_header("Location", "/mrrc/support/api/list")
+            self.send_header("Content-Length", "0")
+            self.end_headers()
+            return
+        if path != "/api/create":
             return self._json(404, {"ok": False, "reason": "not_found"})
         if not self._rate_ok():
             return self._json(429, {"ok": False, "reason": "rate_limited"})
@@ -104,6 +128,27 @@ class Handler(BaseHTTPRequestHandler):
         return self._json(200, {"ok": True, "id": rid})
 
     # ---- PUT /api/<id>/bundle ----
+    def do_DELETE(self):
+        """删除某条支持包（需口令）。路径与 PUT 同形，避免额外路由。"""
+        if not self._require_auth():
+            return
+        match = re.match(r"^/api/([^/]+)/bundle$", self.path or "")
+        if not match or not ID_RE.match(match.group(1)):
+            return self._json(400, {"ok": False, "reason": "bad_id"})
+        folder = os.path.join(DIR, match.group(1))
+        if not os.path.isdir(folder):
+            return self._json(404, {"ok": False, "reason": "unknown_id"})
+        for name in os.listdir(folder):
+            try:
+                os.remove(os.path.join(folder, name))
+            except OSError:
+                pass
+        try:
+            os.rmdir(folder)
+        except OSError:
+            pass
+        return self._json(200, {"ok": True, "id": match.group(1)})
+
     def do_PUT(self):
         match = re.match(r"^/api/([^/]+)/bundle$", self.path or "")
         if not match or not ID_RE.match(match.group(1)):
@@ -177,7 +222,11 @@ class Handler(BaseHTTPRequestHandler):
                 f"<li><b>{rid}</b> · {size / 1024:.0f} KB · {meta.get('version', '?')} · "
                 f"{meta.get('remote', '?')}<br>"
                 f"<span class='p'>{meta.get('problem', '(无描述)')}</span><br>"
-                f"<a href='/api/{rid}/bundle'>下载包</a></li>")
+                f"<a href='/api/{rid}/bundle'>下载包</a> "
+                f"<form method='post' action='/api/{rid}/delete' style='display:inline'"
+                f" onsubmit=\"return confirm('删除 {rid}？')\">"
+                f"<button type='submit' style='background:#a33;color:#fff;border:0;"
+                f"border-radius:3px;padding:2px 8px;cursor:pointer'>删除</button></form></li>")
         body = ("<!doctype html><html lang='zh'><meta charset='utf-8'>"
                 "<title>MRRC 支持包</title><style>body{font:14px/1.6 system-ui,sans-serif;"
                 "background:#111;color:#ddd;max-width:900px;margin:24px auto}li{margin:14px 0}"

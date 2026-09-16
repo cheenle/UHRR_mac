@@ -112,7 +112,8 @@ class ReceiverTest(unittest.TestCase):
         self.assertEqual(ctx.exception.code, 413)
         self.assertFalse(os.path.exists(os.path.join(self.store, rid, "bundle.zip")))
 
-    def test_06_rate_limit(self):
+    def test_09_rate_limit(self):
+        """必须最后一个跑：会把本 IP 的 create 配额打满（unittest 按方法名字母序执行）。"""
         codes = []
         for _ in range(8):
             try:
@@ -121,6 +122,21 @@ class ReceiverTest(unittest.TestCase):
             except urllib.error.HTTPError as exc:
                 codes.append(exc.code)
         self.assertIn(429, codes, "短时间大量 create 必须被限速")
+
+
+    def test_07_delete_requires_auth_and_removes(self):
+        rid = self._create()["id"]
+        self._put(rid)
+        # 无口令删除 → 401
+        with self.assertRaises(urllib.error.HTTPError) as ctx:
+            urllib.request.urlopen(urllib.request.Request(
+                self.base + f"/api/{rid}/bundle", method="DELETE"), timeout=10)
+        self.assertEqual(ctx.exception.code, 401)
+        # 带口令删除 → 200，目录消失
+        req = urllib.request.Request(self.base + f"/api/{rid}/bundle", method="DELETE",
+                                     headers=self._auth())
+        self.assertEqual(json.loads(urllib.request.urlopen(req, timeout=10).read())["ok"], True)
+        self.assertFalse(os.path.exists(os.path.join(self.store, rid)))
 
 
 if __name__ == "__main__":
