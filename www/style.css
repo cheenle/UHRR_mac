@@ -718,6 +718,8 @@ div#Rxmeters div.value {
     width: 420px;
     max-width: 90vw;
     height: 100vh;
+    height: 100dvh;              /* 移动端地址栏可见时按可视高度，避免底部按钮被顶出 */
+    overflow: hidden;            /* 只让内容区滚动，头部/按钮区固定 */
     background: #1a1a24;
     border-left: 1px solid #333;
     box-shadow: -5px 0 20px rgba(0, 0, 0, 0.6);
@@ -756,7 +758,10 @@ div#Rxmeters div.value {
 
 #device-drawer-content {
     flex: 1;
+    min-height: 0;               /* flexbox 关键：不设它 overflow-y 不会生效（按钮被顶出屏幕） */
     overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
     padding: 20px;
 }
 
@@ -794,6 +799,7 @@ div#Rxmeters div.value {
 
 .device-drawer-actions {
     display: flex;
+    flex-shrink: 0;              /* 按钮区永不被内容挤压 */
     gap: 10px;
     padding: 16px 20px;
     border-top: 1px solid #333;

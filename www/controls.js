@@ -2434,7 +2434,9 @@ let _deviceSettingsData = null;
 
 function openDeviceDrawer() {
     document.getElementById('device-drawer-backdrop').style.display = 'block';
-    document.getElementById('device-drawer').style.display = 'block';
+    // 注意：抽屉是 flexbox 布局（头部/内容/按钮三段，内容区靠 flex:1 + overflow-y 滚动）。
+    // 这里若设成 'block'，flex 失效 → 内容不再滚动、底部保存/重启按钮被顶出屏幕。
+    document.getElementById('device-drawer').style.display = 'flex';
     loadDeviceSettings();
 }
 
@@ -2461,7 +2463,7 @@ async function loadDeviceSettings() {
         // rigctld 探针是后台刷新的：首次打开抽屉时可能还没结果，补取一次
         if (!data.rigctld || !data.rigctld.name) {
             setTimeout(function () {
-                if (document.getElementById('device-drawer').style.display === 'block') {
+                if (document.getElementById('device-drawer').style.display !== 'none') {
                     loadDeviceSettings();
                 }
             }, 2500);
