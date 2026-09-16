@@ -150,6 +150,9 @@ def enumerate_audio_devices():
             devices.append({
                 'index': i,
                 'name': info['name'],
+                'host_api': _hostapi_name(p, info['hostApi']),
+                'default_low_input_latency_ms': round(info.get('defaultLowInputLatency', 0) * 1000, 1),
+                'default_low_output_latency_ms': round(info.get('defaultLowOutputLatency', 0) * 1000, 1),
                 'max_input_channels': info['maxInputChannels'],
                 'max_output_channels': info['maxOutputChannels'],
                 'default_sample_rate': info['defaultSampleRate']
@@ -160,6 +163,74 @@ def enumerate_audio_devices():
     except Exception as e:
         print(f"Error enumerating audio devices: {e}")
         return []
+
+
+def _hostapi_name(p, api_index):
+    """PortAudio 主机 API 名称（MME / Windows DirectSound / Windows WASAPI / ASIO / WDM-KS）。"""
+    try:
+        return p.get_host_api_info_by_index(api_index)['name']
+    except Exception:
+        return f"api{api_index}"
+
+
+# Windows 上同一个物理设备会以**完全相同的名字**在多个主机 API 下重复出现，
+# 而 PortAudio 的枚举顺序是 MME → DirectSound → WASAPI → ASIO → WDM-KS：
+# 按名字取“第一个命中”会命中 MME —— 延迟最高、最易 overflow，而且阻塞读
+# 是按驱动周期成块返数据（USB CODEC 上常见数百毫秒到秒级粒度）→ 客户端听到“秒级卡顿”。
+# 这里按优先级挑选，默认 WASAPI 优先，并允许用 [AUDIO] hostapi_preference 覆盖。
+_HOSTAPI_PREFERENCE_DEFAULT = "wasapi,directsound,mme,wdm-ks,asio"
+_HOSTAPI_PREFERENCE_OVERRIDE = None
+
+
+def set_hostapi_preference(preference):
+    """设置主机 API 优先顺序（来自 [AUDIO] hostapi_preference 或环境变量）。None/空 = 用默认。"""
+    global _HOSTAPI_PREFERENCE_OVERRIDE
+    _HOSTAPI_PREFERENCE_OVERRIDE = (preference or "").strip() or None
+
+
+def _hostapi_preference_rank(api_name, preference=None):
+    """返回主机 API 的优先度（越小越好；未列出的排最后，但保持稳定顺序）。"""
+    pref = (preference or _HOSTAPI_PREFERENCE_OVERRIDE
+            or os.environ.get('MRRC_HOSTAPI_PREFERENCE')
+            or _HOSTAPI_PREFERENCE_DEFAULT)
+    tokens = [t.strip().lower() for t in pref.split(',') if t.strip()]
+    name = (api_name or '').lower()
+    for rank, token in enumerate(tokens):
+        if token in name:
+            return rank
+    return len(tokens)
+
+
+def _match_devices(p, name_fragment, need_input=False, need_output=False, preference=None):
+    """按名字片段找设备，返回按“主机 API 优先度 + 索引”排序的 (index, info) 列表。
+
+    Windows：同一名字会在 MME/DirectSound/WASAPI 下重复出现，取优先度最高的那个。
+    其它平台：主机 API 名称不匹配任何 token → 全部同分，顺序退回索引顺序（行为不变）。
+    """
+    fragment = (name_fragment or '').lower()
+    matches = []
+    for i in range(p.get_device_count()):
+        try:
+            info = p.get_device_info_by_index(i)
+        except Exception:
+            continue
+        if fragment not in str(info.get('name', '')).lower():
+            continue
+        if need_input and info.get('maxInputChannels', 0) <= 0:
+            continue
+        if need_output and info.get('maxOutputChannels', 0) <= 0:
+            continue
+        api = _hostapi_name(p, info.get('hostApi', 0))
+        matches.append((_hostapi_preference_rank(api, preference), i, api, info))
+    matches.sort(key=lambda item: (item[0], item[1]))
+    return [(i, api, info) for _rank, i, api, info in matches]
+
+
+def _describe_device(api, info):
+    """一行可粘贴到日志的设备信息（含主机 API 与延迟，Windows 上排查卡顿靠它）。"""
+    return (f"'{info.get('name')}' (index {info.get('index')}, API={api}, "
+            f"latLow={info.get('defaultLowInputLatency', 0) * 1000:.0f}/"
+            f"{info.get('defaultLowOutputLatency', 0) * 1000:.0f}ms)")
 
 def get_default_input_device():
     """Get the default input device"""
@@ -365,22 +436,27 @@ class PyAudioCapture(threading.Thread):
             raise
     
     def _get_device_index(self, device_name):
-        """Convert device name to device index for PyAudio"""
+        """Convert device name to device index for PyAudio
+
+        Windows 上同名设备会在 MME/DirectSound/WASAPI 下重复出现（见 _match_devices），
+        这里取优先度最高的那个（默认 WASAPI > DirectSound > MME），并把选择打进日志。
+        """
         if device_name == "" or device_name is None:
             return None  # Use default device
-        
-        # Try to find device by name (partial match)
+
         try:
-            for i in range(self.p.get_device_count()):
-                info = self.p.get_device_info_by_index(i)
-                if device_name.lower() in info['name'].lower():
-                    # Check if device supports the required channels
-                    if info['maxInputChannels'] > 0:
-                        print(f"Found input device: {info['name']} (index {i})")
-                        return i
+            matches = _match_devices(self.p, device_name, need_input=True)
+            if matches:
+                index, api, info = matches[0]
+                print(f"[音频] 输入设备: {_describe_device(api, info)}")
+                others = [(i, a) for i, a, _ in matches[1:]]
+                if others:
+                    print(f"[音频] 同名设备还有: {', '.join(f'{a}#{i}' for i, a in others)}"
+                          f"（已选优先度最高者；可用 [AUDIO] hostapi_preference 调整）")
+                return index
         except Exception as e:
             print(f"Error finding device '{device_name}': {e}")
-        
+
         print(f"Device '{device_name}' not found, using default input device")
         return None  # Use default if not found
     
@@ -391,6 +467,18 @@ class PyAudioCapture(threading.Thread):
         print("🎵 PyAudioCapture线程已启动，开始音频捕获...")
         frame_count = 0
         last_log_time = time.time()
+
+        # 主机 API 优先顺序（Windows 上同名设备会重复出现，默认 WASAPI > DirectSound > MME）
+        try:
+            set_hostapi_preference(config['AUDIO'].get('hostapi_preference', ''))
+        except Exception:
+            pass
+
+        # MRRC_AUDIO_DIAG=1 时每秒输出采集侧诊断（读取耗时/样本数/待读样本），
+        # 用于定位「秒级卡顿」：读取耗时接近 1s = 主机 API 按驱动周期成块返数据；
+        # 待读样本持续增长 = 处理跟不上（overflow 被 exception_on_overflow=False 吞掉）。
+        _audio_diag = os.environ.get('MRRC_AUDIO_DIAG') == '1'
+        _diag = {'reads': 0, 'total': 0.0, 'max': 0.0, 'samples': 0, 'since': time.time()}
         
         # Opus 编码累积缓冲区
         opus_accumulator = np.array([], dtype=np.int16)
@@ -406,7 +494,27 @@ class PyAudioCapture(threading.Thread):
                 # 原 320 样本（6.7ms）会让每帧都完整跑一遍 numpy/AGC/WDSP/Opus 流水线，
                 # 且 48k→16k 降采样 320/3 不整除，每次丢弃 2 个样本产生周期性微爆音。
                 # 960/3=320，恰好一个 20ms Opus 帧 @16kHz。
+                _t_read0 = time.time()
                 data = self.stream.read(960, exception_on_overflow=False)
+                if _audio_diag:
+                    # 采集侧诊断（MRRC_AUDIO_DIAG=1）：Windows 上 MME 等主机 API 会按驱动
+                    # 周期成块返数据（可能数百 ms~秒级）——有这行就能直接看出来。
+                    _dt = time.time() - _t_read0
+                    _diag['reads'] += 1
+                    _diag['total'] += _dt
+                    _diag['max'] = max(_diag['max'], _dt)
+                    _diag['samples'] += len(data) // 2
+                    if time.time() - _diag['since'] >= 1.0:
+                        try:
+                            _avail = self.stream.get_read_available()
+                        except Exception:
+                            _avail = -1
+                        _elapsed = max(1e-6, time.time() - _diag['since'])
+                        print(f"🎧 音频诊断: {_diag['reads']}次读取/{_elapsed:.2f}s, 平均"
+                              f"{_diag['total'] / max(1, _diag['reads']) * 1000:.1f}ms, 最大"
+                              f"{_diag['max'] * 1000:.1f}ms, 已采{_diag['samples']}样本"
+                              f"（应有{int(_elapsed * 48000)}）, 待读样本 {_avail}")
+                        _diag.update(reads=0, total=0.0, max=0.0, samples=0, since=time.time())
                 capture_end_ns = time.monotonic_ns()
                 
                 if len(data) > 0:
@@ -960,26 +1068,33 @@ class PyAudioPlayback:
             try:
                 info = self.p.get_device_info_by_index(cached)
                 if key in info['name'].lower() and info['maxOutputChannels'] > 0:
-                    print(f"Found output device (cached): {info['name']} (index {cached})")
+                    api = _hostapi_name(self.p, info['hostApi'])
+                    print(f"Found output device (cached): {info['name']} (index {cached}, API={api})")
                     return cached
             except Exception:
                 pass
             # 校验失败（索引已变）：作废缓存，走全量枚举
             _output_device_index_cache.pop(key, None)
-        
+
         # List available audio output devices for debugging（仅全量枚举时）
         print("Available audio output devices:")
         try:
             for i in range(self.p.get_device_count()):
                 info = self.p.get_device_info_by_index(i)
                 if info['maxOutputChannels'] > 0:
-                    print(f"  {i}: {info['name']} (channels: {info['maxOutputChannels']})")
-                if device_name.lower() in info['name'].lower():
-                    # Check if device supports the required channels
-                    if info['maxOutputChannels'] > 0:
-                        print(f"Found output device: {info['name']} (index {i})")
-                        _output_device_index_cache[key] = i
-                        return i
+                    print(f"  {i}: {info['name']} (channels: {info['maxOutputChannels']}, "
+                          f"API={_hostapi_name(self.p, info['hostApi'])})")
+            # Windows 上同名设备会在多个主机 API 下重复出现，取优先度最高者（默认 WASAPI 优先）
+            matches = _match_devices(self.p, device_name, need_output=True)
+            if matches:
+                index, api, info = matches[0]
+                print(f"[音频] 输出设备: {_describe_device(api, info)}")
+                others = [(i, a) for i, a, _ in matches[1:]]
+                if others:
+                    print(f"[音频] 同名设备还有: {', '.join(f'{a}#{i}' for i, a in others)}"
+                          f"（已选优先度最高者；可用 [AUDIO] hostapi_preference 调整）")
+                _output_device_index_cache[key] = index
+                return index
         except Exception as e:
             print(f"Error finding device '{device_name}': {e}")
         

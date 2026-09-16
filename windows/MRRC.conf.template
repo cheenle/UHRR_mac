@@ -17,6 +17,10 @@ debug = False
 ptt_tot_seconds = 120
 
 [AUDIO]
+; Windows 上同一个音频设备会在 MME/DirectSound/WASAPI 三个主机 API 下同名重复出现；
+; 默认按 wasapi,directsound,mme 的优先度选择（MME 延迟最高、易成块丢数据 → 客户端卡顿）。
+; 若某个 API 打不开，可在此调整顺序或只留一个，例如：wasapi  /  directsound,mme
+hostapi_preference = wasapi,directsound,mme
 outputdevice = USB Audio
 inputdevice = USB Audio
 

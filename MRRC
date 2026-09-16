@@ -1545,18 +1545,30 @@ def update_current_frequency(freq):
 
 # 同步频率给 ATR-1000 代理
 def sync_freq_to_atr1000(freq):
-    """同步频率给 ATR-1000 代理（用于天调自动学习）"""
+    """同步频率给 ATR-1000 代理（用于天调自动学习）
+
+    Windows 上代理走 localhost TCP（AF_UNIX 不可用/无此路径），Unix 系走 Unix Socket——
+    与 ATR1000ProxyManager._connect() 保持同一套传输选择，否则 Windows 上这个调用永远失败，
+    天调自动学习拿不到当前频率。
+    """
     import socket
     import json
-    global INSTANCE_UNIX_SOCKET
+    global INSTANCE_UNIX_SOCKET, ATR1000_PROXY_TRANSPORT, ATR1000_PROXY_HOST, ATR1000_PROXY_PORT
     sock = None
     try:
-        sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        if ATR1000_PROXY_TRANSPORT == 'tcp':
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            connect_target = (ATR1000_PROXY_HOST, ATR1000_PROXY_PORT)
+            endpoint = f"{ATR1000_PROXY_HOST}:{ATR1000_PROXY_PORT}"
+        else:
+            sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+            connect_target = INSTANCE_UNIX_SOCKET
+            endpoint = INSTANCE_UNIX_SOCKET
         sock.settimeout(0.5)  # 短超时，不阻塞主程序
-        sock.connect(INSTANCE_UNIX_SOCKET)
+        sock.connect(connect_target)
         # 必须以 \n 结尾：proxy 按行解析，避免命令与下一条合并被整体丢弃
         sock.sendall((json.dumps({"action": "set_freq", "freq": freq}) + "\n").encode())
-        logger.debug(f"📤 频率同步给ATR-1000: {freq/1000:.1f}kHz")
+        logger.debug(f"📤 频率同步给ATR-1000 ({endpoint}): {freq/1000:.1f}kHz")
     except Exception as e:
         # 静默失败，不影响主程序
         logger.debug(f"频率同步失败: {e}")
