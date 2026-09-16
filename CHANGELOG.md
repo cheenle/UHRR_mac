@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [未发布] — 一键升级
+
+### ⬆️ 一键升级到最新版（Windows 安装版）
+
+- 新增 `upgrade_core.py`（纯逻辑）：`latest.json` 清单解析、版本决策（安装版本唯一权威、
+  拒绝降级、`minSupported`/`requires` 门禁）、**原子下载 + SHA256 校验**（先 `.part` 再
+  `os.replace`，失败只清 `.part`）、`state.json` 与 `upgrade.request` 哨兵文件。
+- 启动器：启动时检查 → 后台预下载（可关）→ 用户点【立即升级】或**输 U 回车** →
+  `ShellExecuteW runas` 静默安装（`/VERYSILENT … /LOG=`，一次 UAC）→ 成功后自动重启拉起新版；
+  UAC 被拒(`uac_denied`)/校验失败(`sha_mismatch`)/发射中被拒(`ptt_active`) 都有明确状态落盘。
+- 服务端 `/api/update`（状态/升级/回退，**仅本机免口令**供启动器读 PTT）、`/api/update/upgrade`
+  （PTT 门禁）、`/api/update/rollback`；页面 `www/update.html` + 移动端菜单/桌面入口。
+- 回退：`latest.json` 的 `previous` 段 + 页面一键回退，走同一条静默安装路径。
+- 发布：`dev_tools/make_latest_json.py` 生成 `latest.json`（installer 指向带版本名产物、
+  hotfix 复用 `patch.json`、previous 指向站点保留的上一版）；`release_windows.sh` 自动归档上一版。
+- 文档：`docs/current/operations/one-click-upgrade.md`。
+
 ## [V6.0.10] - 2026-09-16
 
 ### 🔧 本轮其它修复
