@@ -80,6 +80,35 @@
 
   <h2>答复列表</h2>
 
+  <div class="card" data-keys="已知问题 known issue 按钮点不动 生成诊断包没反应 support 页面 6.1.12 6.1.13 热修 hotfix 内联JS 语法错误">
+    <div class="row" style="justify-content:space-between">
+      <h3 style="margin:0">已知问题 · 🐞 页面按钮点不动</h3>
+      <span class="pill ok">已修复 · 6.1.13</span>
+    </div>
+    <p class="muted" style="margin:8px 0 10px">影响版本：<strong>6.1.12</strong>（安装包与热修都带过这个错误）· 修复版本：<strong>6.1.13</strong></p>
+
+    <h3>症状</h3>
+    <p>打开「🐞 遇到问题」后，<strong>点【生成诊断包】【上传给维护者】【只保存到本地】都没有任何反应</strong>
+       （页面看起来正常，但按钮不工作）。</p>
+
+    <h3>原因</h3>
+    <p>6.1.12 在页面上拼接"答复页链接"时多写了一个引号，导致页面里唯一的脚本语法出错，
+       <strong>整个页面的脚本失效</strong>——所以所有按钮都点不动。这是我们的失误，与你的环境无关。</p>
+
+    <h3>你要做的</h3>
+    <ol>
+      <li><strong>关掉 MRRC（那个黑色启动器窗口）再重新打开</strong> —— 启动时会自动拉取热修 6.1.13，
+          页面即恢复正常（日志里会出现 <code>🧩 补丁覆盖层已启用</code>）；</li>
+      <li>或者直接安装 <a href="https://www.vlsc.net/mrrc/downloads/MRRC-Setup.exe">MRRC-Setup.exe</a>
+          （6.1.13 或更新）覆盖安装一次；</li>
+      <li>恢复正常后，如果问题依旧，再用「🐞 遇到问题」生成并上传诊断包即可。</li>
+    </ol>
+
+    <h3>我们怎么防止再犯</h3>
+    <p>已加入自动检查：每次改动都会对 <code>www/</code> 与站点所有页面的<strong>内联脚本</strong>
+       逐段做语法校验（<code>node --check</code>），这类"整页按钮失效"的错误不会再进仓库。</p>
+  </div>
+
   <div class="card" data-keys="20260916-184958-f8aa 目前还可以，你看下日志有咩有异常和潜在风险 其他 20260916-184958-f8aa 无服务端日志 看日志有没有异常 潜在风险 体检正常 rigctld Stable IC-M710 macOS-26.3 源码运行 8891 USB Audio CODEC ATR-1000 需要补充日志">
     <div class="row" style="justify-content:space-between">
       <h3 style="margin:0">编号 <span class="id">20260916-184958-f8aa</span></h3>
