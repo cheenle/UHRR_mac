@@ -160,7 +160,6 @@ def main() -> int:
         child_env = os.environ.copy()
         child_env["MRRC_PATCH_DIR"] = str(patch_root)
         server_log = Path(tmp) / "server.log"
-        log(f"启动      : {' '.join(command)}")
         log(f"服务端输出: {server_log}")
         # 输出写文件而不是 pipe：pipe 上的 read() 会阻塞；stderr 不缓冲，探针打点能立刻落盘
         with open(server_log, "wb") as sink:
