@@ -1,15 +1,11 @@
 {
-  "latest": "6.0.9",
-  "url": "https://www.vlsc.net/mrrc/downloads/hotfix-6.0.9.zip",
-  "sha256": "e326fd38784119119eabcc3c6262a0a7ae758381ce6ba3e9b169fdab69c805f2",
-  "size": 72784,
+  "latest": "6.1.10",
+  "url": "https://www.vlsc.net/mrrc/downloads/hotfix-6.1.10.zip",
+  "sha256": "c9e59ec856f8bcdbc3720f80ba3dfb1639241a2ddd8fed032b472954a2ef4a1a",
+  "size": 5004,
   "requires": "6.0.3",
-  "notes": "新增「🐞 遇到问题」一键诊断包上传（含新模块 support_bundle.py）；空闲关机改为幂等",
+  "notes": "修复真机点【立即升级】无反应：下载锁阻塞 + 连接阶段无超时（upgrade_core 可热修）",
   "files": [
-    "app/MRRC",
-    "app/support_bundle.py",
-    "www/index.html",
-    "www/mobile_modern.html",
-    "www/support.html"
+    "app/upgrade_core.py"
   ]
 }
