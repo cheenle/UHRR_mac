@@ -5,10 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [未发布] — 热补丁 6.0.4 / 6.0.5
+## [未发布] — 热补丁 6.0.4 / 6.0.5 / 6.0.6
 
 > 这两版以**热补丁**形式发布（`website/downloads/patch.json` → 6.0.3+ 安装启动时自动应用），
 > 不重新出安装包：6.0.4 = Device Config 型号对应；6.0.5 = Windows 音频设备按主机 API 优先 + ATR 开关。
+
+### 🪵 Windows 运行日志与低噪音清理（在 Win11 安装版布局上实测）
+
+- **日志编码/缓冲**：冻结版 stdout 之前是 cp936 且块缓冲 → 重定向后中文乱码、启动日志被吞掉
+  （排查时像“什么都没输出”）。现启动即 `reconfigure(encoding='utf-8', errors='replace',
+  line_buffering=True)`，Windows 日志可直接读、不丢行。
+- **音频初始化失败**：原先打 3 段完整 Traceback；常见原因（没插 USB CODEC/被占用/设备名不匹配）
+  不需要堆栈，现只留一行 + 可操作提示，完整堆栈仅在 `MRRC_AUDIO_DIAG=1` 时输出。
+- **RNNoise 告警**：装了 WDSP 的部署不再提示“RNNoise 不可用”（RNNoise 已弃用，属误导噪音）；
+  只有两个降噪引擎都没有时才提示一行。
+- **`packaging/hotfix/apply_hotfix.ps1` 分层 bug**：`Copy-Item -Recurse` 到已存在目录会再套一层，
+  曾把 `app/MRRC` 解成 `patch\app\app\MRRC` 导致覆盖层不生效；改为按子目录复制内容。
+  （这是拿真实 Windows 安装版跑一遍才暴露出来的。）
 
 ### 📡 ATR-1000 改为配置项（可选组件）
 

@@ -62,14 +62,17 @@ def _encode_recording_mp3(pcm, filepath, sample_rate=16000):
 
 
 # RNNoise 可选导入（需要 pip install pyrnnoise）
+# 注意：RNNoise 已弃用（WDSP 取代它）。装了 WDSP 的部署不该再看到“RNNoise 不可用”这种
+# 误导性告警——那只是日志噪音。所以只有 WDSP 也不可用时才提示。
 RNNOISE_AVAILABLE = False
 RNNoise = None
+_RNNOISE_IMPORT_ERROR = None
 try:
     from pyrnnoise import RNNoise
     RNNOISE_AVAILABLE = True
     print("✅ RNNoise 神经网络降噪可用")
-except ImportError:
-    print("⚠️ RNNoise 不可用，如需降噪功能请运行: pip install pyrnnoise")
+except ImportError as _exc:
+    _RNNOISE_IMPORT_ERROR = _exc
 
 # WDSP 可选导入
 WDSP_AVAILABLE = False
@@ -82,6 +85,10 @@ try:
 except ImportError as e:
     print(f"⚠️ WDSP 不可用: {e}")
     print("   如需 WDSP 功能，请先编译安装: cd /tmp && git clone https://github.com/g0orx/wdsp.git && cd wdsp && make")
+
+if not RNNOISE_AVAILABLE and not WDSP_AVAILABLE:
+    # 两个降噪引擎都没有时才值得提示（WDSP 是首选，Windows 安装包自带它的库）
+    print(f"ℹ️ 未启用降噪：WDSP 与 RNNoise 都不可用（RNNoise: {_RNNOISE_IMPORT_ERROR}）")
 
 
 def soft_peak_limiter(x, knee=0.9, ceiling=0.98, ratio=2.0):
@@ -978,8 +985,9 @@ class PyAudioCapture(threading.Thread):
             return filepath
         except Exception as e:
             print(f"❌ 停止录音失败: {e}")
-            import traceback
-            traceback.print_exc()
+            if os.environ.get('MRRC_AUDIO_DIAG') == '1':
+                import traceback
+                traceback.print_exc()
             return None
 
     @staticmethod

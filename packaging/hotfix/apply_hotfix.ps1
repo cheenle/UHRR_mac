@@ -112,8 +112,16 @@ if ($InPlace) {
 $patchRoot = Join-Path $env:LOCALAPPDATA "MRRC\patch"
 if ($DryRun) { Info "[dry-run] 将解到 $patchRoot"; exit 0 }
 New-Item -ItemType Directory -Path $patchRoot -Force | Out-Null
-Get-ChildItem -Path $staging | Where-Object { $_.Name -ne 'manifest.json' } | ForEach-Object {
-    Copy-Item $_.FullName (Join-Path $patchRoot $_.Name) -Recurse -Force
+# 逐个子目录复制**内容**：直接 Copy-Item -Recurse 到已存在的同名目录会再套一层
+# （曾把 app/MRRC 解成 patch\app\app\MRRC，导致覆盖层不生效）。
+foreach ($sub in @('app', 'www', 'vendor')) {
+    $src = Join-Path $staging $sub
+    if (Test-Path $src) {
+        $dst = Join-Path $patchRoot $sub
+        New-Item -ItemType Directory -Force -Path $dst | Out-Null
+        Copy-Item (Join-Path $src '*') $dst -Recurse -Force
+        Info "覆盖 $sub\ → $dst"
+    }
 }
 $applied = Join-Path $patchRoot "applied.json"
 $record = @{ appliedAt = (Get-Date).ToString("yyyy-MM-dd HH:mm:ss"); version = $manifest.version

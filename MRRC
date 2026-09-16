@@ -26,11 +26,18 @@ import urllib.parse
 # Windows consoles may use legacy code pages (for example GBK/cp936). Some
 # optional-feature startup messages contain Unicode symbols; never let logging
 # or print encoding failures abort server startup.
+#
+# 另外两个 Windows 上很实际的坑（2026-09-16 在 Win11 安装版上实测）：
+#   * 重定向到文件时 Python 默认块缓冲 → 启动日志被吞掉（排查时像“什么都没输出”），故强制行缓冲；
+#   * 默认编码 cp936 → 日志在别处打开是乱码（emoji 直接变 '?'），故固定 UTF-8。
 for _stream in (sys.stdout, sys.stderr):
     try:
-        _stream.reconfigure(errors='replace')
+        _stream.reconfigure(encoding='utf-8', errors='replace', line_buffering=True)
     except Exception:
-        pass
+        try:
+            _stream.reconfigure(errors='replace')
+        except Exception:
+            pass
 
 # 统一的容错文本/配置读写（UTF-8 优先，GBK 等历史编码自动迁移）。
 # 见 config_io.py 顶部注释：中文 Windows 上"写 GBK / 读 UTF-8"会让
@@ -632,9 +639,14 @@ class loadWavdata(threading.Thread):
 				self.audio_capture.start()
 				print('✅ PyAudio audio interface initialized and stereo processing started')
 			except Exception as e:
-				print(f"❌ PyAudio initialization failed: {e}")
-				import traceback
-				traceback.print_exc()
+				print(f"❌ 音频初始化失败: {e}")
+				# 常见原因（没插 USB CODEC / 设备被别的程序占用 / 设备名不匹配）不需要整段堆栈，
+				# 否则 Windows 日志里全是 Traceback，排查真正的故障会被淹。
+				if os.environ.get('MRRC_AUDIO_DIAG') == '1':
+					import traceback
+					traceback.print_exc()
+				print("   排查：[AUDIO] inputdevice/outputdevice 是否匹配实际设备；"
+					  "Windows 上确认 USB Audio CODEC 已插好且未被独占")
 				print("Running without audio capture (audio devices not available)")
 		else:
 			# Fallback to ALSA
