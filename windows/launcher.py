@@ -130,6 +130,10 @@ def check_for_hotfix(cfg: Path) -> None:
     try:
         with urllib.request.urlopen(PATCH_MANIFEST_URL, timeout=PATCH_CHECK_TIMEOUT) as response:
             manifest = json.loads(response.read().decode("utf-8"))
+    except urllib.error.HTTPError as exc:
+        if exc.code != 404:          # 404 = 还没发布过任何热补丁，静默跳过
+            print(f"[hotfix] 更新检查失败（HTTP {exc.code}）")
+        return
     except Exception as exc:
         print(f"[hotfix] 跳过检查（{type(exc).__name__}: {exc}）")
         return

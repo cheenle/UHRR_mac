@@ -277,8 +277,16 @@ class OverlayStaticFilesMixin:
 
 
 def _flush_print(message):
-    """重定向到文件时 Python 默认块缓冲，启动日志会被吞掉——这里强制 flush。"""
-    print(message, flush=True)
+    """重定向到文件时 Python 默认块缓冲，启动日志会被吞掉——这里强制 flush。
+
+    另外：中文 Windows 控制台是 cp936，emoji（🧩）会抛 UnicodeEncodeError，这里降级
+    成可编码的替代字符，绝不因为一行日志让启动失败。
+    """
+    try:
+        print(message, flush=True)
+    except UnicodeEncodeError:
+        safe = message.encode("utf-8", "replace").decode("ascii", "replace")
+        print(safe, flush=True)
 
 
 def log_status(printer=_flush_print):

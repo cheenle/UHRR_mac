@@ -23,6 +23,11 @@ $PyInstallerRoot = Join-Path $DistRoot "_pyinstaller"
 
 Set-Location $RepoRoot
 
+# 中文 Windows 控制台是 cp936：测试/工具会打印 emoji，必须让子进程用 UTF-8 输出，
+# 否则 unittest 会因为 UnicodeEncodeError 变成假失败。
+$env:PYTHONIOENCODING = "utf-8"
+$env:PYTHONUTF8 = "1"
+
 # Compile every .py at the repo root as a quick syntax gate.
 $pyFiles = Get-ChildItem -Name *.py
 if ($pyFiles) {

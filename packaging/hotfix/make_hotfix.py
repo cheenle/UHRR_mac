@@ -150,6 +150,20 @@ def build_pack(version: str, files: list[str], notes: str, requires: str,
     return patch_json
 
 
+def _force_utf8_output():
+    """中文 Windows 控制台默认 cp936，直接 print emoji 会 UnicodeEncodeError。"""
+    for stream in ("stdout", "stderr"):
+        target = getattr(sys, stream, None)
+        if target is not None and hasattr(target, "reconfigure"):
+            try:
+                target.reconfigure(encoding="utf-8", errors="replace")
+            except Exception:
+                pass
+
+
+_force_utf8_output()
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="生成 MRRC 热修补丁包")
     parser.add_argument("files", nargs="*", help="改动的仓库文件（相对仓库根）")

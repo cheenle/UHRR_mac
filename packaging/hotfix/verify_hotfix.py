@@ -51,6 +51,20 @@ print("''' + PROBE_MARKER + '''", file=_probe_sys.stderr, flush=True)
 '''
 
 
+def _force_utf8_output():
+    """中文 Windows 控制台默认 cp936，直接 print emoji 会 UnicodeEncodeError。"""
+    for stream in ("stdout", "stderr"):
+        target = getattr(sys, stream, None)
+        if target is not None and hasattr(target, "reconfigure"):
+            try:
+                target.reconfigure(encoding="utf-8", errors="replace")
+            except Exception:
+                pass
+
+
+_force_utf8_output()
+
+
 def log(message: str) -> None:
     print(message, flush=True)
 
