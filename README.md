@@ -1,8 +1,8 @@
-# Mobile Remote Radio Control (MRRC) V6.0.10
+# Mobile Remote Radio Control (MRRC) V6.1.0
 
 [![English](https://img.shields.io/badge/lang-English-blue.svg)](README_en.md)
 [![中文](https://img.shields.io/badge/lang-中文-red.svg)](README_CN.md)
-[![Version](https://img.shields.io/badge/version-V6.0.10-green.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-V6.1.0-green.svg)](CHANGELOG.md)
 
 ---
 
@@ -13,6 +13,8 @@
 A modern web-based remote control system optimized for mobile devices, enabling flexible operation of your amateur radio station from anywhere.
 
 基于现代Web技术的远程电台控制系统，专为移动端优化，让您随时随地灵活操控业余电台。
+
+> 🎉 **V6.1.0 更新**: **一键升级**（有新版本时点一下/按 U 即可，自动下载校验 + 静默安装 + 自动重启，支持回退上一版）。
 
 > 🎉 **V6.0.10 更新**: 新增「🐞 遇到问题」一键诊断包上传（脱敏 + 自动体检摘要，维护者可直接看到问题与日志）、
 > 启动器 tee 服务端日志、空闲关机幂等、诊断包接收端部署在随站点。
