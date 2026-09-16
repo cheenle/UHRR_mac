@@ -125,3 +125,27 @@ class BundleTest(unittest.TestCase):
         for key in ("version", "platform", "python", "frozen", "cpuCount", "audio"):
             self.assertIn(key, snap)
         self.assertEqual(snap["audio"]["api"], "Windows WASAPI")
+
+
+class WindowsEditorCompatTest(unittest.TestCase):
+    """Windows 记事本/PS 保存 UTF-8 会带 BOM —— 配置读取必须容忍（否则服务器起不来）。"""
+
+    def test_bom_config_is_readable(self):
+        import tempfile
+        import config_io
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "MRRC.conf")
+            with open(path, "w", encoding="utf-8-sig") as fh:      # 带 BOM
+                fh.write("[SERVER]\nport = 8877\ncookie_secret = x\n"
+                         "[AUDIO]\ninputdevice = USB Audio CODEC\n")
+            self.assertEqual(open(path, "rb").read(3), b"\xef\xbb\xbf")
+            cfg = __import__("configparser").ConfigParser()
+            encoding = config_io.read_config(cfg, path)
+            self.assertEqual(cfg.get("SERVER", "port"), "8877")
+            self.assertEqual(cfg.get("AUDIO", "inputdevice"), "USB Audio CODEC")
+            # 迁移到无 BOM 的 UTF-8 后仍可用（config_io.should_migrate 的判定不得乱动）
+            if config_io.should_migrate(encoding):
+                config_io.write_config(cfg, path)
+                cfg2 = __import__("configparser").ConfigParser()
+                config_io.read_config(cfg2, path)
+                self.assertEqual(cfg2.get("SERVER", "port"), "8877")
