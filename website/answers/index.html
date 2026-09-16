@@ -44,6 +44,21 @@
     按编号查找即可——多数问题用户自己就能解决。</p>
 
   <div class="card">
+    <h3 style="margin-top:0">这条答复是怎么来的？</h3>
+    <ol style="margin-bottom:6px">
+      <li>你在 App 里点 <strong>🐞 遇到问题</strong> 生成诊断包（日志尾部 + <strong>脱敏</strong>配置 + 环境快照 + 自动体检摘要），
+          用户数据库、证书、密钥永不打包；</li>
+      <li>上传后得到<strong>编号</strong>，维护者侧收到（只有维护者能看）；</li>
+      <li>维护者的自动分诊流程会取出诊断包、生成摘要，交给 AI 按固定的<strong>判定纪律</strong>分析
+          （材料不足就写"需要补充信息"，绝不下没有证据的结论）；</li>
+      <li>结论渲染成上面的一张卡片并发布到本页 —— <strong>你按编号就能看到</strong>，多数问题照着"你要做的"就能解决；</li>
+      <li>如果确认是软件缺陷：先给你临时规避，再修代码；能走热修的就热修
+          （<strong>你重启 MRRC 即生效，无需重装</strong>），否则随新版本发布，卡片会标成"已修复 · 版本号"。</li>
+    </ol>
+    <p class="muted" style="margin:0">隐私：诊断包只在<strong>你主动点击上传</strong>时才发送；本页只放可公开的结论，不含任何用户数据。</p>
+  </div>
+
+  <div class="card">
     <div class="row">
       <input id="q" type="search" placeholder="粘贴你的上报编号（或关键词，如：音频 / 升级 / PTT）">
       <span class="pill" id="count"></span>

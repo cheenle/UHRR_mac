@@ -471,6 +471,31 @@ Response Example: ff050701031b1e000e01
         stack reads (<code>[HAMLIB] rig_model</code> and <code>[INSTANCE_SETTINGS] instance_rigctl_model</code>),
         flagging in the UI when they disagree with what <code>rigctld</code> reports.</p>
 
+        <h2><span class="feature-icon">🛟</span> Product Support Lifecycle</h2>
+        <p>MRRC is maintained as a product, not a zip file. Five stages form one loop — and you can see
+        the last one for yourself at <a href="../answers/">/answers/</a>:</p>
+        <table>
+          <tr><th>Stage</th><th>What happens</th></tr>
+          <tr><td><strong>Release</strong></td><td>Unit tests + an inline-JS syntax guard + an artifact-level hotfix
+              acceptance run (3/3) gate every build; the site carries <code>latest.json</code> (upgrade) and
+              <code>patch.json</code> (hotfix), and the published bytes are verified by SHA256 <em>on the server</em>.</td></tr>
+          <tr><td><strong>Upgrade</strong></td><td>One click (or <code>U</code>) → download + SHA256 → one UAC →
+              silent install → automatic restart; success is recorded as <code>lastResult = ok</code> by the new
+              version itself; one-click rollback to the previous version.</td></tr>
+          <tr><td><strong>Diagnose</strong></td><td>Menu → <strong>🐞 Something went wrong</strong> builds a redacted
+              bundle with an automatic health summary (startup count vs crashes, audio health, IOLoop, TX init,
+              ATR freshness).</td></tr>
+          <tr><td><strong>AI triage</strong></td><td>A scheduled job fetches new reports, digests them, and asks the
+              project's AI <em>with a triage skill</em> (evidence-first rules, conservative verdicts) for a structured
+              conclusion.</td></tr>
+          <tr><td><strong>Answer</strong></td><td>The conclusion is published as a searchable card on the public
+              <a href="../answers/">answers page</a> (find it by report id or keyword) — so most users solve it
+              themselves. If it is a defect: workaround first, then hotfix (restart, no reinstall) or release.</td></tr>
+        </table>
+        <p class="muted">Hotfix channel: fixes in <code>www/**</code>, the loose app modules
+        (<code>upgrade_core.py</code>, <code>support_bundle.py</code>, …) and <code>vendor</code> ship
+        <em>without repackaging</em> — the app applies them on the next start.</p>
+
     </section>
 
     <!-- Footer -->
