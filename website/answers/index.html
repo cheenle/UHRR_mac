@@ -80,6 +80,47 @@
 
   <h2>答复列表</h2>
 
+  <div class="card" data-keys="20260916-161305-a7c6 aaa 环境 20260916-161305-a7c6 aaa -9996 Invalid input device 音频初始化失败 USB Audio not found rigctld daemon not running simulation mode Windows 11 虚拟机 无音频设备 纯Web模式 FT-991">
+    <div class="row" style="justify-content:space-between">
+      <h3 style="margin:0">编号 <span class="id">20260916-161305-a7c6</span></h3>
+      <span class="pill ok">已答复 · 环境</span>
+    </div>
+    <p class="muted" style="margin:8px 0 2px">上报时间 2026-09-16T08:13:02 · 描述：<strong>aaa</strong></p>
+    <p class="muted" style="margin:2px 0 10px">上报版本 6.0.10 · 包体积 5 KB</p>
+
+    <h3>结论</h3>
+    <p>本机无声卡且 rigctld 未启动，属环境问题，非软件故障</p>
+
+    <h3>诊断</h3>
+    <ul>
+      <li>本机没有任何音频设备（env.json 里 audio.devices 为空数组），Windows 报 -9996（找不到可用设备）</li>
+      <li>配置里指定了 inputdevice/outputdevice = USB Audio，但该设备不存在（Device 'USB Audio' not found）</li>
+      <li>rigctld 未运行（timed out），MRRC 退入 simulation mode，电台命令为模拟</li>
+      <li>无任何 Traceback/Fatal，1 次启动时间跨度仅 2 秒，无崩溃痕迹，多为升级/手动重启</li>
+      <li>SSL 证书告警、ATR-1000 未启用、TX 音频分析器禁用均属正常噪声/预期，不是问题</li>
+    </ul>
+
+    <h3>你要做的</h3>
+    <ol>
+      <li>先明确需求：只试用界面时，纯 Web 模式 + simulation mode 属预期，可直接浏览器打开使用</li>
+      <li>若要用真电台：把 FT-991 用 USB/COM1 线接好并装驱动，然后启动 rigctld（或通过设备配置自动启动）</li>
+      <li>若要用真音频：插入 USB 声卡/音频设备，并在 Windows 声音设置里确认系统能识别到该设备</li>
+      <li>若在虚拟机里：需在虚拟机设置中直通/添加音频设备和串口，否则只能纯 Web 模式</li>
+      <li>在 Device Config 里把 inputdevice/outputdevice 改成实际存在的设备名，或留空使用系统默认设备</li>
+      <li>如后续仍异常，请补充：是否接电台、是否接声卡、期望实现什么功能（现在描述只有“aaa”）</li>
+    </ol>
+
+    <h3>证据（原始行）</h3>
+    <ul>
+      <li>"audio": { "devices": [] }</li>
+      <li>❌ 音频初始化失败: [Errno -9996] Invalid input device (no default output device)</li>
+      <li>Device 'USB Audio' not found, using default input device</li>
+      <li>2026-09-16 08:12:32,291 - MRRC - ERROR - ⚠ rigctld daemon not running: timed out</li>
+      <li>Running in simulation mode - radio commands will be simulated</li>
+    </ul>
+
+  </div>
+
   <div class="card" data-keys="已知问题 known issue 按钮点不动 生成诊断包没反应 support 页面 6.1.12 6.1.13 热修 hotfix 内联JS 语法错误">
     <div class="row" style="justify-content:space-between">
       <h3 style="margin:0">已知问题 · 🐞 页面按钮点不动</h3>
