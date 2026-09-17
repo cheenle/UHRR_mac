@@ -392,13 +392,21 @@ def autostart_from_default_config(timeout: float = 8.0) -> dict | None:
     整段包一层硬超时：宁可这次不自启动，也绝不把 MRRC 的启动卡住
     （真机实测过一次"导入时枚举机型 → 卡死"的事故）。
     """
-    # 让位于正式实现：另一路已把 rigctld_manager.py 接进 MRRC（更完整，含 pid/日志/清理）。
-    # 本模块只是"热修通道兜底"——已装 6.1.15+ 的机器走那一条，这里就不再掺和。
+    # 正式实现优先：MRRC（6.1.15+）已把 rigctld_manager 接线进启动流程。
+    # 本模块只承担两个角色：
+    #   ① **热修通道的桥** —— 已装 6.1.13/6.1.14 的机器，MRRC 主脚本里还没有那行接线，
+    #      靠 hamlib_wrapper 的导入钩子走到这里；此时如果 rigctld_manager 可用（热修也能下发它），
+    #      就直接交给它执行，保证"只有一份实现"在干活；
+    #   ② 兜底 —— 环境里确实没有 rigctld_manager 时，用本模块的轻量实现把电台后台拉起来。
+    # 正式实现优先（**只让位、不调用**）：
+    #   * 6.1.15+ 的 MRRC 已在启动流程里自己调用 rigctld_manager.ensure_rigctld()，
+    #     这里再调一次既多余、又可能因为它内部等待而阻塞启动（实测会挂住）→ 检测到就跳过；
+    #   * 6.1.13/6.1.14 的包里根本没有 rigctld_manager.py（那是 6.1.15 才进包的），
+    #     于是 import 失败 → 自动落到本模块的兜底实现，这正是热修通道该做的事。
     try:
-        import rigctld_manager as _full
-        if callable(getattr(_full, "ensure_rigctld", None)):
-            print("[rigctld] 检测到 rigctld_manager（正式实现），跳过兜底自启动")
-            return None
+        import rigctld_manager  # noqa: F401
+        print("[rigctld] 检测到 rigctld_manager（正式实现），本次跳过兜底自启动")
+        return None
     except Exception:
         pass
 

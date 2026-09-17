@@ -47,10 +47,15 @@
 - 安装版本唯一权威 = 安装目录 `version.txt`；升级逻辑在 `windows/launcher.py` + `upgrade_core.py`，
   运行时状态在 `%LOCALAPPDATA%\MRRC\updates\`（`state.json` / `upgrade.request` / `MRRC-Setup-<ver>.exe` / `install-<ver>.log`）。
 - **唯一成功判据**：`state.json` 的 `lastResult.status == "ok"`（由新版启动时 `confirm_pending_upgrade()` 自证）。
-- **rigctld 自启动**：`rigctld_supervisor.py`（可热修）+ `hamlib_wrapper.py` 导入时触发；
-  开关 `[HAMLIB] autostart`（默认 true）/ 环境变量 `MRRC_RIGCTLD_AUTOSTART=0`；
-  可执行文件按 vendor → PATH → `C:\Program Files\hamlib*\bin` 通配 → `MRRC_RIGCTLD_BIN` 查找；
-  打包时用 `packaging/windows/collect_hamlib.ps1` 把 rigctld.exe 与依赖 DLL 收进 vendor。
+- **rigctld 自启动（6.1.15 起）**：正式实现在 `rigctld_manager.py`（settings/argv/fingerprint/probe/
+  进程与日志管理/`RigctldManager`/`ensure_rigctld`/`status`），由 `MRRC` 启动时接线（`atexit` 里 `stop_managed`）。
+  开关 `[HAMLIB] autostart`（默认 true，`auto` 需自带可执行文件）/ 环境变量 `MRRC_RIGCTLD_AUTOSTART=0`。
+  可执行文件查找：安装目录 `vendor/hamlib/windows/bin/x64` → `PATH` → `C:\Program Files\hamlib*\bin`
+  （hamlib 官方包带版本号目录）→ `MRRC_RIGCTLD_BIN`；名字型配置（如 `FT991`）会自动解析成编号
+  （hamlib 的 `-m` 只接受数字）。日志 `%LOCALAPPDATA%\MRRC\logs\rigctld-stdout.log`。
+  `rigctld_supervisor.py` 仅作**热修通道的桥**（已装 6.1.13/6.1.14 的机器靠它接上正式实现；
+  检测到 `rigctld_manager` 时直接调用它），可在一次发布周期后删除。
+  打包时用 `packaging/windows/collect_hamlib.ps1` 把 rigctld.exe 与依赖 DLL 收进 vendor（见 `win_pack.md`）。
 - V6.0.10 及更早**没有**升级逻辑（需手动装一次 6.1.x）；发布时 `latest.json` 的 `previous` 必须在站点上真实存在
   —— 站点部署是 `rsync --delete`，**没进 git 的服务器文件会被清掉**。
 - 热修通道只覆盖 `www/**`、`_APP_MODULES`（含 `upgrade_core.py`）与 `vendor`；

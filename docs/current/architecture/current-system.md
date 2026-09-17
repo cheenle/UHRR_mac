@@ -98,3 +98,18 @@ The main `MRRC` process owns the HTTPS/WSS web application and direct radio/audi
 - `atr1000_api_server.py`: optional REST API process for external tools.
 - `voice_assistant_service.py`: separate voice assistant process, default port `8878`.
 - `website/`: static marketing/documentation site, not served by the MRRC app.
+
+---
+
+## 电台后台（rigctld）的启动与归属（6.1.15 起）
+
+| 平台 | 谁启动 | 说明 |
+|---|---|---|
+| Linux / macOS | `mrrc_control.sh start` | 依次拉起 rigctld → MRRC → atr1000_proxy；参数来自 `[INSTANCE_SETTINGS]`（其次 `[HAMLIB]`） |
+| Windows 安装版 | **`MRRC` 启动时自动** | `rigctld_manager.ensure_rigctld()`（`MRRC` 顶部接线 + `atexit` 停止托管进程） |
+
+- 开关：`[HAMLIB] autostart = true|false|auto`（`auto` = 只有自带可执行文件时才启动）、环境变量 `MRRC_RIGCTLD_AUTOSTART=0`；
+- 可执行文件查找顺序：安装目录 `vendor/hamlib/windows/bin/x64` → `PATH` → `C:\Program Files\hamlib*\bin` → `MRRC_RIGCTLD_BIN`；
+- 机型号：数字直接使用；机型名（`FT991`/`IC-M710`）会解析成 hamlib 编号（`-m` 只接受数字）；
+- 日志：`%LOCALAPPDATA%\MRRC\logs\rigctld-stdout.log`（诊断包会一并收集）；
+- 失败绝不阻断启动：找不到/启动失败只打印一行可执行提示（排查步骤见提示内容）。

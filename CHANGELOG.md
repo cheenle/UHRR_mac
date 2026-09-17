@@ -31,6 +31,9 @@ VM 实测：配置只写机型名（`rig_model = FT991`、无 `instance_rigctl_m
 - **踩到的坑（都已修）**：① 自启动里做"实时枚举 hamlib 机型"会把启动卡死（会去开用户电台占用的串口）
   → 改为数字直接透传 + 只用便宜的来源折算；② 子进程输出没重定向时会继承父进程管道 → 测试/脚本被挂死
   → 现在始终重定向（拿不到日志就 DEVNULL）；③ 整个自启动加 8s 硬超时；④ 测试环境不真启动。
+- 正式实现为 `rigctld_manager.py`（另一路完成并已接进 `MRRC`：settings/argv/进程与日志管理/
+  `ensure_rigctld`/`status`，含 pid 与日志轮转）；`rigctld_supervisor.py` 降级为该实现的
+  **热修通道桥**（已装 6.1.13/6.1.14 的机器靠它立刻修好），下一次发布周期后可删。
 - 打包：`packaging/windows/collect_hamlib.ps1` 收集 `rigctld.exe` + `libhamlib-4.dll` + 传递依赖；
   `rigctld.exe` 入库（267 KB），DLL 按仓库约定由构建机提供（见 win_pack.md）。
 - 测试：新增 10 项（140 项全绿）。

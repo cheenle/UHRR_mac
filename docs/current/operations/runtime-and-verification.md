@@ -173,3 +173,27 @@ ssh cheenle@www.vlsc.net 'cd /var/www/vlsc.net/mrrc/downloads && sha256sum MRRC-
 
 启动器窗口里的 `[update]` 行 + `updates\state.json` + `updates\install-<ver>.log`；
 最省事的办法是让用户点页面 **🐞 遇到问题 → 生成并上传**（会一并带走上述文件与服务端日志）。
+
+---
+
+## 电台后台（rigctld）自启动的验证（Windows 安装版，6.1.15 起）
+
+```powershell
+# 1) 进程与端口
+Get-Process rigctld -ErrorAction SilentlyContinue | Select-Object Id,StartTime
+Test-NetConnection -ComputerName 127.0.0.1 -Port 4532 -InformationLevel Quiet   # 端口来自配置
+
+# 2) MRRC 启动日志（应看到自启动与握手）
+Select-String -Path "$env:LOCALAPPDATA\MRRC\logs\server-stdout.log" -Pattern 'rigctld|responding|simulation' | Select-Object -Last 6
+
+# 3) rigctld 自己的日志（串口占用/机型不匹配等问题都在这里）
+Get-Content "$env:LOCALAPPDATA\MRRC\logs\rigctld-stdout.log" -Tail 10
+
+# 4) 手工排障（等同 MRRC 启动时做的那次）
+python C:\mrrc\rigctld_manager.py            # 安装版：在应用目录里找同名脚本
+```
+
+判读：`✓ rigctld daemon responding!` = 电台后台就绪；若只有 `simulation mode`，依次看
+① 配置里有没有电台（`[HAMLIB] rig_model` / `[INSTANCE_SETTINGS] instance_rigctl_model`）→
+② rigctld-stdout.log 的报错（`serial port ... does not exist` = 串口名/占用；`Unknown rig num` = 机型号）→
+③ `[HAMLIB] autostart` 是否被关掉。
