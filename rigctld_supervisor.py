@@ -392,6 +392,16 @@ def autostart_from_default_config(timeout: float = 8.0) -> dict | None:
     整段包一层硬超时：宁可这次不自启动，也绝不把 MRRC 的启动卡住
     （真机实测过一次"导入时枚举机型 → 卡死"的事故）。
     """
+    # 让位于正式实现：另一路已把 rigctld_manager.py 接进 MRRC（更完整，含 pid/日志/清理）。
+    # 本模块只是"热修通道兜底"——已装 6.1.15+ 的机器走那一条，这里就不再掺和。
+    try:
+        import rigctld_manager as _full
+        if callable(getattr(_full, "ensure_rigctld", None)):
+            print("[rigctld] 检测到 rigctld_manager（正式实现），跳过兜底自启动")
+            return None
+    except Exception:
+        pass
+
     box: dict = {}
 
     def _work():
