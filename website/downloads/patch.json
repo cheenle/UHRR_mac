@@ -1,11 +1,11 @@
 {
-  "latest": "6.1.16",
-  "url": "https://www.vlsc.net/mrrc/downloads/hotfix-6.1.16.zip",
-  "sha256": "cb695e5103a01b68ed48bdfd74df6b4e0fbc7769d51a3418dd4d0315c11f5137",
-  "size": 7661,
+  "latest": "6.1.17",
+  "url": "https://www.vlsc.net/mrrc/downloads/hotfix-6.1.17.zip",
+  "sha256": "ee78fc968f5e25f5edd0ce8e08385276563acc238fe962ca08a5f485c1527ce1",
+  "size": 13274,
   "requires": "6.0.3",
-  "notes": "rigctld 自启动收口：正式实现 rigctld_manager 为主，兜底实现只让位不调用（上一版会重复调用导致启动可能阻塞）",
+  "notes": "NR2 等级表下移一档（-6/-9/-12/-16）：吃字率 26.7%→8.2%，显著减轻水声/吃字；闭环实测见 dev_tools/nr2_loop_opt.py",
   "files": [
-    "app/rigctld_supervisor.py"
+    "app/wdsp_wrapper.py"
   ]
 }
