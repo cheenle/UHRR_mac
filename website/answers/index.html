@@ -99,6 +99,47 @@
 
   <h2>答复列表</h2>
 
+  <div class="card" data-keys="20260917-132643-020a wDSP启用后流水声太大，声音失真/降噪后，如何解决？ 音频 20260917-132643-020a BG1SB 流水声 声音失真 WDSP NR2 降噪 音乐噪音 水音 nr2_level AGC 带通 IC-M710 6.1.16">
+    <div class="row" style="justify-content:space-between">
+      <h3 style="margin:0">编号 <span class="id">20260917-132643-020a</span></h3>
+      <span class="pill ok">已答复 · 音频</span>
+    </div>
+    <p class="muted" style="margin:8px 0 2px">上报时间 2026-09-17T13:26:35 · 描述：<strong>wDSP启用后流水声太大，声音失真/降噪后，如何解决？</strong></p>
+    <p class="muted" style="margin:2px 0 10px">上报版本 6.1.16 · 包体积 143 KB</p>
+
+    <h3>结论</h3>
+    <p>WDSP NR2 降噪强度偏高产生的水音/失真，属调参问题，非缺陷</p>
+
+    <h3>诊断</h3>
+    <ul>
+      <li>用户现象「流水声太大、声音失真」与 WDSP 手册记载的 NR2 谱减法『音乐噪音/水珠杂音』完全吻合，是降噪副作用而非故障</li>
+      <li>配置中 nr2_level = 2（对应每 bin 最大衰减 -12dB、psi=12.0、zeta=0.65），中等偏强，噪声环境下安静段易出水音</li>
+      <li>音频健康 99.9%、单次读取最大 28.3ms，采集链路正常，排除缓冲/性能问题</li>
+      <li>无服务端日志、无 Traceback，非崩溃类问题</li>
+      <li>[RNNOISE] 节无 enabled 键（默认关闭），降噪只走 WDSP NR2 一条链，可排除双降噪叠加</li>
+    </ul>
+
+    <h3>你要做的</h3>
+    <ol>
+      <li>打开 wdsp_settings.html（或移动端 设置→WDSP 数字处理），把 NR2 降噪级别从 2 降到 1，水音会明显减少</li>
+      <li>若想彻底对比，先把 NR2 设为 0（或暂时关 WDSP）确认流水声确实来自降噪而非链路本身</li>
+      <li>若降 1 级后仍失真，把 AGC 模式由 MED 改为 SLOW 或 OFF 测试是否为增益削波</li>
+      <li>收窄带通至 350–2600Hz，减少带外噪声参与谱减法</li>
+      <li>仍不满意时把 nr2_ae_psi 调大到 14–18、nr2_ae_zeta_thresh 调小到 0.6，进一步压制音乐噪声</li>
+      <li>调完后重启 MRRC 生效并实际收听验证；把满意的一组参数记下备用</li>
+    </ol>
+
+    <h3>证据（原始行）</h3>
+    <ul>
+      <li>问题描述：wDSP启用后流水声太大，声音失真/降噪后</li>
+      <li>[WDSP] nr2_level = 2</li>
+      <li>[WDSP] nr2_ae_psi = 12.0 / nr2_ae_zeta_thresh = 0.65</li>
+      <li>🎧 音频健康: 30s 采集 1440000 样本（应有 1441062，99.9%）</li>
+      <li>[WDSP] agc_mode = 3 / bandpass_low = 300.0 / bandpass_high = 2700.0</li>
+    </ul>
+
+  </div>
+
   <div class="card" data-keys="20260917-085736-ebd2 FT-891连接不上，但是电台的音频能同步。 环境 20260917-085736-ebd2 FT-891 连接不上 音频能同步 rigctld daemon not running rigctld.exe COM8 1036 38400 CAT 电台控制 Windows 10 环境">
     <div class="row" style="justify-content:space-between">
       <h3 style="margin:0">编号 <span class="id">20260917-085736-ebd2</span></h3>
