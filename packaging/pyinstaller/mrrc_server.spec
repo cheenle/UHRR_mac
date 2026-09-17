@@ -27,7 +27,9 @@ ROOT = Path(SPECPATH).parents[1]
 _APP_ENTRY = "MRRC"
 _APP_MODULES = [
     "patch_overlay",           # 覆盖层自身也应可被覆盖（后续演进兼容）
+    "rigctld_manager",        # rigctld 生命周期（Windows 自启/看护；COM 口排障逻辑要能单独热修）
     "rig_models",              # hamlib 机型表（改型号列表/别名时无需重新打包）
+    "rigctld_supervisor",      # rigctld 自启动看护（Windows 安装版必须自己拉起电台后台；可热修）
     "support_bundle",          # 诊断包收集/脱敏（安全逻辑，需可单独热修）
     "upgrade_core",            # 一键升级纯逻辑（服务端 /api/update 与启动器都 import；
                                #   漏了它会 ModuleNotFoundError，2026-09-16 VM 实测）
@@ -113,6 +115,7 @@ a = Analysis(
         "opus.api.constants",
         # Local modules (some are imported conditionally)
         "hamlib_wrapper",
+        "rigctld_manager",
         "wdsp_wrapper",
         "audio_interface",
         "atu_auto_tuner",

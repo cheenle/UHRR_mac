@@ -146,3 +146,23 @@ fix_mrrc_encoding.bat -IncludeAux      :: 同时转 MRRC_users.db / memory_chann
   ```
   对应 `MRRC.conf` 的 `[INSTANCE_SETTINGS] atr1000_proxy_transport=tcp / atr1000_proxy_port=60100`。
 - 本机 macOS/Linux 无法交叉编译 Windows 原生 DLL，因此打包前必须先在 Windows 上准备好 `vendor/` 中的 DLL。
+
+## Hamlib / rigctld（Windows）
+
+打包前在构建机上执行一次收集（把 rigctld.exe 与依赖 DLL 放进 vendor，Inno 会整树打包）：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File packaging\windows\collect_hamlib.ps1
+# 或指定：-HamlibBin "C:\Program Files\hamlib-w64-4.7.2\bin"
+```
+
+需要的文件（真机实测 `objdump -p rigctld.exe` 的依赖）：
+
+| 文件 | 说明 |
+|---|---|
+| `rigctld.exe` | 电台后台（入 git，267 KB） |
+| `libhamlib-4.dll` | rigctld 运行时依赖（原始名；`libhamlib.dll` 是 MRRC ctypes 用的改名副本，两者都要） |
+| `libgcc_s_seh-1.dll` / `libwinpthread-1.dll` / `libusb-1.0.dll` | 传递依赖 |
+
+运行时由 `rigctld_supervisor.py` 自动拉起（开关 `[HAMLIB] autostart`），
+找不到可执行文件时只打印一行可执行提示（安装目录 vendor → PATH → `C:\Program Files\hamlib*\bin` → `MRRC_RIGCTLD_BIN`）。

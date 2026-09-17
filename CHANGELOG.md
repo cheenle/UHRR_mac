@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [V6.1.14] - 2026-09-17
+
+### ✅ Windows 安装版自动拉起 rigctld（不再需要手动启动电台后台）
+
+用户上报：MRRC 没连上电台后台，FT-891 连不上；配置已指向（rig_model=1036、COM8、38400），
+但 Windows 安装版只"检测"不"启动" rigctld.exe。
+
+- 新增 `rigctld_supervisor.py`（可热修）：MRRC 启动时幂等地拉起 rigctld —
+  参数与 `mrrc_control.sh` 一致（`-m -r -s -C stop_bits= -T -t -vvv`），日志写 `logs/rigctld-stdout.log`；
+  开关 `[HAMLIB] autostart`（默认 true）/ `MRRC_RIGCTLD_AUTOSTART=0`；
+  可执行文件查找：`vendor/hamlib/windows/bin/x64` → PATH → `C:\Program Files\hamlib*\bin`（通配，真机路径是
+  `hamlib-w64-4.7.2`）→ `MRRC_RIGCTLD_BIN`；找不到只打印一行可执行提示，绝不阻断启动。
+- 挂载点在 `hamlib_wrapper.py` 导入时（MRRC 启动早期 import 它）→ **可热修下发，无需重装**。
+- **踩到的坑（都已修）**：① 自启动里做"实时枚举 hamlib 机型"会把启动卡死（会去开用户电台占用的串口）
+  → 改为数字直接透传 + 只用便宜的来源折算；② 子进程输出没重定向时会继承父进程管道 → 测试/脚本被挂死
+  → 现在始终重定向（拿不到日志就 DEVNULL）；③ 整个自启动加 8s 硬超时；④ 测试环境不真启动。
+- 打包：`packaging/windows/collect_hamlib.ps1` 收集 `rigctld.exe` + `libhamlib-4.dll` + 传递依赖；
+  `rigctld.exe` 入库（267 KB），DLL 按仓库约定由构建机提供（见 win_pack.md）。
+- 测试：新增 10 项（140 项全绿）。
+
 ## [V6.1.13] - 2026-09-17
 
 ### 🐛 紧急修复：🐞 诊断包页面所有按钮失效（我上一步引入，已随热修下发）

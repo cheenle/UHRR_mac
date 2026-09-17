@@ -30,6 +30,9 @@ if not lib_path:
     else:
         base = os.path.dirname(os.path.abspath(__file__))
     common_paths.extend([
+        # rigctld.exe 的导入表要的是 libhamlib-4.dll（官方 Windows 包的原名），
+        # 我们直接随包分发这个名字，不再改名成 libhamlib.dll —— ctypes 侧两个名字都试。
+        os.path.join(base, 'vendor', 'hamlib', 'windows', 'bin', 'x64', 'libhamlib-4.dll'),
         os.path.join(base, 'vendor', 'hamlib', 'windows', 'bin', 'x64', 'libhamlib.dll'),
         os.path.join(base, 'vendor', 'hamlib', 'windows', 'bin', 'x64', 'hamlib.dll'),
     ])
@@ -41,7 +44,12 @@ if not lib_path:
 if not lib_path:
     raise ImportError("Hamlib library not found")
 
-libham = ctypes.CDLL(lib_path)
+try:
+    libham = ctypes.CDLL(lib_path)
+except OSError as exc:
+    # 必须是 ImportError：MRRC 用 `except ImportError` 降级（DLL 架构不对/依赖缺 DLL 时
+    # 抛 OSError 会让整个服务在启动阶段崩掉）。
+    raise ImportError(f"Hamlib library not loadable: {lib_path} ({exc})")
 
 # Define Hamlib constants
 RIG_MODEL_FT817 = 123  # Example model
@@ -216,6 +224,19 @@ class HamlibWrapper:
             level_val.f = val  # Set as float value
             return libham.rig_set_level(self.rig, vfo, level, level_val)
         return -1
+
+
+# --------------------------------------------------------------------------- #
+# rigctld 自启动（Windows 安装版必须自己拉起电台后台）
+# MRRC 启动早期会 `from hamlib_wrapper import HamlibWrapper`，因此这里是最合适的挂载点；
+# 逻辑放在可热修的 rigctld_supervisor.py 里（开关：MRRC.conf 的 [HAMLIB] autostart，
+# 或环境变量 MRRC_RIGCTLD_AUTOSTART=0 强制关闭）。失败只打印一行，绝不阻断启动。
+# --------------------------------------------------------------------------- #
+try:
+    import rigctld_supervisor as _rigctld_supervisor
+    _rigctld_supervisor.autostart_from_default_config()
+except Exception as _rigctld_exc:
+    print(f"[rigctld] 自启动检查跳过：{type(_rigctld_exc).__name__}: {_rigctld_exc}")
 
 # Test the wrapper
 if __name__ == "__main__":

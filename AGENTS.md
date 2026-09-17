@@ -47,6 +47,10 @@
 - 安装版本唯一权威 = 安装目录 `version.txt`；升级逻辑在 `windows/launcher.py` + `upgrade_core.py`，
   运行时状态在 `%LOCALAPPDATA%\MRRC\updates\`（`state.json` / `upgrade.request` / `MRRC-Setup-<ver>.exe` / `install-<ver>.log`）。
 - **唯一成功判据**：`state.json` 的 `lastResult.status == "ok"`（由新版启动时 `confirm_pending_upgrade()` 自证）。
+- **rigctld 自启动**：`rigctld_supervisor.py`（可热修）+ `hamlib_wrapper.py` 导入时触发；
+  开关 `[HAMLIB] autostart`（默认 true）/ 环境变量 `MRRC_RIGCTLD_AUTOSTART=0`；
+  可执行文件按 vendor → PATH → `C:\Program Files\hamlib*\bin` 通配 → `MRRC_RIGCTLD_BIN` 查找；
+  打包时用 `packaging/windows/collect_hamlib.ps1` 把 rigctld.exe 与依赖 DLL 收进 vendor。
 - V6.0.10 及更早**没有**升级逻辑（需手动装一次 6.1.x）；发布时 `latest.json` 的 `previous` 必须在站点上真实存在
   —— 站点部署是 `rsync --delete`，**没进 git 的服务器文件会被清掉**。
 - 热修通道只覆盖 `www/**`、`_APP_MODULES`（含 `upgrade_core.py`）与 `vendor`；

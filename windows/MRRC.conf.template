@@ -30,6 +30,9 @@ retry = 5
 rig_model = IC-M710                  ; hamlib 规范名（“设备配置”抽屉写入的就是这个）
 ; rigctld 实际使用 [INSTANCE_SETTINGS] instance_rigctl_model（数字，如 30003=IC-M710）；
 ; UI 保存型号时会两处一起写，手工改配置时也要同步，否则 rigctld 不会换型号。
+; rigctld 自启动：true=启动 MKRC 时若电台后台未在监听则自动拉起（Windows 安装版推荐）
+; 关掉它就需要自己先跑 rigctld，否则 MRRC 进入模拟模式
+autostart = true
 trxautopower = True
 rig_rate = 4800
 data_bits = 
