@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Product Support Lifecycle · MRRC</title>
+<link rel="stylesheet" href="../css/style.css">
+<link rel="stylesheet" href="../css/octen.css?v=5">
+<link rel="stylesheet" href="../css/sunsdrmobile.css?v=1">
+<link rel="stylesheet" href="../css/docs.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container navbar-content">
+            <a href="../index.html" class="logo">
+                <span class="logo-icon">&#x1f4fb;</span>
+                <span>MRRC</span>
+            </a>
+            <ul class="nav-links">
+                <li><a href="../index.html">Home</a></li>
+                <li><a href="features.html">Features</a></li>
+                <li><a href="../index.html#demo">Demo</a></li>
+                <li><a href="installation.html">Installation</a></li>
+                <li><a href="design.html">Design &amp; Architecture</a></li>
+                <li><a href="docs.html">Docs</a></li>
+                <li><a href="../agentic.html">Agentic</a></li>
+                <li><a href="../aladdin-v2.html">Aladdin V2</a></li>
+                <li><a href="../retrospective.html">Retrospective</a></li>
+                <li><a href="../efhw/index.html">EFHW</a></li>
+                <li><a href="https://github.com/cheenle/UHRR_mac" target="_blank" rel="noopener">
+                    <i class="fab fa-github"></i> GitHub
+                </a></li>
+            </ul>
+            <div class="nav-actions">
+                <a href="../zh/docs/features.html" class="lang-btn">中文</a>
+                <button class="mobile-menu-toggle"><i class="fas fa-bars"></i></button>
+            </div>
+        </div>
+    </nav>
+    <section class="hero">
+        <div class="container">
+            <h1 class="hero-title">Product Support Lifecycle</h1>
+            <p class="hero-subtitle">Release → upgrade → diagnose → AI triage → answer. Five stages, one loop — and you can see the last one yourself.</p>
+        </div>
+    </section>
+
+    <section class="section">
+        <div class="container">
+            <div class="doc-section" id="stages">
+                <h2><span class="feature-icon">🛟</span> Five stages, one loop</h2>
+                <p class="muted">Every stage states what we do, how it is judged, what it produces, and where the details live.</p>
+                <table class="hardware-table">
+                    <tr><th>Stage</th><th>What happens</th><th>Judgement</th><th>Artifacts</th><th>Details</th></tr>
+                    <tr><td><strong>1. Release</strong><br><span class="muted">Build &amp; publish</span></td><td>• Version authority: <code>MRRC.iss</code> → installed <code>version.txt</code><br>• Three gates before anything ships: unit tests (incl. inline-JS syntax guard), full-site audit, artifact-level hotfix acceptance 3/3<br>• Windows packages build on a real Windows host (WDSP DLL → PyInstaller → Inno)<br>• Site carries <code>latest.json</code> (installer/previous/hotfix) and <code>patch.json</code> (hotfix)</td><td>Success = server-side SHA256 of the published bytes matches the manifest (local download links are not trusted)</td><td>MRRC-Setup.exe · MRRC-Setup-&lt;ver&gt;.exe · previous archive (all in git) · latest.json · patch.json</td><td><a href="https://github.com/cheenle/UHRR_mac/blob/main/docs/current/operations/release-process.md">Release process</a> · <a href="https://github.com/cheenle/UHRR_mac/blob/main/dev_tools/site_audit.py">Site audit tool</a></td></tr>
+                    <tr><td><strong>2. Upgrade</strong><br><span class="muted">One click, or hotfix on restart</span></td><td>• Web UI → menu → <strong>⬆️ Software Update</strong> → <em>Install Now</em>; or type <code>U</code> in the launcher window<br>• Download (background, SHA256-verified, atomic rename) → stop service → one UAC → silent install → automatic restart<br>• Roll back to the previous version with the same path<br>• Hotfix channel patches <code>www/**</code>, loose app modules and <code>vendor</code> <em>without reinstalling</em></td><td><code>state.json.lastResult.status == "ok"</code> — confirmed by the <em>new</em> version itself at startup</td><td><code>updates/state.json</code>, <code>upgrade.request</code>, <code>updates/install-&lt;ver&gt;.log</code></td><td><a href="https://github.com/cheenle/UHRR_mac/blob/main/docs/current/operations/one-click-upgrade.md">One-click upgrade + troubleshooting</a> · <a href="https://github.com/cheenle/UHRR_mac/blob/main/docs/current/reliability/RC-002-launcher-upgrade-and-shutdown.md">10 Windows traps (RC-002)</a> · <a href="https://github.com/cheenle/UHRR_mac/blob/main/docs/current/operations/hotfix-and-patching.md">Hotfix coverage rules</a></td></tr>
+                    <tr><td><strong>3. Diagnose</strong><br><span class="muted">One-click diagnostics bundle</span></td><td>• Menu → <strong>🐞 Something went wrong</strong> → fill in the symptom → build the bundle<br>• Bundle = log tails + <strong>redacted</strong> config (whitelist; secrets replaced) + environment snapshot + automatic health summary<br>• Never packaged: user database, certificates/keys, session secrets; upload only when the user clicks it<br>• Health summary reads at a glance: freshness, audio health, hotfix/WDSP state, <strong>startup count &amp; time span (restarts vs crashes)</strong>, audio-device verdict</td><td>The summary must let the user (and the maintainer) tell environment from defect without reading raw logs</td><td>diagnostics/summary.txt · diagnostics/env.json · logs/ · state/config-redacted.ini</td><td><a href="https://github.com/cheenle/UHRR_mac/blob/main/docs/current/operations/support-bundle.md">Support bundle + auto triage</a></td></tr>
+                    <tr><td><strong>4. AI triage</strong><br><span class="muted">Scheduled, evidence-first</span></td><td>• A cron job polls the receiver, fetches new reports, digests them and asks the project AI <em>with this triage skill</em><br>• The skill fixes the discipline: conservative verdicts, no verdict without evidence, environment is not a defect, every answer must be actionable<br>• Structured JSON conclusion (verdict/status/category/diagnosis/solution/evidence/keys)<br>• Guards: idempotent, never auto-publishes by default, half-packets skipped, per-run cap, timeout, narrow-PATH aware</td><td>Materials insufficient → <code>need_more_info</code> (never a guessed verdict); defect → <code>needs_code_change</code> + file/function</td><td>dist/support_answers/&lt;id&gt;.{digest.md,answer.json,card.html} + published answer card</td><td><a href="https://github.com/cheenle/UHRR_mac/blob/main/dev_tools/support_autopilot.py">Autopilot tool</a> · <a href="https://github.com/cheenle/UHRR_mac/blob/main/.pi/skills/mrrc-product-support/SKILL.md">Triage skill</a></td></tr>
+                    <tr><td><strong>5. Answer</strong><br><span class="muted">Public, searchable, self-service</span></td><td>• Every conclusion becomes a card: <strong>id / symptom / diagnosis (with evidence) / conclusion / what to do / status</strong><br>• Published to the public answers page — searchable by report id or keyword, <code>#id</code> jumps straight there<br>• Known-issue cards are written from the <em>user-visible symptom</em> (e.g. “🐞 page buttons do nothing” → restart MRRC to pull the hotfix)<br>• If it is a defect: workaround first, then fix; hotfix if patchable, otherwise a release; the card is then marked <em>fixed in &lt;version&gt;</em></td><td>The user can solve it themselves from the card; otherwise the case enters the fix flow with evidence already attached</td><td>website/answers/index.html (public), one card per report id</td><td><a href="../answers/">Public answers page</a> · <a href="features.html">Features → lifecycle</a></td></tr>
+                </table>
+            </div>
+
+            <div class="doc-section" id="invariants">
+                <h2><span class="feature-icon">✅</span> Loop invariants (use as the acceptance checklist)</h2>
+                <ol><li>Installed version authority = <code>version.txt</code>; upgrade success = <code>lastResult == "ok"</code>.</li><li>Every release has a usable rollback target (in git, and not a known-bad version).</li><li>Three gates before publish: tests + inline-JS guard, site audit, artifact hotfix acceptance.</li><li>Hotfix scope is explicit (<code>www/**</code>, loose app modules, <code>vendor</code>); everything else is a release.</li><li>The diagnostics bundle never contains user DB / certificates / secrets, and only leaves the machine when the user clicks upload.</li><li>Auto triage never publishes by default, is idempotent, and says <code>need_more_info</code> when evidence is thin.</li><li>Every answer is actionable and searchable by report id.</li><li>Every incident adds a guard (test / tool / check) or it is not done.</li></ol>
+            </div>
+
+            <div class="doc-section" id="guards">
+                <h2><span class="feature-icon">🛡️</span> Incident-driven guards</h2>
+                <p class="muted">Every incident must leave a guard behind — otherwise it is not fixed.</p>
+                <table class="hardware-table">
+                    <tr><th>Incident</th><th>Guard added</th></tr>
+<tr><td>IOLoop wedge / Bluetooth-DAC silent TX (RC-001)</td><td>Heartbeat watchdog + thread dumps + TX-init timing probes</td></tr><tr><td>10 silent upgrade failures (RC-002)</td><td>Ten fixes + regression tests, and “the new version self-confirms” for success</td></tr><tr><td>Packaging missed <code>upgrade_core</code> → <code>/api/update</code> ModuleNotFoundError</td><td>Added to spec <code>_APP_MODULES</code>; rule: newly imported modules must be registered</td></tr><tr><td>GBK console + emoji killed the log tee thread</td><td>Launcher stdio forced to UTF-8 + <code>_safe_print</code> + line buffering</td></tr><tr><td>A quote broke the page JS → all buttons dead (6.1.12)</td><td>Inline-JS syntax guard in tests (<code>node --check</code>, every page)</td></tr><tr><td>Site drift: broken links, mixed stylesheets, lagging Chinese pages</td><td><code>dev_tools/site_audit.py</code> + strict test wired into the suite</td></tr>
+                </table>
+            </div>
+
+            <div class="doc-section" id="entry">
+                <h2><span class="feature-icon">🚪</span> Entry points</h2>
+                <ul><li><a href="../answers/">Public answers page</a> — search by report id; every conclusion is a card.</li><li><a href="features.html">Features → Product Support Lifecycle</a> — the user-facing summary.</li><li><a href="docs.html#support">Technical docs → Product Support</a> — upgrade / diagnostics / answers / hotfix.</li><li><a href="installation.html">Installation</a> — first install, and “already installed? one-click upgrade”.</li><li><a href="https://github.com/cheenle/UHRR_mac/blob/main/docs/current/operations/product-support-lifecycle.md">Repository document</a> — the authoritative version of this page.</li></ul>
+            </div>
+        </div>
+    </section>
+
+    <footer class="footer"><div class="container">
+        <p class="muted" style="text-align:center">MRRC · GPLv3 · Product support lifecycle</p>
+    </div></footer>
+    <script src="../js/main.js"></script>
+</body>
+</html>

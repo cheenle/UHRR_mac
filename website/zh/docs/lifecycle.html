@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>产品支持生命周期 · MRRC</title>
+<link rel="stylesheet" href="../../css/style.css">
+<link rel="stylesheet" href="../../css/octen.css?v=5">
+<link rel="stylesheet" href="../../css/sunsdrmobile.css?v=1">
+<link rel="stylesheet" href="../../css/docs.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container navbar-content">
+            <a href="../../index.html" class="logo">
+                <span class="logo-icon">&#x1f4fb;</span>
+                <span>MRRC</span>
+            </a>
+            <ul class="nav-links">
+                <li><a href="../../index.html">Home</a></li>
+                <li><a href="features.html">Features</a></li>
+                <li><a href="../../index.html#demo">Demo</a></li>
+                <li><a href="installation.html">Installation</a></li>
+                <li><a href="design.html">Design &amp; Architecture</a></li>
+                <li><a href="docs.html">Docs</a></li>
+                <li><a href="../../agentic.html">Agentic</a></li>
+                <li><a href="../../aladdin-v2.html">Aladdin V2</a></li>
+                <li><a href="../../retrospective.html">Retrospective</a></li>
+                <li><a href="../../efhw/index.html">EFHW</a></li>
+                <li><a href="https://github.com/cheenle/UHRR_mac" target="_blank" rel="noopener">
+                    <i class="fab fa-github"></i> GitHub
+                </a></li>
+            </ul>
+            <div class="nav-actions">
+                <a href="../../docs/features.html" class="lang-btn">English</a>
+                <button class="mobile-menu-toggle"><i class="fas fa-bars"></i></button>
+            </div>
+        </div>
+    </nav>
+    <section class="hero">
+        <div class="container">
+            <h1 class="hero-title">产品支持生命周期</h1>
+            <p class="hero-subtitle">发版 → 升级 → 诊断 → AI 分析 → 答复：五段一条链，最后一步你自己就能看到。</p>
+        </div>
+    </section>
+
+    <section class="section">
+        <div class="container">
+            <div class="doc-section" id="stages">
+                <h2><span class="feature-icon">🛟</span> 五段一条链</h2>
+                <p class="muted">每段都写清：做法、判据、产物、细则在哪。</p>
+                <table class="hardware-table">
+                    <tr><th>阶段</th><th>做法</th><th>判据</th><th>产物</th><th>细则</th></tr>
+                    <tr><td><strong>1. 开发发版</strong><br><span class="muted">构建与发布</span></td><td>• 版本唯一权威：<code>MRRC.iss</code> → 安装目录 <code>version.txt</code><br>• 发布前三道闸门：单元测试（含内联 JS 语法守卫）、全站结构审计、<strong>产物级热修验收 3/3</strong><br>• Windows 包在真实 Windows 上构建（WDSP DLL → PyInstaller → Inno）<br>• 站点维护 <code>latest.json</code>（升级）与 <code>patch.json</code>（热修）</td><td>判据 = <strong>服务器侧</strong> SHA256 与清单一致（本机下载链路不可信）</td><td>MRRC-Setup.exe · MRRC-Setup-&lt;ver&gt;.exe · 上一版归档（三者都必须在 git 里）· latest.json · patch.json</td><td><a href="https://github.com/cheenle/UHRR_mac/blob/main/docs/current/operations/release-process.md">发版流程</a> · <a href="https://github.com/cheenle/UHRR_mac/blob/main/dev_tools/site_audit.py">全站审计工具</a></td></tr>
+                    <tr><td><strong>2. 版本升级</strong><br><span class="muted">一次点击，或重启即热修</span></td><td>• 页面菜单 <strong>⬆️ 软件更新 →【立即升级】</strong>，或在启动器窗口输入 <code>U</code><br>• 后台下载（SHA256 校验 + 原子改名）→ 停服务 → 一次 UAC → 静默安装 → 自动重启<br>• 【回退到上一版】走同一条路径<br>• 热修通道覆盖 <code>www/**</code>、可热修模块与 <code>vendor</code>：<strong>重启即生效、无需重装</strong></td><td>成功判据：<code>state.json.lastResult.status == "ok"</code>（由<strong>新版本自己</strong>在启动时自证）</td><td><code>updates/state.json</code>、<code>upgrade.request</code>、<code>updates/install-&lt;ver&gt;.log</code></td><td><a href="https://github.com/cheenle/UHRR_mac/blob/main/docs/current/operations/one-click-upgrade.md">一键升级与排障</a> · <a href="https://github.com/cheenle/UHRR_mac/blob/main/docs/current/reliability/RC-002-launcher-upgrade-and-shutdown.md">10 个 Windows 陷阱（RC-002）</a> · <a href="https://github.com/cheenle/UHRR_mac/blob/main/docs/current/operations/hotfix-and-patching.md">可热修范围</a></td></tr>
+                    <tr><td><strong>3. 问题诊断</strong><br><span class="muted">一键诊断包</span></td><td>• 菜单 <strong>🐞 遇到问题</strong> → 填现象 → 一键生成诊断包<br>• 包含日志尾部 + <strong>脱敏</strong>配置（白名单、密钥替换）+ 环境快照 + <strong>自动体检摘要</strong><br>• 永不打包：用户数据库、证书与私钥、会话密钥；**只有用户点击才上传**<br>• 摘要要能一眼读：数据新鲜度、音频健康、热修/WDSP 状态、<strong>启动次数与时间跨度（区分重启与崩溃）</strong>、音频设备判定</td><td>判据 = 用户和维护者都能<strong>不读原始日志</strong>就分清"环境问题"与"产品缺陷"</td><td>diagnostics/summary.txt · diagnostics/env.json · logs/ · state/config-redacted.ini</td><td><a href="https://github.com/cheenle/UHRR_mac/blob/main/docs/current/operations/support-bundle.md">诊断包与自动分诊</a></td></tr>
+                    <tr><td><strong>4. AI 分析</strong><br><span class="muted">定时、证据优先</span></td><td>• 定时任务轮询接收端 → 取新上报 → 生成摘要 → 交给项目 AI（<strong>带分诊 skill</strong>）分析<br>• skill 固定判定纪律：保守判定、无证据不下结论、环境类不算缺陷、每条答复必须可执行<br>• 产出结构化 JSON（verdict/status/category/diagnosis/solution/evidence/keys）<br>• 护栏：幂等、默认不发布、半包跳过、单轮上限、超时控制、适配 cron 的窄 PATH</td><td>材料不足 → <code>need_more_info</code>（绝不猜）；确认缺陷 → <code>needs_code_change</code> + 文件/函数</td><td>dist/support_answers/&lt;编号&gt;.{digest.md,answer.json,card.html} + 已发布的答复卡</td><td><a href="https://github.com/cheenle/UHRR_mac/blob/main/dev_tools/support_autopilot.py">自动分诊工具</a> · <a href="https://github.com/cheenle/UHRR_mac/blob/main/.pi/skills/mrrc-product-support/SKILL.md">分诊 skill</a></td></tr>
+                    <tr><td><strong>5. 回复解决</strong><br><span class="muted">公开、可搜索、自助解决</span></td><td>• 每条结论成为一张答复卡：<strong>编号 / 症状 / 诊断（附证据）/ 结论 / 你要做的 / 状态</strong><br>• 发布到公开答复页：按编号或关键词搜索，<code>#编号</code> 直达并自动填入搜索框<br>• 已知问题卡面向<strong>用户看到的现象</strong>写（例："🐞 页面按钮点不动" → 重启 MRRC 拉热修即修复）<br>• 确认是缺陷：先给临时规避，再修代码；能热修就热修，否则发版；卡片随后标注"已修复 · 版本号"</td><td>判据 = 用户照着卡片就能自己解决；不能解决的，带着已定位的证据进入修复流程</td><td>website/answers/index.html（公开），一个上报编号一张卡</td><td><a href="../../answers/">公开答复页</a> · <a href="features.html">功能页 → 支持生命周期</a></td></tr>
+                </table>
+            </div>
+
+            <div class="doc-section" id="invariants">
+                <h2><span class="feature-icon">✅</span> 闭环不变量（可直接当验收清单）</h2>
+                <ol><li>安装版本唯一权威 = <code>version.txt</code>；升级成功唯一判据 = <code>lastResult == "ok"</code>。</li><li>每次发布都有可用的回退目标（已入库，且不是已知有问题的版本）。</li><li>发布前三道闸门：单测 + 内联 JS 守卫、全站审计、产物级热修验收。</li><li>热修范围是明确的（<code>www/**</code>、可热修模块、<code>vendor</code>）；其余一律发版。</li><li>诊断包永不包含用户数据库 / 证书 / 密钥，且只有用户点击上传才离开本机。</li><li>自动分诊默认不发布、幂等，材料不足一律 <code>need_more_info</code>。</li><li>每条答复都可被用户照着做，并可按上报编号检索。</li><li>每次事故都要留下一条守卫（测试 / 工具 / 检查），否则不算修完。</li></ol>
+            </div>
+
+            <div class="doc-section" id="guards">
+                <h2><span class="feature-icon">🛡️</span> 事故驱动的守卫</h2>
+                <p class="muted">每次事故都要留下一条守卫 —— 没有守卫就不算修完。</p>
+                <table class="hardware-table">
+                    <tr><th>事故</th><th>新增的守卫</th></tr>
+<tr><td>IOLoop 楔死 / 蓝牙 DAC 致 TX 静默（RC-001）</td><td>心跳看门狗 + 线程栈转储 + 发射初始化耗时打点</td></tr><tr><td>升级链路 10 个静默失效（RC-002）</td><td>10 项修复 + 回归测试 + "新版启动自证成功"</td></tr><tr><td>打包漏 <code>upgrade_core</code> → <code>/api/update</code> 报 ModuleNotFoundError</td><td>加入 spec 的 <code>_APP_MODULES</code>；规则：函数内新 import 的模块必须登记</td></tr><tr><td>GBK 控制台 emoji 杀死日志转发线程</td><td>启动器 stdio 统一 UTF-8 + <code>_safe_print</code> + 行缓冲</td></tr><tr><td>页面少写一个引号 → 整页按钮失效（6.1.12）</td><td>内联 JS 语法守卫：所有页面逐段 <code>node --check</code></td></tr><tr><td>站点漂移：断链 / 样式不统一 / 中文滞后</td><td><code>dev_tools/site_audit.py</code> + 严格模式测试接入测试套件</td></tr>
+                </table>
+            </div>
+
+            <div class="doc-section" id="entry">
+                <h2><span class="feature-icon">🚪</span> 入口</h2>
+                <ul><li><a href="../../answers/">公开答复页</a> —— 按上报编号搜索，每条结论都是一张卡。</li><li><a href="features.html">功能页 → 产品支持生命周期</a> —— 面向用户的摘要。</li><li><a href="docs.html#support">技术文档 → 产品支持</a> —— 升级 / 诊断 / 答复 / 热修。</li><li><a href="installation.html">安装指南</a> —— 首次安装与"已装过就一键升级"。</li><li><a href="https://github.com/cheenle/UHRR_mac/blob/main/docs/current/operations/product-support-lifecycle.md">仓库文档</a> —— 本页的权威版本。</li></ul>
+            </div>
+        </div>
+    </section>
+
+    <footer class="footer"><div class="container">
+        <p class="muted" style="text-align:center">MRRC · GPLv3 · 产品支持生命周期</p>
+    </div></footer>
+    <script src="../../js/main.js"></script>
+</body>
+</html>
