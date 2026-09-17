@@ -1,12 +1,11 @@
 {
-  "latest": "6.1.14",
-  "url": "https://www.vlsc.net/mrrc/downloads/hotfix-6.1.14.zip",
-  "sha256": "fddf0d10cc4c53493ddcb6e10430904c85c474b56a540723721cf91887531a5f",
-  "size": 9133,
+  "latest": "6.1.15",
+  "url": "https://www.vlsc.net/mrrc/downloads/hotfix-6.1.15.zip",
+  "sha256": "2f8837e5d0129f290c594c3ae7dcd2efacd48bf60e467f1143341249a90ec95a",
+  "size": 7055,
   "requires": "6.0.3",
-  "notes": "Windows 安装版自动拉起 rigctld（不再需要手动启动电台后台）；含启动卡死与子进程输出两个修复",
+  "notes": "修 rigctld 自启动：机型名→编号解析（hamlib -m 只接受数字）",
   "files": [
-    "app/hamlib_wrapper.py",
     "app/rigctld_supervisor.py"
   ]
 }
