@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [V6.1.15] - 2026-09-17
+
+### 🐛 rigctld 自启动补一个关键修复：hamlib 的 `-m` 只接受编号
+
+VM 实测：配置只写机型名（`rig_model = FT991`、无 `instance_rigctl_model`）时，
+自启动传 `-m FT991` → rigctld 直接退出（`Unknown rig num 0, or initialization error.`）。
+
+修复：名字 → 编号用 **`rigctld --list`** 解析（便宜、离线、不碰设备；忽略大小写与 `-`/`_`/空格差异，
+也认 `RIG_MODEL_*` 宏名），带 3 秒超时与进程内缓存。数字直接透传（用户机器上 `1036` 即走这条）。
+
 ## [V6.1.14] - 2026-09-17
 
 ### ✅ Windows 安装版自动拉起 rigctld（不再需要手动启动电台后台）

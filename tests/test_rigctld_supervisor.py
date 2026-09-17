@@ -142,3 +142,22 @@ class EnsureRunningTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
+
+class ModelListParseTest(unittest.TestCase):
+    """hamlib 的 -m 只接受编号：必须能把机型名解析成编号（真机实测：传名字会
+    "Unknown rig num 0" 直接退出）。"""
+
+    SAMPLE = """   1  Yaesu  FT-847  1.0  Beta  RIG_MODEL_FT847
+1036  Yaesu  FT-891  20241118.11  Stable  RIG_MODEL_FT891
+ 3073  Icom  IC-M710  1.0  Stable  RIG_MODEL_ICM710
+"""
+
+    def test_name_variants_resolve(self):
+        for name in ("FT-891", "FT891", "ft 891", "RIG_MODEL_FT891"):
+            self.assertEqual(sup.parse_model_list(self.SAMPLE, name), "1036", name)
+        for name in ("IC-M710", "ICM710", "ic m710"):
+            self.assertEqual(sup.parse_model_list(self.SAMPLE, name), "3073", name)
+
+    def test_unknown_returns_none(self):
+        self.assertIsNone(sup.parse_model_list(self.SAMPLE, "NOPE-123"))
+        self.assertIsNone(sup.parse_model_list("", "FT-891"))

@@ -25,6 +25,7 @@ from __future__ import annotations
 
 import configparser
 import os
+import re
 import socket
 import subprocess
 import sys
@@ -49,6 +50,58 @@ def _cfg_get(cfg: configparser.ConfigParser, section: str, key: str, default: st
         return default
     return (value or "").strip() or default
 
+
+
+def parse_model_list(text: str, name: str) -> str | None:
+    """从 `rigctld --list` 的输出里找出机型对应的编号。
+
+    输出形如（hamlib 4.x）：
+        1  Yaesu  FT-847  1.0  Beta  RIG_MODEL_FT847
+     1036  Yaesu  FT-891  20241118.11  Stable  RIG_MODEL_FT891
+    匹配规则：忽略大小写与 -/_/空格差异，也接受 RIG_MODEL_* 宏名。
+    """
+    if not text or not name:
+        return None
+    want = _norm(name)
+    for line in text.splitlines():
+        m = re.match(r"\s*(\d+)\s+(.*)$", line)
+        if not m:
+            continue
+        code, rest = m.group(1), m.group(2)
+        fields = [f for f in re.split(r"\s{2,}", rest.strip()) if f]
+        cands = {_norm(f) for f in fields}
+        macro = next((f for f in fields if f.upper().startswith("RIG_MODEL_")), "")
+        if macro:
+            cands.add(_norm(macro[len("RIG_MODEL_"):]))
+        if want in cands:
+            return code
+    return None
+
+
+def _norm(text: str) -> str:
+    return re.sub(r"[-_\s]+", "", str(text)).lower()
+
+
+_model_id_cache: dict[str, str] = {}
+
+
+def model_id_from_name(name: str) -> str | None:
+    """把机型名解析成 hamlib 编号（`rigctld --list`，最多等 3 秒；失败返回 None）。"""
+    key = _norm(name)
+    if key in _model_id_cache:
+        return _model_id_cache[key] or None
+    binary = find_rigctld()
+    if not binary:
+        return None
+    try:
+        out = subprocess.run([binary, "--list"], capture_output=True, text=True,
+                             timeout=3.0, stdin=subprocess.DEVNULL).stdout or ""
+    except Exception:
+        _model_id_cache[key] = ""
+        return None
+    code = parse_model_list(out, name)
+    _model_id_cache[key] = code or ""
+    return code
 
 def resolve_config(cfg: configparser.ConfigParser) -> dict:
     """把配置折算成启动 rigctld 需要的参数（双键优先级 + 机型名→数字）。"""
@@ -79,9 +132,13 @@ def resolve_config(cfg: configparser.ConfigParser) -> dict:
                 code = cached(out.get("host") or DEFAULTS["host"], out.get("port") or DEFAULTS["port"])
         except Exception:
             code = None
+        if not code:
+            # hamlib 的 -m 只接受数字（实测：传名字会 "Unknown rig num 0" 直接退出），
+            # 所以再用 `rigctld --list` 解析一次（便宜、离线、不碰设备）
+            code = model_id_from_name(model)
         if code:
             out["model"] = str(code)
-        # 折算不出来就保留原名：rigctld 的 -m 也接受机型名（找不到时它自己会报错，日志可见）
+        # 还解析不出来就保留原名：启动会失败并在 rigctld-stdout.log 里留下明确报错
     return out
 
 
