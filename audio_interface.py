@@ -328,6 +328,66 @@ def accumulate_capture_health(diag, samples, read_seconds, now=None, window_seco
     return line
 
 
+# ═══ NR3: RNNoise（Xiph, BSD-3）纯 C 神经降噪 —— 2026-09-17 "水声"工程第二轮 ═══
+# 实测：新代 RNNoise 对输入电平有隐含假设（帧能量 E<0.04 即判静默直通），采集电平下需
+# ×100 增益才稳定工作（silence 率 0%）；输出再 ÷100 还原。特征为对数域，固定增益安全。
+_RNNOISE = {'lib': None, 'st': None, 'tried': False}
+RNNOISE_GAIN = 100.0
+
+def _rnnoise_process(frame):
+    """960 样本 float32 → 两帧 480 过 RNNoise。任何失败都直通，绝不抛异常阻断采集。"""
+    import ctypes
+    st = _RNNOISE
+    if not st['tried']:
+        st['tried'] = True
+        try:
+            import os, sys
+            here = os.path.dirname(os.path.abspath(__file__))
+            names = {'Windows': 'rnnoise.dll'}.get(sys.platform, 'librnnoise.dylib')
+            cands = [os.path.join(here, names), os.path.join(here, 'DSP', 'rnnoise', names)]
+            try:
+                import patch_overlay
+                cands += [os.path.join(d, names) for d in patch_overlay.dll_dirs()]
+            except Exception:
+                pass
+            lib, path = None, None
+            for c in cands:
+                if os.path.exists(c):
+                    lib, path = ctypes.CDLL(c), c
+                    break
+            if lib is None:
+                raise FileNotFoundError(f'librnnoise 未找到: {cands}')
+            lib.rnnoise_create.restype = ctypes.c_void_p
+            lib.rnnoise_create.argtypes = [ctypes.c_void_p]
+            lib.rnnoise_process_frame.restype = ctypes.c_float
+            lib.rnnoise_process_frame.argtypes = [ctypes.c_void_p, ctypes.POINTER(ctypes.c_float), ctypes.POINTER(ctypes.c_float)]
+            handle = lib.rnnoise_create(None)
+            if not handle:
+                raise RuntimeError('rnnoise_create 返回空')
+            st['lib'], st['st'], st['path'] = lib, handle, path
+            print(f"🔌 NR3(RNNoise) 已加载: {path}（电平标定 ×{RNNOISE_GAIN:g}）")
+        except Exception as e:
+            print(f"⚠️ RNNoise 不可用，NR3 降级关闭: {e}")
+    lib, handle = st.get('lib'), st.get('st')
+    if lib is None:
+        return frame
+    try:
+        import numpy as np
+        n = (len(frame) // 480) * 480
+        if n <= 0:
+            return frame
+        src = (frame[:n].astype(np.float32) * RNNOISE_GAIN)
+        out = np.empty(n, np.float32)
+        P = ctypes.POINTER(ctypes.c_float)
+        for i in range(0, n, 480):
+            ob = np.empty(480, np.float32)
+            lib.rnnoise_process_frame(handle, ob.ctypes.data_as(P), src[i:i + 480].ctypes.data_as(P))
+            out[i:i + 480] = ob
+        return out / RNNOISE_GAIN
+    except Exception:
+        return frame
+
+
 class PyAudioCapture(threading.Thread):
     """PyAudio-based replacement for ALSA capture
     
@@ -442,6 +502,8 @@ class PyAudioCapture(threading.Thread):
                     # 增益级：AGC 最大补偿增益(dB) / 输出电势 panel
                     'agc_top_db': config['WDSP'].getfloat('agc_top_db', 20.0),
                     'panel_gain': config['WDSP'].getfloat('panel_gain', 0.35),
+                    # NR3: RNNoise 神经降噪（Xiph, BSD-3，纯 C）—— plus=RN+EMNR 叠加 / only=仅 RN / off
+                    'nr3': (config['WDSP'].get('nr3', 'off') or 'off').strip().lower(),
                 }
                 cfg = PyAudioCapture.wdsp_config
                 print(f"🔧 WDSP DSP 已启用（替代 RNNoise）")
@@ -639,6 +701,10 @@ class PyAudioCapture(threading.Thread):
                     dc_offset = np.mean(float32_data)
                     if abs(dc_offset) > 0.001:
                         float32_data = float32_data - dc_offset
+
+                    # NR3: RNNoise 神经降噪（[WDSP] nr3 = plus|only|off）—— 在 DC 去除后、WDSP/录制之前
+                    if PyAudioCapture.wdsp_config.get('nr3', 'off') in ('plus', 'only'):
+                        float32_data = _rnnoise_process(float32_data)
                     
                     # 2. 自动增益控制 (AGC) - 当 WDSP AGC 已开启时跳过
                     wdsp_agc_active = (
