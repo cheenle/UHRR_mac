@@ -1,8 +1,8 @@
-# Mobile Remote Radio Control (MRRC) V6.1.15
+# Mobile Remote Radio Control (MRRC) V6.1.16
 
 [![English](https://img.shields.io/badge/lang-English-blue.svg)](README_en.md)
 [![中文](https://img.shields.io/badge/lang-中文-red.svg)](README_CN.md)
-[![Version](https://img.shields.io/badge/version-V6.1.15-green.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-V6.1.16-green.svg)](CHANGELOG.md)
 
 ---
 
@@ -30,7 +30,7 @@ A modern web-based remote control system optimized for mobile devices, enabling 
 热修通道：`www/**`、`_APP_MODULES`（含 `upgrade_core.py`/`support_bundle.py`）与 `vendor` 的修复**无需重装**，
 用户重启即生效。
 
-> 🎉 **V6.1.15 更新**: **一键升级**（有新版本时点一下/按 U 即可，自动下载校验 + 静默安装 + 自动重启，支持回退上一版）。
+> 🎉 **V6.1.16 更新**: **一键升级**（有新版本时点一下/按 U 即可，自动下载校验 + 静默安装 + 自动重启，支持回退上一版）。
 
 > 🎉 **V6.0.10 更新**: 新增「🐞 遇到问题」一键诊断包上传（脱敏 + 自动体检摘要，维护者可直接看到问题与日志）、
 > 启动器 tee 服务端日志、空闲关机幂等、诊断包接收端部署在随站点。

@@ -262,15 +262,15 @@
                 <div class="step">
                     <div class="step-number">0</div>
                     <div class="step-content">
-                        <h3>Windows Installer (V6.1.15, Easiest Path)</h3>
+                        <h3>Windows Installer (V6.1.16, Easiest Path)</h3>
                         <p>Download <code>MRRC-Setup.exe</code>, run it, then start <strong>MRRC</strong> from the Start Menu. The launcher creates HTTPS certificates, a local login, and a quick-start file automatically.</p>
-                        <p class="tip">🔌 <strong>The radio daemon (rigctld) now starts automatically (V6.1.15).</strong>
+                        <p class="tip">🔌 <strong>The radio daemon (rigctld) now starts automatically (V6.1.16).</strong>
                             Once the model and serial port are configured, MRRC finds and launches rigctld itself on startup
                             (search order: app <code>vendor\hamlib\windows\bin\x64</code> → <code>PATH</code> →
                             <code>C:\Program Files\hamlib*\bin</code>; override with <code>MRRC_RIGCTLD_BIN</code>).
                             Daemon log: <code>%LOCALAPPDATA%\MRRC\logs\rigctld-stdout.log</code>.
                             To disable: <code>[HAMLIB] autostart = false</code> (or <code>MRRC_RIGCTLD_AUTOSTART=0</code>).</p>
-                        <p class="tip">⬆️ <strong>Already installed (V6.1.15 or newer)?</strong> You don't need to download anything:
+                        <p class="tip">⬆️ <strong>Already installed (V6.1.16 or newer)?</strong> You don't need to download anything:
                             open the web UI → menu → <strong>⬆️ Software Update</strong> (or type <code>U</code> + Enter in the launcher window)
                             → the app downloads, verifies and installs the new version itself, then restarts.
                             Installs up to V6.0.10 have no updater yet — install this package once to enable it.</p>
