@@ -99,6 +99,48 @@
 
   <h2>答复列表</h2>
 
+  <div class="card" data-keys="20260917-085736-ebd2 FT-891连接不上，但是电台的音频能同步。 环境 20260917-085736-ebd2 FT-891 连接不上 音频能同步 rigctld daemon not running rigctld.exe COM8 1036 38400 CAT 电台控制 Windows 10 环境">
+    <div class="row" style="justify-content:space-between">
+      <h3 style="margin:0">编号 <span class="id">20260917-085736-ebd2</span></h3>
+      <span class="pill ok">已答复 · 环境</span>
+    </div>
+    <p class="muted" style="margin:8px 0 2px">上报时间 2026-09-17T08:53:09 · 描述：<strong>FT-891连接不上，但是电台的音频能同步。</strong></p>
+    <p class="muted" style="margin:2px 0 10px">上报版本 6.1.13 · 包体积 10 KB</p>
+
+    <h3>结论</h3>
+    <p>FT-891连不上是rigctld未启动，需手动启动rigctld.exe（环境问题）</p>
+
+    <h3>诊断</h3>
+    <ul>
+      <li>3次ERROR『rigctld daemon not running: timed out』（08:40:14/08:41:15/08:51:38），电台CAT后台没起来，FT-891因此连不上。</li>
+      <li>配置两套键一致且正确：rig_model=FT-891、instance_rigctl_model=1036、rig_pathname=COM8、rig_rate=38400，问题不在机型配置。</li>
+      <li>Windows安装版不会自动拉起rigctld.exe，需用户手动启动（与此前073700-14ef同因，属重复现象）。</li>
+      <li>音频走声卡、与CAT控制是两条独立通道：日志尾部采集100.0%、Opus编码正常，与『音频能同步』一致。</li>
+      <li>无Traceback、6次启动无崩溃痕迹，属正常升级/重启，不是软件故障。</li>
+      <li>音频最低健康度89.4%（略低于99%），为次要性能点，非本次连接问题主因。</li>
+    </ul>
+
+    <h3>你要做的</h3>
+    <ol>
+      <li>以管理员身份打开PowerShell启动rigctld：rigctld.exe -m 1036 -r COM8 -s 38400 -T 127.0.0.1 -t 4532（串口/速率按设备管理器与FT-891的CAT菜单核实）。</li>
+      <li>确认FT-891已开机、CAT串口线接到COM8，且电台CAT菜单速率=38400、数据位=8、停止位/校验与上面命令一致。</li>
+      <li>验证rigctld已监听：运行 Test-NetConnection 127.0.0.1 -Port 4532 应成功；再重启MRRC，日志出现『✓ rigctld daemon responding!』即连接成功。</li>
+      <li>确认COM8未被JTDX/WSJT-X/电台原厂等CAT软件占用，占用时rigctld会打不开串口。</li>
+      <li>若音频仍有偶发卡顿（健康度89.4%），检查CPU占用、关掉WDSP高负载项或将采集设备换用低延迟WASAPI通道。</li>
+    </ol>
+
+    <h3>证据（原始行）</h3>
+    <ul>
+      <li>ERROR - ⚠ rigctld daemon not running: timed out（08:40:14、08:41:15、08:51:38）</li>
+      <li>rig_model = FT-891 / rig_pathname = COM8 / rig_rate = 38400 / instance_rigctl_model = 1036</li>
+      <li>音频健康: 30s 采集 1440960 样本（应有 1440944，100.0%）</li>
+      <li>自动体检结论：音频采集最低健康度 89.4%</li>
+      <li>启动次数：6 次，时间跨度 06:42:28 → 08:51:40 —— 无崩溃痕迹</li>
+      <li>platform: Windows-10-10.0.19041-SP0</li>
+    </ul>
+
+  </div>
+
   <div class="card" data-keys="20260917-073700-14ef FT-891还是无法连接上，音频同步正常，S表偏大过电台机显，大概差1到1.5个S。 环境 20260917-073700-14ef bg7zhs FT-891 无法连接 rigctld daemon not running rigctld.exe S表偏大 1到1.5个S COM8 rig_model 1036 38400 音频同步正常 Windows 10 CAT 连接">
     <div class="row" style="justify-content:space-between">
       <h3 style="margin:0">编号 <span class="id">20260917-073700-14ef</span></h3>
