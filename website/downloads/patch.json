@@ -1,11 +1,12 @@
 {
-  "latest": "6.1.13",
-  "url": "https://www.vlsc.net/mrrc/downloads/hotfix-6.1.13.zip",
-  "sha256": "91444198a042096eef1e1873964b7143ef9334744a97a53429a7dcd6339b5246",
-  "size": 3168,
+  "latest": "6.1.14",
+  "url": "https://www.vlsc.net/mrrc/downloads/hotfix-6.1.14.zip",
+  "sha256": "fddf0d10cc4c53493ddcb6e10430904c85c474b56a540723721cf91887531a5f",
+  "size": 9133,
   "requires": "6.0.3",
-  "notes": "紧急修复：🐞 遇到问题页面所有按钮失效（内联 JS 语法错误）",
+  "notes": "Windows 安装版自动拉起 rigctld（不再需要手动启动电台后台）；含启动卡死与子进程输出两个修复",
   "files": [
-    "www/support.html"
+    "app/hamlib_wrapper.py",
+    "app/rigctld_supervisor.py"
   ]
 }
