@@ -703,7 +703,11 @@ class PyAudioCapture(threading.Thread):
                         float32_data = float32_data - dc_offset
 
                     # NR3: RNNoise 神经降噪（[WDSP] nr3 = plus|only|off）—— 在 DC 去除后、WDSP/录制之前
-                    if PyAudioCapture.wdsp_config.get('nr3', 'off') in ('plus', 'only'):
+                    # 门控（2026-09-17 修）：必须同时满足 WDSP 启用 + 用户 NR 开关（nr2_enabled）开着。
+                    # 否则用户在 UI 关掉 NR2/WDSP 后 RN 仍在处理 → "关了还有失真"（实测踩坑）。
+                    if (PyAudioCapture.wdsp_enabled and WDSP_AVAILABLE
+                            and PyAudioCapture.wdsp_config.get('nr2_enabled', True)
+                            and PyAudioCapture.wdsp_config.get('nr3', 'off') in ('plus', 'only')):
                         float32_data = _rnnoise_process(float32_data)
                     
                     # 2. 自动增益控制 (AGC) - 当 WDSP AGC 已开启时跳过
