@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [V6.1.16] - 2026-09-17
+
+### 🔧 rigctld 自启动收口：正式实现 rigctld_manager 为主，兜底实现只让位不调用
+
+- `rigctld_manager.py` 为唯一正式实现（已接进 `MRRC`，含 settings/argv/进程与日志管理/`status`）；
+- `rigctld_supervisor.py` 只作**热修通道的桥**：检测到 `rigctld_manager` 时**直接跳过**（不重复调用 ——
+  重复调用会因内部等待阻塞启动，实测挂住）；6.1.13/6.1.14 的包里没有该模块，故自然走兜底；
+- 文档全面更新：`AGENTS.md`、`current-system.md`（rigctld 归属）、`runtime-and-verification.md`（验证方法）、
+  `product-support-lifecycle.md`（守卫清单）、安装页（中英，说明自启动与开关）。
+
 ## [V6.1.15] - 2026-09-17
 
 ### 🐛 rigctld 自启动补一个关键修复：hamlib 的 `-m` 只接受编号
