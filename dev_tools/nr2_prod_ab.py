@@ -46,7 +46,7 @@ def band_noise(n, lo=250.0, hi=2950.0, seed=11, amp=1.0):
 
 def run_prod(x, *, emnr, agc=WDSPAGCMode.MED, panel=0.06, bp=(300.0, 2700.0),
              floor_db=None, dry=None, gm=0, npe=0, ae=1, psi=12.0, zeta=0.65,
-             agc_top_db=None, speed=1.0):
+             alpha=None, npmax=None, agc_top_db=None, speed=1.0):
     """生产链路：与 audio_interface.PyAudioCapture + wdsp_wrapper 一致"""
     p = WDSPProcessor(sample_rate=SR, buffer_size=BS, mode=WDSPMode.USB, enable_nr2=False,
                       enable_nb=False, enable_anf=False, agc_mode=WDSPAGCMode.MED)
@@ -69,6 +69,10 @@ def run_prod(x, *, emnr, agc=WDSPAGCMode.MED, panel=0.06, bp=(300.0, 2700.0),
             _wdsp.SetRXAEMNRmaxAttenDb(ctypes.c_int(0), ctypes.c_double(floor_db))
         if dry is not None and hasattr(_wdsp, "SetRXAEMNRdry"):
             _wdsp.SetRXAEMNRdry(ctypes.c_int(0), ctypes.c_double(dry))
+        if alpha is not None and hasattr(_wdsp, "SetRXAEMNRalpha"):
+            _wdsp.SetRXAEMNRalpha(ctypes.c_int(0), ctypes.c_double(alpha))
+        if npmax is not None and hasattr(_wdsp, "SetRXAEMNRnpMax"):
+            _wdsp.SetRXAEMNRnpMax(ctypes.c_int(0), ctypes.c_double(npmax))
     if bp and emnr:                 # 与生产一致：bp1 只在有 NR 模块运行时有效
         p.set_bandpass(*bp)
     n = len(x) // BS

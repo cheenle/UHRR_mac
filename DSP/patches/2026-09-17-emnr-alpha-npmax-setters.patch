@@ -1,0 +1,52 @@
+--- /tmp/wdsp_chk/wdsp/emnr.c	2026-09-14 15:12:10
++++ DSP/wdsp/emnr.c	2026-09-17 15:00:11
+@@ -26,7 +26,7 @@
+ #define _CRT_SECURE_NO_WARNINGS
+ #include "comm.h"
+ 
+-#if defined(linux) || defined(__APPLE__)
++#if defined(linux) || defined(__APPLE__) || defined(__MINGW32__)
+ #include "calculus.h"
+ #endif
+ 	
+@@ -278,7 +278,7 @@
+ 	//
+ 	a->g.GG = (double *)malloc0(241 * 241 * sizeof(double));
+ 	a->g.GGS = (double *)malloc0(241 * 241 * sizeof(double));
+-#if defined(linux) || defined(__APPLE__)
++#if defined(linux) || defined(__APPLE__) || defined(__MINGW32__)
+         memcpy(a->g.GG, GG, 241 * 241 * sizeof(double));
+         memcpy(a->g.GGS, GGS, 241 * 241 * sizeof(double));
+ #else
+@@ -985,5 +985,31 @@
+ {
+ 	EnterCriticalSection (&ch[channel].csDSP);
+ 	rxa[channel].emnr.p->g.dry = (dry > 0.0) ? ((dry < 1.0) ? dry : 1.0) : 0.0;
++	LeaveCriticalSection (&ch[channel].csDSP);
++}
++
++PORT
++void SetRXAEMNRalpha (int channel, double alpha)
++{
++	EnterCriticalSection (&ch[channel].csDSP);
++	// 决策导向平滑（掩码时间平滑）：越大越平滑 → 音乐噪声/水声↓；过大则拖尾、跟不上语音起伏。
++	// 初始化等效值（48k/incr=256）≈0.9933；建议范围 0.990~0.998。
++	EMNR a = rxa[channel].emnr.p;
++	a->g.alpha = (alpha > 0.90) ? ((alpha < 0.9999) ? alpha : 0.9999) : 0.90;
++	LeaveCriticalSection (&ch[channel].csDSP);
++}
++
++PORT
++void SetRXAEMNRnpMax (int channel, double logref)
++{
++	EnterCriticalSection (&ch[channel].csDSP);
++	// 噪声估计“最大跟踪”平滑（初始化里 log(0.96) 那个）：越大噪声估计变化越慢 →
++	// 停顿间咕嘟/泵动↓；过大则语音结束后噪声底回填太慢。
++	EMNR a = rxa[channel].emnr.p;
++	if (logref > 0.50 && logref < 1.0)
++	{
++		double tau = -128.0 / 8000.0 / log (logref);
++		a->np.alphaMax = exp (-a->np.incr / a->np.rate / tau);
++	}
+ 	LeaveCriticalSection (&ch[channel].csDSP);
+ }

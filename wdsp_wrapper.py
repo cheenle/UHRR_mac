@@ -70,8 +70,9 @@ class WDSPNR2Level:
     #   -12dB 深度仅 +0.8dB 但吃字 26.7%、音乐噪声 ×1.22；-9dB 吃字降到 8.2%。
     #   -16/-20 深度不再增长而吃字 32-33%。整体下移一档：-6/-9/-12/-16。
     MAX_ATTEN_DB = {1: -6.0, 2: -9.0, 3: -12.0, 4: -16.0}
-    PSI = {1: 8.0, 2: 12.0, 3: 14.0, 4: 18.0}
-    ZETA_THRESH = {1: 0.70, 2: 0.65, 3: 0.60, 4: 0.55}
+    # AE 两行目前无人读取（生效的是构造默认 psi=20/zeta=0.50，闭环实测 winner）；保留以备按档分化
+    PSI = {1: 20.0, 2: 20.0, 3: 20.0, 4: 20.0}
+    ZETA_THRESH = {1: 0.50, 2: 0.50, 3: 0.50, 4: 0.50}
 
 # Try to load WDSP library
 def _load_wdsp_library():
@@ -263,9 +264,11 @@ class WDSPProcessor:
                  enable_nb: bool = False,
                  enable_anf: bool = False,
                  agc_mode: int = WDSPAGCMode.MED,
-                 nr2_ae_psi: float = 12.0,
-                 nr2_ae_zeta_thresh: float = 0.65,
+                 nr2_ae_psi: float = 20.0,
+                 nr2_ae_zeta_thresh: float = 0.50,
                  nr2_max_atten_db: float = None,
+                 nr2_npmax: float = 0.98,
+                 nr2_alpha: float = None,
                  nr2_dry: float = 0.0,
                  agc_top_db: float = 20.0,
                  panel_gain: float = 0.35):
@@ -300,6 +303,11 @@ class WDSPProcessor:
         self._agc_mode = agc_mode
         self._nr2_ae_psi = nr2_ae_psi
         self._nr2_ae_zeta_thresh = nr2_ae_zeta_thresh
+        # C 层“去水”旋钮（需 2026-09-17 后的 libwdsp；旧库无符号时自动跳过）
+        #   npmax：噪声估计“最大跟踪”平滑（stock 0.96）；闭环实测 0.98：包络相关↑、深度↑（2026-09-17）
+        #   alpha：决策导向平滑（stock≈0.9933）；闭环实测提高无益（只拖尾），保持 None=不设置
+        self._nr2_npmax = nr2_npmax
+        self._nr2_alpha = nr2_alpha
         # SSB 语音保护：每 bin 最大衰减（None=跟随等级表，<0 生效，>=0 关闭=旧行为）/ 干湿混合
         self._nr2_max_atten_db = nr2_max_atten_db
         self._nr2_dry = nr2_dry
@@ -391,8 +399,13 @@ class WDSPProcessor:
             _wdsp.SetRXAEMNRaeRun(ctypes.c_int(self.channel), ctypes.c_int(1))
             # Position=0: 在 AGC 之前降噪，避免 AGC 放大残留噪声
             _wdsp.SetRXAEMNRPosition(ctypes.c_int(self.channel), ctypes.c_int(0))
-            # 调强 AE 掩码平滑（psi=20, zetaThresh=0.5），压制频谱减法"水音"音乐噪声
+            # 调强 AE 掩码平滑（psi=20, zetaThresh=0.5），压制频谱减法“水音”音乐噪声
             self.set_nr2_ae(self._nr2_ae_psi, self._nr2_ae_zeta_thresh)
+            # C 层去水：噪声估计放慢（闭环实测小胜）+ 可选决策导向 alpha（默认不设=stock）
+            if self._nr2_npmax is not None and hasattr(_wdsp, "SetRXAEMNRnpMax"):
+                _wdsp.SetRXAEMNRnpMax(ctypes.c_int(self.channel), ctypes.c_double(self._nr2_npmax))
+            if self._nr2_alpha is not None and hasattr(_wdsp, "SetRXAEMNRalpha"):
+                _wdsp.SetRXAEMNRalpha(ctypes.c_int(self.channel), ctypes.c_double(self._nr2_alpha))
             # SSB 语音保护：限制每 bin 最大衰减（默认跟随等级表：L2 = -12dB）
             self._apply_nr2_voice_protection(2)
             if self._nr2_dry > 0.0:
@@ -505,7 +518,7 @@ class WDSPProcessor:
                 self._nr2_level = level
                 level_names = {1: 'MIN(极温和)', 2: 'LOW(温和)', 3: 'MED(中等)', 4: 'HIGH(强力)'}
                 db = (self._nr2_max_atten_db if self._nr2_max_atten_db is not None
-                      else WDSPNR2Level.MAX_ATTEN_DB.get(level, -12.0))
+                      else WDSPNR2Level.MAX_ATTEN_DB.get(level, -9.0))
                 print(f"🔧 WDSP NR2: {level_names.get(level, level)} "
                       f"(max_atten={db}dB, psi={self._nr2_ae_psi}, ae={ae_run})")
         except Exception as e:
@@ -527,7 +540,7 @@ class WDSPProcessor:
             return
         try:
             db = (self._nr2_max_atten_db if self._nr2_max_atten_db is not None
-                  else WDSPNR2Level.MAX_ATTEN_DB.get(level, -12.0))
+                  else WDSPNR2Level.MAX_ATTEN_DB.get(level, -9.0))
             _wdsp.SetRXAEMNRmaxAttenDb(ctypes.c_int(self.channel), ctypes.c_double(db))
             if self._nr2_dry and self._nr2_dry > 0.0 and hasattr(_wdsp, "SetRXAEMNRdry"):
                 _wdsp.SetRXAEMNRdry(ctypes.c_int(self.channel), ctypes.c_double(self._nr2_dry))

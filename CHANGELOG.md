@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [未发布] - 2026-09-17（本机 Mac 已生效；Windows 待下次 DLL 构建）
+
+### 🔊 NR2 水声第二轮：C 层旋钮 + AE 参数收敛（闭环实测）
+
+- `DSP/wdsp/emnr.c` 新增两个 setter：`SetRXAEMNRalpha`（决策导向平滑）与 `SetRXAEMNRnpMax`
+  （噪声估计"最大跟踪"平滑）；累计补丁存档 `DSP/patches/2026-09-17-emnr-alpha-npmax-setters.patch`。
+- 闭环实测（`dev_tools/nr2_loop_opt.py` 新增 Stage C）：**npmax 0.96→0.98 小胜**（包络相关 0.933→0.939、
+  深度 +0.2dB）；**alpha 提高无益**（flicker 不降、env 反降 → 保持 stock）；gm=1 更差；nbp0 关闭仅微赢
+  （保留其哨声保护）→ AE 参数收敛为 **psi=20 / zeta=0.50**（等级表 AE 行同步，原表行为死代码已标注）。
+- `wdsp_wrapper.py`：新增 `nr2_npmax=0.98` / `nr2_alpha=None` 参数并在 `_setup_nr2` 落地（旧库无符号自动跳过，
+  Windows 下一次 DLL 构建后生效）；`audio_interface.py` 与三份 conf（radio1/MRRC/template）的 AE 默认同步 20/0.50。
+- 本机验证：MRRC 加载仓库根新 `libwdsp.dylib`（stock 行为逐位一致 + 新 setter 生效），142 项测试全绿。
+- 卡顿排查：与 NR 无关 —— Chrome 音频服务进程卡死（99% CPU × 17 天），已清。
+
 ## [V6.1.17] - 2026-09-17
 
 ### 🔊 NR2“水声”闭环优化：等级表整体下移一档（-6/-9/-12/-16）

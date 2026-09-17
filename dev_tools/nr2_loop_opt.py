@@ -221,13 +221,15 @@ def main():
             print(f"  {cfg(kw)}  ✗ 无法度量"); return 1e9
         s = float(np.mean([m["score"] for m in ms]))
         m0 = ms[0]
-        results.append(dict(tag=tag, **{k: kw[k] for k in ("psi", "zeta", "floor_db", "dry")}, **m0))
+        results.append(dict(tag=tag, **{k: kw.get(k) for k in ("psi", "zeta", "floor_db", "dry", "alpha", "npmax")}, **m0))
         print(f"  {cfg(kw)}  score={s:6.3f}  nr={m0['nr_db']:>6} flicker×{m0['flicker_ratio']:>5} "
               f"eat={m0['eat_pct']:>5}% env={m0['env_corr']:>5} spd={m0['spd_db']:>6} lag={m0['lag_frames']}")
         return s
 
     def cfg(kw):
-        return f"atten={kw['floor_db']:>5} psi={kw['psi']:>4} zeta={kw['zeta']:.2f} dry={kw['dry']:.2f}"
+        al = kw.get('alpha'); nm = kw.get('npmax')
+        return (f"atten={kw['floor_db']:>5} psi={kw['psi']:>4} zeta={kw['zeta']:.2f} dry={kw['dry']:.2f}"
+                f" alpha={al if al else 'stock'} npmax={nm if nm else 'stock'}")
 
     print("── 基线 ──")
     s_default = probe(DEFAULT, "def")
@@ -254,7 +256,18 @@ def main():
                     continue
                 stageB.append((probe(kw2, "B"), kw2))
     stageB.sort(key=lambda t: t[0])
-    best_kw, s_best = stageB[0][1], stageB[0][0]
+    best_kw = stageB[0][1]
+
+    print("── Stage C：最优 atten/psi/zeta 上扫 alpha × npmax（C 层去水旋钮，需新 dylib）──")
+    stageC = [(stageB[0][0], dict(best_kw))]
+    for al in (None, 0.996, 0.998):
+        for nm in (None, 0.98, 0.99):
+            if al is None and nm is None:
+                continue
+            kw3 = dict(best_kw, alpha=al, npmax=nm)
+            stageC.append((probe(kw3, "C"), kw3))
+    stageC.sort(key=lambda t: t[0])
+    best_kw, s_best = stageC[0][1], stageC[0][0]
 
     print(f"\n默认 score={s_default:.3f} → 最优 score={s_best:.3f}")
     print(f"最优: {cfg(best_kw)}\n")
