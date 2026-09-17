@@ -132,6 +132,19 @@ try:
 except ImportError:
     HAMLIB_AVAILABLE = False
     print("Hamlib wrapper not available")
+
+# rigctld 生命周期管理（Windows 安装版自带 rigctld.exe，但过去没人拉起它 → 永远是模拟模式）。
+# 见 rigctld_manager.py 头部与用户上报 20260917-073700-14ef / 20260917-085736-ebd2。
+try:
+    import rigctld_manager
+    RIGCTLD_MANAGER_AVAILABLE = True
+    import atexit as _atexit
+    # 正常退出（Ctrl-C / 解释器收尾）时收掉自己拉起的 rigctld，不占着串口
+    _atexit.register(rigctld_manager.stop_managed)
+except ImportError:
+    rigctld_manager = None
+    RIGCTLD_MANAGER_AVAILABLE = False
+    print("rigctld manager not available")
 import numpy as np
 import math
 
@@ -187,10 +200,47 @@ def _resource_dir():
     return _runtime_dir()
 
 
+def _relaunch_command():
+    """本进程的重启命令（冻结包 = 同一个 exe；源码模式 = 解释器 + 脚本）。"""
+    if getattr(sys, "frozen", False):
+        return [sys.executable] + list(sys.argv[1:])
+    return [sys.executable, os.path.abspath(sys.argv[0])] + list(sys.argv[1:])
+
+
+def restart_self():
+    """自我重启（保存设备配置后让新配置生效）。
+
+    旧实现是 `os.system("sleep 2;./MRRC &")`，只在 POSIX + 源码模式成立：
+    Windows 的 cmd.exe 既没有 sleep 也没有 ./MRRC —— 保存完配置服务直接退出且不回来，
+    用户看到的是浏览器里的死页面（2026-09-17 FT-891 用户的 6 次启动记录里就有这一类）。
+
+    冻结包用 os.execv **就地替换进程映像**：PID 不变 → 启动器（MRRC-Launcher.exe）的
+    stdout 管道与看护线程继续有效，启动期报错照旧进 logs/server-stdout.log。
+    execv 万一失败，退化成“新起一个分离进程 + 自己退出”。
+    """
+    import subprocess
+    argv = _relaunch_command()
+    logger.info(f"🔄 自我重启：{' '.join(argv)}")
+    try:
+        os.execv(argv[0], argv)
+    except Exception as exc:
+        logger.error(f"execv 重启失败（改为新起独立进程）: {exc}")
+        try:
+            flags = 0
+            if os.name == "nt":
+                flags = (getattr(subprocess, "DETACHED_PROCESS", 0)
+                         | getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0))
+            subprocess.Popen(argv, cwd=_runtime_dir(), creationflags=flags,
+                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                             close_fds=True)
+        except Exception as exc2:
+            logger.error(f"重启失败，请手动启动 MRRC：{exc2}")
+    os._exit(1)
+
+
 ############ Global variables ##################################
 CTRX=None
 config = configparser.ConfigParser()
-
 # 支持命令行参数指定配置文件路径
 # 用法: python3 MRRC [config_file]
 # 默认使用 MRRC.conf
@@ -2579,46 +2629,26 @@ class TRXRIG:
 		self.infos["PTT"]=False
 		self.infos["powerstat"]=False
 		self.rig = None
-		
+		self.rigctld_host = "127.0.0.1"
+		self.rigctld_port = 4532
+		self._connect_fail_count = 0
+		self._last_connect_attempt = 0.0
+
+		# ① 先把后台服务准备好：Windows 安装版自带 rigctld.exe（vendor/hamlib/windows/bin/x64），
+		#    过去没人拉起它 → 下面这次探测必然失败 → 整个应用进“模拟模式”，用户看到的就是
+		#    “连不上电台”（2026-09-17 两次上报 14ef / ebd2 的根因，见 rigctld_manager.py）。
+		#    已经有 rigctld 在跑时不会抢端口（macOS 的 mrrc_control.sh 流程完全不变）。
+		if HAMLIB_AVAILABLE and RIGCTLD_MANAGER_AVAILABLE:
+			try:
+				rigctld_manager.ensure_rigctld(config, config_path=config_file,
+											   runtime_dir=_runtime_dir(),
+											   resource_dir=_resource_dir())
+			except Exception as exc:
+				logger.error(f"rigctld 自动启动异常（继续按老流程探测）: {exc}")
+
 		# Use rigctld daemon for persistent connection
 		if HAMLIB_AVAILABLE:
-			try:
-				# Test if rigctld daemon is running
-				logger.info("Testing rigctld daemon connection...")
-				import socket
-				
-				# Test connection to rigctld
-				try:
-					sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-					# 从配置读取 rigctld 端口，默认 4532
-					rigctld_port = 4532
-					# 尝试从 INSTANCE_SETTINGS 节读取端口
-					if config.has_option('INSTANCE_SETTINGS', 'instance_rigctl_port'):
-						try:
-							rigctld_port = int(config.get('INSTANCE_SETTINGS', 'instance_rigctl_port'))
-						except:
-							pass
-					
-					sock.settimeout(2)
-					sock.connect(('127.0.0.1', rigctld_port))
-					sock.sendall(b"f\n")
-					response = sock.recv(1024).decode().strip()
-					sock.close()
-					
-					logger.info(f"✓ rigctld daemon responding! Initial frequency: {response}")
-					self.rig = "rigctld_daemon"  # Use daemon approach
-					self.rigctld_host = "127.0.0.1"
-					self.rigctld_port = rigctld_port
-					
-										
-				except socket.error as e:
-					logger.error(f"⚠ rigctld daemon not running: {e}")
-					logger.info(f"Please start rigctld with: rigctld -m 30003 -r /dev/cu.usbserial-230 -s 4800 -C stop_bits=2 -T 127.0.0.1 -t {rigctld_port}")
-					self.rig = None
-					
-			except Exception as e:
-				logger.error(f"Could not initialize radio control: {e}")
-				self.rig = None
+			self._connect_daemon(first=True)
 		else:
 			logger.warning("Hamlib not available")
 			self.rig = None
@@ -2645,15 +2675,112 @@ class TRXRIG:
 		self._ptt_release_failed = False
 
 		if self.rig:
-			print("Radio control initialized successfully")
-			# Get initial values from radio
-			self.setPower(1)
-			self.getvfo()
-			self.getFreq()
-			self.getMode()
+			self._radio_init_sequence()
 			# PTT monitoring disabled to reduce rigctld load
 		else:
 			print("Running in simulation mode - radio commands will be simulated")
+			logger.warning("🛑 电台控制处于模拟模式：rigctld 不可用，界面上的频率/S表/PTT 都不可信")
+
+	def _daemon_endpoint(self):
+		"""rigctld 的 host/port：instance_rigctl_host/port → 默认 127.0.0.1:4532。"""
+		host, port = "127.0.0.1", 4532
+		try:
+			if config.has_option('INSTANCE_SETTINGS', 'instance_rigctl_host'):
+				host = (config.get('INSTANCE_SETTINGS', 'instance_rigctl_host') or host).strip() or host
+			if config.has_option('INSTANCE_SETTINGS', 'instance_rigctl_port'):
+				port = int(config.get('INSTANCE_SETTINGS', 'instance_rigctl_port'))
+		except Exception:
+			pass
+		return host, port
+
+	def _connect_daemon(self, first=False):
+		"""探测并接管 rigctld；成功切到 rigctld_daemon 模式。失败只记日志，不抛异常。"""
+		import socket
+		host, port = self._daemon_endpoint()
+		try:
+			sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+			sock.settimeout(2)
+			sock.connect((host, port))
+			sock.sendall(b"f\n")
+			response = sock.recv(1024).decode(errors="replace").strip()
+			sock.close()
+			logger.info(f"✓ rigctld daemon responding! Initial frequency: {response}")
+			self.rig = "rigctld_daemon"  # Use daemon approach
+			self.rigctld_host = host
+			self.rigctld_port = port
+			self._connect_fail_count = 0
+			return True
+		except Exception as e:
+			self.rig = None
+			self._connect_fail_count = getattr(self, "_connect_fail_count", 0) + 1
+			# 首次立刻报错；之后每 12 次（≈1 分钟）才重复一条，不把日志刷成一片红
+			if first or self._connect_fail_count % 12 == 1:
+				logger.error(f"⚠ rigctld 未就绪（{host}:{port}，{e}）——电台控制降级为模拟模式")
+				hint = self._rigctld_hint()
+				if hint:
+					logger.error(f"   ↳ {hint}")
+			return False
+
+	def _rigctld_hint(self):
+		"""“为什么连不上 / 下一步怎么办”的一句人话（进日志、诊断包、用户答复）。"""
+		manual = self._manual_rigctld_hint()
+		if not RIGCTLD_MANAGER_AVAILABLE:
+			return f"rigctld 管理模块不可用；请手动启动：{manual}"
+		try:
+			st = rigctld_manager.status() or {}
+		except Exception:
+			st = {}
+		mode = st.get("mode", "")
+		if mode == "disabled":
+			return "自动启动被关闭（[HAMLIB] rigctld_autostart=false 或 MRRC_RIGCTLD=0）"
+		if mode == "blocked":
+			return f"自动启动缺条件：{st.get('last_error')}"
+		if mode == "failed":
+			return (f"自动启动失败：{st.get('last_error')}；rigctld 日志 {st.get('log_path')}"
+					f"（串口被别的 CAT 软件占用 / 电台没开机 / COM 口不对都常见）")
+		return f"请手动启动 rigctld：{manual}"
+
+	def _manual_rigctld_hint(self):
+		"""照抄配置拼一条手工排障命令。"""
+		try:
+			s = rigctld_manager.rigctld_settings(config, runtime_dir=_runtime_dir(),
+											resource_dir=_resource_dir())
+			return " ".join(rigctld_manager.build_argv(s))
+		except Exception:
+			return f"rigctld -T {self.rigctld_host} -t {self.rigctld_port}"
+
+	def _radio_init_sequence(self):
+		"""连上电台后的初始化（首次连接与断线重连走同一条路，避免两处逻辑漂移）。"""
+		print("Radio control initialized successfully")
+		self.setPower(1)
+		self.getvfo()
+		self.getFreq()
+		self.getMode()
+
+	def ensure_connection(self):
+		"""断线自愈：rigctld 晚到/重启/换机型之后自动接管，不用重启 MRRC。
+
+		旧版本只在启动时探测一次：rigctld 之后才起来也没用，用户只能重启应用。
+		"""
+		if self.rig:
+			return True
+		now = time.time()
+		if now - self._last_connect_attempt < 5.0:   # 限流：最多 5s 一次
+			return False
+		self._last_connect_attempt = now
+		if not HAMLIB_AVAILABLE:
+			return False
+		if RIGCTLD_MANAGER_AVAILABLE:
+			try:
+				rigctld_manager.ensure_rigctld(config, config_path=config_file,
+											   runtime_dir=_runtime_dir(),
+											   resource_dir=_resource_dir(), wait_s=1.0)
+			except Exception:
+				pass
+		if not self._connect_daemon():
+			return False
+		self._radio_init_sequence()
+		return True
 	
 	def _rigctld_command(self, cmd):
 		"""Send command to rigctld daemon and return the result"""
@@ -3338,8 +3465,18 @@ class ticksTRXRIG(threading.Thread):
 
 	def run(self):
 		while True:
-			if CTRX.infos["powerstat"]:
-				CTRX.getStrgLVL()
+			try:
+				if CTRX is None:
+					time.sleep(0.5)
+					continue
+				if CTRX.rig is None:
+					# 断线自愈（内部限流 5s 一次）：rigctld 后来才起来时自动接管，
+					# 不必重启整个 MRRC（旧版本连不上就永远是模拟模式）。
+					CTRX.ensure_connection()
+				if CTRX.infos["powerstat"]:
+					CTRX.getStrgLVL()
+			except Exception as exc:
+				logger.debug(f"TRXRIG 周期任务异常（忽略，下轮重试）: {exc}")
 			time.sleep(0.5)  # 优化：从 0.1s 改为 0.5s，减少CPU消耗
 
 class WS_ControlTRX(AuthenticatedWebSocketHandler):
@@ -4151,10 +4288,9 @@ class ConfigHandler(BaseHandler):
 				print(f"⚠ 型号归一化异常（保持原值）: {_exc}")
 		config_io.write_config(config, config_file)
 		self.write("""<html><head><script>window.setTimeout(function() {window.location.href = 'https://'+window.location.hostname+':'+ '"""+config['SERVER']['port']+"""';}, 10000);</script><head><body>You will be redirected automatically. Please wait...<br><img width="40px" height=40px" src="../img/spinner.gif"></body></html>""")
-		self.flush() 
+		self.flush()
 		time.sleep(2)
-		os.system("sleep 2;./MRRC &")
-		os._exit(1)
+		restart_self()
 
 ############ Devices API ##############
 class DevicesApiHandler(BaseHandler):
@@ -4387,12 +4523,11 @@ class DevicesApiHandler(BaseHandler):
 			self.set_status(500)
 			self.write(json.dumps({"ok": False, "reason": "write_failed", "message": str(e)}))
 			return
-		# 与 /CONFIG 一致的重启方式
+		# 与 /CONFIG 一致的重启方式（Windows 上旧写法 os.system("sleep 2;./MRRC &") 不会回来）
 		self.write(json.dumps({"ok": True, "restarting": True}))
 		self.flush()
 		time.sleep(2)
-		os.system("sleep 2;./MRRC &")
-		os._exit(1)
+		restart_self()
 
 	def post(self):
 		if self.request.path.rstrip('/').endswith('/apply'):

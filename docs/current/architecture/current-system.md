@@ -113,3 +113,13 @@ The main `MRRC` process owns the HTTPS/WSS web application and direct radio/audi
 - 机型号：数字直接使用；机型名（`FT991`/`IC-M710`）会解析成 hamlib 编号（`-m` 只接受数字）；
 - 日志：`%LOCALAPPDATA%\MRRC\logs\rigctld-stdout.log`（诊断包会一并收集）；
 - 失败绝不阻断启动：找不到/启动失败只打印一行可执行提示（排查步骤见提示内容）。
+
+### 配置保存后的自我重启（Windows 修正版）
+
+`ConfigHandler` 保存设备配置后需要重启服务让新配置生效。旧实现 `os.system("sleep 2;./MRRC &")` 只在
+POSIX + 源码模式成立 —— Windows 的 `cmd.exe` 既没有 `sleep` 也没有 `./MRRC`，结果是**保存后服务退出且不回来**
+（浏览器停在死页面）。现在的 `restart_self()`：
+
+- 冻结包（安装版）用 `os.execv` **就地替换进程映像**：PID 不变 → 启动器 `MRRC-Launcher.exe` 的 stdout 管道
+  与看护线程依然有效，启动期报错照旧进 `logs/server-stdout.log`；
+- `execv` 失败时退化为"新起分离进程 + 自己退出"。
