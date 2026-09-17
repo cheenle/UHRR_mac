@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [V6.1.17] - 2026-09-17
+
+### 🔊 NR2“水声”闭环优化：等级表整体下移一档（-6/-9/-12/-16）
+
+- 新工具 `dev_tools/nr2_loop_opt.py`：真实波段录音 → 生产链路离线复现（实时节拍+包络对齐+静态增益校正）
+  → 无参考水声指标（音乐噪声闪烁比/吃字率/降噪深度/包络相关）→ 分阶段参数搜索 → 排行榜 + A/B 试听样本。
+- 实测（2 条 40m 波段录音）：默认 L2(-12dB) 降噪深度仅 4.9dB 却吃字 26.7%、音乐噪声 ×1.22；
+  **-9dB 深度只让 0.8dB 但吃字降到 8.2%**；-16/-20 深度不再增长而吃字 32-33% → 等级表整体下移一档。
+- 方法论教训（踩过的三个测量坑）：wdsp 是多线程实时引擎，喂数快于实时结果不可复现（必须实时节拍）；
+  AGC 的静态增益/泵动会污染"输出/输入"型度量（14dB 差异被压成 3dB）→ 归因时 AGC=OFF + 静态增益基线校正；
+  处理时延需包络互相关对齐，饥饿(-2)直通帧要掩蔽。
+- `www/wdsp_settings.html` 无需改（下拉本就有 -9 档与 auto 跟随）。
+
 ## [V6.1.16] - 2026-09-17
 
 ### 🔧 rigctld 自启动收口：正式实现 rigctld_manager 为主，兜底实现只让位不调用
