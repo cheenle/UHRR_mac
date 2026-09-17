@@ -37,9 +37,14 @@ class TeeTest(unittest.TestCase):
         shutil.rmtree(self.tmp, ignore_errors=True)
 
     def _run_child(self, script, log_path=None, max_bytes=None):
+        # 与 launcher.main() 里的 Popen 保持一致：显式 UTF-8 解码。
+        # 只写 text=True 时 Windows 会按 GBK 解码，而子进程（继承 PYTHONIOENCODING=utf-8）
+        # 写的是 UTF-8 → UnicodeDecodeError（VM 实测）。
+        env = dict(os.environ, PYTHONIOENCODING="utf-8")
         proc = subprocess.Popen([sys.executable, "-u", "-c", script],
                                 stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                                text=True, bufsize=1)
+                                text=True, encoding="utf-8", errors="replace",
+                                bufsize=1, env=env)
         args = [proc, log_path or self.log]
         if max_bytes is not None:
             args.append(max_bytes)
