@@ -1,10 +1,10 @@
 {
-  "latest": "6.1.15",
-  "url": "https://www.vlsc.net/mrrc/downloads/hotfix-6.1.15.zip",
-  "sha256": "2f8837e5d0129f290c594c3ae7dcd2efacd48bf60e467f1143341249a90ec95a",
-  "size": 7055,
+  "latest": "6.1.16",
+  "url": "https://www.vlsc.net/mrrc/downloads/hotfix-6.1.16.zip",
+  "sha256": "cb695e5103a01b68ed48bdfd74df6b4e0fbc7769d51a3418dd4d0315c11f5137",
+  "size": 7661,
   "requires": "6.0.3",
-  "notes": "修 rigctld 自启动：机型名→编号解析（hamlib -m 只接受数字）",
+  "notes": "rigctld 自启动收口：正式实现 rigctld_manager 为主，兜底实现只让位不调用（上一版会重复调用导致启动可能阻塞）",
   "files": [
     "app/rigctld_supervisor.py"
   ]
