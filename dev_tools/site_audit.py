@@ -36,7 +36,7 @@ EN_ONLY_ALLOWED = ("docs/design/", "answers/", "efhw/")
 # 中文站独有的入口页（英文树已有 docs/design.html 作为对应）
 ZH_ONLY_ALLOWED = ("docs/design/index.html",)
 # 不随仓库发布的大文件（视频等），缺失只提示不算失败
-EXTERNAL_BIG_ASSETS = ("videos/", "downloads/")   # 大文件：视频；安装包（只随发布上传，不入库）
+EXTERNAL_BIG_ASSETS = ("videos", "downloads")   # 目录名：视频；安装包（只随发布上传，不入库）
 # 主站样式表集合（顺序敏感）：style.css → octen.css?v=5 → sunsdrmobile.css → [docs.css]
 CANON_CSS = ["css/style.css", "css/octen.css?v=5", "css/sunsdrmobile.css?v=1"]
 
@@ -122,7 +122,8 @@ def audit() -> dict:
             if t.is_dir():
                 t = t / "index.html"
             if not t.exists():
-                if any(target.startswith(a) for a in EXTERNAL_BIG_ASSETS):
+                norm = target.lstrip("./")          # ../downloads/x → downloads/x
+                if any(a.rstrip("/") in norm.split("/") for a in EXTERNAL_BIG_ASSETS):
                     result["external_assets"].append(f"{rel(p)} → {href}")
                 else:
                     result["broken_links"].append(f"{rel(p)} → {href}")
