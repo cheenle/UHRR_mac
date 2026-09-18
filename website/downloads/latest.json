@@ -1,15 +1,15 @@
 {
-  "latest": "6.1.16",
+  "latest": "6.1.18",
   "installer": {
-    "version": "6.1.16",
-    "url": "https://www.vlsc.net/mrrc/downloads/MRRC-Setup-6.1.16.exe",
-    "sha256": "32e14996001e634e612e54b89b43836b907be3f339117907ce5ee03071cbb9d0",
-    "size": 48480307
+    "version": "6.1.18",
+    "url": "https://www.vlsc.net/mrrc/downloads/MRRC-Setup-6.1.18.exe",
+    "sha256": "c10399867aead38f98db0fbe03bc5400109f40f275c0c6980f2bf8c1e6776e32",
+    "size": 51984242
   },
   "minSupported": "6.0.3",
   "mandatory": false,
-  "releasedAt": "2026-09-17T10:30:00",
-  "notes": "Windows 安装版自动拉起 rigctld（内置 rigctld.exe+DLL）；rigctld 自启动收口（正式实现 rigctld_manager 为主）；此前的一键升级/诊断包/答复闭环",
+  "releasedAt": "2026-09-17T23:30:00",
+  "notes": "NR3(RNNoise 神经降噪)进包 + libwdsp 重建（EMNR 新旋钮）+ NR2 等级表 -9 + 门控修复（关降噪=真旁路）",
   "hotfix": {
     "url": "https://www.vlsc.net/mrrc/downloads/hotfix-6.0.9.zip",
     "sha256": "e326fd38784119119eabcc3c6262a0a7ae758381ce6ba3e9b169fdab69c805f2",
@@ -17,9 +17,9 @@
     "notes": "新增「🐞 遇到问题」一键诊断包上传（含新模块 support_bundle.py）；空闲关机改为幂等"
   },
   "previous": {
-    "version": "6.1.15",
-    "url": "https://www.vlsc.net/mrrc/downloads/MRRC-Setup-6.1.15.exe",
-    "sha256": "d8bbf62cf362256b11411adb944ad9310fe34bd65d03bb5884533bd25d79ff1b",
-    "size": 48478680
+    "version": "6.1.16",
+    "url": "https://www.vlsc.net/mrrc/downloads/MRRC-Setup-6.1.16.exe",
+    "sha256": "32e14996001e634e612e54b89b43836b907be3f339117907ce5ee03071cbb9d0",
+    "size": 48480307
   }
 }

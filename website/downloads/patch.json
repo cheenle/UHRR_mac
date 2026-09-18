@@ -1,11 +1,14 @@
 {
-  "latest": "6.1.17",
-  "url": "https://www.vlsc.net/mrrc/downloads/hotfix-6.1.17.zip",
-  "sha256": "ee78fc968f5e25f5edd0ce8e08385276563acc238fe962ca08a5f485c1527ce1",
-  "size": 13274,
+  "latest": "6.1.18",
+  "url": "https://www.vlsc.net/mrrc/downloads/hotfix-6.1.18.zip",
+  "sha256": "874b02e213145c86b13d77127e8209cda6398417291ae70a1a053e40d66c95b8",
+  "size": 16162292,
   "requires": "6.0.3",
-  "notes": "NR2 等级表下移一档（-6/-9/-12/-16）：吃字率 26.7%→8.2%，显著减轻水声/吃字；闭环实测见 dev_tools/nr2_loop_opt.py",
+  "notes": "RN3(RNNoise)可用（vendor/rnnoise.dll）+ libwdsp 重建（EMNR alpha/npMax 旋钮）+ NR2 等级表 -6/-9/-12/-16 + 门控修复（关降噪=真旁路）",
   "files": [
+    "app/audio_interface.py",
+    "vendor/rnnoise/windows/bin/x64/rnnoise.dll",
+    "vendor/wdsp/windows/bin/x64/libwdsp.dll",
     "app/wdsp_wrapper.py"
   ]
 }
