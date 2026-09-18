@@ -107,10 +107,13 @@ if (Test-Path (Join-Path $RnSrc "src\denoise.c")) {
     New-Item -ItemType Directory -Force -Path $RnDir | Out-Null
     $gccCmd = Get-Command gcc -ErrorAction SilentlyContinue
     if ($gccCmd) {
-        Invoke-Checked gcc -O3 -shared -static -DHAVE_CONFIG_H "-I$RnSrc" "-I$RnSrc\include" "-I$RnSrc\src" -DNDEBUG `
-            "$RnSrc\src\rnnoise_data.c" "$RnSrc\src\rnnoise_tables.c" "$RnSrc\src\rnn.c" "$RnSrc\src\pitch.c" `
-            "$RnSrc\src\nnet.c" "$RnSrc\src\nnet_default.c" "$RnSrc\src\parse_lpcnet_weights.c" `
-            "$RnSrc\src\kiss_fft.c" "$RnSrc\src\denoise.c" "$RnSrc\src\celt_lpc.c" -o "$RnOut"
+        # 注意：不要走 Invoke-Checked —— gcc 的 -I/-O 参数会被 PowerShell 函数参数绑定误解析
+        $gccArgs = @('-O3','-shared','-static','-DHAVE_CONFIG_H',"-I$RnSrc","-I$RnSrc\include","-I$RnSrc\src",'-DNDEBUG',
+            "$RnSrc\src\rnnoise_data.c","$RnSrc\src\rnnoise_tables.c","$RnSrc\src\rnn.c","$RnSrc\src\pitch.c",
+            "$RnSrc\src\nnet.c","$RnSrc\src\nnet_default.c","$RnSrc\src\parse_lpcnet_weights.c",
+            "$RnSrc\src\kiss_fft.c","$RnSrc\src\denoise.c","$RnSrc\src\celt_lpc.c",'-o',$RnOut)
+        & gcc @gccArgs
+        if ($LASTEXITCODE -ne 0) { throw "gcc rnnoise.dll failed with exit code $LASTEXITCODE" }
         Copy-Item $RnOut (Join-Path $DistRoot "rnnoise.dll") -Force
         Write-Host "NR3: rnnoise.dll built -> $RnOut"
     } else {
