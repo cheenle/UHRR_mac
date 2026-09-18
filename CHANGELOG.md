@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [V6.1.18] - 2026-09-17
+
+### 🧠 NR3(RNNoise) 进包 + WDSP C 层旋钮 + 门控修复
+
+- 安装包新增 `rnnoise.dll`（Xiph 新代 v0.2, BSD-3, mumble 快照 + media.xiph.org 模型）；`[WDSP] nr3 = plus|only|off`
+- `libwdsp.dll` 重建：EMNR 新增 SetRXAEMNRalpha / SetRXAEMNRnpMax（npmax=0.98 默认）
+- NR2 等级表 -6/-9/-12/-16（吃字 26.7%→8.2%）；AE 收敛 psi=20/zeta=0.50
+- 门控修复：UI 关掉 NR2/WDSP 后 RNNoise 不再残留处理（修"关了还失真"）
+- 本轮全部来自水声闭环（dev_tools/nr2_loop_opt.py）+ 真机试听迭代
+
 ## [未发布] - 2026-09-17（本机 Mac 已生效；Windows 待下次 DLL 构建）
 
 ### 🔊 NR2 水声第二轮：C 层旋钮 + AE 参数收敛（闭环实测）

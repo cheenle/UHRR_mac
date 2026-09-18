@@ -98,6 +98,26 @@ if (Test-Path $VendorRoot) {
     Copy-Item $VendorRoot (Join-Path $AppRoot "vendor") -Recurse -Force
 }
 
+# NR3: RNNoise (Xiph 新代, BSD-3) —— MinGW 构建 rnnoise.dll 放进应用模块目录
+# （audio_interface.py 同目录查找；构建失败只告警，NR3 在该包内自动降级关闭）
+$RnSrc = Join-Path $RepoRoot "DSP\rnnoise"
+if (Test-Path (Join-Path $RnSrc "src\denoise.c")) {
+    $RnDir = Join-Path $AppRoot "_internal\app"
+    $RnOut = Join-Path $RnDir "rnnoise.dll"
+    New-Item -ItemType Directory -Force -Path $RnDir | Out-Null
+    $gccCmd = Get-Command gcc -ErrorAction SilentlyContinue
+    if ($gccCmd) {
+        Invoke-Checked gcc -O3 -shared -static -DHAVE_CONFIG_H "-I$RnSrc" "-I$RnSrc\include" "-I$RnSrc\src" -DNDEBUG `
+            "$RnSrc\src\rnnoise_data.c" "$RnSrc\src\rnnoise_tables.c" "$RnSrc\src\rnn.c" "$RnSrc\src\pitch.c" `
+            "$RnSrc\src\nnet.c" "$RnSrc\src\nnet_default.c" "$RnSrc\src\parse_lpcnet_weights.c" `
+            "$RnSrc\src\kiss_fft.c" "$RnSrc\src\denoise.c" "$RnSrc\src\celt_lpc.c" -o "$RnOut"
+        Copy-Item $RnOut (Join-Path $DistRoot "rnnoise.dll") -Force
+        Write-Host "NR3: rnnoise.dll built -> $RnOut"
+    } else {
+        Write-Warning "gcc not found: skip rnnoise.dll (NR3 degrades to off in this package)"
+    }
+}
+
 if (Get-Command iscc -ErrorAction SilentlyContinue) {
     Invoke-Checked iscc packaging\windows\MRRC.iss
 } else {
