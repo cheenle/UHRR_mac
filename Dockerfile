@@ -38,6 +38,7 @@ COPY atr1000_proxy.py /uhrh/atr1000_proxy.py
 COPY atr1000_tuner.py /uhrh/atr1000_tuner.py
 COPY audio_interface.py /uhrh/audio_interface.py
 COPY hamlib_wrapper.py /uhrh/hamlib_wrapper.py
+COPY rigctld_manager.py /uhrh/rigctld_manager.py
 COPY wdsp_wrapper.py /uhrh/wdsp_wrapper.py
 COPY tci_client.py /uhrh/tci_client.py
 COPY www/ /uhrh/www/
