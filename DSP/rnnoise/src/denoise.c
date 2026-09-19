@@ -454,7 +454,6 @@ void rnn_pitch_filter(kiss_fft_cpx *X, const kiss_fft_cpx *P, const float *Ex, c
   }
 }
 
-static int g_cnt = 0;
 float rnnoise_process_frame(DenoiseState *st, float *out, const float *in) {
   int i;
   kiss_fft_cpx X[FREQ_SIZE];
@@ -471,7 +470,6 @@ float rnnoise_process_frame(DenoiseState *st, float *out, const float *in) {
   static const float b_hp[2] = {-2, 1};
   rnn_biquad(x, st->mem_hp_x, in, b_hp, a_hp, FRAME_SIZE);
   silence = rnn_compute_frame_features(st, X, P, Ex, Ep, Exp, features, x);
-  g_cnt++; if (g_cnt % 100 == 1) fprintf(stderr, "[dbg] call=%d silence=%d X10=%.4g Ex3=%.4g Ex5=%.4g\n", g_cnt, silence, X[10].r, Ex[3], Ex[5]);
 
   if (!silence) {
 #if !TRAINING
