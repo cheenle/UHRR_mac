@@ -100,3 +100,8 @@ updates/
 
 # 监控脚本采样输出（mrrc_monitor.sh mem/cpu 生成物）
 perf_data_*.json
+
+# macOS 构建产物（DSP 动态库，本机构建生成）
+*.dylib
+librnnoise*.dylib
+libwdsp*.dylib
