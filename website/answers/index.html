@@ -99,6 +99,46 @@
 
   <h2>答复列表</h2>
 
+  <div class="card" data-keys="20260926-104803-2b9b 功率偏小 电台 20260926-104803-2b9b 功率偏小 功率低 IC-M710 ATR-1000 SSB 调制 静默发射 发射功率 麦克风增益 RNNOISE suppress_level USB Audio CODEC 6.1.18">
+    <div class="row" style="justify-content:space-between">
+      <h3 style="margin:0">编号 <span class="id">20260926-104803-2b9b</span></h3>
+      <span class="pill ">需要补充信息 · 电台</span>
+    </div>
+    <p class="muted" style="margin:8px 0 2px">上报时间 2026-09-26T10:47:56 · 描述：<strong>功率偏小</strong></p>
+    <p class="muted" style="margin:2px 0 10px">上报版本 6.1.18 · 包体积 60 KB</p>
+
+    <h3>结论</h3>
+    <p>材料不足：仅有“功率偏小”无实测读数，需补充功率表读数与发射模式</p>
+
+    <h3>诊断</h3>
+    <ul>
+      <li>体检显示音频采集健康（30s 采集 100.0%）、rigctld IC-M710 状态 Stable，无服务端异常日志，音频与控制链路基本正常</li>
+      <li>用户仅描述“功率偏小”，未提供 ATR-1000 实测功率、发射模式（SSB/FM/CW）及期望值，无法判断是调制不足还是电台输出功率设置问题</li>
+      <li>ATR-1000 已启用（192.168.1.63），但无任何功率读数可佐证，无法区分“摆动 100W+ 正常调制”与“平直 ~7W 静默发射”</li>
+      <li>RNNOISE suppress_level=50 可能对音频电平有衰减影响，需排查是否在发射链路上压低驱动电平</li>
+      <li>缺少服务端日志，无法确认 TX 音频初始化耗时是否正常</li>
+    </ul>
+
+    <h3>你要做的</h3>
+    <ol>
+      <li>补充：发射模式（SSB/FM/CW）、ATR-1000 实测功率读数、期望功率是多少</li>
+      <li>对着话筒持续发“啊——”音，观察 ATR-1000 功率表：摆动 100W+ 为调制正常；平直 ~7W 为无调制（静默发射）</li>
+      <li>检查电台本身的 RF 功率档位与麦克风增益/音频驱动电平设置</li>
+      <li>尝试把 RNNOISE suppress_level 调低或关闭（如设为 0）后重测，排除噪声抑制衰减音频</li>
+      <li>重测后仍偏小，请在诊断包补充服务端日志或直接反馈功率表读数截图</li>
+    </ol>
+
+    <h3>证据（原始行）</h3>
+    <ul>
+      <li>功率偏小（用户原话）</li>
+      <li>🎧 音频健康: 30s 采集 1440000 样本（应有 1440130，100.0%）</li>
+      <li>rigctld: id 30003, name IC-M710, status Stable</li>
+      <li>suppress_level = 50</li>
+      <li>atr1000.enabled = true，reason = auto（已配置设备 192.168.1.63）</li>
+    </ul>
+
+  </div>
+
   <div class="card" data-keys="20260917-132643-020a wDSP启用后流水声太大，声音失真/降噪后，如何解决？ 音频 20260917-132643-020a BG1SB 流水声 声音失真 WDSP NR2 降噪 音乐噪音 水音 nr2_level AGC 带通 IC-M710 6.1.16">
     <div class="row" style="justify-content:space-between">
       <h3 style="margin:0">编号 <span class="id">20260917-132643-020a</span></h3>
