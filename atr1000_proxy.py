@@ -15,6 +15,9 @@ ATR-1000 天调代理程序 - V5.6.0 稳定窗口学习版
 6. V4.5.18: 专门的通讯日志记录，分析设备压力
 7. V4.5.30: 连接定期刷新（~55分钟），避免设备每小时断连影响 TX
 8. V5.6.3: TX 结束(stop)即清零功率/SWR 缓存，消除 RX 期间幽灵读数
+9. V5.9.0: tune 确认学习 — 完整调谐结束后若 SWR 较调谐前改善且 ≤1.8，
+   将设备选定的最终参数 force 写库，不受 3W 学习功率门限制
+   （修复弱 tune 载波 ~2W 下手动调谐结果永不入库、被旧库参数覆盖的"白调"问题）
 
 使用方法：
     python3 atr1000_proxy.py --device 192.168.1.63 --port 60001
@@ -178,10 +181,10 @@ LEARN_SWR_MAX = 1.8          # 学习 SWR 上限
 LEARNING_ENABLED = True      # 全局学习开关 — 天线扫频(bypass)期间由客户端置 False，防止直通状态污染学习库
 
 # ========== SWR 过高自动完整调谐参数 ==========
-AUTOTUNE_ENABLED = True          # 全局自动调谐守卫开关 — 天线扫频(bypass)期间由客户端置 False，防止裸 SWR>2 触发自动调谐破坏测量
+AUTOTUNE_ENABLED = True          # 全局自动调谐守卫开关 — 天线扫频(bypass)期间由客户端置 False，防止裸 SWR 超阈值触发自动调谐破坏测量
 SWR_RETUNE_THRESHOLD     = 2.0   # SWR 严格大于此值视为过高
 SWR_RETUNE_MIN_POWER     = 5     # 实测功率 ≥5W 视为发射中（过滤空闲/调谐扫描的 1–2W）
-SWR_RETUNE_DEBOUNCE      = 1.5   # SWR>2 持续 ≥1.5s 才触发
+SWR_RETUNE_DEBOUNCE      = 3.5   # SWR 超阈值持续 ≥3.5s 才触发
 SWR_RETUNE_COOLDOWN      = 30    # 两次自动完整调谐最小间隔（秒）
 SWR_RETUNE_MAX_FAILS     = 3     # 同一频率连续失败次数上限
 
@@ -316,6 +319,66 @@ _swr_high_since   = 0      # 高 SWR 连续起点时间戳（0=不在连续段�
 _last_retune_time = 0      # 上次自动调谐时间戳（冷却）
 _retune_fail_count = {}    # freq_key → 连续失败次数
 
+# V5.9.0: tune 确认学习状态
+# 手动/自动完整调谐结束后，若 settled SWR 较调谐前改善且 ≤LEARN_SWR_MAX，
+# 把设备选定的最终继电器参数 force_update 写库。不受 LEARN_MIN_POWER(3W)
+# 限制——调谐扫描本身就是验证；弱 tune 载波（~2W）下常规学习永不触发，
+# tune 结果会被下次 set_freq 用旧库参数覆盖（"白调"）。
+TUNE_CONFIRM_WINDOW = 15.0        # 调谐结束后的确认窗口（秒）
+TUNE_CONFIRM_MIN_IMPROVE = 0.05   # 最小改善幅度
+_pre_tune_swr = 0.0               # 调谐开始前 SWR（0=未武装）
+_pre_tune_freq = 0                # 调谐开始前频率
+_tune_confirm_deadline = 0.0      # 确认窗口截止时间戳（0=关闭）
+_was_tuning = False               # 上一 METER 的 tuning 标志（完成沿检测）
+
+
+def _tune_confirm_arm(freq, pre_swr):
+    """完整调谐开始时武装确认学习（记录调谐前频率/SWR 作为改善判据）"""
+    global _pre_tune_freq, _pre_tune_swr
+    _pre_tune_freq = freq
+    _pre_tune_swr = pre_swr
+
+
+def _tune_confirm_capture(power, swr, swr_raw):
+    """METER 分支内调用（持 cache_lock）：检测调谐完成沿，满足判据时返回待写库数据
+
+    返回 None 或 {"freq","sw","ind","cap","swr","pre_swr"}；实际 learn() 写盘在锁外。
+    判据：调谐完成沿后 TUNE_CONFIRM_WINDOW 秒内、swr_raw>=100（拒 swr_raw=0 的
+    伪 1.0）、power>0、频率未变、继电器非直通、SWR≤LEARN_SWR_MAX 且较调谐前
+    改善 ≥TUNE_CONFIRM_MIN_IMPROVE。未改善的样本不关窗（继续等 settled 值）；
+    超时或频率变化则作废。
+    """
+    global _was_tuning, _tune_confirm_deadline
+
+    tuning_now = cache.get("tuning", False)
+    if _was_tuning and not tuning_now and _pre_tune_swr > 0:
+        _tune_confirm_deadline = time.time() + TUNE_CONFIRM_WINDOW
+    _was_tuning = tuning_now
+
+    if not _tune_confirm_deadline:
+        return None
+    if time.time() > _tune_confirm_deadline:
+        _tune_confirm_deadline = 0.0
+        return None
+    if tuning_now or swr_raw < 100 or power <= 0:
+        return None  # 调谐中 / 伪 SWR / 无载波 — 等下一个有效样本
+
+    freq = cache.get("freq", 0)
+    if not freq or abs(freq - _pre_tune_freq) > 1000:
+        _tune_confirm_deadline = 0.0  # 频率已变，确认作废
+        return None
+
+    sw, ind, cap = cache.get("sw", 0), cache.get("ind", 0), cache.get("cap", 0)
+    if ind == 0 and cap == 0:
+        return None  # 直通状态无意义，等下一个样本
+
+    if swr > LEARN_SWR_MAX or swr >= _pre_tune_swr - TUNE_CONFIRM_MIN_IMPROVE:
+        return None  # 尚未改善到门内，窗口内继续等 settled 值
+
+    _tune_confirm_deadline = 0.0  # 确认完成，关窗
+    return {"freq": freq, "sw": sw, "ind": ind, "cap": cap,
+            "swr": swr, "pre_swr": _pre_tune_swr}
+
 def set_relay_with_throttle(atr1000, sw, ind, cap):
     """带节流的继电器设置 - V4.5.19 增强版
     
@@ -370,7 +433,7 @@ def check_swr_retune(atr1000, power):
     """
     global _swr_high_since, _last_retune_time
 
-    # 扫频/测量期间客户端可关闭自动调谐，避免裸 SWR>2 触发调谐破坏测量
+    # 扫频/测量期间客户端可关闭自动调谐，避免裸 SWR 超阈值触发调谐破坏测量
     if not AUTOTUNE_ENABLED:
         with state_lock:
             _swr_high_since = 0
@@ -439,9 +502,10 @@ def check_swr_retune(atr1000, power):
         cache["tuning_relay_stable_since"] = 0
 
     # 发送完整调谐命令（锁外网络 I/O）
+    _tune_confirm_arm(freq, swr)  # V5.9.0: 武装调谐确认学习
     atr1000.start_tune(2)
     logger.info(
-        f"⚡ SWR={swr:.2f}>2 自动触发完整调谐: {freq/1000:.1f}kHz "
+        f"⚡ SWR={swr:.2f}>{SWR_RETUNE_THRESHOLD} 自动触发完整调谐: {freq/1000:.1f}kHz "
         f"(第{fail_num}次)"
     )
 
@@ -731,6 +795,7 @@ class ATR1000Client:
         _learn_freq = 0
         _relay_updated = False
         _relay_sw = _relay_ind = _relay_cap = 0
+        _confirm_learn = None  # V5.9.0: tune 确认学习捕获结果
 
         with cache_lock:
             if cmd == SCMD_METER_STATUS and len(data) >= 8:
@@ -776,6 +841,9 @@ class ATR1000Client:
                         cache["tuning_started_at"] = 0
                         cache["tuning_relay_stable_since"] = 0
                         logger.info("✅ 调谐完成 (继电器稳定>8秒，自动清除)")
+
+                # V5.9.0: tune 确认学习 — 锁内捕获判据，实际写库在锁外
+                _confirm_learn = _tune_confirm_capture(power, cache["swr"], swr_raw)
 
                 # 通讯日志 - 功率/SWR 数据
                 if power > 0:
@@ -876,8 +944,12 @@ class ATR1000Client:
                     last_log_relay = current_relay
 
             elif cmd == SCMD_TUNE_STATUS and len(data) >= 4:
+                _was_tuning_flag = cache.get("tuning", False)
                 cache["tuning"] = bool(data[3])
                 cache["tuning_started_at"] = time.time() if cache["tuning"] else 0
+                # V5.9.0: 设备侧发起的调谐（面板/其他客户端）也武装确认学习
+                if cache["tuning"] and not _was_tuning_flag and cache.get("freq", 0) > 0:
+                    _tune_confirm_arm(cache["freq"], cache.get("swr", 0.0))
                 log_comm('RX', 'TUNE', data[:4].hex(), f'调谐状态={cache["tuning"]}')
 
         # ===== V5.6.0: 锁外学习缓冲器操作 =====
@@ -940,6 +1012,22 @@ class ATR1000Client:
                                     _last_learned_state[("best", freq_key)] = {"swr": median_swr, "time": now_ts}
                         except Exception as e:
                             logger.error(f"学习天调参数失败: {e}")
+
+        # ===== V5.9.0: tune 确认学习写库（锁外）=====
+        if _confirm_learn:
+            try:
+                tuner = get_storage()
+                if tuner.learn(freq=_confirm_learn["freq"], sw=_confirm_learn["sw"],
+                               ind=_confirm_learn["ind"], cap=_confirm_learn["cap"],
+                               swr=_confirm_learn["swr"], force_update=True):
+                    logger.info(
+                        f"✅ 调谐确认学习: {_confirm_learn['freq']/1000:.1f}kHz, "
+                        f"SWR {_confirm_learn['pre_swr']:.2f}→{_confirm_learn['swr']:.2f}, "
+                        f"{'CL' if _confirm_learn['sw'] else 'LC'}, "
+                        f"L={_confirm_learn['ind']}, C={_confirm_learn['cap']}"
+                    )
+            except Exception as e:
+                logger.error(f"调谐确认学习失败: {e}")
 
         # ===== SWR 过高自动完整调谐守卫 (V5.8.0) =====
         if cmd == SCMD_METER_STATUS and len(data) >= 8:
@@ -1119,7 +1207,7 @@ def handle_unix_client(conn, addr, atr1000):
 
         elif action == "set_autotune":
             # SWR 自动完整调谐守卫总开关（天线扫频 bypass 期间关闭，
-            # 防止裸 SWR>2 触发 mode=2 完整调谐破坏测量）
+            # 防止裸 SWR 超阈值触发 mode=2 完整调谐破坏测量）
             global AUTOTUNE_ENABLED
             AUTOTUNE_ENABLED = bool(msg.get("enabled", True))
             if not AUTOTUNE_ENABLED:
@@ -1286,6 +1374,11 @@ def handle_unix_client(conn, addr, atr1000):
                 cache["tuning"] = True
                 cache["tuning_started_at"] = time.time()
                 cache["tuning_relay_stable_since"] = 0  # V5.6.1: 等首个 RELAY 来初始化
+                _arm_freq = cache.get("freq", 0)
+                _arm_swr = cache.get("swr", 0.0)
+            # V5.9.0: 武装调谐确认学习（仅完整调谐）
+            if mode == 2 and _arm_freq > 0:
+                _tune_confirm_arm(_arm_freq, _arm_swr)
             atr1000.start_tune(mode)
             logger.info(f"启动自动调谐: mode={mode}")
 

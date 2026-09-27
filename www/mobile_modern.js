@@ -3387,7 +3387,7 @@ const ATR1000 = {
         }
     },
 
-    // Tune 按钮联动：SWR > 1.6 时执行完整调谐；若未改善则恢复原继电器参数。
+    // Tune 按钮联动：SWR > 2.0（与代理守卫阈值一致）时执行完整调谐；若未改善则恢复原继电器参数。
     autoFullTuneIfHighSWR: async function() {
         if (this._tuneAssistRunning) {
             return;
@@ -3407,7 +3407,7 @@ const ATR1000 = {
             if (token.cancelled) return;
 
             const initialSWR = this.lastSWR;
-            if (!Number.isFinite(initialSWR) || initialSWR <= 1.6) {
+            if (!Number.isFinite(initialSWR) || initialSWR <= 2.0) {
                 return;
             }
 

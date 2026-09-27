@@ -48,9 +48,9 @@ def _feed(fake_atr, swr, power, n=1, dt=0.2):
 def test_triggers_once_after_debounce():
     _reset(swr=2.5, power=40)
     fake = FakeATR()
-    _feed(fake, 2.5, 40, n=6, dt=0.2)   # 距首个高SWR样本 1.0s，未满 1.5s
+    _feed(fake, 2.5, 40, n=6, dt=0.2)   # 距首个高SWR样本 1.2s，未满 3.5s
     assert fake.tune_calls == [], f"不应提前触发: {fake.tune_calls}"
-    _feed(fake, 2.5, 40, n=3, dt=0.2)   # 距首个样本 1.6s ≥ 1.5s → 触发
+    _feed(fake, 2.5, 40, n=13, dt=0.2)  # 距首个样本 3.8s ≥ 3.5s → 触发
     assert len(fake.tune_calls) == 1, f"应恰好触发一次: {fake.tune_calls}"
     assert fake.tune_calls[0][0] == 2, "应为完整调谐 mode=2"
     print("✓ 去抖后恰好触发一次完整调谐 (mode=2)")
@@ -59,7 +59,7 @@ def test_triggers_once_after_debounce():
 def test_cooldown_blocks_repeat():
     _reset(swr=2.5, power=40)
     fake = FakeATR()
-    _feed(fake, 2.5, 40, n=9, dt=0.2)   # 触发第一次（距首个样本 1.6s）
+    _feed(fake, 2.5, 40, n=19, dt=0.2)  # 触发第一次（距首个样本 3.8s）
     assert len(fake.tune_calls) == 1
     with ap.cache_lock:
         ap.cache["tuning"] = False       # 模拟调谐完成，进入 30s 冷却期
@@ -78,7 +78,7 @@ def test_gives_up_after_max_fails():
             ap.cache["tuning"] = False          # 模拟上次调谐已完成
             ap.cache["tuning_started_at"] = 0
             ap.cache["tuning_relay_stable_since"] = 0
-        _feed(fake, 2.5, 40, n=9, dt=0.2)
+        _feed(fake, 2.5, 40, n=19, dt=0.2)
         assert len(fake.tune_calls) == i + 1, f"第{i+1}次应触发"
     # 第 4 次连续段：失败计数已达上限 → 不再触发
     FakeClock.now += 31
@@ -87,7 +87,7 @@ def test_gives_up_after_max_fails():
         ap.cache["tuning"] = False
         ap.cache["tuning_started_at"] = 0
         ap.cache["tuning_relay_stable_since"] = 0
-    _feed(fake, 2.5, 40, n=9, dt=0.2)
+    _feed(fake, 2.5, 40, n=19, dt=0.2)
     assert len(fake.tune_calls) == 3, "3 次失败后不应再触发"
     print("✓ 3 次失败后放弃自动调谐")
 
@@ -115,6 +115,19 @@ def test_skips_when_not_conditions():
     print("✓ 功率不足/SWR达标/调谐中/继电器忽略窗口均不触发")
 
 
+def test_threshold_boundary_20():
+    """阈值 2.0 边界：2.0 本身不触发（严格大于才触发），2.1 触发"""
+    _reset(swr=2.0, power=40)
+    fake = FakeATR()
+    _feed(fake, 2.0, 40, n=12, dt=0.2)
+    assert fake.tune_calls == [], "SWR=2.0（阈值本身）不应触发"
+    _reset(swr=2.1, power=40)
+    fake = FakeATR()
+    _feed(fake, 2.1, 40, n=19, dt=0.2)  # 3.8s 过去抖
+    assert len(fake.tune_calls) == 1, f"SWR=2.1>2.0 应触发: {fake.tune_calls}"
+    print("✓ 阈值边界：2.0 不触发，2.1 触发")
+
+
 def test_parse_data_integration():
     """通过 _parse_data 喂连续高 SWR METER 包，验证触发完整调谐。"""
     import struct
@@ -124,7 +137,7 @@ def test_parse_data_integration():
     ap._parse_data = ap.ATR1000Client._parse_data.__get__(fake, FakeATR)
     ap.learning_buffer.set_relay(0, 0, 15)
     ap.learning_buffer.set_freq(21074000)
-    for _ in range(10):                      # 10 个 SWR=2.5, P=40W 的 METER
+    for _ in range(20):                      # 20 个 SWR=2.5, P=40W 的 METER（4.0s 过去抖）
         FakeClock.now += 0.2
         raw = struct.pack('<H', 250) + struct.pack('<H', 40)
         ap._parse_data(bytes([0xFF, 0x02, 0x07, 0x00]) + raw)
@@ -138,7 +151,7 @@ def main():
     ap.time.time = FakeClock.time      # 打桩模块级 time.time
     tests = [test_triggers_once_after_debounce, test_cooldown_blocks_repeat,
              test_gives_up_after_max_fails, test_skips_when_not_conditions,
-             test_parse_data_integration]
+             test_threshold_boundary_20, test_parse_data_integration]
     for t in tests:
         FakeClock.now = 1000.0
         t()

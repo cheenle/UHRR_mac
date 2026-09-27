@@ -40,7 +40,7 @@ function startTune() {
             ATR1000.onTXStart();
         }
 
-        // Tune 发射建立后，若 SWR 偏高则联动 ATR-1000 执行完整调谐。
+        // Tune 发射建立后，若 SWR > 2.0（与代理守卫阈值一致）则联动 ATR-1000 执行完整调谐。
         if (typeof ATR1000 !== 'undefined' && ATR1000.autoFullTuneIfHighSWR) {
             ATR1000.autoFullTuneIfHighSWR();
         }
