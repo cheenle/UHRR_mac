@@ -98,6 +98,7 @@
 - `docs/legacy/tooling/CLAUDE.md` has the website nav/version/path gotchas; check it before changing many `website/*.html` pages.
 
 ## Existing Guidance
+- 天线/天调（EFHW × ATR-1000）：扫频画像、学习库体检/修复、测算页的全程复盘与铁律在 `docs/current/antenna/efhw-atr1000-project-retrospective-2026-09-28.md`，操作技能沉淀在 `.pi/skills/antenna-sweep/SKILL.md`（与 `~/.agents/skills/antenna-sweep/` 同步）。动天线测量、学习库或调谐自动化前先读。关键坑：PTTSafetyMonitor TOT=120s 不豁免 tune（长会话工具须 re-arm）、确认学习需继电器稳定 >8s、改学习库必须走 proxy socket learn。
 - `docs/current/reliability/` indexes the reliability/safety case series (RC-001: IOLoop wedge + BT-DAC-churn silent TX); consult it before touching TX init, the IOLoop, or macOS audio device handling.
 - `docs/current/methodology/project-retrospective-2026-09.md` is the full project history retrospective (phases, problem taxonomy, validated methods, future outlook) — read it when planning larger direction changes.
 - `docs/legacy/methodology/aldv2/Aladdin_V2_Methodology.md` is the top-level engineering methodology; `.opencode/skills/aladdin-v2/SKILL.md` turns it into a repo-local OpenCode skill.
