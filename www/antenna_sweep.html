@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>天线 SWR 扫频画像 — MRRC</title>
+<style>
+  :root { --bg:#12181e; --panel:#1b242c; --line:#2c3a45; --fg:#d7e0e7; --dim:#8fa3b0;
+          --acc:#4fb3ff; --good:#5fd68a; --warn:#ffb84f; --bad:#ff6b6b; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg);
+         font:14px/1.5 -apple-system,"PingFang SC","Helvetica Neue",sans-serif; }
+  header { padding:12px 18px; border-bottom:1px solid var(--line); display:flex;
+           align-items:baseline; gap:12px; flex-wrap:wrap; }
+  header h1 { font-size:17px; margin:0; }
+  header a { color:var(--acc); text-decoration:none; font-size:13px; }
+  .wrap { display:flex; gap:14px; padding:14px 18px; flex-wrap:wrap; }
+  .panel { background:var(--panel); border:1px solid var(--line); border-radius:8px;
+           padding:12px 14px; }
+  #cfg { width:300px; flex:none; }
+  #view { flex:1; min-width:420px; }
+  .row { margin:8px 0; display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  label { color:var(--dim); }
+  .bands label { color:var(--fg); margin-right:8px; }
+  input[type=number], input[type=text] { width:70px; background:#0e1419; color:var(--fg);
+    border:1px solid var(--line); border-radius:4px; padding:4px 6px; }
+  input[type=text] { width:100%; }
+  button { background:var(--acc); border:none; color:#08131c; font-weight:600;
+           padding:7px 16px; border-radius:6px; cursor:pointer; }
+  button#stopBtn { background:var(--bad); color:#fff; }
+  button:disabled { opacity:.4; cursor:not-allowed; }
+  .ghost { background:transparent; border:1px solid var(--line); color:var(--fg); }
+  #progressBar { height:8px; background:#0e1419; border-radius:4px; overflow:hidden; margin:6px 0; }
+  #progressFill { height:100%; width:0; background:var(--acc); transition:width .3s; }
+  #statusLine { font-size:13px; color:var(--dim); }
+  #statusLine b { color:var(--fg); }
+  canvas { width:100%; background:#0e1419; border-radius:6px; }
+  table { border-collapse:collapse; width:100%; font-size:12.5px; margin-top:10px; }
+  th,td { border-bottom:1px solid var(--line); padding:3px 8px; text-align:right; }
+  th { color:var(--dim); font-weight:500; }
+  .hist button { padding:2px 10px; font-size:12px; margin:2px 4px 2px 0; }
+  .hist .on { outline:2px solid var(--acc); }
+  .note { font-size:12px; color:var(--dim); margin-top:8px; }
+  .warn { color:var(--warn); }
+</style>
+</head>
+<body>
+<header>
+  <h1>📡 天线 SWR 扫频画像（天调 bypass）</h1>
+  <a href="/">← 返回主界面</a>
+  <a href="/support.html">🐞 诊断包</a>
+</header>
+
+<div class="wrap">
+  <div class="panel" id="cfg">
+    <div class="row bands" id="bandChecks"></div>
+    <div class="row">
+      <label>步进</label>
+      <select id="step"><option>5</option><option selected>10</option><option>25</option><option>50</option></select> kHz
+      <label>驻留</label>
+      <input type="number" id="dwell" value="1.2" step="0.2" min="0.5" max="10"> s
+    </div>
+    <div class="row"><input type="text" id="note" placeholder="备注（如：干燥/雨后/换天线后）"></div>
+    <div class="row">
+      <button id="startBtn">▶ 开始扫频</button>
+      <button id="stopBtn" disabled>■ 停止</button>
+    </div>
+    <div id="progressBar"><div id="progressFill"></div></div>
+    <div id="statusLine">空闲</div>
+    <div class="note">
+      原理：ATR-1000 切到 L=0/C=0 直通（bypass），逐频点发射短促 tune 载波，记录裸天线 SWR/功率。
+      扫频期间自动学习关闭，结束后自动恢复当前频率的天调参数。<br>
+      <span class="warn">注意：扫频会在各业余波段逐点发射短载波（每点约 1–2 秒），请确认频段使用合规。</span>
+    </div>
+    <div class="note hist" id="histBox"><b>历史记录</b>（点击叠加对比）：<br><span id="histList">加载中…</span></div>
+  </div>
+
+  <div class="panel" id="view">
+    <canvas id="chart" height="420"></canvas>
+    <table id="tbl"><thead><tr>
+      <th>频率 kHz</th><th>波段</th><th>SWR</th><th>功率 W</th><th>样本</th>
+    </tr></thead><tbody></tbody></table>
+  </div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const BANDS = [["40m",7000,7300],["30m",10100,10150],["20m",14000,14350],
+               ["17m",18068,18168],["15m",21000,21450],["12m",24890,24990],["10m",28000,29700]];
+let livePoints = [], overlays = [], pollTimer = null;
+
+BANDS.forEach(([n], i) => {
+  const lab = document.createElement("label");
+  lab.innerHTML = `<input type="checkbox" value="${n}" ${["40m","20m","15m","10m"].includes(n)?"checked":""}> ${n}`;
+  $("bandChecks").appendChild(lab);
+});
+
+async function api(path, method="GET", body=null) {
+  const r = await fetch("/api/antenna_sweep/" + path, {
+    method, headers: {"Content-Type":"application/json"},
+    body: body ? JSON.stringify(body) : null });
+  return r.json();
+}
+
+$("startBtn").onclick = async () => {
+  const bands = [...document.querySelectorAll("#bandChecks input:checked")].map(c => c.value);
+  if (!bands.length) { alert("至少选一个波段"); return; }
+  if (!confirm(`将对 ${bands.join("/")} 逐点发射短载波（天调 bypass），确认开始？`)) return;
+  const r = await api("start", "POST", {
+    bands, step_khz: +$("step").value, dwell_s: +$("dwell").value, note: $("note").value });
+  if (r.error) alert("启动失败: " + r.error);
+  else { livePoints = []; startPoll(); }
+};
+
+$("stopBtn").onclick = () => api("stop", "POST");
+
+async function poll() {
+  let st;
+  try { st = await api("status"); } catch(e) { return; }
+  livePoints = st.points || [];
+  const pct = st.points_total ? (100*st.points_done/st.points_total) : 0;
+  $("progressFill").style.width = pct + "%";
+  $("statusLine").innerHTML = st.running
+    ? `扫描中 <b>${st.current_freq_khz||"-"} kHz</b>（${st.current_band||"-"}） — ${st.points_done}/${st.points_total} 点`
+    : (st.phase === "done" ? `完成：${st.points_done} 点 → <b>${st.result_file||""}</b>`
+      : st.phase === "error" ? `错误：${st.error}`
+      : st.phase === "aborted" ? `已中止（${st.points_done} 点已保存）` : "空闲");
+  $("startBtn").disabled = st.running;
+  $("stopBtn").disabled = !st.running;
+  draw();
+  fillTable();
+  if (!st.running && pollTimer) { clearInterval(pollTimer); pollTimer = null; loadHist(); }
+}
+function startPoll() { if (!pollTimer) pollTimer = setInterval(poll, 1200); poll(); }
+
+async function loadHist() {
+  const r = await api("list");
+  const box = $("histList");
+  if (!r.results || !r.results.length) { box.textContent = "（暂无）"; return; }
+  box.innerHTML = "";
+  r.results.slice(0, 12).forEach(it => {
+    const b = document.createElement("button");
+    b.className = "ghost";
+    const d = new Date(it.started_at*1000);
+    const note = (it.config && it.config.note) ? " " + it.config.note : "";
+    b.textContent = `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")} (${it.n_points}点)${note}`;
+    b.title = it.file;
+    b.onclick = () => toggleOverlay(it.file, b);
+    box.appendChild(b);
+  });
+}
+
+async function toggleOverlay(file, btn) {
+  const i = overlays.findIndex(o => o.file === file);
+  if (i >= 0) { overlays.splice(i,1); btn.classList.remove("on"); draw(); return; }
+  const r = await api("result?file=" + encodeURIComponent(file));
+  if (r.points) { overlays.push({file, points: r.points}); btn.classList.add("on"); draw(); }
+}
+
+// ---------- 绘图 ----------
+const OV_COLORS = ["#ffb84f", "#b08fff", "#5fd68a"];
+function draw() {
+  const cv = $("chart"), ctx = cv.getContext("2d");
+  const W = cv.width = cv.clientWidth * 2, H = cv.height = 840;
+  ctx.scale(1,1);
+  ctx.fillStyle = "#0e1419"; ctx.fillRect(0,0,W,H);
+  const all = [...livePoints, ...overlays.flatMap(o => o.points)];
+  if (!all.length) {
+    ctx.fillStyle = "#8fa3b0"; ctx.font = "28px sans-serif";
+    ctx.fillText("开始扫频后此处实时显示裸 SWR 曲线", 60, 120); return;
+  }
+  const fmin = Math.min(...all.map(p => p.freq_khz)), fmax = Math.max(...all.map(p => p.freq_khz));
+  const SMAX = 6, padL = 90, padR = 30, padT = 30, padB = 60;
+  const X = f => padL + (f - fmin) / (fmax - fmin || 1) * (W - padL - padR);
+  const Y = s => padT + (1 - Math.min(s, SMAX) / SMAX) * (H - padT - padB);
+  // 波段底色
+  BANDS.forEach(([n, lo, hi]) => {
+    if (hi < fmin || lo > fmax) return;
+    ctx.fillStyle = "rgba(255,160,60,0.07)";
+    ctx.fillRect(X(lo), padT, X(hi)-X(lo), H-padT-padB);
+    ctx.fillStyle = "#8fa3b0"; ctx.font = "22px sans-serif";
+    ctx.fillText(n, (X(lo)+X(hi))/2 - 20, padT + 26);
+  });
+  // 网格 + SWR 刻度
+  [1, 1.5, 2, 3, 4, 5, 6].forEach(s => {
+    ctx.strokeStyle = s===1.5||s===2 ? "#3a5a72" : "#223039";
+    ctx.setLineDash(s===1.5 ? [4,4] : s===2 ? [8,6] : []);
+    ctx.beginPath(); ctx.moveTo(padL, Y(s)); ctx.lineTo(W-padR, Y(s)); ctx.stroke();
+    ctx.fillStyle = "#8fa3b0"; ctx.font = "20px sans-serif";
+    ctx.fillText("SWR " + s, 8, Y(s) + 7);
+  });
+  ctx.setLineDash([]);
+  // 频率刻度（每 500kHz）
+  for (let f = Math.ceil(fmin/500)*500; f <= fmax; f += 500) {
+    ctx.fillStyle = "#5b6d79"; ctx.font = "20px sans-serif";
+    ctx.fillText((f/1000).toFixed(1), X(f)-18, H-24);
+    ctx.strokeStyle = "#1a252d"; ctx.beginPath();
+    ctx.moveTo(X(f), padT); ctx.lineTo(X(f), H-padB); ctx.stroke();
+  }
+  ctx.fillStyle = "#5b6d79"; ctx.font = "20px sans-serif";
+  ctx.fillText("MHz", W-70, H-24);
+  // 叠加历史
+  overlays.forEach((o, i) => {
+    ctx.strokeStyle = OV_COLORS[i % OV_COLORS.length]; ctx.lineWidth = 2;
+    ctx.beginPath();
+    o.points.forEach((p, j) => { const x=X(p.freq_khz), y=Y(p.swr||SMAX);
+      j ? ctx.lineTo(x,y) : ctx.moveTo(x,y); });
+    ctx.stroke();
+  });
+  // 当前/最新扫描
+  ctx.strokeStyle = "#4fb3ff"; ctx.lineWidth = 3; ctx.beginPath();
+  livePoints.forEach((p, j) => { const x=X(p.freq_khz), y=Y(p.swr||SMAX);
+    j ? ctx.lineTo(x,y) : ctx.moveTo(x,y); });
+  ctx.stroke();
+  ctx.fillStyle = "#4fb3ff";
+  livePoints.forEach(p => { ctx.beginPath();
+    ctx.arc(X(p.freq_khz), Y(p.swr||SMAX), 3.5, 0, 7); ctx.fill(); });
+}
+
+function fillTable() {
+  const tb = document.querySelector("#tbl tbody");
+  tb.innerHTML = "";
+  [...livePoints].reverse().slice(0, 60).forEach(p => {
+    const tr = document.createElement("tr");
+    const cls = p.swr <= 1.5 ? 'style="color:var(--good)"' : p.swr <= 2 ? 'style="color:var(--warn)"' : 'style="color:var(--bad)"';
+    tr.innerHTML = `<td>${p.freq_khz}</td><td>${p.band}</td><td ${cls}>${p.swr ? p.swr.toFixed(2) : "—"}</td><td>${p.power_w}</td><td>${p.samples}</td>`;
+    tb.appendChild(tr);
+  });
+}
+
+window.addEventListener("resize", draw);
+loadHist();
+poll();  // 若页面打开时正在扫频，接上进度
+</script>
+</body>
+</html>

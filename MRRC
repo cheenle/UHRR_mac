@@ -1680,6 +1680,13 @@ def sync_freq_to_atr1000(freq):
     与 ATR1000ProxyManager._connect() 保持同一套传输选择，否则 Windows 上这个调用永远失败，
     天调自动学习拿不到当前频率。
     """
+    # 扫频期间屏蔽：引擎自己用 no_tune set_freq 维护代理频率上下文，
+    # 这里若转发会触发代理按学习库自动应用 LC，破坏 bypass 直通状态
+    try:
+        if antenna_sweep_running():
+            return
+    except NameError:
+        pass
     import socket
     import json
     global INSTANCE_UNIX_SOCKET, ATR1000_PROXY_TRANSPORT, ATR1000_PROXY_HOST, ATR1000_PROXY_PORT
@@ -2464,6 +2471,123 @@ class ATR1000ProxyManager:
 
 # 全局代理管理器实例
 atr1000_proxy_manager = ATR1000ProxyManager()
+
+# ============ 天线 SWR 扫频（天调 bypass 画像） ============
+# 引擎在 antenna_sweep.py（松散模块，回调注入）；CTRX 等全局在调用时才解析，
+# 因此这里可以先创建，回调真正执行时（扫描开始后）它们必然已就绪。
+import antenna_sweep as _antsw
+
+def _sweep_set_freq(hz):
+    try:
+        return int(CTRX.setFreq(int(hz))) == int(hz)
+    except Exception as e:
+        logger.error(f"扫频 set_freq 失败: {e}")
+        return False
+
+def _sweep_ptt(on):
+    try:
+        return bool(CTRX.setPTT("true" if on else "false")) == bool(on)
+    except Exception as e:
+        logger.error(f"扫频 PTT 失败: {e}")
+        return False
+
+def _sweep_tone(on):
+    if on:
+        start_tune()
+    else:
+        stop_tune()
+
+def _sweep_get_meter():
+    raw = atr1000_proxy_manager.last_data
+    if not raw:
+        return None
+    try:
+        d = json.loads(raw)
+    except Exception:
+        return None
+    if d.get("type") != "atr1000_meter":
+        return None
+    return {"power": d.get("power", 0), "swr": d.get("swr", 0)}
+
+def _sweep_proxy_cmd(cmd):
+    return atr1000_proxy_manager.send_to_proxy(json.dumps(cmd))
+
+antenna_sweep_engine = _antsw.AntennaSweepEngine(
+    set_freq=_sweep_set_freq, ptt=_sweep_ptt, tone=_sweep_tone,
+    get_meter=_sweep_get_meter, proxy_cmd=_sweep_proxy_cmd,
+    logger=lambda m: logger.info(f"[antenna-sweep] {m}"))
+
+def antenna_sweep_running():
+    try:
+        return antenna_sweep_engine.status().get("running", False)
+    except Exception:
+        return False
+
+class AntennaSweepApiHandler(BaseHandler):
+    """天线 SWR 扫频 API（天调 bypass 画像）
+
+    GET  /api/antenna_sweep/status            引擎状态 + 已扫点
+    GET  /api/antenna_sweep/list              历史扫描文件列表
+    GET  /api/antenna_sweep/result?file=xx    读取一次扫描的完整结果
+    POST /api/antenna_sweep/start             {"bands":["40m",...],"step_khz":10,"dwell_s":1.2,"note":"..."}
+                                              或 {"freqs_khz":[7130,7140,...]} 自定义频点（复测掉读点）
+    POST /api/antenna_sweep/stop              请求中止
+    """
+
+    def _json(self, obj, status=200):
+        self.set_status(status)
+        self.set_header("Content-Type", "application/json; charset=utf-8")
+        self.write(json.dumps(obj, ensure_ascii=False))
+
+    def get(self):
+        path = self.request.path
+        if path.endswith("/status"):
+            st = antenna_sweep_engine.status()
+            st["atr1000_enabled"] = ATR1000_ENABLED
+            self._json(st)
+        elif path.endswith("/list"):
+            self._json({"results": antenna_sweep_engine.list_results()})
+        elif path.endswith("/result"):
+            name = self.get_argument("file", "")
+            try:
+                self._json(antenna_sweep_engine.load_result(name))
+            except Exception as e:
+                self._json({"error": str(e)}, 404)
+        else:
+            self._json({"error": "unknown endpoint"}, 404)
+
+    def post(self):
+        path = self.request.path
+        if path.endswith("/start"):
+            if not ATR1000_ENABLED:
+                self._json({"error": "ATR-1000 未启用"}, 400)
+                return
+            if antenna_sweep_running():
+                self._json({"error": "扫频正在进行中"}, 409)
+                return
+            try:
+                if CTRX.getPTT():
+                    self._json({"error": "电台正在发射中，拒绝开始扫频"}, 409)
+                    return
+            except Exception:
+                pass
+            try:
+                body = json.loads(self.request.body.decode("utf-8") or "{}")
+            except Exception:
+                body = {}
+            try:
+                r = antenna_sweep_engine.start(
+                    bands=body.get("bands"), step_khz=body.get("step_khz", 10),
+                    dwell_s=body.get("dwell_s", 1.2), settle_s=body.get("settle_s", 0.5),
+                    note=body.get("note", ""), freqs_khz=body.get("freqs_khz"))
+                self._json({"ok": True, **r})
+            except Exception as e:
+                self._json({"error": str(e)}, 400)
+        elif path.endswith("/stop"):
+            antenna_sweep_engine.stop()
+            self._json({"ok": True})
+        else:
+            self._json({"error": "unknown endpoint"}, 404)
 
 class WS_ATR1000Handler(AuthenticatedWebSocketHandler):
     """
@@ -5332,6 +5456,7 @@ if __name__ == "__main__":
 					(r'/api/devices', DevicesApiHandler),  # 抽屉式设备配置 API
 					(r'/api/devices/apply', DevicesApiHandler),  # 设备配置保存并重启
 					(r'/api/support/.*', SupportApiHandler),  # 诊断包：生成/上传/保存/下载
+					(r'/api/antenna_sweep/.*', AntennaSweepApiHandler),  # 天线 SWR 扫频（天调 bypass 画像）
 					(r'/api/update.*', UpdateApiHandler),  # 一键升级：状态/升级/回退
 					(r'/recordings/([^/]+)', RecordingsDownloadHandler),  # 录音下载
 					(r'/', MainHandler),

@@ -175,8 +175,10 @@ LEARN_MIN_POWER = 3          # 最小功率 (W) — QRP 友好：>=3W 即可学�
 LEARN_IGNORE_WINDOW = 1.0    # TX 开始/继电器变化后忽略时间 (s)
 LEARN_SWR_MIN = 1.0          # 学习 SWR 下限
 LEARN_SWR_MAX = 1.8          # 学习 SWR 上限
+LEARNING_ENABLED = True      # 全局学习开关 — 天线扫频(bypass)期间由客户端置 False，防止直通状态污染学习库
 
 # ========== SWR 过高自动完整调谐参数 ==========
+AUTOTUNE_ENABLED = True          # 全局自动调谐守卫开关 — 天线扫频(bypass)期间由客户端置 False，防止裸 SWR>2 触发自动调谐破坏测量
 SWR_RETUNE_THRESHOLD     = 2.0   # SWR 严格大于此值视为过高
 SWR_RETUNE_MIN_POWER     = 5     # 实测功率 ≥5W 视为发射中（过滤空闲/调谐扫描的 1–2W）
 SWR_RETUNE_DEBOUNCE      = 1.5   # SWR>2 持续 ≥1.5s 才触发
@@ -367,6 +369,12 @@ def check_swr_retune(atr1000, power):
     SWR 在函数内自 cache_lock 快照中读取，调用方无需（也不应）预取传入。
     """
     global _swr_high_since, _last_retune_time
+
+    # 扫频/测量期间客户端可关闭自动调谐，避免裸 SWR>2 触发调谐破坏测量
+    if not AUTOTUNE_ENABLED:
+        with state_lock:
+            _swr_high_since = 0
+        return
 
     now = time.time()
     # 先取 cache 快照（cache_lock 独立获取后立即释放）
@@ -795,7 +803,7 @@ class ATR1000Client:
                 # V5.8.5: 学习入口改为按实测功率判定发射中（power ≥ LEARN_MIN_POWER），
                 # 与 SWR 守卫一致，覆盖非前端路径发射（面板直发/外部软件）——原 is_tx
                 # 依赖前端 start 信号，面板直发时永远收不到，学习静默失效。
-                _should_check_learn = (not cache.get("tuning") and power >= LEARN_MIN_POWER)
+                _should_check_learn = (LEARNING_ENABLED and not cache.get("tuning") and power >= LEARN_MIN_POWER)
                 if _should_check_learn:
                     _learn_freq = cache.get("freq", 0)
                     _learn_power = power
@@ -1057,7 +1065,9 @@ def handle_unix_client(conn, addr, atr1000):
 
         elif action == "set_freq":
             # 设置当前频率并自动调谐（如果有匹配参数）
+            # no_tune=true: 只更新频率上下文、不应用学习参数（天线扫频 bypass 模式用）
             freq = msg.get("freq", 0)
+            no_tune = bool(msg.get("no_tune", False))
             with cache_lock:
                 old_freq = cache.get("freq", 0)
                 cache["freq"] = freq
@@ -1069,7 +1079,7 @@ def handle_unix_client(conn, addr, atr1000):
 
             # 查找并应用天调参数
             tune_result = None
-            if freq > 0:
+            if freq > 0 and not no_tune:
                 tuner = get_storage()
                 params = tuner.get_tune_params(freq)
                 if params:
@@ -1096,6 +1106,28 @@ def handle_unix_client(conn, addr, atr1000):
                 "tune_params": tune_result
             }) + "\n"
             conn.send(response.encode())
+
+        elif action == "set_learning":
+            # 学习总开关（天线扫频 bypass 期间关闭，防止 L=0/C=0 直通状态写进学习库）
+            global LEARNING_ENABLED
+            LEARNING_ENABLED = bool(msg.get("enabled", True))
+            if not LEARNING_ENABLED:
+                learning_buffer.reset()
+            logger.info(f"📚 学习开关: {'开启' if LEARNING_ENABLED else '关闭'}")
+            conn.send((json.dumps({"type": "ack", "action": "set_learning",
+                                   "enabled": LEARNING_ENABLED}) + "\n").encode())
+
+        elif action == "set_autotune":
+            # SWR 自动完整调谐守卫总开关（天线扫频 bypass 期间关闭，
+            # 防止裸 SWR>2 触发 mode=2 完整调谐破坏测量）
+            global AUTOTUNE_ENABLED
+            AUTOTUNE_ENABLED = bool(msg.get("enabled", True))
+            if not AUTOTUNE_ENABLED:
+                with state_lock:
+                    _swr_high_since = 0
+            logger.info(f"⚡ 自动调谐守卫: {'开启' if AUTOTUNE_ENABLED else '关闭'}")
+            conn.send((json.dumps({"type": "ack", "action": "set_autotune",
+                                   "enabled": AUTOTUNE_ENABLED}) + "\n").encode())
 
         elif action == "quick_tune":
             # V4.5.15: 快速调谐到指定频率
