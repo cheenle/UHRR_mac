@@ -1,0 +1,42 @@
+{
+ "version": 1,
+ "started_at": 1790506581.171221,
+ "finished_at": 1790506589.5653079,
+ "config": {
+  "bands": [
+   "12m"
+  ],
+  "step_khz": 50,
+  "dwell_s": 1.2,
+  "settle_s": 0.5,
+  "note": "冒烟测试"
+ },
+ "error": null,
+ "aborted": false,
+ "points": [
+  {
+   "freq_khz": 24890,
+   "band": "12m",
+   "power_w": 0.0,
+   "swr": 0.0,
+   "samples": 0,
+   "ts": 1790506582.2
+  },
+  {
+   "freq_khz": 24940,
+   "band": "12m",
+   "power_w": 5.5,
+   "swr": 8.19,
+   "samples": 8,
+   "ts": 1790506584.8
+  },
+  {
+   "freq_khz": 24990,
+   "band": "12m",
+   "power_w": 11.0,
+   "swr": 2.75,
+   "samples": 8,
+   "ts": 1790506587.4
+  }
+ ]
+}

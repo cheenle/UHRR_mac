@@ -1,0 +1,387 @@
+{
+ "version": 1,
+ "started_at": 1790514165.854076,
+ "finished_at": 1790514327.2662349,
+ "config": {
+  "bands": [
+   "15m"
+  ],
+  "freqs_khz": null,
+  "step_khz": 10,
+  "dwell_s": 2.0,
+  "settle_s": 0.5,
+  "note": ""
+ },
+ "error": null,
+ "aborted": false,
+ "points": [
+  {
+   "freq_khz": 21000,
+   "band": "15m",
+   "power_w": 20.0,
+   "swr": 1.65,
+   "samples": 12,
+   "ts": 1790514168.4
+  },
+  {
+   "freq_khz": 21010,
+   "band": "15m",
+   "power_w": 20.0,
+   "swr": 1.63,
+   "samples": 14,
+   "ts": 1790514171.9
+  },
+  {
+   "freq_khz": 21020,
+   "band": "15m",
+   "power_w": 20.0,
+   "swr": 1.61,
+   "samples": 14,
+   "ts": 1790514175.4
+  },
+  {
+   "freq_khz": 21030,
+   "band": "15m",
+   "power_w": 20.0,
+   "swr": 1.59,
+   "samples": 14,
+   "ts": 1790514178.8
+  },
+  {
+   "freq_khz": 21040,
+   "band": "15m",
+   "power_w": 20.0,
+   "swr": 1.57,
+   "samples": 14,
+   "ts": 1790514182.3
+  },
+  {
+   "freq_khz": 21050,
+   "band": "15m",
+   "power_w": 20.0,
+   "swr": 1.55,
+   "samples": 14,
+   "ts": 1790514185.8
+  },
+  {
+   "freq_khz": 21060,
+   "band": "15m",
+   "power_w": 19.5,
+   "swr": 1.53,
+   "samples": 14,
+   "ts": 1790514189.2
+  },
+  {
+   "freq_khz": 21070,
+   "band": "15m",
+   "power_w": 19.0,
+   "swr": 1.51,
+   "samples": 14,
+   "ts": 1790514192.7
+  },
+  {
+   "freq_khz": 21080,
+   "band": "15m",
+   "power_w": 19.5,
+   "swr": 1.49,
+   "samples": 14,
+   "ts": 1790514196.2
+  },
+  {
+   "freq_khz": 21090,
+   "band": "15m",
+   "power_w": 19.0,
+   "swr": 1.48,
+   "samples": 14,
+   "ts": 1790514199.6
+  },
+  {
+   "freq_khz": 21100,
+   "band": "15m",
+   "power_w": 19.0,
+   "swr": 1.46,
+   "samples": 14,
+   "ts": 1790514203.1
+  },
+  {
+   "freq_khz": 21110,
+   "band": "15m",
+   "power_w": 19.0,
+   "swr": 1.44,
+   "samples": 14,
+   "ts": 1790514206.6
+  },
+  {
+   "freq_khz": 21120,
+   "band": "15m",
+   "power_w": 19.0,
+   "swr": 1.42,
+   "samples": 14,
+   "ts": 1790514210.1
+  },
+  {
+   "freq_khz": 21130,
+   "band": "15m",
+   "power_w": 19.0,
+   "swr": 1.41,
+   "samples": 14,
+   "ts": 1790514213.5
+  },
+  {
+   "freq_khz": 21140,
+   "band": "15m",
+   "power_w": 19.0,
+   "swr": 1.39,
+   "samples": 14,
+   "ts": 1790514217.0
+  },
+  {
+   "freq_khz": 21150,
+   "band": "15m",
+   "power_w": 19.0,
+   "swr": 1.37,
+   "samples": 14,
+   "ts": 1790514220.5
+  },
+  {
+   "freq_khz": 21160,
+   "band": "15m",
+   "power_w": 19.0,
+   "swr": 1.36,
+   "samples": 13,
+   "ts": 1790514223.9
+  },
+  {
+   "freq_khz": 21170,
+   "band": "15m",
+   "power_w": 19.0,
+   "swr": 1.34,
+   "samples": 14,
+   "ts": 1790514227.3
+  },
+  {
+   "freq_khz": 21180,
+   "band": "15m",
+   "power_w": 19.0,
+   "swr": 1.33,
+   "samples": 14,
+   "ts": 1790514230.7
+  },
+  {
+   "freq_khz": 21190,
+   "band": "15m",
+   "power_w": 19.0,
+   "swr": 1.31,
+   "samples": 14,
+   "ts": 1790514234.2
+  },
+  {
+   "freq_khz": 21200,
+   "band": "15m",
+   "power_w": 19.0,
+   "swr": 1.3,
+   "samples": 14,
+   "ts": 1790514237.7
+  },
+  {
+   "freq_khz": 21210,
+   "band": "15m",
+   "power_w": 19.0,
+   "swr": 1.28,
+   "samples": 13,
+   "ts": 1790514241.1
+  },
+  {
+   "freq_khz": 21220,
+   "band": "15m",
+   "power_w": 19.0,
+   "swr": 1.27,
+   "samples": 14,
+   "ts": 1790514244.6
+  },
+  {
+   "freq_khz": 21230,
+   "band": "15m",
+   "power_w": 19.0,
+   "swr": 1.26,
+   "samples": 14,
+   "ts": 1790514248.1
+  },
+  {
+   "freq_khz": 21240,
+   "band": "15m",
+   "power_w": 19.0,
+   "swr": 1.24,
+   "samples": 14,
+   "ts": 1790514251.5
+  },
+  {
+   "freq_khz": 21250,
+   "band": "15m",
+   "power_w": 19.0,
+   "swr": 1.23,
+   "samples": 14,
+   "ts": 1790514255.0
+  },
+  {
+   "freq_khz": 21260,
+   "band": "15m",
+   "power_w": 19.0,
+   "swr": 1.21,
+   "samples": 13,
+   "ts": 1790514258.5
+  },
+  {
+   "freq_khz": 21270,
+   "band": "15m",
+   "power_w": 20.0,
+   "swr": 1.21,
+   "samples": 13,
+   "ts": 1790514261.9
+  },
+  {
+   "freq_khz": 21280,
+   "band": "15m",
+   "power_w": 19.0,
+   "swr": 1.2,
+   "samples": 14,
+   "ts": 1790514265.4
+  },
+  {
+   "freq_khz": 21290,
+   "band": "15m",
+   "power_w": 19.0,
+   "swr": 1.2,
+   "samples": 14,
+   "ts": 1790514268.9
+  },
+  {
+   "freq_khz": 21300,
+   "band": "15m",
+   "power_w": 19.0,
+   "swr": 1.19,
+   "samples": 14,
+   "ts": 1790514272.4
+  },
+  {
+   "freq_khz": 21310,
+   "band": "15m",
+   "power_w": 19.0,
+   "swr": 1.19,
+   "samples": 14,
+   "ts": 1790514275.8
+  },
+  {
+   "freq_khz": 21320,
+   "band": "15m",
+   "power_w": 19.0,
+   "swr": 1.19,
+   "samples": 14,
+   "ts": 1790514279.3
+  },
+  {
+   "freq_khz": 21330,
+   "band": "15m",
+   "power_w": 19.0,
+   "swr": 1.19,
+   "samples": 14,
+   "ts": 1790514282.8
+  },
+  {
+   "freq_khz": 21340,
+   "band": "15m",
+   "power_w": 19.0,
+   "swr": 1.19,
+   "samples": 14,
+   "ts": 1790514286.2
+  },
+  {
+   "freq_khz": 21350,
+   "band": "15m",
+   "power_w": 19.0,
+   "swr": 1.2,
+   "samples": 14,
+   "ts": 1790514289.7
+  },
+  {
+   "freq_khz": 21360,
+   "band": "15m",
+   "power_w": 19.0,
+   "swr": 1.2,
+   "samples": 14,
+   "ts": 1790514293.2
+  },
+  {
+   "freq_khz": 21370,
+   "band": "15m",
+   "power_w": 19.0,
+   "swr": 1.21,
+   "samples": 14,
+   "ts": 1790514296.6
+  },
+  {
+   "freq_khz": 21380,
+   "band": "15m",
+   "power_w": 19.0,
+   "swr": 1.22,
+   "samples": 14,
+   "ts": 1790514300.1
+  },
+  {
+   "freq_khz": 21390,
+   "band": "15m",
+   "power_w": 19.0,
+   "swr": 1.23,
+   "samples": 14,
+   "ts": 1790514303.6
+  },
+  {
+   "freq_khz": 21400,
+   "band": "15m",
+   "power_w": 19.0,
+   "swr": 1.24,
+   "samples": 14,
+   "ts": 1790514307.1
+  },
+  {
+   "freq_khz": 21410,
+   "band": "15m",
+   "power_w": 19.0,
+   "swr": 1.26,
+   "samples": 14,
+   "ts": 1790514310.5
+  },
+  {
+   "freq_khz": 21420,
+   "band": "15m",
+   "power_w": 19.0,
+   "swr": 1.27,
+   "samples": 13,
+   "ts": 1790514314.0
+  },
+  {
+   "freq_khz": 21430,
+   "band": "15m",
+   "power_w": 19.0,
+   "swr": 1.28,
+   "samples": 14,
+   "ts": 1790514317.3
+  },
+  {
+   "freq_khz": 21440,
+   "band": "15m",
+   "power_w": 19.0,
+   "swr": 1.3,
+   "samples": 14,
+   "ts": 1790514320.8
+  },
+  {
+   "freq_khz": 21450,
+   "band": "15m",
+   "power_w": 19.0,
+   "swr": 1.31,
+   "samples": 14,
+   "ts": 1790514324.3
+  }
+ ]
+}

@@ -1,0 +1,91 @@
+{
+ "version": 1,
+ "started_at": 1790513868.094954,
+ "finished_at": 1790513892.0816581,
+ "config": {
+  "bands": [
+   "40m"
+  ],
+  "freqs_khz": null,
+  "step_khz": 10,
+  "dwell_s": 1.2,
+  "settle_s": 0.5,
+  "note": ""
+ },
+ "error": null,
+ "aborted": true,
+ "points": [
+  {
+   "freq_khz": 7000,
+   "band": "40m",
+   "power_w": 18.0,
+   "swr": 2.755,
+   "samples": 8,
+   "ts": 1790513870.7
+  },
+  {
+   "freq_khz": 7010,
+   "band": "40m",
+   "power_w": 18.5,
+   "swr": 2.805,
+   "samples": 8,
+   "ts": 1790513873.2
+  },
+  {
+   "freq_khz": 7020,
+   "band": "40m",
+   "power_w": 18.5,
+   "swr": 2.855,
+   "samples": 8,
+   "ts": 1790513875.8
+  },
+  {
+   "freq_khz": 7030,
+   "band": "40m",
+   "power_w": 18.0,
+   "swr": 2.905,
+   "samples": 8,
+   "ts": 1790513878.3
+  },
+  {
+   "freq_khz": 7040,
+   "band": "40m",
+   "power_w": 18.5,
+   "swr": 2.95,
+   "samples": 8,
+   "ts": 1790513880.9
+  },
+  {
+   "freq_khz": 7050,
+   "band": "40m",
+   "power_w": 18.0,
+   "swr": 2.35,
+   "samples": 8,
+   "ts": 1790513883.4
+  },
+  {
+   "freq_khz": 7060,
+   "band": "40m",
+   "power_w": 21.0,
+   "swr": 1.73,
+   "samples": 8,
+   "ts": 1790513886.0
+  },
+  {
+   "freq_khz": 7070,
+   "band": "40m",
+   "power_w": 20.0,
+   "swr": 1.73,
+   "samples": 8,
+   "ts": 1790513888.5
+  },
+  {
+   "freq_khz": 7080,
+   "band": "40m",
+   "power_w": 21.0,
+   "swr": 1.04,
+   "samples": 1,
+   "ts": 1790513891.1
+  }
+ ]
+}

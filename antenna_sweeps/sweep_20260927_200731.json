@@ -1,0 +1,491 @@
+{
+ "version": 1,
+ "started_at": 1790510851.4820821,
+ "finished_at": 1790511001.845449,
+ "config": {
+  "bands": null,
+  "freqs_khz": [
+   6000,
+   6010,
+   6020,
+   6030,
+   6040,
+   6050,
+   6060,
+   6070,
+   6080,
+   6090,
+   6100,
+   6110,
+   6120,
+   6130,
+   6140,
+   6150,
+   6160,
+   6170,
+   6180,
+   6190,
+   6200,
+   6210,
+   6220,
+   6230,
+   6240,
+   6250,
+   6260,
+   6270,
+   6280,
+   6290,
+   6300,
+   6310,
+   6320,
+   6330,
+   6340,
+   6350,
+   6360,
+   6370,
+   6380,
+   6390,
+   6400,
+   6410,
+   6420,
+   6430,
+   6440,
+   6450,
+   6460,
+   6470,
+   6480,
+   6490,
+   6500,
+   6510
+  ],
+  "step_khz": 10,
+  "dwell_s": 1.5,
+  "settle_s": 0.5,
+  "note": "6.0-6.5M 找f1最低点 2026-09-27"
+ },
+ "error": null,
+ "aborted": false,
+ "points": [
+  {
+   "freq_khz": 6000,
+   "band": "custom",
+   "power_w": 10.0,
+   "swr": 3.38,
+   "samples": 3,
+   "ts": 1790510854.0
+  },
+  {
+   "freq_khz": 6010,
+   "band": "custom",
+   "power_w": 10.0,
+   "swr": 3.32,
+   "samples": 10,
+   "ts": 1790510856.9
+  },
+  {
+   "freq_khz": 6020,
+   "band": "custom",
+   "power_w": 10.0,
+   "swr": 3.26,
+   "samples": 10,
+   "ts": 1790510859.7
+  },
+  {
+   "freq_khz": 6030,
+   "band": "custom",
+   "power_w": 10.0,
+   "swr": 3.2,
+   "samples": 10,
+   "ts": 1790510862.6
+  },
+  {
+   "freq_khz": 6040,
+   "band": "custom",
+   "power_w": 10.0,
+   "swr": 3.14,
+   "samples": 10,
+   "ts": 1790510865.4
+  },
+  {
+   "freq_khz": 6050,
+   "band": "custom",
+   "power_w": 10.0,
+   "swr": 3.08,
+   "samples": 10,
+   "ts": 1790510868.3
+  },
+  {
+   "freq_khz": 6060,
+   "band": "custom",
+   "power_w": 10.0,
+   "swr": 3.03,
+   "samples": 10,
+   "ts": 1790510871.1
+  },
+  {
+   "freq_khz": 6070,
+   "band": "custom",
+   "power_w": 10.0,
+   "swr": 2.97,
+   "samples": 10,
+   "ts": 1790510874.0
+  },
+  {
+   "freq_khz": 6080,
+   "band": "custom",
+   "power_w": 10.0,
+   "swr": 2.92,
+   "samples": 10,
+   "ts": 1790510876.8
+  },
+  {
+   "freq_khz": 6090,
+   "band": "custom",
+   "power_w": 10.0,
+   "swr": 2.86,
+   "samples": 10,
+   "ts": 1790510879.7
+  },
+  {
+   "freq_khz": 6100,
+   "band": "custom",
+   "power_w": 10.0,
+   "swr": 2.81,
+   "samples": 10,
+   "ts": 1790510882.5
+  },
+  {
+   "freq_khz": 6110,
+   "band": "custom",
+   "power_w": 10.0,
+   "swr": 2.75,
+   "samples": 10,
+   "ts": 1790510885.4
+  },
+  {
+   "freq_khz": 6120,
+   "band": "custom",
+   "power_w": 2.0,
+   "swr": 2.75,
+   "samples": 10,
+   "ts": 1790510888.2
+  },
+  {
+   "freq_khz": 6130,
+   "band": "custom",
+   "power_w": 2.0,
+   "swr": 2.69,
+   "samples": 10,
+   "ts": 1790510891.1
+  },
+  {
+   "freq_khz": 6140,
+   "band": "custom",
+   "power_w": 2.0,
+   "swr": 2.63,
+   "samples": 3,
+   "ts": 1790510894.0
+  },
+  {
+   "freq_khz": 6150,
+   "band": "custom",
+   "power_w": 2.0,
+   "swr": 2.58,
+   "samples": 10,
+   "ts": 1790510896.8
+  },
+  {
+   "freq_khz": 6170,
+   "band": "custom",
+   "power_w": 2.0,
+   "swr": 2.53,
+   "samples": 10,
+   "ts": 1790510902.5
+  },
+  {
+   "freq_khz": 6180,
+   "band": "custom",
+   "power_w": 2.0,
+   "swr": 2.42,
+   "samples": 10,
+   "ts": 1790510905.4
+  },
+  {
+   "freq_khz": 6190,
+   "band": "custom",
+   "power_w": 2.0,
+   "swr": 2.37,
+   "samples": 4,
+   "ts": 1790510908.2
+  },
+  {
+   "freq_khz": 6200,
+   "band": "custom",
+   "power_w": 2.0,
+   "swr": 2.34,
+   "samples": 10,
+   "ts": 1790510911.1
+  },
+  {
+   "freq_khz": 6210,
+   "band": "custom",
+   "power_w": 2.0,
+   "swr": 2.26,
+   "samples": 10,
+   "ts": 1790510913.9
+  },
+  {
+   "freq_khz": 6220,
+   "band": "custom",
+   "power_w": 2.0,
+   "swr": 2.14,
+   "samples": 10,
+   "ts": 1790510916.7
+  },
+  {
+   "freq_khz": 6230,
+   "band": "custom",
+   "power_w": 2.0,
+   "swr": 2.16,
+   "samples": 10,
+   "ts": 1790510919.6
+  },
+  {
+   "freq_khz": 6240,
+   "band": "custom",
+   "power_w": 2.0,
+   "swr": 2.11,
+   "samples": 3,
+   "ts": 1790510922.4
+  },
+  {
+   "freq_khz": 6250,
+   "band": "custom",
+   "power_w": 2.0,
+   "swr": 2.05,
+   "samples": 10,
+   "ts": 1790510925.3
+  },
+  {
+   "freq_khz": 6260,
+   "band": "custom",
+   "power_w": 2.0,
+   "swr": 2.01,
+   "samples": 4,
+   "ts": 1790510928.1
+  },
+  {
+   "freq_khz": 6270,
+   "band": "custom",
+   "power_w": 2.0,
+   "swr": 2.01,
+   "samples": 10,
+   "ts": 1790510931.0
+  },
+  {
+   "freq_khz": 6280,
+   "band": "custom",
+   "power_w": 2.0,
+   "swr": 1.9,
+   "samples": 10,
+   "ts": 1790510933.9
+  },
+  {
+   "freq_khz": 6300,
+   "band": "custom",
+   "power_w": 2.0,
+   "swr": 1.82,
+   "samples": 10,
+   "ts": 1790510939.6
+  },
+  {
+   "freq_khz": 6310,
+   "band": "custom",
+   "power_w": 2.0,
+   "swr": 1.78,
+   "samples": 4,
+   "ts": 1790510942.4
+  },
+  {
+   "freq_khz": 6320,
+   "band": "custom",
+   "power_w": 2.0,
+   "swr": 1.76,
+   "samples": 10,
+   "ts": 1790510945.3
+  },
+  {
+   "freq_khz": 6340,
+   "band": "custom",
+   "power_w": 2.0,
+   "swr": 1.69,
+   "samples": 10,
+   "ts": 1790510951.0
+  },
+  {
+   "freq_khz": 6350,
+   "band": "custom",
+   "power_w": 2.0,
+   "swr": 1.6,
+   "samples": 10,
+   "ts": 1790510953.8
+  },
+  {
+   "freq_khz": 6360,
+   "band": "custom",
+   "power_w": 2.0,
+   "swr": 1.56,
+   "samples": 3,
+   "ts": 1790510956.7
+  },
+  {
+   "freq_khz": 6370,
+   "band": "custom",
+   "power_w": 2.0,
+   "swr": 1.48,
+   "samples": 10,
+   "ts": 1790510959.5
+  },
+  {
+   "freq_khz": 6380,
+   "band": "custom",
+   "power_w": 2.0,
+   "swr": 1.48,
+   "samples": 10,
+   "ts": 1790510962.4
+  },
+  {
+   "freq_khz": 6390,
+   "band": "custom",
+   "power_w": 2.0,
+   "swr": 1.43,
+   "samples": 4,
+   "ts": 1790510965.2
+  },
+  {
+   "freq_khz": 6400,
+   "band": "custom",
+   "power_w": 2.0,
+   "swr": 1.43,
+   "samples": 10,
+   "ts": 1790510968.1
+  },
+  {
+   "freq_khz": 6410,
+   "band": "custom",
+   "power_w": 2.0,
+   "swr": 1.35,
+   "samples": 10,
+   "ts": 1790510970.9
+  },
+  {
+   "freq_khz": 6420,
+   "band": "custom",
+   "power_w": 2.0,
+   "swr": 1.0,
+   "samples": 4,
+   "ts": 1790510973.8
+  },
+  {
+   "freq_khz": 6430,
+   "band": "custom",
+   "power_w": 2.0,
+   "swr": 1.0,
+   "samples": 10,
+   "ts": 1790510976.7
+  },
+  {
+   "freq_khz": 6440,
+   "band": "custom",
+   "power_w": 2.0,
+   "swr": 1.0,
+   "samples": 10,
+   "ts": 1790510979.5
+  },
+  {
+   "freq_khz": 6450,
+   "band": "custom",
+   "power_w": 2.0,
+   "swr": 1.0,
+   "samples": 10,
+   "ts": 1790510982.3
+  },
+  {
+   "freq_khz": 6460,
+   "band": "custom",
+   "power_w": 2.0,
+   "swr": 1.0,
+   "samples": 10,
+   "ts": 1790510985.2
+  },
+  {
+   "freq_khz": 6470,
+   "band": "custom",
+   "power_w": 2.0,
+   "swr": 1.0,
+   "samples": 3,
+   "ts": 1790510988.1
+  },
+  {
+   "freq_khz": 6480,
+   "band": "custom",
+   "power_w": 2.0,
+   "swr": 1.0,
+   "samples": 10,
+   "ts": 1790510990.9
+  },
+  {
+   "freq_khz": 6490,
+   "band": "custom",
+   "power_w": 2.0,
+   "swr": 1.0,
+   "samples": 10,
+   "ts": 1790510993.8
+  },
+  {
+   "freq_khz": 6500,
+   "band": "custom",
+   "power_w": 2.0,
+   "swr": 1.0,
+   "samples": 3,
+   "ts": 1790510996.6
+  },
+  {
+   "freq_khz": 6510,
+   "band": "custom",
+   "power_w": 2.0,
+   "swr": 1.0,
+   "samples": 10,
+   "ts": 1790510999.5
+  }
+ ],
+ "dropped_points": [
+  {
+   "freq_khz": 6160,
+   "band": "custom",
+   "power_w": 2.0,
+   "swr": 1.0,
+   "samples": 10,
+   "ts": 1790510899.7,
+   "drop_reason": "meter_dropout_or_no_carrier"
+  },
+  {
+   "freq_khz": 6290,
+   "band": "custom",
+   "power_w": 2.0,
+   "swr": 1.0,
+   "samples": 10,
+   "ts": 1790510936.7,
+   "drop_reason": "meter_dropout_or_no_carrier"
+  },
+  {
+   "freq_khz": 6330,
+   "band": "custom",
+   "power_w": 2.0,
+   "swr": 1.0,
+   "samples": 10,
+   "ts": 1790510948.1,
+   "drop_reason": "meter_dropout_or_no_carrier"
+  }
+ ]
+}

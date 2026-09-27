@@ -1,0 +1,27 @@
+{
+ "version": 1,
+ "started_at": 1790514026.3376791,
+ "finished_at": 1790514046.843644,
+ "config": {
+  "bands": [
+   "30m"
+  ],
+  "freqs_khz": null,
+  "step_khz": 10,
+  "dwell_s": 5.0,
+  "settle_s": 0.5,
+  "note": ""
+ },
+ "error": "SweepError: set_freq 失败 @ 10110kHz",
+ "aborted": false,
+ "points": [
+  {
+   "freq_khz": 10100,
+   "band": "30m",
+   "power_w": 14.0,
+   "swr": 5.36,
+   "samples": 32,
+   "ts": 1790514028.9
+  }
+ ]
+}

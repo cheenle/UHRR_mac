@@ -1,0 +1,117 @@
+{
+ "version": 1,
+ "started_at": 1790510383.929127,
+ "finished_at": 1790510429.1730628,
+ "config": {
+  "bands": null,
+  "freqs_khz": [
+   3800,
+   3810,
+   3820,
+   3830,
+   3840,
+   3850,
+   3860,
+   3870,
+   3880,
+   3890,
+   3900
+  ],
+  "step_khz": 10,
+  "dwell_s": 2.5,
+  "settle_s": 0.5,
+  "note": "80m段 3800-3900 干燥基线 2026-09-27"
+ },
+ "error": null,
+ "aborted": false,
+ "points": [
+  {
+   "freq_khz": 3800,
+   "band": "custom",
+   "power_w": 5.0,
+   "swr": 16.31,
+   "samples": 17,
+   "ts": 1790510386.5
+  },
+  {
+   "freq_khz": 3810,
+   "band": "custom",
+   "power_w": 6.0,
+   "swr": 15.88,
+   "samples": 17,
+   "ts": 1790510390.4
+  },
+  {
+   "freq_khz": 3820,
+   "band": "custom",
+   "power_w": 5.0,
+   "swr": 16.29,
+   "samples": 17,
+   "ts": 1790510394.3
+  },
+  {
+   "freq_khz": 3830,
+   "band": "custom",
+   "power_w": 5.0,
+   "swr": 16.17,
+   "samples": 17,
+   "ts": 1790510398.2
+  },
+  {
+   "freq_khz": 3840,
+   "band": "custom",
+   "power_w": 5.0,
+   "swr": 16.23,
+   "samples": 14,
+   "ts": 1790510402.2
+  },
+  {
+   "freq_khz": 3850,
+   "band": "custom",
+   "power_w": 5.0,
+   "swr": 16.22,
+   "samples": 17,
+   "ts": 1790510406.1
+  },
+  {
+   "freq_khz": 3860,
+   "band": "custom",
+   "power_w": 5.0,
+   "swr": 16.24,
+   "samples": 17,
+   "ts": 1790510410.0
+  },
+  {
+   "freq_khz": 3870,
+   "band": "custom",
+   "power_w": 5.0,
+   "swr": 16.24,
+   "samples": 17,
+   "ts": 1790510413.9
+  },
+  {
+   "freq_khz": 3880,
+   "band": "custom",
+   "power_w": 5.0,
+   "swr": 16.23,
+   "samples": 17,
+   "ts": 1790510417.8
+  },
+  {
+   "freq_khz": 3890,
+   "band": "custom",
+   "power_w": 5.0,
+   "swr": 16.1,
+   "samples": 17,
+   "ts": 1790510421.8
+  },
+  {
+   "freq_khz": 3900,
+   "band": "custom",
+   "power_w": 5.0,
+   "swr": 16.09,
+   "samples": 11,
+   "ts": 1790510425.7
+  }
+ ]
+}

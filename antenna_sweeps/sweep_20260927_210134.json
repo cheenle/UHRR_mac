@@ -1,0 +1,67 @@
+{
+ "version": 1,
+ "started_at": 1790514094.795627,
+ "finished_at": 1790514133.18649,
+ "config": {
+  "bands": [
+   "20m"
+  ],
+  "freqs_khz": null,
+  "step_khz": 10,
+  "dwell_s": 5.0,
+  "settle_s": 0.5,
+  "note": ""
+ },
+ "error": null,
+ "aborted": true,
+ "points": [
+  {
+   "freq_khz": 14000,
+   "band": "20m",
+   "power_w": 19.0,
+   "swr": 1.47,
+   "samples": 29,
+   "ts": 1790514097.4
+  },
+  {
+   "freq_khz": 14010,
+   "band": "20m",
+   "power_w": 19.0,
+   "swr": 1.49,
+   "samples": 33,
+   "ts": 1790514103.7
+  },
+  {
+   "freq_khz": 14020,
+   "band": "20m",
+   "power_w": 18.0,
+   "swr": 1.5,
+   "samples": 33,
+   "ts": 1790514110.1
+  },
+  {
+   "freq_khz": 14030,
+   "band": "20m",
+   "power_w": 18.0,
+   "swr": 1.52,
+   "samples": 33,
+   "ts": 1790514116.5
+  },
+  {
+   "freq_khz": 14040,
+   "band": "20m",
+   "power_w": 18.0,
+   "swr": 1.54,
+   "samples": 33,
+   "ts": 1790514122.9
+  },
+  {
+   "freq_khz": 14050,
+   "band": "20m",
+   "power_w": 18.0,
+   "swr": 1.57,
+   "samples": 20,
+   "ts": 1790514129.3
+  }
+ ]
+}
