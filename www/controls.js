@@ -774,11 +774,30 @@ function setcustomaudiofilter(){
 	}
 }
 
+// C_af 的量程是 0-1000（见 mobile_modern.html 的 min/max/value），线性增益 = C_af/1000。
+// 早期版本 C_af 是 0-100，遗留 cookie/用户设置里可能存着旧量程的值 —— 读存储值时按
+// 一次性标记迁移到新量程，否则音量会只剩应有的 1/10（实测「声音有点小」）。
+// 只迁移一次并写回，避免把用户后来故意设的小音量反复 ×10。
+function normalizeCAfScale(raw){
+	var v = parseFloat(raw);
+	if (!isFinite(v)) return 500;                        // 取不到 → 0.5（原注释的意图）
+	try {
+		if (!localStorage.getItem('mrrc_caf_scale_v2')) {
+			localStorage.setItem('mrrc_caf_scale_v2', '1');
+			if (v > 0 && v <= 100) return v * 10;        // 旧量程 0-100 → ×10
+		}
+	} catch (e) { /* localStorage 不可用：不迁移，按新量程解释 */ }
+	return v;
+}
+
 function AudioRX_SetGAIN( vol="None" ){
 	var cAfElement = document.getElementById("C_af");
 	if(vol == "None"){
-		volumeRX = cAfElement ? cAfElement.value/100 : 0.5; // 默认值0.5如果元素不存在
-		vol = volumeRX;
+		// 除数必须是 1000 而不是 100：元素量程是 0-1000，默认 500 应对应增益 0.5
+		// （原注释「默认值0.5」即此意）。用 /100 会得到 5.0，把音量顶爆 10 倍。
+		var raw = cAfElement ? parseFloat(cAfElement.value) : NaN;
+		volumeRX = isFinite(raw) ? raw / 1000 : 0.5;
+		vol = Math.min(Math.max(volumeRX, 0), 1);         // 夹到 [0,1]，杜绝越界值把音量顶爆
 	}
 	if(poweron && AudioRX_gain_node){
 		AudioRX_gain_node.gain.setValueAtTime(vol, AudioRX_context.currentTime);

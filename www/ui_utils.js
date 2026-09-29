@@ -199,7 +199,12 @@ function getCookie(cname) {
 function checkCookie() {
     var C_af = getCookie("C_af");
     if (C_af != "") {
-        document.getElementById("C_af").value = C_af;
+        // 旧量程（0-100）的遗留值要迁移到当前量程（0-1000）并写回 cookie，
+        // 否则音量会只剩应有的 1/10。normalizeCAfScale 在 controls.js 里定义。
+        var afValue = (typeof normalizeCAfScale === 'function')
+            ? normalizeCAfScale(C_af) : C_af;
+        document.getElementById("C_af").value = afValue;
+        if (afValue != C_af) { setCookie("C_af", afValue, 180); }
     }
     var C_mg = getCookie("C_mg");
     if (C_mg != "") {

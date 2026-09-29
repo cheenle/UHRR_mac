@@ -946,7 +946,13 @@ function loadAudioSettingsFromCookies() {
             console.warn('加载C_af设置失败:', e);
         }
         if (vol) {
-            cAfEl.value = vol;
+            // 旧量程（0-100）的遗留值迁移到当前量程（0-1000）并写回，否则音量只剩 1/10
+            var afValue = (typeof normalizeCAfScale === 'function')
+                ? normalizeCAfScale(vol) : vol;
+            cAfEl.value = afValue;
+            if (afValue != vol && typeof setCookie === 'function') {
+                setCookie('C_af', afValue, 180);
+            }
         }
         
         // 同步主界面音量滑块
