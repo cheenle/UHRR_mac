@@ -1856,7 +1856,16 @@ class AtuStatusHandler(tornado.web.RequestHandler):
 ############ 录音管理处理器 ##############
 class RecordingsListHandler(BaseHandler):
     """录音列表API处理器"""
-    
+
+    def prepare(self):
+        """JSON API：未登录返回 401 JSON，避免 BaseHandler 的 HTML 302 触发前端死循环。"""
+        if auth_enabled() and not self.current_user:
+            self.set_status(401)
+            self.set_header('Content-Type', 'application/json')
+            self.write(json.dumps({'success': False, 'reason': 'auth_required'}))
+            self.finish()
+            return
+
     @tornado.gen.coroutine
     def get(self):
         """返回录音文件列表"""
@@ -1876,7 +1885,16 @@ class RecordingsListHandler(BaseHandler):
 
 class RecordingsDownloadHandler(BaseHandler):
     """录音文件下载处理器"""
-    
+
+    def prepare(self):
+        """文件下载：未登录返回 401 JSON，避免 BaseHandler 的 HTML 302。"""
+        if auth_enabled() and not self.current_user:
+            self.set_status(401)
+            self.set_header('Content-Type', 'application/json')
+            self.write(json.dumps({'success': False, 'reason': 'auth_required'}))
+            self.finish()
+            return
+
     @tornado.gen.coroutine
     def get(self, filename):
         """下载指定的录音文件"""
@@ -2533,6 +2551,13 @@ class AntennaSweepApiHandler(BaseHandler):
                                               或 {"freqs_khz":[7130,7140,...]} 自定义频点（复测掉读点）
     POST /api/antenna_sweep/stop              请求中止
     """
+
+    def prepare(self):
+        """JSON API：未登录返回 401 JSON，避免 BaseHandler 的 HTML 302 触发前端死循环。"""
+        if auth_enabled() and not self.current_user:
+            self._json({"ok": False, "reason": "auth_required"}, 401)
+            self.finish()
+            return
 
     def _json(self, obj, status=200):
         self.set_status(status)
@@ -4519,6 +4544,24 @@ class DevicesApiHandler(BaseHandler):
 			"rigctld": dict(live, host=host, port=port) if live else {"host": host, "port": port},
 		}
 
+	def prepare(self):
+		"""JSON API 鉴权：未登录返回 401 JSON，而不是 BaseHandler 的 HTML 302。
+
+		BaseHandler.prepare() 对未登录 GET/HEAD 一律 redirect /login，浏览器
+		fetch('/api/devices') 收到 302 → 跟随跳转到 /login HTML → json() 解析
+		失败 → controls.js catch 重置抽屉内容为 Loading… → 再次触发 load → 死循环
+		闪烁（用户报告 ham.vlsc.net:8891/mobile 设备配置页持续刷新无法输入）。
+
+		本覆盖把未登录改成标准 JSON 401，controls.js 已有 'Please login first.'
+		分支（loadDeviceSettings line ~2456）可正常渲染提示且不触发跳转。
+		"""
+		if auth_enabled() and not self.current_user:
+			self.set_status(401)
+			self.set_header("Content-Type", "application/json")
+			self.write(json.dumps({"ok": False, "reason": "auth_required"}))
+			self.finish()
+			return
+
 	def get(self):
 		self.set_header("Content-Type", "application/json")
 		data = {
@@ -4961,6 +5004,17 @@ class SupportApiHandler(BaseHandler):
 			logger.warning(f"诊断包接口失败: {exc}")
 			self.set_status(500)
 			self.write(json.dumps({"ok": False, "reason": f"{type(exc).__name__}: {exc}"}))
+
+	def prepare(self):
+		"""JSON/文件下载 API：未登录返回 401 JSON，避免 BaseHandler 的 HTML 302。
+		post() 已有自己的 current_user 检查（保留）；这里补齐 GET /bundle/<id>
+		与 GET /state 的鉴权，统一用 401 JSON 而非 redirect。"""
+		if auth_enabled() and not self.current_user:
+			self.set_status(401)
+			self.set_header("Content-Type", "application/json")
+			self.write(json.dumps({"ok": False, "reason": "auth_required"}))
+			self.finish()
+			return
 
 	def get(self):
 		path = self.request.path
