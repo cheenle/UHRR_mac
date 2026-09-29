@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### 🩹 Device Config 抽屉不再每 2.5 s 自重建（"搜索/选择一闪而过"）
+
+- `www/controls.js`：`loadDeviceSettings()` 的 rigctld 探针"补取"原为递归——
+  内置串口控制（无 rigctld）的实例条件恒真，抽屉开着就每 2.5 s 整表
+  `innerHTML` 重建：搜索词被清空、展开的机型下拉被打掉、Loading 闪烁。
+  现补取只发生一次（`retryProbe` 参数），且 `renderDeviceSettings()` 重建前
+  保留搜索词与已选机型（选项仍存在才恢复）。
+
 ## [V6.1.18] - 2026-09-17
 
 ### 🧠 NR3(RNNoise) 进包 + WDSP C 层旋钮 + 门控修复

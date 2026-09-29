@@ -2470,7 +2470,8 @@ function closeDeviceDrawer() {
     document.getElementById('device-drawer').style.display = 'none';
 }
 
-async function loadDeviceSettings() {
+async function loadDeviceSettings(retryProbe) {
+    if (retryProbe === undefined) retryProbe = true;
     const content = document.getElementById('device-drawer-content');
     content.innerHTML = '<p class="device-drawer-hint">Loading...</p>';
     try {
@@ -2485,11 +2486,13 @@ async function loadDeviceSettings() {
         const data = await res.json();
         _deviceSettingsData = data;
         renderDeviceSettings(data);
-        // rigctld 探针是后台刷新的：首次打开抽屉时可能还没结果，补取一次
-        if (!data.rigctld || !data.rigctld.name) {
+        // rigctld 探针是后台刷新的：首次打开抽屉时可能还没结果，补取一次。
+        // 只补一次：内置串口控制的实例永远探不到 rigctld，递归补取会每
+        // 2.5 s 重建整张表单，把正在输入的搜索词/展开的下拉打掉（“一闪而过”）。
+        if (retryProbe && (!data.rigctld || !data.rigctld.name)) {
             setTimeout(function () {
                 if (document.getElementById('device-drawer').style.display !== 'none') {
-                    loadDeviceSettings();
+                    loadDeviceSettings(false);
                 }
             }, 2500);
         }
@@ -2506,6 +2509,12 @@ function escHtml(s) {
 
 function renderDeviceSettings(data) {
     const content = document.getElementById('device-drawer-content');
+    // 重建前先留住用户正在进行的搜索与选择：抽屉刷新（含一次性探针补取）
+    // 不应把输入框清空、把已选机型打回服务器值。
+    const prevFilterEl = document.getElementById('dev-rig-model-filter');
+    const prevFilter = prevFilterEl ? prevFilterEl.value : '';
+    const prevModelEl = document.getElementById('dev-rig-model');
+    const prevModel = prevModelEl ? prevModelEl.value : '';
     const cfg = data.config || {};
     const ham = cfg.HAMLIB || {};
     const audio = cfg.AUDIO || {};
@@ -2648,6 +2657,23 @@ function renderDeviceSettings(data) {
     html += '</select></label>';
 
     content.innerHTML = html;
+
+    // 恢复重建前的搜索词与机型选择（选项仍在才恢复，避免落到无效值）
+    const filterEl = document.getElementById('dev-rig-model-filter');
+    if (filterEl && prevFilter) {
+        filterEl.value = prevFilter;
+        onRigModelFilter();
+    }
+    const modelEl = document.getElementById('dev-rig-model');
+    if (modelEl && prevModel) {
+        for (const opt of modelEl.options) {
+            if (opt.value === prevModel) {
+                modelEl.value = prevModel;
+                break;
+            }
+        }
+        onDeviceModelChange();
+    }
 
     const saveBtn = document.getElementById('device-btn-save');
     const applyBtn = document.getElementById('device-btn-apply');
