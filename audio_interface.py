@@ -303,6 +303,52 @@ def capture_frame_count(byte_length, channels=1, sample_bytes=4):
     return int(byte_length) // frame_bytes if byte_length > 0 else 0
 
 
+# ═══ WFM 直通：电台模式门（2026-09-29） ═══
+# 采集线程每帧要知道电台当前模式，决定是否旁路语音 DSP 链路、走 48kHz 全带宽。
+# 读 __main__.CTRX.infos 是 GIL 下的 dict 读取：无锁、不阻塞采集线程 —— 这是
+# 「流式播放中切模式」安全的根本，不要改成锁或队列。
+_RX_MODE_POLL_S = 0.1
+_rx_mode_cache = {'t': 0.0, 'v': ''}
+
+
+def read_radio_mode():
+    """当前电台模式（大写；取不到返回 ''）。
+
+    0.1s 缓存：切模式对用户是低频操作，没必要每帧跨模块取值。
+    CTRX 不存在时返回 ''（离线/无电台/测试路径 → 与今天行为完全一致）。
+    """
+    now = time.time()
+    if now - _rx_mode_cache['t'] < _RX_MODE_POLL_S:
+        return _rx_mode_cache['v']
+    mode = ''
+    try:
+        import sys
+        main_module = sys.modules.get('__main__')
+        ctrx = getattr(main_module, 'CTRX', None) if main_module is not None else None
+        if ctrx is not None:
+            mode = str(ctrx.infos.get('MODE', '') or '').strip().upper()
+    except Exception:
+        mode = ''
+    _rx_mode_cache['t'] = now
+    _rx_mode_cache['v'] = mode
+    return mode
+
+
+def opus_bitrate_for_rate(rate):
+    """按采样率选 Opus 码率（bps）。
+
+    16kHz 档**必须精确返回 RX_OPUS_BITRATE(32000)** —— SSB 的线格式字节数依赖它，
+    改动即回归。48k 档给 96000：实测 libopus 单声道 48k 内部目标约 72kbps，且
+    opus.encoder 的 ctl 变参路径不可用（见 opus/encoder.py 注释），该值只是
+    max_data_bytes 上限，设到 96k 已不受限、再高是 no-op。
+    """
+    if rate >= 48000:
+        return 96000
+    if rate >= 24000:
+        return 48000
+    return PyAudioCapture.RX_OPUS_BITRATE
+
+
 def accumulate_capture_health(diag, samples, read_seconds, now=None, window_seconds=30.0,
                               sample_rate=48000):
     """累计采集健康度；满 window_seconds 返回一条 🎧 音频健康 行（未到点返回 None）。
@@ -461,6 +507,8 @@ class PyAudioCapture(threading.Thread):
         # Opus 编码器实例（延迟初始化）
         self.rx_opus_encoder = None
         self.rx_opus_encoder_rate = 0  # 用于检测参数变化
+        self.rx_opus_encoder_bitrate = 0  # 用于检测码率变化（WFM 48k 档与 16k 档不同）
+        self._opus_rate_in_use = 0  # 有效的 Opus 采样率；变化时清空累积器丢弃残留半帧
         
         # RNNoise 降噪器实例（延迟初始化）
         self.rnnoise_denoiser = None
@@ -675,6 +723,12 @@ class PyAudioCapture(threading.Thread):
                     PyAudioCapture.last_health = _health_line
                     print(_health_line)
                 capture_end_ns = time.monotonic_ns()
+
+                # WFM 直通门（2026-09-29）：电台在 WFM 时旁路语音 DSP 链路，保持 48kHz 全带宽。
+                # 广播 FM 需要 ~15kHz 音频带宽，而 SSB 链路会把它砍到 ~2.7kHz：
+                # 先是 _StatefulDecimator 的 5.5kHz 低通，再是 WDSP 的 300-2700Hz 带通，
+                # 外加这里块外的 NR3(神经语音降噪) 与粗糙峰值 AGC（会让音乐「抽气」）。
+                wfm_active = (read_radio_mode() == 'WFM')
                 
                 if len(data) > 0:
                     frame_count += 1
@@ -685,7 +739,11 @@ class PyAudioCapture(threading.Thread):
                         # 动态读取类变量
                         current_opus_mode = PyAudioCapture.rx_opus_encode
                         encode_mode = "Opus" if current_opus_mode else "Int16"
-                        print(f"🎵 音频捕获正常 | 帧数: {frame_count} | 模式: {encode_mode}")
+                        # 报出当前走哪条通路：冷启动就在 WFM 时 wdsp_processor 从没被创建，
+                        # 上面的 "🎚️ WFM 直通" 就不会打印，靠这行认路。
+                        dsp_path = "WFM 直通 48kHz" if wfm_active else "语音 DSP 链路"
+                        print(f"🎵 音频捕获正常 | 帧数: {frame_count} | 模式: {encode_mode}"
+                              f" | 通路: {dsp_path}")
                         last_log_time = current_time
                     
                     # Convert stereo to mono if needed
@@ -708,17 +766,22 @@ class PyAudioCapture(threading.Thread):
                     # NR3: RNNoise 神经降噪（[WDSP] nr3 = plus|only|off）—— 在 DC 去除后、WDSP/录制之前
                     # 门控（2026-09-17 修）：必须同时满足 WDSP 启用 + 用户 NR 开关（nr2_enabled）开着。
                     # 否则用户在 UI 关掉 NR2/WDSP 后 RN 仍在处理 → "关了还有失真"（实测踩坑）。
-                    if (PyAudioCapture.wdsp_enabled and WDSP_AVAILABLE
+                    # WFM 直通：RNNoise 是语音降噪，在音乐上就是「水声」，必须一并旁路。
+                    voice_dsp_active = (
+                        PyAudioCapture.wdsp_enabled and WDSP_AVAILABLE and not wfm_active
+                    )
+                    if (voice_dsp_active
                             and PyAudioCapture.wdsp_config.get('nr2_enabled', True)
                             and PyAudioCapture.wdsp_config.get('nr3', 'off') in ('plus', 'only')):
                         float32_data = _rnnoise_process(float32_data)
-                    
+
                     # 2. 自动增益控制 (AGC) - 当 WDSP AGC 已开启时跳过
                     wdsp_agc_active = (
-                        PyAudioCapture.wdsp_enabled and WDSP_AVAILABLE
+                        voice_dsp_active
                         and PyAudioCapture.wdsp_config.get('agc_mode', 0) != 0
                     )
-                    if not wdsp_agc_active:
+                    # WFM 下这个语音 AGC 也要跳过：它对弱信号最多 4 倍增益，会让音乐「抽气」
+                    if not wdsp_agc_active and not wfm_active:
                         max_val = np.max(np.abs(float32_data))
                         if max_val > 0.001:
                             target_level = 0.6  # 目标电平 -4dB
@@ -743,21 +806,29 @@ class PyAudioCapture(threading.Thread):
 
                     # V5.2: WDSP 配置缓存 — 仅变更时进入
                     # 计算配置哈希，避免每帧 100+ 行的属性比较
-                    if not PyAudioCapture.wdsp_enabled and self.wdsp_processor is not None:
+                    if ((not PyAudioCapture.wdsp_enabled or wfm_active)
+                            and self.wdsp_processor is not None):
                         try:
                             self.wdsp_processor.close()
                             self.wdsp_processor = None
                             self.wdsp_resample_buffer = np.array([], dtype=np.int16)
-                            if self._decimator is not None:
-                                self._decimator.reset()
+                            # 置 None（而非只 reset）：回 SSB 时下方重建分支会 new 一个全新的
+                            # 降采样器，相位/状态从零开始，杜绝跨模式残留引起的咔哒声。
+                            self._decimator = None
                             PyAudioCapture._wdsp_config_hash = None
+                            if wfm_active:
+                                print("🎚️ WFM 直通：WDSP 已旁路（48kHz 全带宽）")
                         except Exception as e:
                             pass
                     
                     # 当前 int16_data 的采样率（决定后续是否需降采样到 Opus 率）
                     stream_rate = 48000
 
-                    if PyAudioCapture.wdsp_enabled and WDSP_AVAILABLE:
+                    # WFM 直通：整块 WDSP 跳过 → stream_rate 停在 48000（全带宽）。
+                    # 不给 WDSP 设 WFM=12：喂进去的是电台解调后的 AF 音频而非 I/Q，
+                    # WDSP 的 WFM 是 FM 鉴频器，对伪解析信号跑鉴频只会出垃圾；
+                    # 且 NR2/ANF/带通/AGC 全是语音取向（ANF 会把音乐里的音符当单音陷波掉）。
+                    if PyAudioCapture.wdsp_enabled and WDSP_AVAILABLE and not wfm_active:
                         # 只有 WDSP 产出完整处理块时才录制，绝不回退录入原始 RX。
                         recording_pcm = None
                         try:
@@ -924,6 +995,16 @@ class PyAudioCapture(threading.Thread):
                                 current_opus_mode = PyAudioCapture.rx_opus_encode
                                 current_opus_rate = PyAudioCapture.rx_opus_rate
                                 current_opus_frame_dur = PyAudioCapture.rx_opus_frame_dur
+
+                                # WFM 直通：客户端仍协商 16000，这里覆盖成 48k 送全带宽。
+                                # 其它未改动的前端用 16k 解码器解 48k Opus 也是正确的（libopus
+                                # 内部重采样，只是被带限到 8kHz），所以无需重协商、不会变调变速。
+                                if wfm_active:
+                                    current_opus_rate = max(current_opus_rate, 48000)
+                                # 速率变化时丢掉旧速率残留的半帧（最多丢 20ms），避免帧边界错位
+                                if current_opus_rate != self._opus_rate_in_use:
+                                    self._opus_rate_in_use = current_opus_rate
+                                    opus_accumulator = np.array([], dtype=np.int16)
                                 
                                 # Opus 编码模式
                                 if current_opus_mode:
@@ -954,17 +1035,21 @@ class PyAudioCapture(threading.Thread):
                                         opus_accumulator = opus_accumulator[opus_frame_size:]
                                         
                                         # V5.2: 编码器仅在首次或参数变化时初始化
-                                        if self.rx_opus_encoder is None or self.rx_opus_encoder_rate != current_opus_rate:
+                                        _target_bitrate = opus_bitrate_for_rate(current_opus_rate)
+                                        if (self.rx_opus_encoder is None
+                                                or self.rx_opus_encoder_rate != current_opus_rate
+                                                or self.rx_opus_encoder_bitrate != _target_bitrate):
                                             try:
                                                 # application 传 'audio'(2049)：短波语音/数字模式比 VOIP(2048) 更自然
                                                 self.rx_opus_encoder = OpusEncoder(
                                                     current_opus_rate, 1, 'audio'
                                                 )
                                                 self.rx_opus_encoder_rate = current_opus_rate
+                                                self.rx_opus_encoder_bitrate = _target_bitrate
                                                 # 固定码率（不再全局自适应）：单客户端拥塞不再拖累全体，
                                                 # 拥塞由下方每客户端的 Wavframes 队列丢帧机制吸收。
                                                 self.rx_opus_encoder.configure_for_voip(
-                                                    bitrate=PyAudioCapture.RX_OPUS_BITRATE, complexity=8,
+                                                    bitrate=_target_bitrate, complexity=8,
                                                     fec=True, packet_loss_perc=15, dtx=True
                                                 )
                                             except Exception as e:

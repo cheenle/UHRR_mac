@@ -3004,9 +3004,12 @@ class TRXRIG:
 		"""Get default passband for mode"""
 		passbands = {
 			"USB": 2400,
-			"LSB": 2400, 
+			"LSB": 2400,
 			"AM": 6000,
 			"FM": 12000,
+			# 广播 FM 需 ~150kHz 通带（实测 IC-R9000 hamlib caps: WFM Normal = 150.0000 kHz）。
+			# 不加这条会落到 fallback 2400，发出 M WFM 2400。
+			"WFM": 150000,
 			"CW": 500,
 			"RTTY": 2200
 		}
@@ -3159,8 +3162,12 @@ class TRXRIG:
 				if response == "RPRT 0":
 					self.infos["MODE"] = MODE.upper()
 					logger.info(f"✓ Mode set to {MODE} via rigctld")
+				elif response.startswith("RPRT -"):
+					# 电台明确拒绝：绝不本地记为成功，否则 UI 显示已切换而实际没有。
+					# 不写 infos["MODE"]，末尾返回旧模式 → 广播 getMode:<旧> → 前端自动回滚。
+					logger.error(f"✗ Mode {MODE} rejected by rig: {response}")
 				else:
-					logger.warning(f"Mode setting failed via CAT: {response}, storing locally")
+					logger.warning(f"Mode response unexpected: {response!r}, storing locally")
 					self.infos["MODE"] = MODE.upper()
 			except Exception as e:
 				logger.error(f"Error communicating with rigctld for mode command '{mode_cmd}': {e}")
@@ -3176,7 +3183,11 @@ class TRXRIG:
 				# Convert mode string to Hamlib mode constant
 				mode_map = {
 					"LSB": 1, "USB": 2, "CW": 3, "FM": 4, "AM": 5,
-					"RTTY": 6, "CWR": 7, "RTTYR": 8, "AMS": 9
+					"RTTY": 6, "CWR": 7, "RTTYR": 8, "AMS": 9,
+					# hamlib 真实枚举: AM=1,CW=2,USB=3,LSB=4,RTTY=5,FM=6,WFM=7。
+					# 上表既存整体错位（只影响 direct-hamlib 路径，R9000 走 rigctld 不可达），
+					# 此处只补 WFM，不动其它值以免改变其它机型行为。
+					"WFM": 7
 				}
 				hamlib_mode = mode_map.get(MODE.upper(), 2)  # Default to USB
 				pb = 0  # Use default passband

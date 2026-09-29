@@ -230,6 +230,10 @@ var AudioRX_analyser = "";
 var audiobufferready = false;
 var AudioRX_audiobuffer = [];
 var AudioRX_sampleRate=16000;
+// Opus 解码采样率，默认 16000（其它前端不设 → 行为逐字节不变）。
+// 页面级脚本可在 AudioRX_start() 之前覆盖（先例见 mobile_high.js:30）；
+// WFM 高保真模式用 48000：后端在 WFM 时改发 48kHz，解码率必须跟上。
+var AudioRX_opusDecodeRate=16000;
 
 // 线格式 1 字节编解码标签（与后端 audio_interface.py 一致）
 var AUDIO_TAG_PCM = 0x00;   // Int16 PCM
@@ -350,8 +354,10 @@ function AudioRX_start(){
 	// 如果 AudioContext 使用不同采样率（如 iOS Safari 的 44100Hz），需要重采样
 	function decodeOpusAudio(data) {
 		try {
-			// Opus 解码采样率：必须与后端编码器一致（16kHz，对 2.7kHz SSB 语音近无损）
-			const opusDecodeRate = 16000;
+			// Opus 解码采样率：必须与后端编码器一致。默认 16kHz（对 2.7kHz SSB 语音近无损）；
+			// WFM 直通时后端改发 48kHz，页面级脚本可把 AudioRX_opusDecodeRate 覆盖成 48000。
+			const opusDecodeRate = (typeof AudioRX_opusDecodeRate === 'number'
+				&& AudioRX_opusDecodeRate > 0) ? AudioRX_opusDecodeRate : 16000;
 			// AudioContext 实际采样率
 			var contextRate = AudioRX_context ? AudioRX_context.sampleRate : AudioRX_sampleRate;
 			

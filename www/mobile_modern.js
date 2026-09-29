@@ -218,6 +218,9 @@ const MOBILE_BANDS = [
     { name: '10m', freq: 28450000, min: 28000000, max: 29700000 }
 ];
 const MOBILE_MODES = ['USB', 'LSB', 'CW', 'AM', 'FM'];
+// 显示/归一用的超集：WFM 刻意不进 MOBILE_MODES，以免改变 cycleMode 的循环语义
+// （在 WFM 时 indexOf 返回 -1 → 下一档落到 USB，这是有意的）。
+const KNOWN_MODES = MOBILE_MODES.concat(['WFM']);
 const MEMORY_CHANNELS_KEY = 'mrrc_memory_channels_v1';
 const MEMORY_CHANNEL_COUNT = 6;
 // memorySaveArmed 已移除 — 改用标准 tap=recall, long-press=save 交互
@@ -253,7 +256,7 @@ function updateBandButtonLabel(currentBand) {
 
 function normalizeMobileMode(mode) {
     const normalized = String(mode || '').trim().toUpperCase();
-    return MOBILE_MODES.includes(normalized) ? normalized : MOBILE_MODES[0];
+    return KNOWN_MODES.includes(normalized) ? normalized : MOBILE_MODES[0];
 }
 
 function updateModeButtonLabel(mode) {
@@ -267,6 +270,94 @@ function updateModeButtonLabel(mode) {
     modeBtn.textContent = nextMode;
     modeBtn.title = '当前: ' + currentMode + ' · 点按切换到 ' + nextMode;
     modeBtn.setAttribute('aria-label', '当前模式 ' + currentMode + ', 点按切换到 ' + nextMode);
+    // showTRXmode(controls.js) 每次收到模式更新都会调到这里，所以 WFM 的 UI 同步挂在这里即可
+    updateWfmUi(currentMode);
+}
+
+// ---- WFM 直通（2026-09-29）：广播 FM 高保真 ----
+// 电台在 WFM 时后端旁路语音 DSP 链路、改发 48kHz（见 audio_interface.py 的 wfm_active 门），
+// 所以默认入口的解码率与 AudioContext 率都要从 16kHz 覆盖成 48kHz。
+// 覆盖必须在 AudioRX_start() 之前，而它只在开机（首次触摸）时调用 —— 放在
+// DOMContentLoaded 里执行既保证 controls.js 已解析，又早于任何开机动作。
+// 其它前端不加载本文件，因此只在这里覆盖 = 「只给默认入口加 WFM」。
+// 先例：mobile_high.js 用同样方式覆盖 AudioRX_sampleRate。
+let wfmLastNonWfmMode = 'USB';
+
+function setMobileMode(mode) {
+    mobileState.currentMode = mode;
+    if (domElements.modeIndicator) domElements.modeIndicator.textContent = mode;
+    updateModeButtonLabel(mode);
+    sendWebSocketMessage('setMode:' + mode);
+}
+
+function toggleWfmMode() {
+    const current = normalizeMobileMode(mobileState.currentMode);
+    if (current === 'WFM') {
+        const back = (KNOWN_MODES.includes(wfmLastNonWfmMode) && wfmLastNonWfmMode !== 'WFM')
+            ? wfmLastNonWfmMode : 'USB';
+        setMobileMode(back);
+    } else {
+        wfmLastNonWfmMode = current;
+        setMobileMode('WFM');
+    }
+    if (typeof hapticFeedback === 'function') hapticFeedback('medium');
+}
+
+function updateWfmUi(currentMode) {
+    const inWfm = (currentMode === 'WFM');
+    // 始终记住最后一个非 WFM 模式：从 cycle 按钮离开 WFM 后，回来仍能正确回退
+    if (!inWfm) wfmLastNonWfmMode = currentMode;
+
+    const wfmBtn = document.getElementById('wfm-btn');
+    if (wfmBtn) {
+        wfmBtn.classList.toggle('active', inWfm);
+        wfmBtn.title = inWfm
+            ? 'WFM 直通中 · 点按返回 ' + wfmLastNonWfmMode
+            : '广播调频 · 高保真直通（旁路语音 DSP）';
+    }
+
+    // DSP 面板置灰：只改外观，绝不碰 WDSP 的 cookie 状态、也不发 setWDSPEnabled ——
+    // 那是用户的设置，被我们改掉会跟面板打架且会被持久化。离开 WFM 时原样恢复。
+    const dsp = document.getElementById('dsp-controls');
+    if (dsp) {
+        dsp.classList.toggle('wfm-bypassed', inWfm);
+        const title = dsp.querySelector('.dsp-title');
+        if (title) {
+            if (!title.dataset.origText) title.dataset.origText = title.textContent;
+            title.textContent = inWfm ? 'DSP 已旁路' : title.dataset.origText;
+        }
+    }
+}
+
+function ensureWfmButton() {
+    // 覆盖 RX 音频率（幂等；controls.js 已在本文件之前解析完）
+    window.AudioRX_sampleRate = 48000;
+    window.AudioRX_opusDecodeRate = 48000;
+
+    if (document.getElementById('wfm-btn')) return;
+    const modeBtn = document.getElementById('mode-btn');
+    if (!modeBtn || !modeBtn.parentNode) return;
+
+    if (!document.getElementById('wfm-style')) {
+        const style = document.createElement('style');
+        style.id = 'wfm-style';
+        style.textContent =
+            '#dsp-controls.wfm-bypassed{opacity:.45;filter:grayscale(1);}'
+            + '#wfm-btn.active{background:#c0392b;color:#fff;}';
+        document.head.appendChild(style);
+    }
+
+    const btn = document.createElement('button');
+    btn.className = 'quick-btn mode-btn';
+    btn.id = 'wfm-btn';
+    btn.type = 'button';
+    btn.textContent = 'WFM';
+    btn.title = '广播调频 · 高保真直通（旁路语音 DSP）';
+    modeBtn.parentNode.insertBefore(btn, modeBtn.nextSibling);
+    btn.addEventListener('click', toggleWfmMode);
+
+    // 初次同步：页面可能在电台已处于 WFM 时加载
+    updateWfmUi(normalizeMobileMode(mobileState.currentMode));
 }
 
 function refreshCycleButtonLabels() {
@@ -692,6 +783,8 @@ document.addEventListener('DOMContentLoaded', function() {
     try {
         initializeElements();
         console.log('✅ DOM元素初始化完成');
+        // WFM 按钮是动态插入的（不改 HTML 文件），必须在元素就绪后
+        ensureWfmButton();
     } catch (e) {
         console.error('❌ initializeElements 失败:', e);
     }
