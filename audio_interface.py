@@ -544,7 +544,7 @@ class PyAudioCapture(threading.Thread):
                     rate=48000,
                     input=True,
                     input_device_index=device_index,
-                    frames_per_buffer=960  # V5.2: 20ms@48kHz → 对齐Opus帧(320samples@16kHz)
+                    frames_per_buffer=320  # 2026-09-29: 必须 ≤320，否则 PortAudio 掉 12%（详见 read() 处注释）
                 )
                 print(f'PyAudio input stream opened successfully with {device_channels} channel(s) at 48000 Hz')
                 self.stereo_mode = (device_channels == 2)
@@ -558,7 +558,7 @@ class PyAudioCapture(threading.Thread):
                         rate=48000,
                         input=True,
                         input_device_index=device_index,
-                        frames_per_buffer=960  # V5.2: 20ms@48kHz → 对齐Opus帧(320samples@16kHz)
+                        frames_per_buffer=320  # 2026-09-29: 必须 ≤320，否则 PortAudio 掉 12%（详见 read() 处注释）
                     )
                     print('PyAudio input stream opened successfully with MONO (1 channel) at 48000 Hz - fallback')
                     self.stereo_mode = False
@@ -571,7 +571,7 @@ class PyAudioCapture(threading.Thread):
                             channels=1,
                             rate=48000,
                             input=True,
-                            frames_per_buffer=960  # V5.2: 20ms@48kHz → 对齐Opus帧(320samples@16kHz)
+                            frames_per_buffer=320  # 2026-09-29: 必须 ≤320，否则 PortAudio 掉 12%（详见 read() 处注释）
                         )
                         print('Opened with default input device (mono) at 48000 Hz')
                         self.stereo_mode = False
@@ -639,12 +639,15 @@ class PyAudioCapture(threading.Thread):
         while not self._stop_event.is_set():
             try:
                 # 使用非阻塞读取，避免线程被阻塞
-                # V5.4: 一次读取 960 样本（20ms@48kHz，对齐 frames_per_buffer）。
-                # 原 320 样本（6.7ms）会让每帧都完整跑一遍 numpy/AGC/WDSP/Opus 流水线，
-                # 且 48k→16k 降采样 320/3 不整除，每次丢弃 2 个样本产生周期性微爆音。
-                # 960/3=320，恰好一个 20ms Opus 帧 @16kHz。
+                # 2026-09-29 卡顿排查: 周期必须 ≤320 样本（6.7ms）。960（20ms）时 PortAudio
+                # 的 ALSA 读取会周期性阻塞约 3 个周期，环形缓冲溢出丢样本，实测只剩 85~88%；
+                # 同样 40ms 缓冲下 arecord 直采 100%、设备侧 hw_ptr 也是 100% → 锅在 PortAudio。
+                # 320 实测 99.9~100%。V5.4 曾把 320 改成 960 换「每帧只跑一遍流水线」，
+                # 那次改动就是本次卡顿的来源，勿再改大（384 已掉到 92.9%）。
+                # 降采样: 320/3 不整除，但 _StatefulDecimator 跨调用带相位，不丢样本；
+                # 只有 WDSP 关闭时走 trimmed_len 路径会丢 2/320 余数，介意可改 318。
                 _t_read0 = time.time()
-                data = self.stream.read(960, exception_on_overflow=False)
+                data = self.stream.read(320, exception_on_overflow=False)
                 if _audio_diag:
                     # 采集侧诊断（MRRC_AUDIO_DIAG=1）：Windows 上 MME 等主机 API 会按驱动
                     # 周期成块返数据（可能数百 ms~秒级）——有这行就能直接看出来。
