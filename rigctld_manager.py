@@ -45,7 +45,11 @@ logger = logging.getLogger(__name__)
 
 DEFAULT_HOST = "127.0.0.1"
 DEFAULT_PORT = 4532
-RIGCTLD_NAMES = ("rigctld.exe", "rigctld")
+_IS_WINDOWS = os.name == "nt"
+# Windows 安装版自带 rigctld.exe（vendor/hamlib/windows/bin/x64），macOS/Linux 用
+# 系统 PATH 里的 rigctld。仓库入库的那个 .exe 在 Linux 上会被 isfile() 选中并以
+# "Exec format error" 启动失败，故按平台裁剪候选名，非 Windows 不扫打包目录。
+RIGCTLD_NAMES = ("rigctld.exe", "rigctld") if _IS_WINDOWS else ("rigctld",)
 STATE_NAME = "rigctld.managed.json"
 LOG_NAME = "rigctld.log"
 LOG_MAX_BYTES = 2 * 1024 * 1024
@@ -95,14 +99,16 @@ def find_binary(runtime_dir=None, resource_dir=None, environ=None):
         # PyInstaller onedir：运行时目录旁边还有一个 _internal/
         bases.append(os.path.join(base, "_internal"))
     seen = set()
-    for base in bases:
-        for name in RIGCTLD_NAMES:
-            path = os.path.join(base, "vendor", "hamlib", "windows", "bin", "x64", name)
-            if path in seen:
-                continue
-            seen.add(path)
-            if os.path.isfile(path):
-                return path
+    # 打包目录只存在于 Windows 安装版；非 Windows 跳过，避免选中入库的 .exe
+    if _IS_WINDOWS:
+        for base in bases:
+            for name in RIGCTLD_NAMES:
+                path = os.path.join(base, "vendor", "hamlib", "windows", "bin", "x64", name)
+                if path in seen:
+                    continue
+                seen.add(path)
+                if os.path.isfile(path):
+                    return path
     for name in RIGCTLD_NAMES:
         for directory in env.get("PATH", "").split(os.pathsep):
             if not directory:
