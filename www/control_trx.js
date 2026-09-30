@@ -1,10 +1,18 @@
+// 路径前缀（Cloud Hub 路径反代入口）：页面总挂在 <base>/<page>.html，故文档目录即前缀。
+function __mrrcBase() {
+	var m = window.location.pathname.match(/^(.*\/)[^\/]*$/);
+	return m ? m[1] : '/';
+}
+function __mrrcUrl(path) {
+	return __mrrcBase() + String(path).replace(/^\//, '');
+}
 // Control TRX functions - Radio control and frequency management
 
 var wsControlTRX = "";
 function ControlTRX_start(){
 	document.getElementById("indwsControlTRX").innerHTML='<img src="img/critsgrey.png">wsCtrl';
 
-	wsControlTRX = new WebSocket( 'wss://' + window.location.href.split( '/' )[2] + '/WScontrolTRX' );
+	new WebSocket( (window.location.protocol === 'https:' ? 'wss:' : 'ws:') + '//' + window.location.host + __mrrcUrl('/WScontrolTRX') );
 	wsControlTRX.onmessage = wsControlTRXcrtol;
 	wsControlTRX.onopen = wsControlTRXopen;
 	wsControlTRX.onclose = wsControlTRXclose;

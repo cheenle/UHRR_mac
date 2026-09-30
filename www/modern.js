@@ -1,3 +1,11 @@
+// 路径前缀（Cloud Hub 路径反代入口）：页面总挂在 <base>/<page>.html，故文档目录即前缀。
+function __mrrcBase() {
+	var m = window.location.pathname.match(/^(.*\/)[^\/]*$/);
+	return m ? m[1] : '/';
+}
+function __mrrcUrl(path) {
+	return __mrrcBase() + String(path).replace(/^\//, '');
+}
 // Modern Hamradio Remote Interface JavaScript - 完整功能版本
 
 // 全局变量 - 与旧界面兼容
@@ -754,7 +762,7 @@ class ModernHamInterface {
 
     startAudioRX() {
         const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        wsAudioRX = new WebSocket(proto + '//' + window.location.host + '/WSaudioRX');
+        new WebSocket( (window.location.protocol === 'https:' ? 'wss:' : 'ws:') + '//' + window.location.host + __mrrcUrl('/WSaudioRX') );
         wsAudioRX.binaryType = 'arraybuffer';
         wsAudioRX.onmessage = (msg) => this.appendwsAudioRX(msg);
         wsAudioRX.onopen = () => this.wsAudioRXopen();
@@ -764,7 +772,7 @@ class ModernHamInterface {
 
     startAudioTX() {
         const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        wsAudioTX = new WebSocket(proto + '//' + window.location.host + '/WSaudioTX');
+        new WebSocket( (window.location.protocol === 'https:' ? 'wss:' : 'ws:') + '//' + window.location.host + __mrrcUrl('/WSaudioTX') );
         wsAudioTX.binaryType = 'arraybuffer';
         wsAudioTX.onopen = () => this.wsAudioTXopen();
         wsAudioTX.onclose = () => this.wsAudioTXclose();
@@ -774,7 +782,7 @@ class ModernHamInterface {
     startControlTRX() {
         // M4: 端点名应为 /WSCTRX（后端路由与 controls.js 一致），原 /WSControlTRX 连不上
         const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        wsControlTRX = new WebSocket(proto + '//' + window.location.host + '/WSCTRX');
+        new WebSocket( (window.location.protocol === 'https:' ? 'wss:' : 'ws:') + '//' + window.location.host + __mrrcUrl('/WSCTRX') );
         wsControlTRX.onmessage = (msg) => this.appendwsControlTRX(msg);
         wsControlTRX.onopen = () => this.wsControlTRXopen();
         wsControlTRX.onclose = () => this.wsControlTRXclose();

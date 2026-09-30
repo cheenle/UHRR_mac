@@ -1,3 +1,11 @@
+// 路径前缀（Cloud Hub 路径反代入口）：页面总挂在 <base>/<page>.html，故文档目录即前缀。
+function __mrrcBase() {
+	var m = window.location.pathname.match(/^(.*\/)[^\/]*$/);
+	return m ? m[1] : '/';
+}
+function __mrrcUrl(path) {
+	return __mrrcBase() + String(path).replace(/^\//, '');
+}
 // High Quality Mobile Interface - 48kHz TX
 // V1.0.0 - 2026-03-08
 // 高品质语音版本：TX 48kHz PCM 直发，RX 保持 Opus 16kHz
@@ -130,7 +138,7 @@ function HQ_AudioTX_start() {
     if (el) el.innerHTML = '<img src="img/critsgrey.png">wsTX';
     
     // 创建 WebSocket（使用全局变量 wsAudioTX）
-    var ws = new WebSocket('wss://' + window.location.href.split('/')[2] + '/WSaudioTX');
+    new WebSocket( (window.location.protocol === 'https:' ? 'wss:' : 'ws:') + '//' + window.location.host + __mrrcUrl('/WSaudioTX') );
     
     ws.onopen = function() {
         var el = document.getElementById("indwsAudioTX");
