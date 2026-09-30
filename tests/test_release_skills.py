@@ -141,6 +141,32 @@ class SkillFactTests(unittest.TestCase):
         self.assertIn("version.txt", text)
         self.assertIn("CArchiveReader", text)
 
+    def test_windows_skill_release_script_line_refs_are_current(self):
+        """技能正文里的 release_windows.sh 行号必须指向它自称的那一行。
+
+        Task 2 写技能时 :83/:86 是对的；Task 3 给 release_windows.sh 加了一行，
+        行号随即漂到 :84/:87——路径存在性测试抓不到这种任务间漂移，本测试把
+        每条行号引用钉到它引用内容所在的行上。
+        """
+        text = read_skill("windows-installer")
+        rw_lines = (ROOT / "dev_tools" / "release_windows.sh").read_text(
+            encoding="utf-8", errors="replace").splitlines()
+        cases = [
+            (r"`release_windows\.sh:(\d+)` 只把 `build exit=", "build exit="),
+            (r"`release_windows\.sh:(\d+)` 会在打包产物上跑", "verify_hotfix.py"),
+        ]
+        for pattern, needle in cases:
+            with self.subTest(needle=needle):
+                m = re.search(pattern, text)
+                if m is None:
+                    self.fail(f"技能里找不到 {needle!r} 的行号引用（pattern={pattern!r}）——"
+                              "若改了措辞，请同步本测试的锚点")
+                n = int(m.group(1))
+                self.assertLessEqual(n, len(rw_lines))
+                self.assertIn(needle, rw_lines[n - 1],
+                              f"技能说 release_windows.sh:{n} 是 {needle!r}，"
+                              f"实际该行是：{rw_lines[n - 1].strip()[:90]!r}")
+
 
 class SkillSyncTests(unittest.TestCase):
     def test_sync_script_targets_the_skills_dir(self):

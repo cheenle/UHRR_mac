@@ -1,6 +1,7 @@
 # AGENTS.md
 
 ## Start Here
+
 - Main app entrypoint is the executable Python/Tornado script `MRRC`; it reads `MRRC.conf` by default or `python3 MRRC <config-file>` for another config.
 - Active default server port is `8877` from `MRRC.conf` and `docker-compose.yml`; older docs/tools may still say `8888`.
 - Root `/` serves `www/index.html`; `/mobile` serves `www/mobile_modern.html`; static assets are served from `www/`.
@@ -8,6 +9,7 @@
 - `/CONFIG` posts always write `MRRC.conf` and restart `./MRRC`; do not assume it preserves a custom config path used by `python3 MRRC <config-file>`.
 
 ## Run And Verify
+
 - Start directly for local debugging with `python3 ./MRRC` or `./MRRC` after installing system/audio/radio deps.
 - `./mrrc_control.sh start` starts `rigctld`, MRRC, then `atr1000_proxy.py`; edit its hard-coded device/model values before trusting it on new hardware.
 - `mrrc_control.sh` currently invokes `Python "$SCRIPT_DIR/MRRC"` in `start_mrrc`; if service start fails, try direct `python3 ./MRRC` before debugging the app.
@@ -18,6 +20,7 @@
 - Windows installer build chain mirrors `../mrrc_modern`: run `packaging/windows/build.ps1` on a Windows build machine after placing the required native DLLs under `vendor/{opus,hamlib,wdsp}/windows/bin/x64/`. See `win_pack.md` for the full workflow.
 
 ## Tests And Diagnostics
+
 - No root manifest, root test runner, pre-commit config, or CI workflow is present; use focused dev tools instead of assuming pytest/npm for the whole repo.
 - Dependency smoke test: `python3 dev_tools/test_installation.py`; it checks Python 3.7+, imports, `MRRC.conf`, and legacy root cert names `UHRH.crt`/`UHRH.key`.
 - Audio device/capture/playback checks: `python3 dev_tools/test_audio.py` and `python3 dev_tools/test_audio_capture.py`; these require usable local audio devices.
@@ -28,8 +31,9 @@
 - Bluetooth audio devices as macOS default output churn A2DP (`bluetoothd` `Jitter Buffer ... error 312`) and stall CoreAudio globally, slowing MRRC `p.open()`; see `docs/current/reliability/RC-001-ioloop-wedge-and-tx-silence.md` §7 for probes.
 
 ## Architecture Notes
+
 - 电台型号有两套键、必须同步：UI/配置里的 `[HAMLIB] rig_model`（hamlib 规范名，如 `IC-M710`）与 rigctld 实际读取的 `[INSTANCE_SETTINGS] instance_rigctl_model`（数字，如 30003）。Device Config 保存时由 `rig_models.apply_to_config()` 两处一起写；机型表由 `rig_models.py` 从本机 hamlib 实时枚举（312 个），不要再硬编码型号列表。
-- 「🐞 遇到问题」一键诊断包：生成/脱敏在 `support_bundle.py`（纯标准库、松散模块，可热修），服务端接口在 `MRRC` 的 `SupportApiHandler`（`/api/support/*`，IO 全走 executor），页面 `www/support.html`；接收端 `tools/support_receiver/server.py` 部署在 www.vlsc.net（`./deploy_support_receiver.sh`），维护者列表页与口令见 `docs/current/operations/support-bundle.md`。
+- 「🐞 遇到问题」一键诊断包：生成/脱敏在 `support_bundle.py`（纯标准库、松散模块，可热修），服务端接口在 `MRRC` 的 `SupportApiHandler`（`/api/support/*`，IO 全走 executor），页面 `www/support.html`；接收端 `tools/support_receiver/server.py` 部署在 <www.vlsc.net（`./deploy_support_receiver.sh`），维护者列表页与口令见> `docs/current/operations/support-bundle.md`。
 - Radio control goes through `rigctld`/Hamlib via `hamlib_wrapper.py`; audio I/O goes through PyAudio abstractions in `audio_interface.py`.
 - WebSocket endpoints are defined near the bottom of `MRRC`: `/WSaudioRX`, `/WSaudioTX`, `/WSCTRX`, `/WSpanFFT`, `/WSATR1000`, and `/WSATU`.
 - `www/controls.js` owns shared browser control/audio behavior; `www/mobile_modern.js` depends on `controls.js` and should not redeclare its globals.
@@ -44,6 +48,7 @@
 - **TX init is async (F4/F4b, V6.0.2)**: `WS_AudioTXHandler` `m:` → `_start_tx_init_async` runs `TX_init` (incl. blocking `p.open()`) on a `run_in_executor` worker — never call `TX_init` synchronously from `on_message`. Frames arriving during init buffer into `_tx_pending_frames` (250-frame cap) and flush on completion; `s:`/`on_close` set `_tx_init_cancel` and clear the buffer; the discard path force-releases PTT. `audio_interface.py` caches the output-device index (`_output_device_index_cache`, validated by name on each hit). A heartbeat watchdog (`arm_ioloop_watchdog`, 2s/8s) dumps all thread stacks if the IOLoop wedges. Full story: `docs/current/reliability/RC-001-ioloop-wedge-and-tx-silence.md`.
 
 ## Windows Installer / One-Click Upgrade
+
 - 安装版本唯一权威 = 安装目录 `version.txt`；升级逻辑在 `windows/launcher.py` + `upgrade_core.py`，
   运行时状态在 `%LOCALAPPDATA%\MRRC\updates\`（`state.json` / `upgrade.request` / `MRRC-Setup-<ver>.exe` / `install-<ver>.log`）。
 - **唯一成功判据**：`state.json` 的 `lastResult.status == "ok"`（由新版启动时 `confirm_pending_upgrade()` 自证）。
@@ -68,6 +73,7 @@
   （大文件传 `~` 再 `sudo mv`）；VM 网络对 45 MB 下载不稳（验收可用 `MRRC_UPDATE_MANIFEST=file://…` 离线跑）。
 
 ## 支持自动化（support autopilot）
+
 - **产品支持生命周期总览**（开发发版 → 版本升级 → 问题诊断 → AI 分析 → 回复解决 + 闭环不变量 8 条 + 事故驱动的守卫清单）：
   `docs/current/operations/product-support-lifecycle.md` —— 改这条链路前先读它。
 - 端到端闭环：**轮询接收端 → 取诊断包 → 调用 `pi` 分析 → 生成答复卡 → 发布公开答复页**，实现于
@@ -80,6 +86,7 @@
   保守判定（材料不足 → `need_more_info`）；环境类问题（无声卡/无 rigctld/虚拟机）不判成产品缺陷。
 
 ## Audio/PTT Guardrails
+
 - TX/PTT timing is fragile; preserve the flow documented in `docs/legacy/audio/PTT_Audio_Postmortem_and_Best_Practices.md` and implemented in `www/tx_button_optimized.js`.
 - `rx_worklet_processor.js` uses a **millisecond watermark** buffer (not legacy frame counts). Normal RX needs `prebufferMs` well above one frame; safe desktop config is `prebufferMs: 200, recoveryMs: 80, maxMs: 600`.
 - TX-to-RX intentionally drops to a transient low-buffer window (`prebufferMs: 20`, ≈1 frame) in `tx_button_optimized.js`, then restores `prebufferMs: 200 / recoveryMs: 80 / maxMs: 600` after 200 ms; do not remove that timer.
@@ -89,15 +96,18 @@
 - `stream.read()` capture sizes should align to Opus frames; `audio_interface.py` reads 960 samples per call (20 ms at 48 kHz → exactly one 320-sample Opus frame after 3:1 decimation to 16 kHz).
 
 ## FT8/CW Removal (V5.7)
+
 - FT8 and CW decoder features were removed entirely: `/WSFT8`, `WS_FT8Handler`, `ft8_integration.py` (JTDX/WSJT-X UDP bridge), `ft8_decoder.py`, the `www/ft8*`/`www/cw_*` pages, both `models/` + `www/models/` (cw_decoder.onnx), and the standalone `ft8/` ULTRON automation directory are all deleted. Radio-side CW *mode* (`setMode:CW`) is unaffected.
 - The mobile quick row now hosts IC-M710 AGC/RF-gain controls wired to `/WSCTRX` `setAGC`/`setRFGain` (rigctld `L AGC`/`L RF` → icm710 NMEA `AGC ON/OFF`, `RFG 0-9`).
 
 ## Website
+
 - Website source lives in `website/`; deploy with root `./deploy_website.sh [user@host] [remote_path]`.
 - The executable deploy default is `cheenle@www.vlsc.net:/var/www/vlsc.net/mrrc`; `website/README.md` still mentions older `/var/www/html/mrrc` paths.
 - `docs/legacy/tooling/CLAUDE.md` has the website nav/version/path gotchas; check it before changing many `website/*.html` pages.
 
 ## 发布完成度检查
+
 - `python3 dev_tools/release_check.py` 校验"该跟安装版本一致的文件是否真的一致"；
   `--strict` 把 SKIP 也算失败（发布日用），`--json` 给机器读。权威 = `packaging/windows/MRRC.iss`
   的 `MyAppVersion`（`packaging/windows/build.ps1` 与 `dev_tools/release_windows.sh` 都读它）。
@@ -111,17 +121,20 @@
 - `tests/test_release_artifacts.py` 在套件里跑它；发版收尾必跑一次 `--strict`。
 
 ## 发布技能
+
 - `.pi/skills/mrrc-release/` —— 发版全链路：版本权威链（`packaging/windows/MRRC.iss` 的
   `MyAppVersion`，**不是** CHANGELOG 顶条，与 `../mrrc_modern` 相反）、`./dev_tools/release_windows.sh`
   一条命令发版、热修通道下发（`--requires` 必须显式传；漏了 `cp dist/hotfix/* website/downloads/`
   会静默失败）、发版验收表。
 - `.pi/skills/windows-installer/` —— Win11 KVM VM 上的构建门禁、产物取证（别信退出码）、
   `_APP_MODULES` 与热修覆盖面、PowerShell 5.1 / GBK / OOM / job object 等陷阱。
-- 两者都由 `tests/test_release_skills.py` 守着（frontmatter 文风 + 正文引用的仓库路径必须存在），
+- 两者都由 `tests/test_release_skills.py` 守着（frontmatter 文风 + 正文引用的仓库路径必须存在 +
+  关键行号引用必须仍指向正确的那一行），
   改动后用 `./dev_tools/sync_skills.sh` 同步到 `~/.pi/agent/skills` 与 `~/.agents/skills`。
 - `macos-installer` 技能待 P3（macOS 打包链）落地后补，那时才有经过实战的 gotcha 可写。
 
 ## Existing Guidance
+
 - 天线/天调（EFHW × ATR-1000）：扫频画像、学习库体检/修复、测算页的全程复盘与铁律在 `docs/current/antenna/efhw-atr1000-project-retrospective-2026-09-28.md`，操作技能沉淀在 `.pi/skills/antenna-sweep/SKILL.md`（与 `~/.agents/skills/antenna-sweep/` 同步）。动天线测量、学习库或调谐自动化前先读。关键坑：PTTSafetyMonitor TOT=120s 不豁免 tune（长会话工具须 re-arm）、确认学习需继电器稳定 >8s、改学习库必须走 proxy socket learn。
 - `docs/current/reliability/` indexes the reliability/safety case series (RC-001: IOLoop wedge + BT-DAC-churn silent TX); consult it before touching TX init, the IOLoop, or macOS audio device handling.
 - `docs/current/methodology/project-retrospective-2026-09.md` is the full project history retrospective (phases, problem taxonomy, validated methods, future outlook) — read it when planning larger direction changes.

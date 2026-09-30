@@ -26,7 +26,7 @@ metadata:
 | 位置 | 能否热修 | 走哪条路 |
 | --- | --- | --- |
 | `www/**`（前端） | ✅ | 热修 |
-| `mrrc_server.spec` 的 `_APP_MODULES` 里的模块 | ✅ | 热修 |
+| `packaging/pyinstaller/mrrc_server.spec` 的 `_APP_MODULES` 里的模块 | ✅ | 热修 |
 | `vendor`（第三方依赖 / 原生库） | ✅ | 热修 |
 | 其它 Python（`MRRC` 主脚本、`windows/launcher.py`） | ❌ 在 PYZ 里 | **必须重发安装包** |
 | 原生 DLL（`vendor/{opus,hamlib,wdsp}`）需重建 | ❌ | **必须重发安装包** |

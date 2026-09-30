@@ -29,9 +29,14 @@ Mac ──ssh──► ham.vlsc.net（KVM 宿主）──ssh──► cheenle@19
 4. 三个 PyInstaller spec：`packaging/pyinstaller/mrrc_server.spec`、`mrrc_launcher.spec`、
    `atr1000_proxy.spec`
 5. 从 `MRRC.iss` 读 `MyAppVersion` 写 `dist/windows/MRRC/version.txt`（:79-86）
-6. WDSP DLL（`build_wdsp_dll.ps1`，:110 附近；**刻意不走 `Invoke-Checked`**——gcc 的
-   `-I`/`-O` 会被 PowerShell 函数参数绑定误解析）
+6. NR3 的 `rnnoise.dll` 用 gcc 现场编译（:101-118，注释在 :110；**刻意不走 `Invoke-Checked`**
+   ——gcc 的 `-I`/`-O` 会被 PowerShell 函数参数绑定误解析；失败只告警）
 7. `iscc packaging/windows/MRRC.iss` → `dist/windows/MRRC-Setup.exe`
+
+**`libwdsp.dll` 不是 `build.ps1` 的一步，而是先决条件**：VM 上先跑
+`packaging/windows/build_wdsp_dll.ps1` 生成它（见 `win_pack.md` / `release-process.md` §3），
+`build.ps1:48-67` 只检查 `vendor/{opus,hamlib,wdsp}/windows/bin/x64/` 里有没有、缺了
+**只警告不中止**——所以"构建成功"不等于包里带了 DSP。
 
 `MRRC.iss` 只打包 `dist\windows\MRRC\*`（`ignoreversion recursesubdirs createallsubdirs`）
 ——**原生 DLL 必须先落到 `vendor/{opus,hamlib,wdsp}/windows/bin/x64/`**，否则包里没有它们；
@@ -39,7 +44,7 @@ hamlib（含 `rigctld.exe`）用 `packaging/windows/collect_hamlib.ps1` 收集�
 
 ## 证明产物真的含本次代码（**不要**只看退出码）
 
-`release_windows.sh:83` 只把 `build exit=$LASTEXITCODE` 打进日志。**退出码不是证据**——
+`release_windows.sh:84` 只把 `build exit=$LASTEXITCODE` 打进日志。**退出码不是证据**——
 `Invoke-Checked` 中止的是*子* PowerShell，外层脚本会继续往下走。只认产物：
 
 ```powershell
@@ -58,10 +63,9 @@ Mac 侧取回后再比对一次：`shasum -a 256 dist/windows/MRRC-Setup.exe` �
 import marshal, types
 from PyInstaller.archive.readers import CArchiveReader
 r = CArchiveReader(r"C:\mrrc\dist\windows\MRRC\MRRC-Server.exe")
-# 注意：PyInstaller 6 里 a.toc 是 dict，不是 list；a.toc[0] 会 KeyError: 0
-code = marshal.loads(r.extract("server"))     # 入口"脚本"是 CArchive 条目，不是 PYZ 模块
+# 注意：PyInstaller 6 里 r.toc 是 dict，不是 list；r.toc[0] 会 KeyError: 0
 try:
-    code = marshal.loads(r.extract("server"))
+    code = marshal.loads(r.extract("server"))       # 入口"脚本"是 CArchive 条目，不是 PYZ 模块
 except Exception:
     code = marshal.loads(r.extract("server")[8:])   # 可能带 8 字节头
 seen = set()
@@ -82,12 +86,14 @@ VM 实测报 `ModuleNotFoundError`。
 
 ## 在产物上跑热修通道验收
 
-`release_windows.sh:86` 会在打包产物上跑 `packaging/hotfix/verify_hotfix.py`。
+`release_windows.sh:87` 会在打包产物上跑 `packaging/hotfix/verify_hotfix.py`。
 它从 `%LOCALAPPDATA%\MRRC\` 找配置、按启动器的方式解包到 `patch\`、再启动 `MRRC-Server.exe` 验证。
-手动跑：
+手动跑（VM 上仓库根是 `C:\mrrc`，即 `release_windows.sh` 的 `VM_REPO`——**不是**
+`%USERPROFILE%\mrrc`）：
 
 ```powershell
-& "$env:USERPROFILE\mrrc\venv\Scripts\python.exe" packaging\hotfix\verify_hotfix.py `
+Set-Location C:\mrrc
+& C:\mrrc\venv\Scripts\python.exe packaging\hotfix\verify_hotfix.py `
     --app "C:\mrrc\dist\windows\MRRC" --repo "C:\mrrc"
 ```
 
