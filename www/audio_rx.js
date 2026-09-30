@@ -31,7 +31,7 @@ function AudioRX_start(){
 	_rx_scheduledCount = 0;
 	_rx_nodesInitialized = false;
 
-	wsAudioRX = new WebSocket( 'wss://' + window.location.href.split( '/' )[2] + '/WSaudioRX' );
+	wsAudioRX = new WebSocket( (window.location.protocol === 'https:' ? 'wss:' : 'ws:') + '//' + window.location.host + __mrrcUrl('/WSaudioRX') );
 	wsAudioRX.binaryType = 'arraybuffer';
 	wsAudioRX.onmessage = appendwsAudioRX;
 	wsAudioRX.onopen = wsAudioRXopen;

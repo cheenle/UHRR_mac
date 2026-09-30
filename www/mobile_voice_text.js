@@ -906,7 +906,7 @@ window.addEventListener('beforeunload', () => {
 // ============================================
 function initATRWebSocket() {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${protocol}//${window.location.host}/WSATR1000`;
+    const wsUrl = `${protocol}//${window.location.host}` + __mrrcUrl('/WSATR1000');
 
     console.log('[VoiceText] 连接ATR-1000:', wsUrl);
 

@@ -3255,7 +3255,7 @@ const ATR1000 = {
             // 使用当前页面的主机和协议，连接后端代理 WebSocket
             const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
             const host = window.location.host;
-            const url = `${protocol}//${host}/WSATR1000`;
+            const url = `${protocol}//${host}` + __mrrcUrl('/WSATR1000');
             
             console.log('📻 连接 ATR-1000 后端代理:', url);
             this.ws = new WebSocket(url);

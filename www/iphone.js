@@ -1,3 +1,11 @@
+// 路径前缀（Cloud Hub 路径反代入口）：页面总挂在 <base>/<page>.html，故文档目录即前缀。
+function __mrrcBase() {
+	var m = window.location.pathname.match(/^(.*\/)[^\/]*$/);
+	return m ? m[1] : '/';
+}
+function __mrrcUrl(path) {
+	return __mrrcBase() + String(path).replace(/^\//, '');
+}
 // iPhone Ham Radio Remote - 可工作的音频实现
 // 基于已验证的工作实现进行优化
 
@@ -130,7 +138,7 @@ function AudioRX_start() {
 
     // 建立WebSocket连接
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const baseUrl = `${protocol}//${window.location.host}`;
+    const baseUrl = `${protocol}//${window.location.host}` + __mrrcBase().replace(/\/$/, '');
     wsAudioRX = new WebSocket(`${baseUrl}/WSaudioRX`);
     wsAudioRX.binaryType = 'arraybuffer';
     wsAudioRX.onmessage = appendwsAudioRX;
@@ -385,7 +393,7 @@ function connect() {
     console.log('Connecting to MRRC server...');
     
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const baseUrl = `${protocol}//${window.location.host}`;
+    const baseUrl = `${protocol}//${window.location.host}` + __mrrcBase().replace(/\/$/, '');
     
     try {
         // 控制WebSocket

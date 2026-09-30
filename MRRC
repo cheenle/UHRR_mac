@@ -450,6 +450,12 @@ def writte_log(logmsg):
 	print(msg)
 
 ############ BaseHandler tornado ##############
+import base_path as _base_path              # 路径前缀支持（Cloud Hub 路径反代入口）
+BASE_PATH = _base_path.normalize(config['SERVER'].get('base_path', ''))
+_base_path._ACTIVE_BASE = BASE_PATH          # 供 base_path.application() 使用
+if BASE_PATH:
+    logger.info(f"路径前缀已启用: /{BASE_PATH}")
+
 def auth_enabled():
 	try:
 		auth_value = config['SERVER'].get('auth', '')
@@ -459,7 +465,7 @@ def auth_enabled():
 
 def safe_next_url(next_url):
 	if not next_url or not next_url.startswith('/') or next_url.startswith('//'):
-		return '/'
+		return _base_path.url(BASE_PATH, '/')
 	return next_url
 
 class BaseHandler(tornado.web.RequestHandler):
@@ -467,11 +473,12 @@ class BaseHandler(tornado.web.RequestHandler):
 		return self.get_secure_cookie("user")
 
 	def prepare(self):
-		if self.request.path in ('/login', '/logout'):
+		if self.request.path in (_base_path.url(BASE_PATH, '/login'),
+				 _base_path.url(BASE_PATH, '/logout')):
 			return
 		if auth_enabled() and not self.current_user:
 			if self.request.method in ('GET', 'HEAD'):
-				self.redirect('/login?next=' + urllib.parse.quote(self.request.uri, safe=''))
+				self.redirect(_base_path.url(BASE_PATH, '/login') + '?next=' + urllib.parse.quote(self.request.uri, safe=''))
 			else:
 				self.set_status(403)
 				self.finish('Authentication required')
@@ -546,7 +553,7 @@ class AuthenticatedStaticFileHandler(_OverlayMixin, tornado.web.StaticFileHandle
 	def prepare(self):
 		if auth_enabled() and not self.current_user:
 			if self.request.method in ('GET', 'HEAD'):
-				self.redirect('/login?next=' + urllib.parse.quote(self.request.uri, safe=''))
+				self.redirect(_base_path.url(BASE_PATH, '/login') + '?next=' + urllib.parse.quote(self.request.uri, safe=''))
 			else:
 				self.set_status(403)
 				self.finish('Authentication required')
@@ -4238,7 +4245,7 @@ class ConfigHandler(BaseHandler):
 	def get(self):
 	
 		if auth_enabled() and not self.current_user:
-			self.redirect("/login")
+			self.redirect(_base_path.url(BASE_PATH, "/login"))
 			return
 	
 		self.application.settings.get("compiled_template_cache", False)
@@ -4427,7 +4434,7 @@ class ConfigHandler(BaseHandler):
 	def post(self):
 	
 		if auth_enabled() and not self.current_user:
-			self.redirect("/login")
+			self.redirect(_base_path.url(BASE_PATH, "/login"))
 			return
 			
 		for x in self.request.arguments:
@@ -5244,9 +5251,9 @@ body{
 	def post(self):
 		if self.get_argument("name") != "" and self.get_argument("passwd") != "":
 			if self.bind(self.get_argument("name"),self.get_argument("passwd")):
-				self.set_secure_cookie("user", self.get_argument("name"))
-				self.set_cookie("callsign", self.get_argument("name"))
-				self.set_cookie("autha", "1")
+				self.set_secure_cookie("user", self.get_argument("name"), path=_base_path.cookie_path(BASE_PATH))
+				self.set_cookie("callsign", self.get_argument("name"), path=_base_path.cookie_path(BASE_PATH))
+				self.set_cookie("autha", "1", path=_base_path.cookie_path(BASE_PATH))
 			else:
 				writte_log("Auth error for CallSign:"+str(self.get_argument("name")))
 				next_url = safe_next_url(self.get_argument('next', '/'))
@@ -5276,8 +5283,8 @@ body{
 		
 class AuthLogoutHandler(BaseHandler):
 	def get(self):
-		self.clear_cookie("user")
-		self.clear_cookie("autha")
+		self.clear_cookie("user", path=_base_path.cookie_path(BASE_PATH))
+		self.clear_cookie("autha", path=_base_path.cookie_path(BASE_PATH))
 		self.redirect(safe_next_url(self.get_argument("next", "/")))
 		
 ############ Test Handler for Radio Control ##############
@@ -5345,7 +5352,7 @@ class MobileHandler(BaseHandler):
 		print("Tornado current user:"+str(self.current_user))
 		if auth_enabled() and not self.current_user:
 			print("Redirecting to login")
-			self.redirect("/login")
+			self.redirect(_base_path.url(BASE_PATH, "/login"))
 			return
 		self.application.settings.get("compiled_template_cache", False)
 		self.set_header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
@@ -5417,7 +5424,7 @@ class MainHandler(BaseHandler):
 		print("Tornado current user:"+str(self.current_user))
 		if auth_enabled() and not self.current_user:
 			print("Redirecting to login")
-			self.redirect("/login")
+			self.redirect(_base_path.url(BASE_PATH, "/login"))
 			return
 			
 		self.set_header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
@@ -5503,7 +5510,7 @@ if __name__ == "__main__":
 		freq_sync_thread.start()
 		logger.info("🚀 频率同步线程已启动（支持JTDX/flrig联动）")
 		
-		app = tornado.web.Application([
+		app = base_path.application([
 					(r'/login', AuthLoginHandler),			(r'/logout', AuthLogoutHandler),
 			(r'/WSaudioRX', WS_AudioRXHandler),
 			(r'/WSaudioTX', WS_AudioTXHandler),
@@ -5534,7 +5541,7 @@ if __name__ == "__main__":
 		import traceback
 		traceback.print_exc()
 		print("=== END EXCEPTION INFO ===")
-		app = tornado.web.Application([
+		app = base_path.application([
 		(r'/CONFIG', ConfigHandler),
 		(r'/', ConfigHandler),
 		(r'/(.*)', OverlayStaticFileHandler, { 'path' : os.path.join(_resource_dir(), 'www') })

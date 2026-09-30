@@ -14,9 +14,17 @@ const IS_MOBILE = (function (a) {
 // M3: 统一 WebSocket URL 构造。根据页面协议选择 ws/wss，用 location.host（含端口），
 // 避免 'wss://' + href.split('/')[2] 在 http 本地开发下握手失败、
 // 以及在带 basic-auth URL 中误带凭据的问题。
+// 路径前缀（Cloud Hub 路径反代入口）：页面总挂在 <base>/<page>.html，故文档目录即前缀。
+function __mrrcBase() {
+	var m = window.location.pathname.match(/^(.*\/)[^\/]*$/);
+	return m ? m[1] : '/';
+}
+function __mrrcUrl(path) {
+	return __mrrcBase() + String(path).replace(/^\//, '');
+}
 function __wsURL(path) {
 	var proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-	return proto + '//' + window.location.host + path;
+	return proto + '//' + window.location.host + __mrrcUrl(path);
 }
 
 // M2: 统一获取事件源元素。内联 onclick="fn()" 在被调用函数内，Firefox 已不暴露全局
@@ -2475,7 +2483,7 @@ async function loadDeviceSettings(retryProbe) {
     const content = document.getElementById('device-drawer-content');
     content.innerHTML = '<p class="device-drawer-hint">Loading...</p>';
     try {
-        const res = await fetch('/api/devices');
+        const res = await fetch('api/devices');
         if (!res.ok) {
             if (res.status === 401 || res.status === 403) {
                 content.innerHTML = '<p class="device-drawer-hint">Please login first.</p>';
@@ -2807,7 +2815,7 @@ async function saveDeviceSettings() {
         return;
     }
     try {
-        const res = await fetch('/api/devices', {
+        const res = await fetch('api/devices', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify(getDeviceFormPayload())
@@ -2832,7 +2840,7 @@ async function applyDeviceSettings() {
         return;
     }
     try {
-        const res = await fetch('/api/devices/apply', {
+        const res = await fetch('api/devices/apply', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify(getDeviceFormPayload())

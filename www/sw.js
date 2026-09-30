@@ -1,9 +1,11 @@
 // 只缓存静态资源 — JS/HTML 始终走网络，避免缓存旧代码
 const CACHE_NAME = 'hamradio-static-v17.0';
+// 预缓存必须是绝对路径，但前缀随部署位置变化 —— 从注册 scope 推出，不硬编码站点根。
+const SW_BASE = new URL(self.registration.scope).pathname.replace(/\/$/, '');
 const STATIC_ASSETS = [
-  '/mobile_modern.css',
-  '/favicon.png',
-  '/manifest.json'
+  SW_BASE + '/mobile_modern.css',
+  SW_BASE + '/favicon.png',
+  SW_BASE + '/manifest.json'
 ];
 
 // Install

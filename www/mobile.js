@@ -1,3 +1,11 @@
+// 路径前缀（Cloud Hub 路径反代入口）：页面总挂在 <base>/<page>.html，故文档目录即前缀。
+function __mrrcBase() {
+	var m = window.location.pathname.match(/^(.*\/)[^\/]*$/);
+	return m ? m[1] : '/';
+}
+function __mrrcUrl(path) {
+	return __mrrcBase() + String(path).replace(/^\//, '');
+}
 /* Mobile Ham Radio Remote JavaScript */
 
 // Mobile detection
@@ -316,7 +324,7 @@ function powerToggle() {
 function connectWebSockets() {
     // Use the same protocol as the current page
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const baseUrl = `${protocol}//${window.location.host}`;
+    const baseUrl = `${protocol}//${window.location.host}` + __mrrcBase().replace(/\/$/, '');
     console.log('Connecting to WebSocket server at:', baseUrl);
     
     // Control WebSocket
