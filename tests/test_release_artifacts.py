@@ -180,5 +180,23 @@ class RepositoryStateTests(unittest.TestCase):
         self.assertEqual(rc.main(["--strict"]), 0)
 
 
+class VersionTxtDerivationTests(unittest.TestCase):
+    """守卫：version.txt 必须由构建脚本从权威派生，不能硬编码。"""
+
+    def _text(self, rel):
+        return (rc.ROOT / rel).read_text(encoding="utf-8", errors="replace")
+
+    def test_windows_build_derives_version_txt_from_iss(self):
+        text = self._text("packaging/windows/build.ps1")
+        self.assertIn("version.txt", text, "build.ps1 必须写 version.txt")
+        self.assertIn("MyAppVersion", text,
+                      "build.ps1 必须从 MRRC.iss 的 MyAppVersion 派生版本")
+
+    def test_windows_launcher_reads_version_txt(self):
+        text = self._text("windows/launcher.py")
+        self.assertIn("version.txt", text,
+                      "运行时权威是 version.txt；启动器必须读它")
+
+
 if __name__ == "__main__":
     unittest.main()

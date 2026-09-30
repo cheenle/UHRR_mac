@@ -97,6 +97,15 @@
 - The executable deploy default is `cheenle@www.vlsc.net:/var/www/vlsc.net/mrrc`; `website/README.md` still mentions older `/var/www/html/mrrc` paths.
 - `docs/legacy/tooling/CLAUDE.md` has the website nav/version/path gotchas; check it before changing many `website/*.html` pages.
 
+## 发布完成度检查
+- `python3 dev_tools/release_check.py` 校验"该跟安装版本一致的文件是否真的一致"；
+  `--strict` 把 SKIP 也算失败（发布日用），`--json` 给机器读。权威 = `packaging/windows/MRRC.iss`
+  的 `MyAppVersion`（`packaging/windows/build.ps1` 与 `dev_tools/release_windows.sh` 都读它）。
+- 规则表 `dev_tools/release_artifacts.json`：**新文件开始携带版本/大小时必须补一条规则**，
+  否则它会静默漂移。规则 pattern 必须锚定到具体位置，**绝不可裸扫 `V[0-9.]+`**——
+  `README.md` 的更新史与 `website/index.html` 的历史举例会被误判。
+- `tests/test_release_artifacts.py` 在套件里跑它；发版收尾必跑一次 `--strict`。
+
 ## Existing Guidance
 - 天线/天调（EFHW × ATR-1000）：扫频画像、学习库体检/修复、测算页的全程复盘与铁律在 `docs/current/antenna/efhw-atr1000-project-retrospective-2026-09-28.md`，操作技能沉淀在 `.pi/skills/antenna-sweep/SKILL.md`（与 `~/.agents/skills/antenna-sweep/` 同步）。动天线测量、学习库或调谐自动化前先读。关键坑：PTTSafetyMonitor TOT=120s 不豁免 tune（长会话工具须 re-arm）、确认学习需继电器稳定 >8s、改学习库必须走 proxy socket learn。
 - `docs/current/reliability/` indexes the reliability/safety case series (RC-001: IOLoop wedge + BT-DAC-churn silent TX); consult it before touching TX init, the IOLoop, or macOS audio device handling.
