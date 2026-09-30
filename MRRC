@@ -450,7 +450,8 @@ def writte_log(logmsg):
 	print(msg)
 
 ############ BaseHandler tornado ##############
-import base_path as _base_path              # 路径前缀支持（Cloud Hub 路径反代入口）
+import base_path as _base_path
+import session_metrics as _metrics  # 会话遥测（Cloud Hub 前置能力）              # 路径前缀支持（Cloud Hub 路径反代入口）
 BASE_PATH = _base_path.normalize(config['SERVER'].get('base_path', ''))
 _base_path._ACTIVE_BASE = BASE_PATH          # 供 base_path.application() 使用
 if BASE_PATH:
@@ -5372,6 +5373,35 @@ class MobileHandler(BaseHandler):
 			self.write("<html><body><h1>Mobile Interface Error</h1><p>Please check the server logs.</p></body></html>")
 
 ############ 频道记忆 HTTP API ##############
+def _metrics_active():
+	"""当前各类 WebSocket 连接数。只读既有连接列表 —— 不侵入连接生命周期。"""
+	out = {}
+	for label, clients in (
+				('audiopanahandler', AudioPanaHandlerClients),
+		('audiorxhandler', AudioRXHandlerClients),
+		('audiotxhandler', AudioTXHandlerClients),
+		('controltrxhandler', ControlTRXHandlerClients)
+	):
+		try:
+			out[label] = len(clients)
+		except Exception:
+			out[label] = -1
+	return out
+
+
+class SessionMetricsHandler(BaseHandler):
+	"""GET /api/session_metrics —— 会话遥测（供 Hub 侧容量决策）。"""
+
+	def get(self):
+		if auth_enabled() and not self.current_user:
+			self.set_status(401)
+			self.finish(json.dumps({"error": "Authentication required"}))
+			return
+		self.set_header("Content-Type", "application/json")
+		self.set_header("Cache-Control", "no-store")
+		self.write(json.dumps(_metrics.render(_metrics_active(), {"pid": os.getpid()})))
+
+
 class MemChannelsHandler(BaseHandler):
 
 	def get(self):
@@ -5509,6 +5539,18 @@ if __name__ == "__main__":
 		freq_sync_thread = FrequencySyncThread()
 		freq_sync_thread.start()
 		logger.info("🚀 频率同步线程已启动（支持JTDX/flrig联动）")
+
+		# 会话遥测：周期打印一行（0 = 关闭）。用 print 而非 logger：本产品的操作员可见
+		# 输出走 stdout，而 logger 级别默认 WARNING 会把它吞掉。
+		_metrics_interval = float(config['SERVER'].get('metrics_interval_s', 60) or 0)
+		if _metrics_interval > 0:
+			def _log_metrics():
+				try:
+					print(_metrics.format_line(_metrics.render(_metrics_active(), {"pid": os.getpid()})), flush=True)
+				except Exception as _e:
+					print(f"⚠️ [metrics] 采集失败: {_e}", flush=True)
+			tornado.ioloop.PeriodicCallback(_log_metrics, int(_metrics_interval * 1000)).start()
+			print(f"📊 会话遥测已启用（每 {_metrics_interval:g}s 一行；GET /api/session_metrics）", flush=True)
 		
 		app = base_path.application([
 					(r'/login', AuthLoginHandler),			(r'/logout', AuthLogoutHandler),
@@ -5528,6 +5570,7 @@ if __name__ == "__main__":
 					(r'/api/devices', DevicesApiHandler),  # 抽屉式设备配置 API
 					(r'/api/devices/apply', DevicesApiHandler),  # 设备配置保存并重启
 					(r'/api/support/.*', SupportApiHandler),  # 诊断包：生成/上传/保存/下载
+					(r'/api/session_metrics', SessionMetricsHandler),  # 会话遥测
 					(r'/api/antenna_sweep/.*', AntennaSweepApiHandler),  # 天线 SWR 扫频（天调 bypass 画像）
 					(r'/api/update.*', UpdateApiHandler),  # 一键升级：状态/升级/回退
 					(r'/recordings/([^/]+)', RecordingsDownloadHandler),  # 录音下载

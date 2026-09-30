@@ -24,6 +24,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   现补取只发生一次（`retryProbe` 参数），且 `renderDeviceSettings()` 重建前
   保留搜索词与已选机型（选项仍存在才恢复）。
 
+
+### 📊 会话遥测（Cloud Hub 前置能力）
+
+- **新增** `session_metrics.py`：纯逻辑层（计数器 / 快照组装 / 单行日志格式化），不依赖本产品任何代码，可单独测试。
+- **新增** `GET /api/session_metrics`：返回运行时长、各类 WebSocket 连接数（读既有连接列表，**不侵入连接生命周期**）、计数器与 pid。
+- **新增** `[SERVER] metrics_interval_s`（默认 60，0 = 关闭）：周期把上述指标打成**一行**日志，便于 grep 与长期归档；用 `print` 而非 logger（本产品 logger 默认 WARNING，会吞掉它）。
+- **测试** `dev_tools/test_session_metrics.py`。
+- 用途：Hub 侧容量决策（如是否做 RX 扇出）不再靠估计。
 ## [V6.1.18] - 2026-09-17
 
 ### 🧠 NR3(RNNoise) 进包 + WDSP C 层旋钮 + 门控修复

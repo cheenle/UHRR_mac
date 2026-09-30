@@ -35,6 +35,17 @@ subdomain root, so asset and request URLs must be **prefix-safe**:
 - Run `python3 dev_tools/test_path_prefix.py` after touching routes, assets, cookies or `sw.js`.
   It caught two escapes a manual pattern sweep had missed.
 
+## Session Metrics
+
+- `GET /api/session_metrics` returns uptime, per-type WebSocket connection counts, counters
+  and pid; `[SERVER] metrics_interval_s` (default 60, `0` disables) prints the same as one
+  line to stdout. Both come from `session_metrics.py`, which is pure logic - the connection
+  counts are read from the existing `*Clients` lists, so telemetry never touches a WebSocket's
+  open/close path.
+- Use `print`, not `logger`, for operator-visible lines in this app: the logger level is
+  WARNING by default and would swallow them.
+- Unit test: `python3 dev_tools/test_session_metrics.py`.
+
 ## Tests And Diagnostics
 
 - No root manifest, root test runner, pre-commit config, or CI workflow is present; use focused dev tools instead of assuming pytest/npm for the whole repo.
