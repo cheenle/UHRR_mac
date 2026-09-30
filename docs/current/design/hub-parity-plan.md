@@ -14,7 +14,7 @@
 ## 前缀改造：逃逸点实测清单
 
 | # | 位置 | 实测 | 处理 |
-|---|------|------|------|
+| --- | ------ | ------ | ------ |
 | 1 | 路由注册表 | `MRRC:71` 起的 `handlers=[...]`（含 `/login` `/logout` `/CONFIG` `/mobile` `/test` `/api/mem_channels` `/api/recordings` `/WSaudioRX` `/WSaudioTX` `/WSCTRX` `/WSpanFFT` `/WSATR1000` `/WSATU` `/(panfft.*)` 等） | 引入 `base_path` 配置，注册时统一前缀（空值 = 现状） |
 | 2 | HTML 绝对路径 | **5 个文件 / 8 处**（如 `www/index.html` 的 `href="/wdsp_settings.html"`、`/panfft.html`） | 改相对路径 |
 | 3 | JS 绝对调用 | `fetch('/api/devices')` ×2、`fetch('/api/devices/apply')` ×1 | 改相对或经 `base_url()` |
@@ -27,6 +27,21 @@
 新增 `tests/`（或用 `dev_tools/`，本仓无统一 pytest 入口）：
 断言"任何 HTML/JS 里不得出现指向站点根的绝对路径"（`sw.js` 预缓存清单除外）、
 "路由表在 `base_path` 非空时全部带前缀"、"登录跳转与 `next` 往返保持前缀"。
+
+## 进展：前缀改造已完成（2026-09-30）
+
+| 项 | 落点 |
+|----|------|
+| 配置 | `MRRC.conf` `[SERVER] base_path =`（默认空 = 行为与改造前完全一致） |
+| 模块 | `base_path.py`：`normalize/url/cookie_path/apply_to_handlers/application` |
+| 路由 | 两处 `Application` 改走 `base_path.application(handlers, **kwargs)`——**不动参数列表**（早期尝试往字面量里插函数调用，括号失衡且修了两次，教训已记入提交信息） |
+| 登录/回跳 | `prepare()` 放行判断、2 处 `next` 跳转、4 处裸 `/login`、`safe_next_url` 回退值 |
+| **Cookie** | 5 处设置/清除都限定 `path=<前缀>` —— 路径入口下同 origin 多产品才不会互相覆盖会话 |
+| 资产 | HTML 8 处相对化；`__wsURL`（管 5 个调用点）、`baseUrl`（2 处定义）、`__mrrcUrl` 统一前缀；`sw.js` 预缓存清单由注册 scope 推出前缀（仍是绝对路径） |
+| 打包 | `Dockerfile` COPY `base_path.py`（漏了会 ImportError） |
+| 守卫 | `dev_tools/test_path_prefix.py`（模块行为 8 项 + 资产扫描 + 服务端接线 + 打包）。**首跑即抓到 2 处漏网**（`control_trx.js`、`mobile_high.js` 用 `href.split` 拼 WS，grep 没覆盖到）+ `modern.js` 3 处 |
+
+遗留：`www/pad.js` 含 WS 路径字面量但未见前缀化助手（守卫测试提示项，非失败项）——需确认那处是否真的建连接。
 
 ## 未完成（第二、三块）
 

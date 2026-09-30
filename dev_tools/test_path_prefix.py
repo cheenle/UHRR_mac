@@ -45,7 +45,10 @@ for path in sorted((ROOT / 'www').glob('*.js')):
             failures.append(f'{path.name}:{i} fetch 用了站点根绝对路径')
         if 'location.href.split' in line and 'wss://' in line:
             failures.append(f'{path.name}:{i} 用 href.split 拼 WS 地址（前缀不安全）')
-    if re.search(r"""['"]/WS[a-zA-Z]+['"]""", text) and '__mrrcUrl' not in text and '__wsURL' not in text:
+    # 只看非注释行：注释里出现 WS 路径是正常的（实测 pad.js 即为误报）
+    code = '\n'.join(l for l in text.splitlines()
+                      if not l.lstrip().startswith(('//', '*', '#')))
+    if re.search(r"""['"]/WS[a-zA-Z]+['"]""", code) and '__mrrcUrl' not in text and '__wsURL' not in text:
         notes.append(f'{path.name}: 出现 WS 路径字面量但未见前缀化助手，请复核')
 
 src = (ROOT / 'MRRC').read_text(encoding='utf-8')

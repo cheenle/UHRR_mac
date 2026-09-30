@@ -19,6 +19,22 @@
 - `mrrc_multi.sh` uses a `detect_python()` helper to pick the interpreter for MRRC startup (no longer hardcodes `/opt/local/bin/python3.12`); instance names are validated to `[A-Za-z0-9_-]` to prevent shell→Python string-literal injection.
 - Windows installer build chain mirrors `../mrrc_modern`: run `packaging/windows/build.ps1` on a Windows build machine after placing the required native DLLs under `vendor/{opus,hamlib,wdsp}/windows/bin/x64/`. See `win_pack.md` for the full workflow.
 
+## Path Prefix (Cloud Hub)
+
+This app can be served behind a path entry (`/<product>/<callsign>/`) as well as at a
+subdomain root, so asset and request URLs must be **prefix-safe**:
+
+- `[SERVER] base_path` in `MRRC.conf` selects the prefix; empty (default) means behaviour
+  is exactly as before - keep it that way, and keep it tested that way.
+- Server side: routes go through `base_path.application(handlers, **kwargs)`; `_base_path.url()`
+  for redirects/next URLs; **and `path=_base_path.cookie_path(BASE_PATH)` on every cookie**.
+  That last one is not cosmetic - on the path entry every tenant shares one origin.
+- Client side: use `__mrrcUrl()` / `__wsURL()` / `baseUrl` (all derive the prefix from the
+  document directory); never hardcode a site-root path such as `'/WSaudioRX'` or `fetch('/api/...')`.
+- `sw.js` keeps its precache list absolute but derives the prefix from the registration scope.
+- Run `python3 dev_tools/test_path_prefix.py` after touching routes, assets, cookies or `sw.js`.
+  It caught two escapes a manual pattern sweep had missed.
+
 ## Tests And Diagnostics
 
 - No root manifest, root test runner, pre-commit config, or CI workflow is present; use focused dev tools instead of assuming pytest/npm for the whole repo.
