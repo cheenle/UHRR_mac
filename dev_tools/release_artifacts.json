@@ -1,0 +1,111 @@
+{
+  "version": 1,
+  "description": "MRRC 产物清单：每个携带版本号的文件在此登记一条规则。新文件开始携带版本/大小时必须补一条规则 —— 这是它不静默漂移的唯一保证。由 dev_tools/release_check.py 消费，tests/test_release_artifacts.py 在套件里执行。pattern 必须锚定到具体位置，绝不可裸扫 V[0-9.]+。",
+  "app_version_source": {
+    "path": "packaging/windows/MRRC.iss",
+    "pattern": "#define MyAppVersion \"([0-9.]+)\"",
+    "comment": "安装版本的唯一权威：packaging/windows/build.ps1 与 dev_tools/release_windows.sh 都读它。权威只读不判，不出现在 rules 里（避免循环权威）。"
+  },
+  "rules": [
+    {
+      "id": "changelog-top",
+      "path": "CHANGELOG.md",
+      "pattern": "^## \\[(?:V)?([0-9]+\\.[0-9]+\\.[0-9]+)\\]",
+      "first_only": true,
+      "why": "人先改的地方；与 iss 不一致 = 有一条忘了改。顶部夹有 [Unreleased]/[未发布] 等非版本标题，故取首个匹配而非数条数（历史标题有 75 条）。"
+    },
+    {
+      "id": "mobile-css",
+      "path": "www/mobile_modern.html",
+      "pattern": "mobile_modern\\.css\\?v=([0-9.]+)",
+      "count": 1,
+      "why": "静态资源缓存戳；不改则手机端拿到旧 JS。"
+    },
+    {
+      "id": "mobile-footer",
+      "path": "www/mobile_modern.html",
+      "pattern": "version-text\">MRRC V([0-9.]+)",
+      "count": 1
+    },
+    {
+      "id": "mobile-zh-footer",
+      "path": "www/mobile_modern_zh.html",
+      "pattern": "version-text\">MRRC V([0-9.]+)",
+      "count": 1
+    },
+    {
+      "id": "readme-title",
+      "path": "README.md",
+      "pattern": "\\(MRRC\\) V([0-9.]+)",
+      "count": 1
+    },
+    {
+      "id": "readme-badge",
+      "path": "README.md",
+      "pattern": "version-V([0-9.]+)-green\\.svg",
+      "count": 1
+    },
+    {
+      "id": "readme-cn-title",
+      "path": "README_CN.md",
+      "pattern": "\\(MRRC\\) V([0-9.]+)",
+      "count": 1
+    },
+    {
+      "id": "readme-cn-badge",
+      "path": "README_CN.md",
+      "pattern": "版本-V([0-9.]+)-green\\.svg",
+      "count": 1
+    },
+    {
+      "id": "readme-cn-latest",
+      "path": "README_CN.md",
+      "pattern": "最新版本: V([0-9.]+)",
+      "count": 1,
+      "why": "用户可见的\"当前版本\"声明，比 badge 更容易被当真。"
+    },
+    {
+      "id": "readme-en-title",
+      "path": "README_en.md",
+      "pattern": "\\(MRRC\\) V([0-9.]+)",
+      "count": 1
+    },
+    {
+      "id": "readme-en-badge",
+      "path": "README_en.md",
+      "pattern": "version-V([0-9.]+)-green\\.svg",
+      "count": 1
+    },
+    {
+      "id": "readme-en-latest",
+      "path": "README_en.md",
+      "pattern": "Latest Version: V([0-9.]+)",
+      "count": 1
+    },
+    {
+      "id": "website-stat",
+      "path": "website/index.html",
+      "pattern": "stat-value\">V([0-9]+\\.[0-9]+\\.[0-9]+)",
+      "count": 1,
+      "why": "锚定到 HTML 属性；同一文件里还有 V6.1.0/V6.0.10 的历史举例，裸扫会误报。"
+    },
+    {
+      "id": "website-headline",
+      "path": "website/index.html",
+      "pattern": "section-title\">V([0-9]+\\.[0-9]+\\.[0-9]+)",
+      "count": 1
+    },
+    {
+      "id": "website-zh-stat",
+      "path": "website/zh/index.html",
+      "pattern": "stat-value\">V([0-9]+\\.[0-9]+\\.[0-9]+)",
+      "count": 1
+    },
+    {
+      "id": "website-zh-headline",
+      "path": "website/zh/index.html",
+      "pattern": "section-title\">V([0-9]+\\.[0-9]+\\.[0-9]+)",
+      "count": 1
+    }
+  ]
+}

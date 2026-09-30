@@ -6,6 +6,7 @@
 
 import json
 import os
+import re
 import sys
 import tempfile
 import unittest
@@ -124,6 +125,70 @@ class RuleEngineTests(unittest.TestCase):
         self._write("packaging/windows/MRRC.iss", "nothing to see\n")
         with self.assertRaises(ValueError):
             rc.app_version(reg, self.root)
+
+
+class RepositoryStateTests(unittest.TestCase):
+    """真实仓库的检查结果。
+
+    本任务断言"检查器能检出已知漂移"；Task 3 修掉漂移后，
+    这里的期望会翻转为"干净"。
+    """
+
+    # spec §2.4：四个已知漂移文件，共 9 个锚点
+    KNOWN_DRIFT_IDS = {
+        "mobile-css", "mobile-footer", "mobile-zh-footer",
+        "readme-cn-title", "readme-cn-badge", "readme-cn-latest",
+        "readme-en-title", "readme-en-badge", "readme-en-latest",
+    }
+
+    def test_registry_loads_and_validates(self):
+        registry = rc.load_registry()
+        # 不断言具体版本号——升级后本测试不应变红
+        self.assertRegex(rc.app_version(registry), r"^\d+\.\d+\.\d+$")
+        for rule in registry["rules"]:
+            rc.validate_rule(rule)  # 不抛即可
+
+    def test_registry_governs_the_expected_files(self):
+        paths = {r["path"] for r in rc.load_registry()["rules"]}
+        for expected in ("CHANGELOG.md", "www/mobile_modern.html",
+                         "www/mobile_modern_zh.html", "README.md",
+                         "README_CN.md", "README_en.md",
+                         "website/index.html", "website/zh/index.html"):
+            self.assertIn(expected, paths)
+
+    def test_authority_file_is_not_itself_a_rule(self):
+        """iss 是权威，不能同时被治理（避免循环权威）。"""
+        paths = {r["path"] for r in rc.load_registry()["rules"]}
+        self.assertNotIn("packaging/windows/MRRC.iss", paths)
+
+    def test_detects_exactly_the_known_drift(self):
+        """当前状态下，恰好这 9 个锚点漂移。"""
+        registry = rc.load_registry()
+        expected = rc.app_version(registry)
+        failed = {f.rule_id for f in rc.check_rules(registry, expected)
+                  if f.status == rc.FAIL}
+        self.assertEqual(failed, self.KNOWN_DRIFT_IDS)
+
+    def test_non_anchored_pattern_would_false_positive(self):
+        """边界说明：裸扫 V[0-9.]+ 会把历史举例判成漂移。
+
+        这条测试锁住"为什么规则必须锚定"——它是给未来改规则的人的警告，
+        不是要求检查器支持裸扫。
+        """
+        registry = rc.load_registry()
+        expected = rc.app_version(registry)   # 不硬编码版本号
+        text = (rc.ROOT / "website" / "index.html").read_text(encoding="utf-8")
+        loose = {v.lstrip("vV") for v in re.findall(r"V([0-9]+\.[0-9]+\.[0-9]+)", text)}
+        anchored_rule = next(r for r in registry["rules"] if r["id"] == "website-stat")
+        anchored = {v.lstrip("vV") for v in re.findall(
+            anchored_rule["pattern"], text, re.MULTILINE)}
+        # 裸扫会带出历史版本；锚定不会
+        self.assertTrue(loose - {expected}, "裸扫未带出历史版本，本测试失去意义")
+        self.assertEqual(anchored, {expected})
+
+    def test_main_is_clean_after_drift_fix(self):
+        """Task 3 修完漂移后本函数必须返回 0；当前应为 1。"""
+        self.assertEqual(rc.main([]), 0)
 
 
 if __name__ == "__main__":
