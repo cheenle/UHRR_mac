@@ -106,6 +106,17 @@
   `README.md` 的更新史与 `website/index.html` 的历史举例会被误判。
 - `tests/test_release_artifacts.py` 在套件里跑它；发版收尾必跑一次 `--strict`。
 
+## 发布技能
+- `.pi/skills/mrrc-release/` —— 发版全链路：版本权威链（`packaging/windows/MRRC.iss` 的
+  `MyAppVersion`，**不是** CHANGELOG 顶条，与 `../mrrc_modern` 相反）、`./dev_tools/release_windows.sh`
+  一条命令发版、热修通道下发（`--requires` 必须显式传；漏了 `cp dist/hotfix/* website/downloads/`
+  会静默失败）、发版验收表。
+- `.pi/skills/windows-installer/` —— Win11 KVM VM 上的构建门禁、产物取证（别信退出码）、
+  `_APP_MODULES` 与热修覆盖面、PowerShell 5.1 / GBK / OOM / job object 等陷阱。
+- 两者都由 `tests/test_release_skills.py` 守着（frontmatter 文风 + 正文引用的仓库路径必须存在），
+  改动后用 `./dev_tools/sync_skills.sh` 同步到 `~/.pi/agent/skills` 与 `~/.agents/skills`。
+- `macos-installer` 技能待 P3（macOS 打包链）落地后补，那时才有经过实战的 gotcha 可写。
+
 ## Existing Guidance
 - 天线/天调（EFHW × ATR-1000）：扫频画像、学习库体检/修复、测算页的全程复盘与铁律在 `docs/current/antenna/efhw-atr1000-project-retrospective-2026-09-28.md`，操作技能沉淀在 `.pi/skills/antenna-sweep/SKILL.md`（与 `~/.agents/skills/antenna-sweep/` 同步）。动天线测量、学习库或调谐自动化前先读。关键坑：PTTSafetyMonitor TOT=120s 不豁免 tune（长会话工具须 re-arm）、确认学习需继电器稳定 >8s、改学习库必须走 proxy socket learn。
 - `docs/current/reliability/` indexes the reliability/safety case series (RC-001: IOLoop wedge + BT-DAC-churn silent TX); consult it before touching TX init, the IOLoop, or macOS audio device handling.
