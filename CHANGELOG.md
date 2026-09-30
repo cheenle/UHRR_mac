@@ -1,11 +1,20 @@
 # Changelog
 
-All notable changes to this project will be documented in this file.
+## [Unreleased]
 
+### ☁️ Cloud Hub 路径入口支持（base_path）
+
+- **新增** `base_path.py` 与 `[SERVER] base_path` 配置：实例可挂在 `/<产品>/<呼号>/` 路径下运行，
+  与子域根路径入口并存。默认空值 = 行为与之前完全一致。
+- **修复** 路径入口下的三类前缀逃逸：HTML 站点根绝对引用（8 处）、`fetch('/api/...')`（3 处）、
+  WebSocket 地址（10 处，含 2 处 `location.href.split` 写法，由守卫测试发现）。
+- **安全** Cookie 的 `path` 限定到前缀：路径入口下同 origin 的多个产品不再互相覆盖会话（fleet 评审 P0-3）。
+- **打包** `Dockerfile` 增加 `base_path.py`（缺它会在容器内 ImportError）。
+- **测试** 新增 `dev_tools/test_path_prefix.py` 守卫（模块行为 + 资产扫描 + 服务端接线 + 打包）。
+- 详见 `docs/current/design/hub-parity-plan.md`；未完成：TX 活性闸门、会话遥测。
+All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
-
-## [Unreleased]
 
 ### 🩹 Device Config 抽屉不再每 2.5 s 自重建（"搜索/选择一闪而过"）
 
