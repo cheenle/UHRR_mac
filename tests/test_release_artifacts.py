@@ -33,40 +33,40 @@ class RuleEngineTests(unittest.TestCase):
         return p
 
     def test_matching_version_passes(self):
-        self._write("a.html", "<span>V6.1.18</span>")
-        rule = {"id": "a", "path": "a.html", "pattern": r"V([0-9.]+)", "count": 1}
+        self._write("a.html", "<span>ver-V6.1.18</span>")
+        rule = {"id": "a", "path": "a.html", "pattern": r"ver-V([0-9.]+)", "count": 1}
         self.assertEqual(rc.evaluate_rule(rule, "6.1.18", self.root).status, rc.PASS)
 
     def test_stale_version_fails(self):
-        self._write("a.html", "<span>V6.1.16</span>")
-        rule = {"id": "a", "path": "a.html", "pattern": r"V([0-9.]+)", "count": 1}
+        self._write("a.html", "<span>ver-V6.1.16</span>")
+        rule = {"id": "a", "path": "a.html", "pattern": r"ver-V([0-9.]+)", "count": 1}
         found = rc.evaluate_rule(rule, "6.1.18", self.root)
         self.assertEqual(found.status, rc.FAIL)
         self.assertIn("6.1.16", found.detail)
 
     def test_count_mismatch_fails(self):
-        self._write("a.html", "V6.1.18 V6.1.18")
-        rule = {"id": "a", "path": "a.html", "pattern": r"V([0-9.]+)", "count": 1}
+        self._write("a.html", "ver-V6.1.18 ver-V6.1.18")
+        rule = {"id": "a", "path": "a.html", "pattern": r"ver-V([0-9.]+)", "count": 1}
         self.assertEqual(rc.evaluate_rule(rule, "6.1.18", self.root).status, rc.FAIL)
 
     def test_min_count_not_met_fails(self):
-        self._write("a.html", "V6.1.18")
-        rule = {"id": "a", "path": "a.html", "pattern": r"V([0-9.]+)", "min_count": 2}
+        self._write("a.html", "ver-V6.1.18")
+        rule = {"id": "a", "path": "a.html", "pattern": r"ver-V([0-9.]+)", "min_count": 2}
         self.assertEqual(rc.evaluate_rule(rule, "6.1.18", self.root).status, rc.FAIL)
 
     def test_pattern_without_match_fails(self):
         self._write("a.html", "no version here")
-        rule = {"id": "a", "path": "a.html", "pattern": r"V([0-9.]+)", "count": 1}
+        rule = {"id": "a", "path": "a.html", "pattern": r"ver-V([0-9.]+)", "count": 1}
         found = rc.evaluate_rule(rule, "6.1.18", self.root)
         self.assertEqual(found.status, rc.FAIL)
         self.assertIn("锚点", found.detail)
 
     def test_missing_required_file_fails(self):
-        rule = {"id": "a", "path": "nope.html", "pattern": r"V([0-9.]+)", "count": 1}
+        rule = {"id": "a", "path": "nope.html", "pattern": r"ver-V([0-9.]+)", "count": 1}
         self.assertEqual(rc.evaluate_rule(rule, "6.1.18", self.root).status, rc.FAIL)
 
     def test_missing_optional_file_skips(self):
-        rule = {"id": "a", "path": "nope.html", "pattern": r"V([0-9.]+)",
+        rule = {"id": "a", "path": "nope.html", "pattern": r"ver-V([0-9.]+)",
                 "count": 1, "optional": True}
         self.assertEqual(rc.evaluate_rule(rule, "6.1.18", self.root).status, rc.SKIP)
 
@@ -92,24 +92,60 @@ class RuleEngineTests(unittest.TestCase):
         self.assertEqual(rc.evaluate_rule(rule, "6.1.19", self.root).status, rc.FAIL)
 
     def test_leading_v_is_normalized(self):
-        self._write("a.html", "V6.1.18")
-        rule = {"id": "a", "path": "a.html", "pattern": r"V([0-9.]+)", "count": 1}
+        self._write("a.html", "ver-V6.1.18")
+        rule = {"id": "a", "path": "a.html", "pattern": r"ver-V([0-9.]+)", "count": 1}
         # 期望值带不带 v 都该通过（两侧都 lstrip）
         self.assertEqual(rc.evaluate_rule(rule, "v6.1.18", self.root).status, rc.PASS)
 
     def test_first_only_with_count_is_rejected(self):
         """互斥字段同时出现必须报错，不能静默取其一。"""
-        rule = {"id": "a", "path": "a.html", "pattern": r"V([0-9.]+)",
+        rule = {"id": "a", "path": "a.html", "pattern": r"ver-V([0-9.]+)",
                 "first_only": True, "count": 1}
         with self.assertRaises(ValueError):
             rc.validate_rule(rule)
 
     def test_rule_requires_id_path_pattern(self):
         for missing in ("id", "path", "pattern"):
-            rule = {"id": "a", "path": "a.html", "pattern": r"V([0-9.]+)"}
+            rule = {"id": "a", "path": "a.html", "pattern": r"ver-V([0-9.]+)"}
             del rule[missing]
             with self.assertRaises(ValueError):
                 rc.validate_rule(rule)
+
+    def test_unanchored_pattern_is_rejected(self):
+        """裸扫版本号必须在**加载规则时**就被拒绝，而不是等它误报。
+
+        `V([0-9.]+)` 会把 README 的更新史与网站的历史举例算成漂移；
+        真出现一次误报潮，团队就会学会无视检查器。
+        """
+        for pattern in (r"V([0-9.]+)", r"v?([0-9.]+)",
+                        r"([0-9]+\.[0-9]+\.[0-9]+)", r"V([0-9.]+)\b"):
+            with self.subTest(pattern=pattern):
+                rule = {"id": "a", "path": "a.html", "pattern": pattern, "count": 1}
+                with self.assertRaises(ValueError):
+                    rc.validate_rule(rule)
+
+    def test_anchored_patterns_are_accepted(self):
+        """锚点检查不能误伤正常写法（行首锚、属性锚、可选 V 前缀）。"""
+        for pattern in (r'^## \[(?:V)?([0-9]+\.[0-9]+\.[0-9]+)\]',
+                        r'stat-value">V([0-9]+\.[0-9]+\.[0-9]+)',
+                        r"最新版本: V([0-9.]+)",
+                        r"version-V([0-9.]+)-green\.svg"):
+            with self.subTest(pattern=pattern):
+                rc.validate_rule({"id": "a", "path": "a.html",
+                                  "pattern": pattern, "count": 1})
+
+    def test_structurally_malformed_registry_exits_2(self):
+        """清单结构坏掉 = "清单不可读"，必须退出 2。
+
+        抛 AttributeError 栈再退回 1 会让自动化把"清单坏了"读成"有版本漂移"。
+        """
+        source = rc.load_registry()["app_version_source"]
+        for bad in (["oops"], {"a": "b"}, None, "oops"):
+            with self.subTest(rules=bad):
+                p = self.root / "reg.json"
+                p.write_text(json.dumps({"app_version_source": source,
+                                         "rules": bad}), encoding="utf-8")
+                self.assertEqual(rc.main([], registry_path=p), 2)
 
     def test_app_version_reads_iss(self):
         reg = {"app_version_source": {
@@ -154,6 +190,29 @@ class RepositoryStateTests(unittest.TestCase):
         paths = {r["path"] for r in rc.load_registry()["rules"]}
         self.assertNotIn("packaging/windows/MRRC.iss", paths)
 
+    def test_every_readme_version_declaration_is_governed(self):
+        """三份 README 的"最新版本"声明：既必须等于权威，又必须被规则治理。
+
+        README.md 的那一行曾经漏治理，停在 V6.0.0 而检查器报全绿——
+        这正是本工具存在的原因，所以两层都要断言。
+        """
+        registry = rc.load_registry()
+        expected = rc.app_version(registry)
+        decl = re.compile(r"(?:Latest Release|最新版本|Latest Version)\s*[:：]\s*V?([0-9.]+)")
+        for name in ("README.md", "README_CN.md", "README_en.md"):
+            text = (rc.ROOT / name).read_text(encoding="utf-8")
+            with self.subTest(readme=name):
+                found = decl.findall(text)
+                self.assertTrue(found, f"{name} 里找不到版本声明，本测试失去意义")
+                self.assertEqual(found, [expected],
+                                 f"{name} 的版本声明 {found} 与权威 {expected} 不符")
+                decl_lines = [ln for ln in text.splitlines() if decl.search(ln)]
+                governed = [r["id"] for r in registry["rules"] if r["path"] == name
+                            and any(re.search(r["pattern"], ln, re.MULTILINE)
+                                    for ln in decl_lines)]
+                self.assertTrue(governed,
+                                f"{name} 的版本声明没有任何规则治理，它会再次静默漂移")
+
     def test_non_anchored_pattern_would_false_positive(self):
         """边界说明：裸扫 V[0-9.]+ 会把历史举例判成漂移。
 
@@ -187,15 +246,33 @@ class VersionTxtDerivationTests(unittest.TestCase):
         return (rc.ROOT / rel).read_text(encoding="utf-8", errors="replace")
 
     def test_windows_build_derives_version_txt_from_iss(self):
+        """version.txt 的值必须是**变量**，且该变量取自 MRRC.iss 的 MyAppVersion。
+
+        只断言两个字符串出现过是不够的：`-Value "6.1.19"` 这种硬编码同样能通过，
+        而它会让 version.txt 与 iss 脱钩——正是本守卫要防的回归。
+        """
         text = self._text("packaging/windows/build.ps1")
-        self.assertIn("version.txt", text, "build.ps1 必须写 version.txt")
-        self.assertIn("MyAppVersion", text,
-                      "build.ps1 必须从 MRRC.iss 的 MyAppVersion 派生版本")
+        written = re.search(
+            r'Set-Content\s+-Path\s+\(Join-Path\s+\$AppRoot\s+"version\.txt"\)\s+'
+            r'-Value\s+(\S+)', text)
+        self.assertIsNotNone(
+            written, "build.ps1 必须用 Set-Content … \"version.txt\" 写版本标记")
+        var = written.group(1)
+        self.assertRegex(var, r"^\$[A-Za-z_]\w*$",
+                         f"version.txt 的值必须是变量，不能硬编码版本字面量：{var!r}")
+        assign = re.search(re.escape(var) + r"\s*=\s*(.+)", text)
+        self.assertIsNotNone(assign, f"build.ps1 里找不到 {var} 的赋值")
+        source = assign.group(1)
+        self.assertIn("MRRC.iss", source, f"{var} 必须从 MRRC.iss 取版本")
+        self.assertIn("MyAppVersion", source, f"{var} 必须读 MyAppVersion")
 
     def test_windows_launcher_reads_version_txt(self):
+        """运行时权威是 version.txt；启动器必须在 _installed_version() 里读它。"""
         text = self._text("windows/launcher.py")
-        self.assertIn("version.txt", text,
-                      "运行时权威是 version.txt；启动器必须读它")
+        fn = re.search(r"def _installed_version\(\).*?(?=\ndef |\Z)", text, re.S)
+        self.assertIsNotNone(fn, "启动器必须有 _installed_version()")
+        self.assertIn("version.txt", fn.group(0),
+                      "_installed_version() 必须读 version.txt（那是运行时权威）")
 
 
 class ReleaseSourceZipTests(unittest.TestCase):

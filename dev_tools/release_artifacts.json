@@ -46,6 +46,13 @@
       "count": 1
     },
     {
+      "id": "readme-latest",
+      "path": "README.md",
+      "pattern": "Latest Release: V([0-9.]+)",
+      "count": 1,
+      "why": "用户可见的\"当前版本\"声明。它曾停在 V6.0.0（落后 11 个版本）而检查器报全绿——因为只有 README_CN/README_en 的对应行受了治理。tests/test_release_artifacts.py::test_every_readme_version_declaration_is_governed 现在同时守着三份 README。"
+    },
+    {
       "id": "readme-cn-title",
       "path": "README_CN.md",
       "pattern": "\\(MRRC\\) V([0-9.]+)",

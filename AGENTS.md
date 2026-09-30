@@ -103,7 +103,11 @@
   的 `MyAppVersion`（`packaging/windows/build.ps1` 与 `dev_tools/release_windows.sh` 都读它）。
 - 规则表 `dev_tools/release_artifacts.json`：**新文件开始携带版本/大小时必须补一条规则**，
   否则它会静默漂移。规则 pattern 必须锚定到具体位置，**绝不可裸扫 `V[0-9.]+`**——
-  `README.md` 的更新史与 `website/index.html` 的历史举例会被误判。
+  `README.md` 的更新史与 `website/index.html` 的历史举例会被误判；这条已由
+  `validate_rule()` 的锚点检查机械拒绝（捕获组前必须有属性名/标签/行首等具体上下文）。
+- 三份 README 的"最新版本"声明（`Latest Release:` / `最新版本:` / `Latest Version:`）各有规则；
+  `tests/test_release_artifacts.py::test_every_readme_version_declaration_is_governed`
+  会揪出任何**新增但未登记**的声明——`README.md` 那行曾漏治理停在 V6.0.0 而检查器报全绿。
 - `tests/test_release_artifacts.py` 在套件里跑它；发版收尾必跑一次 `--strict`。
 
 ## 发布技能

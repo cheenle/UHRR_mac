@@ -29,12 +29,27 @@ PASS, FAIL, SKIP = "PASS", "FAIL", "SKIP"
 
 _REQUIRED_FIELDS = ("id", "path", "pattern")
 
+# 捕获组的起点；`(?:...)` 不算
+_CAPTURE_START = re.compile(r"(?<!\\)\((?!\?)")
+_REGEX_META = re.compile(r"[\\^$.|?*+(){}\[\]]")
+# 裸版本扫描里会出现的字符——只有这些不算"具体上下文"
+_VERSION_ONLY = set("0123456789. \tVv")
+
 
 class Finding(NamedTuple):
     rule_id: str
     path: str
     status: str
     detail: str = ""
+
+
+def _has_anchor(pattern: str) -> bool:
+    """捕获组之前是否留有"具体上下文"（属性名 / 标签 / 行首）。"""
+    m = _CAPTURE_START.search(pattern)
+    if m is None:
+        return True          # 没有捕获组：无可判定的锚点，交给别处报错
+    prefix = _REGEX_META.sub("", pattern[:m.start()])
+    return any(ch not in _VERSION_ONLY for ch in prefix)
 
 
 def validate_rule(rule: dict) -> None:
@@ -49,6 +64,11 @@ def validate_rule(rule: dict) -> None:
         re.compile(rule["pattern"])
     except re.error as exc:
         raise ValueError(f"规则 {rule['id']!r} 的 pattern 非法：{exc}") from exc
+    if not _has_anchor(rule["pattern"]):
+        raise ValueError(
+            f"规则 {rule['id']!r} 的 pattern 未锚定：捕获组前必须有具体上下文"
+            f"（属性名/标签/行首），不能裸扫 V([0-9.]+)——README 的更新史与"
+            f"网站的历史举例会被判成漂移")
 
 
 def _normalize(version: str) -> str:
@@ -127,7 +147,7 @@ def _report(expected: str, findings: list) -> None:
         print(f"  {_MARK[f.status]} {f.rule_id:<22} {f.path:<34} {f.detail}")
 
 
-def main(argv=None) -> int:
+def main(argv=None, registry_path: Path = REGISTRY_PATH) -> int:
     parser = argparse.ArgumentParser(description="MRRC 发布完成度检查")
     parser.add_argument("--json", action="store_true", help="机器可读输出")
     parser.add_argument("--strict", action="store_true",
@@ -135,11 +155,17 @@ def main(argv=None) -> int:
     args = parser.parse_args(argv)
 
     try:
-        registry = load_registry()
-        for rule in registry["rules"]:
+        registry = load_registry(registry_path)
+        rules = registry["rules"]
+        if not isinstance(rules, list):
+            raise ValueError(f"rules 必须是列表，实际是 {type(rules).__name__}")
+        for rule in rules:
+            if not isinstance(rule, dict):
+                raise ValueError(f"每条规则必须是对象，实际是 {rule!r}")
             validate_rule(rule)
         expected = app_version(registry)
-    except (OSError, KeyError, ValueError, json.JSONDecodeError) as exc:
+    except (OSError, KeyError, ValueError, TypeError, AttributeError,
+            json.JSONDecodeError) as exc:
         print(f"清单或权威不可用：{exc}", file=sys.stderr)
         return 2
 

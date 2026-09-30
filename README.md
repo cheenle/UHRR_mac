@@ -342,7 +342,7 @@ Based on [F4HTB/Universal_HamRadio_Remote_HTML5](https://github.com/F4HTB/Univer
 
 ---
 
-**Latest Release: V6.0.0** (2026-09-05) | [View Changelog](CHANGELOG.md)
+**Latest Release: V6.1.18** (2026-09-17) | [View Changelog](CHANGELOG.md)
 
 ## 🖥️ Multi-Instance Support ⭐ New
 
