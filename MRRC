@@ -914,6 +914,15 @@ class WS_AudioRXHandler(AuthenticatedWebSocketHandler):
 
 ############ websocket for control TX ##############
 last_AudioTXHandler_msg_time=0
+
+# PTT 活性闸门：发射期间若连续 _TX_MISS_LIMIT 次（每 _TX_POLL_S 秒检查一次）
+# 没收到客户端音频帧，即判定客户端假死并收回 PTT（走 CTRX.setPTT("false")，与
+# TOT 硬上限同一条释放路径）。它在 2026-09 之前是硬编码的 25 × 200ms ≈ 5s；
+# 本次只把它变成可配置，默认值即原行为 —— 安全行为不因配置重构而改变。
+# 0 = 关闭（不建议：关闭后只剩下 TOT 兜底）。
+_TX_POLL_S = 0.2
+_TX_LIVENESS_S = float(config['CTRL'].get('tx_liveness_s', 5.0) or 0)
+_TX_MISS_LIMIT = max(1, int(round(_TX_LIVENESS_S / _TX_POLL_S))) if _TX_LIVENESS_S > 0 else 0
 AudioTXHandlerClients = []
 
 class WS_AudioTXHandler(AuthenticatedWebSocketHandler):
@@ -928,11 +937,11 @@ class WS_AudioTXHandler(AuthenticatedWebSocketHandler):
 			if tune_playing or cq_playing:
 				return None
 
-			# 每200ms检查一次，连续25次未收到帧（约5秒）则熄灭PTT
+			# 每 _TX_POLL_S 检查一次，连续 _TX_MISS_LIMIT 次未收到帧则熄灭 PTT（默认 ≈5s）
 			# 增加容忍度以应对网络延迟和浏览器处理延迟
-			if time.time() > last_AudioTXHandler_msg_time + 0.2:
+			if _TX_MISS_LIMIT and time.time() > last_AudioTXHandler_msg_time + _TX_POLL_S:
 				self.miss_count += 1
-				if self.miss_count >= 25 and self.ws_connection and CTRX.mrrc_ptt_active:
+				if self.miss_count >= _TX_MISS_LIMIT and self.ws_connection and CTRX.mrrc_ptt_active:
 					CTRX.setPTT("false")
 					print("stop ptt on timeout by miss_count (25x200ms)")
 			else:
@@ -940,7 +949,7 @@ class WS_AudioTXHandler(AuthenticatedWebSocketHandler):
 		except:
 			return None
 		# Check more frequently for faster response
-		tornado.ioloop.IOLoop.instance().add_timeout(datetime.timedelta(seconds=0.2), self.stoppttontimeout)
+		tornado.ioloop.IOLoop.instance().add_timeout(datetime.timedelta(seconds=_TX_POLL_S), self.stoppttontimeout)
 
 
 	def _start_tx_init_async(self, msg):

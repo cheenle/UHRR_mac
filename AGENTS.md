@@ -46,6 +46,25 @@ subdomain root, so asset and request URLs must be **prefix-safe**:
   WARNING by default and would swallow them.
 - Unit test: `python3 dev_tools/test_session_metrics.py`.
 
+## PTT Safety (three independent layers)
+
+Do not weaken any of these; they are why a stuck transmitter is a five-second problem
+rather than a two-minute one:
+
+1. **Liveness gate** - `WS_AudioTXHandler.stoppttontimeout()` releases PTT when audio frames
+   stop arriving: `[CTRL] tx_liveness_s`, default 5.0s (the historical 25 x 200ms), `0` disables
+   and leaves only the TOT. Skipped while tune/CQ playback is active.
+2. **TOT hard cap** - `PTTSafetyMonitor` forces release past `CTRX.ptt_tot_seconds` (default 120s),
+   independent of clients, sockets and audio.
+3. **Release retry** - if `setPTT("false")` fails three times, the monitor retries every 2s until
+   the hardware confirms.
+
+Guard: `python3 dev_tools/test_ptt_liveness.py`.
+
+**Config gotcha**: this app parses `MRRC.conf` with configparser, which does **not** support
+inline comments - `key = 5.0  # note` fails with a ValueError at startup. Put comments on
+their own line. (Also: the TX config section is `[CTRL]`; `CTRX` is the runtime object.)
+
 ## Tests And Diagnostics
 
 - No root manifest, root test runner, pre-commit config, or CI workflow is present; use focused dev tools instead of assuming pytest/npm for the whole repo.

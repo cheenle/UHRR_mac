@@ -49,7 +49,14 @@
    + `[SERVER] metrics_interval_s`（默认 60、0 关闭）+ `dev_tools/test_session_metrics.py`。
    连接数直接读既有 `*Clients` 列表（`AudioPana`/`AudioRX`/`AudioTX`/`ControlTRX`），**未侵入 WS 生命周期**。
    计数器目前只提供接口（`bump()`），尚未在音频/TX 路径埋点 —— 埋点要碰实时路径，留待需要时单独做。
-2. **PTT 活性闸门（P0-1 类）**：TX 路径在本仓是另一套代码（`hamlib_wrapper.py` / `audio_interface.py` /
+2. ~~**PTT 活性闸门（原误记为缺失）**~~ —— **不需要做（更正）**：能力**本来就存在** ——
+   `WS_AudioTXHandler.stoppttontimeout()` 连续 25 × 200ms ≈ 5s 未收帧即 `CTRX.setPTT("false")`；
+   另有 `PTTSafetyMonitor` 的 TOT 硬上限（`[CTRL] ptt_tot_seconds`，默认 120s）与释放失败每 2s 重试。
+   本次只把阈值变成可配置（`[CTRL] tx_liveness_s`，默认 5.0 = 原行为，0 = 关闭）+ 补守卫测试。
+   **教训**：原文档的结论来自只读了 TX 路径的一部分 —— 下结论前要读完那条路径。
+   另注：配置值不能写行内注释（configparser 不支持），否则启动 ValueError。
+
+3. ~~**PTT 活性闸门（原误记为缺失）**~~：TX 路径在本仓是另一套代码（`hamlib_wrapper.py` / `audio_interface.py` /
    `atu_auto_tuner.py`），mrrc_modern 的实现不能复用。需：客户端心跳 → 服务端超时即释放 PTT，
    与既有 `MAX_TX` 类时长上限构成两条独立防线；默认关闭，Hub 模式建议 3–5 秒
 2. **会话遥测**：需新增等价于 mrrc_modern `session_metrics.py` + `/api/session_metrics` 的聚合与周期日志，

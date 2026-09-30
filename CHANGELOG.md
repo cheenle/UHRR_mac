@@ -32,6 +32,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **新增** `[SERVER] metrics_interval_s`（默认 60，0 = 关闭）：周期把上述指标打成**一行**日志，便于 grep 与长期归档；用 `print` 而非 logger（本产品 logger 默认 WARNING，会吞掉它）。
 - **测试** `dev_tools/test_session_metrics.py`。
 - 用途：Hub 侧容量决策（如是否做 RX 扇出）不再靠估计。
+
+### 🛡️ PTT 活性闸门阈值可配置（默认行为不变）
+
+- **更正**：发射期间"连续未收到客户端音频帧即收回 PTT"的看门狗**早已存在**（原硬编码 25 × 200ms ≈ 5s，
+  走 `CTRX.setPTT("false")`）；连同 `PTTSafetyMonitor` 的 TOT 硬上限（120s）与释放失败每 2s 重试，共三层独立防线。
+  此前文档误记为"缺失"，本次一并更正。
+- **新增** `[CTRL] tx_liveness_s`（默认 `5.0` = 原行为；`0` = 关闭，不建议）。摆在慢速隧道后（Cloud Hub 模式）
+  时可按需放宽，避免网络抖动误收回。
+- **注意**：配置值**不得写行内注释** —— 本产品用 configparser，它不支持行内 `#`，会把注释当值的一部分
+  导致启动时 ValueError。注释请独占一行（本次即为踩坑后修正）。
+- **测试** `dev_tools/test_ptt_liveness.py`：除守住"默认仍是 5s / 未残留硬编码 / 走既有释放路径"外，
+  还校验**配置段名真实存在**与**取值可被解析**（这两条今天各抓到一个会导致启动崩溃的错误）。
 ## [V6.1.18] - 2026-09-17
 
 ### 🧠 NR3(RNNoise) 进包 + WDSP C 层旋钮 + 门控修复
