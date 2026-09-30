@@ -1,6 +1,6 @@
-# Mobile Remote Radio Control (MRRC) V6.0.0
+# Mobile Remote Radio Control (MRRC) V6.1.18
 
-[![English](https://img.shields.io/badge/lang-English-blue.svg)](README_en.md) [![中文](https://img.shields.io/badge/lang-中文-red.svg)](README_CN.md) [![版本](https://img.shields.io/badge/版本-V6.0.0-green.svg)](CHANGELOG.md)
+[![English](https://img.shields.io/badge/lang-English-blue.svg)](README_en.md) [![中文](https://img.shields.io/badge/lang-中文-red.svg)](README_CN.md) [![版本](https://img.shields.io/badge/版本-V6.1.18-green.svg)](CHANGELOG.md)
 
 **随时随地，畅享业余无线电。**
 
@@ -386,7 +386,7 @@ curl -X POST -H "Content-Type: application/json" \
 
 ---
 
-**最新版本: V6.0.0** (2026-09-05) | [查看更新日志](CHANGELOG.md)
+**最新版本: V6.1.18** (2026-09-17) | [查看更新日志](CHANGELOG.md)
 
 ## 🖥️ 多实例支持（Multi-Instance）⭐ 新功能
 

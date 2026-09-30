@@ -134,13 +134,6 @@ class RepositoryStateTests(unittest.TestCase):
     这里的期望会翻转为"干净"。
     """
 
-    # spec §2.4：四个已知漂移文件，共 9 个锚点
-    KNOWN_DRIFT_IDS = {
-        "mobile-css", "mobile-footer", "mobile-zh-footer",
-        "readme-cn-title", "readme-cn-badge", "readme-cn-latest",
-        "readme-en-title", "readme-en-badge", "readme-en-latest",
-    }
-
     def test_registry_loads_and_validates(self):
         registry = rc.load_registry()
         # 不断言具体版本号——升级后本测试不应变红
@@ -161,14 +154,6 @@ class RepositoryStateTests(unittest.TestCase):
         paths = {r["path"] for r in rc.load_registry()["rules"]}
         self.assertNotIn("packaging/windows/MRRC.iss", paths)
 
-    def test_detects_exactly_the_known_drift(self):
-        """当前状态下，恰好这 9 个锚点漂移。"""
-        registry = rc.load_registry()
-        expected = rc.app_version(registry)
-        failed = {f.rule_id for f in rc.check_rules(registry, expected)
-                  if f.status == rc.FAIL}
-        self.assertEqual(failed, self.KNOWN_DRIFT_IDS)
-
     def test_non_anchored_pattern_would_false_positive(self):
         """边界说明：裸扫 V[0-9.]+ 会把历史举例判成漂移。
 
@@ -187,8 +172,12 @@ class RepositoryStateTests(unittest.TestCase):
         self.assertEqual(anchored, {expected})
 
     def test_main_is_clean_after_drift_fix(self):
-        """Task 3 修完漂移后本函数必须返回 0；当前应为 1。"""
+        """漂移已修：真实仓库必须干净。"""
         self.assertEqual(rc.main([]), 0)
+
+    def test_main_is_clean_in_strict_mode(self):
+        """发布日形态：不允许任何 SKIP（当前无 optional 规则，故同样应为 0）。"""
+        self.assertEqual(rc.main(["--strict"]), 0)
 
 
 if __name__ == "__main__":

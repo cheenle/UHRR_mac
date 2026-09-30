@@ -1,6 +1,6 @@
-# Mobile Remote Radio Control (MRRC) V6.0.0
+# Mobile Remote Radio Control (MRRC) V6.1.18
 
-[![English](https://img.shields.io/badge/lang-English-blue.svg)](README_en.md) [![中文](https://img.shields.io/badge/lang-中文-red.svg)](README_CN.md) [![Version](https://img.shields.io/badge/version-V6.0.0-green.svg)](CHANGELOG.md)
+[![English](https://img.shields.io/badge/lang-English-blue.svg)](README_en.md) [![中文](https://img.shields.io/badge/lang-中文-red.svg)](README_CN.md) [![Version](https://img.shields.io/badge/version-V6.1.18-green.svg)](CHANGELOG.md)
 
 **Amateur Radio, Anytime, Anywhere.**
 
@@ -362,7 +362,7 @@ Based on [F4HTB/Universal_HamRadio_Remote_HTML5](https://github.com/F4HTB/Univer
 
 ---
 
-**Latest Version: V6.0.0** (2026-09-05) | [View Changelog](CHANGELOG.md)
+**Latest Version: V6.1.18** (2026-09-17) | [View Changelog](CHANGELOG.md)
 
 **MRRC - Mobile Remote Radio Control**  
 *Amateur Radio, Anytime, Anywhere.*
