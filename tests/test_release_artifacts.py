@@ -198,5 +198,59 @@ class VersionTxtDerivationTests(unittest.TestCase):
                       "运行时权威是 version.txt；启动器必须读它")
 
 
+class ReleaseSourceZipTests(unittest.TestCase):
+    """发行源码包（传给构建 VM 的 zip）的文件选择。
+
+    打包逻辑在 dev_tools/release_windows.sh，排除前缀外置在
+    dev_tools/release_src_excludes.json，本测试是该不变量的唯一守卫。
+    """
+
+    EXCLUDES = rc.ROOT / "dev_tools" / "release_src_excludes.json"
+
+    def _excludes(self):
+        return json.loads(self.EXCLUDES.read_text(encoding="utf-8"))
+
+    def _tracked(self):
+        import subprocess
+        return subprocess.run(["git", "ls-files"], cwd=rc.ROOT,
+                              capture_output=True, text=True,
+                              check=True).stdout.split()
+
+    def test_exclude_file_exists_and_is_wellformed(self):
+        data = self._excludes()
+        self.assertIsInstance(data["exclude_prefixes"], list)
+        self.assertTrue(all(isinstance(p, str) and p.endswith("/")
+                            for p in data["exclude_prefixes"]),
+                        "排除前缀必须以 / 结尾，避免 certs 误伤 certs_foo")
+
+    def test_private_key_material_is_excluded(self):
+        """certs/ 下确实有私钥，且必须被排除。
+
+        判据是"basename 里含 `.key`"而不是"以 `.key` 结尾"——真实私钥
+        `radio.vlsc.net.key.20260317_010431` 带时间戳后缀；而
+        `certs/backup/fullchain_complete.pem` 是**公开**的证书链，不算私钥。
+        """
+        keys = [f for f in self._tracked()
+                if f.startswith("certs/") and ".key" in Path(f).name]
+        self.assertTrue(keys, "前提失效：certs/ 下已无可识别的私钥，本规则可删")
+        excludes = self._excludes()["exclude_prefixes"]
+        leaked = [f for f in keys if not any(f.startswith(p) for p in excludes)]
+        self.assertEqual(leaked, [], f"私钥会随源码包上传构建 VM：{leaked}")
+
+    def test_every_exclude_prefix_matches_something(self):
+        """没有失效规则（拼错的前缀会静默不排除任何东西）。"""
+        tracked = self._tracked()
+        for prefix in self._excludes()["exclude_prefixes"]:
+            with self.subTest(prefix=prefix):
+                self.assertTrue(any(f.startswith(prefix) for f in tracked),
+                                f"排除前缀 {prefix!r} 不匹配任何被跟踪文件")
+
+    def test_script_reads_the_exclude_file(self):
+        """脚本必须真的读它，而不是各写一份。"""
+        text = (rc.ROOT / "dev_tools" / "release_windows.sh").read_text(
+            encoding="utf-8", errors="replace")
+        self.assertIn("release_src_excludes.json", text)
+
+
 if __name__ == "__main__":
     unittest.main()

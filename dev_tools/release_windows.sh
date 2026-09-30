@@ -61,9 +61,10 @@ fi
 if [ "$SKIP_BUILD" = 0 ]; then
     log "打包源码（含 DSP/wdsp 全部 .c/.h 与补丁）"
     run "venv/bin/python3 - <<'PY'
-import os, subprocess, zipfile
+import json, os, subprocess, zipfile
+excl = json.load(open('dev_tools/release_src_excludes.json'))['exclude_prefixes']
 tracked=[f for f in subprocess.run(['git','ls-files'],capture_output=True,text=True).stdout.split('\\n') if f and os.path.isfile(f)]
-tracked=[f for f in tracked if not f.startswith('website/downloads/')]
+tracked=[f for f in tracked if not any(f.startswith(p) for p in excl)]
 dsp=sorted(os.path.join('DSP/wdsp',f) for f in os.listdir('DSP/wdsp')
            if f.endswith(('.c','.h','.md','.sh')) or f.startswith(('Makefile','makefile')))
 extra=[f for f in ('win_pack.md','memory_channels.json','MRRC_users.db','windows/MRRC.conf.template') if os.path.isfile(f)]
@@ -72,7 +73,7 @@ out='$SRC_ZIP'
 if os.path.exists(out): os.remove(out)
 with zipfile.ZipFile(out,'w',zipfile.ZIP_DEFLATED,compresslevel=9) as z:
     for f in files: z.write(f,f)
-print(f'源码包 {len(files)} 文件 / {os.path.getsize(out)/1e6:.1f} MB')
+print(f'源码包 {len(files)} 文件 / {os.path.getsize(out)/1e6:.1f} MB（已排除 {excl}）')
 PY"
 
     log "上传源码到 $HOST → VM"

@@ -1,0 +1,11 @@
+{
+  "description": "发行源码包（dev_tools/release_windows.sh 打给构建 VM 的 zip）的文件前缀排除清单。一行一个前缀，必须以 / 结尾。由 tests/test_release_artifacts.py::ReleaseSourceZipTests 守卫：私钥不得随包上传，且每条前缀都必须真的匹配到文件（防止拼错后静默失效）。",
+  "exclude_prefixes": [
+    "website/downloads/",
+    "certs/"
+  ],
+  "why": {
+    "website/downloads/": "安装包/热修包由服务器管理，打源码包不需要它们",
+    "certs/": "TLS 私钥材料（certs/backup/radio.vlsc.net.key.20260317_010431）。已实测构建链一行都不读 certs/（MRRC.iss 只打包 dist\\windows\\MRRC\\*），故纯粹是净损失"
+  }
+}
