@@ -220,6 +220,18 @@ def restart_self():
     """
     import subprocess
     argv = _relaunch_command()
+    # print 而非 logger.info：本产品 basicConfig 级别是 WARNING，info 不进日志；
+    # 而“是谁触发了自重启”是“页面/连接为什么突然断一下”的唯一直接答案。
+    # 2026-10-04 实测：一次会话里静默自重启了 2 次（17:10:05 / 17:12:29），
+    # 日志里零痕迹，只能靠 ps 的 PID/启动时间反推。
+    try:
+        import traceback
+        _stack = traceback.extract_stack()
+        _caller = " ← ".join(f"{os.path.basename(fr.filename)}:{fr.lineno} {fr.name}"
+                             for fr in _stack[-3:-1])
+    except Exception:                                            # noqa: BLE001 - 只为留痕
+        _caller = "?"
+    print(f"🔄 自我重启（调用者 {_caller}，{time.strftime('%H:%M:%S')}）", flush=True)
     logger.info(f"🔄 自我重启：{' '.join(argv)}")
     try:
         os.execv(argv[0], argv)
@@ -377,6 +389,122 @@ def save_memory_channels_to_file():
     with memory_lock:
         _save_memory_channels_to_file_unlocked()
 
+
+# ==== F11：电台“最后一次设置”的记忆（IC-M710 的 hamlib 后端是虚拟的）===============
+# hamlib 的 icm710 后端（rigs/icmarine/icm710.c）里写得明明白白：
+#   "The M710 does not respond to queries so we keep our own copy of things as a virtual
+#    rig response" —— get_freq/get_mode 返回的是 rigctld **进程内存里“最后一次设置”的副本**。
+# 后果（2026-10-04 实测）：rigctld 一重启，副本归零 → 读频率恒为 0（页面/RUMlogNG 都读不到）；
+# 只有“经这个 rigctld 设置过”的频率/模式才读得出来。
+# 应用侧对策：把每次成功写入的频率/模式落盘，启动/发现副本丢失时再写一遍（值相同即为幂等，
+# 不会凭空改频），于是应用、电台、以及轮询同一个 rigctld 的第三方日志软件看到同一套事实。
+RIG_STATE_FILE = os.environ.get("MRRC_RIG_STATE_FILE") or os.path.join(_runtime_dir(), 'rig_state.json')
+_rig_state = {}
+
+
+def load_rig_state():
+    """加载上次已知的频率/模式（文件不存在时为 {}）。"""
+    global _rig_state
+    try:
+        raw = config_io.read_text(RIG_STATE_FILE) if os.path.exists(RIG_STATE_FILE) else None
+        data = json.loads(raw) if raw else {}
+        _rig_state = data if isinstance(data, dict) else {}
+    except Exception as e:
+        logger.warning(f"加载电台状态失败（忽略）: {e}")
+        _rig_state = {}
+    return _rig_state
+
+
+def save_rig_state(freq=None, mode=None):
+    """记录最后一次**成功**写入电台的频率/模式。"""
+    global _rig_state
+    changed = False
+    if freq is not None:
+        try:
+            freq = int(freq)
+        except (TypeError, ValueError):
+            freq = None
+        if freq and freq > 0 and _rig_state.get('freq') != freq:
+            _rig_state['freq'] = freq
+            changed = True
+    if mode:
+        mode = str(mode).upper()
+        if _rig_state.get('mode') != mode:
+            _rig_state['mode'] = mode
+            changed = True
+    if not changed:
+        return
+    try:
+        config_io.write_text(RIG_STATE_FILE, json.dumps(_rig_state, indent=2))
+    except Exception as e:
+        logger.warning(f"保存电台状态失败（忽略）: {e}")
+
+
+def reassert_rig_state(reason=''):
+    """把上次已知的频率/模式重新写一遍，让 rigctld 的虚拟副本恢复。
+
+    只在启动时、或读回 0（副本丢失）时调用；写的是上次真实设置过的值，不会凭空改频。
+    """
+    if CTRX is None:
+        return False
+    freq = int(_rig_state.get('freq') or 0)
+    mode = str(_rig_state.get('mode') or '')
+    if freq <= 0 and not mode:
+        return False
+    detail = []
+    wrote = False
+    # F11b：先问电台怎么想。会回答查询的机型（FT-817/FT-818 等）以**电台自报值**为准 ——
+    # 应用关着的时候操作员可能手动调过台，不能拿记忆值把它覆盖掉；只有读回 0/空
+    # （IC-M710 这类“虚拟副本”后端在 rigctld 重启后正是这种情况）才需要重写。
+    if freq > 0:
+        try:
+            now = (CTRX._rigctld_command('f') or '').strip().splitlines()
+            now_hz = int((now[0].strip() if now else '') or 0)
+        except Exception:                                        # noqa: BLE001 - 读不到就走恢复
+            now_hz = 0
+        if now_hz > 0:
+            save_rig_state(freq=now_hz)     # 电台自报即以它为准，并顺手自愈记忆文件
+            detail.append(f"{now_hz/1000:.1f} kHz（电台自报，未覆盖）")
+            freq = 0
+    if freq > 0:
+        wrote = True
+        CTRX.setFreq(freq)
+        # F11：写回后立即回读 —— 本后端只认“最后一次设置”，回读值才是第三方软件
+        # （RUMlogNG 等）真正会看到的东西，写进日志便于事后核对。
+        try:
+            back = (CTRX._rigctld_command('f') or '').strip()
+        except Exception:                                        # noqa: BLE001 - 只影响日志
+            back = ''
+        detail.append(f"{freq/1000:.1f} kHz（读回 {back or '失败'}）")
+    if mode:
+        try:
+            # 不要先 .strip()：副本为空时 rigctld 对 `m` 回的是“空首行 + 2200（通带）”，
+            # 先 strip 会把 2200 顶到首行、被当成模式名（真机已踩，写进 rig_state.json）。
+            lines = (CTRX._rigctld_command('m') or '').splitlines()
+            now_mode = (lines[0].strip() if lines else '')
+            if now_mode.isdigit():          # 纯数字 = 通带宽度，不是模式
+                now_mode = ''
+        except Exception:                                        # noqa: BLE001 - 读不到就走恢复
+            now_mode = ''
+        if now_mode and now_mode != 'None' and not now_mode.startswith('RPRT'):
+            save_rig_state(mode=now_mode)   # 同上：能回答的机型以电台为准
+            detail.append(f"{now_mode}（电台自报，未覆盖）")
+            mode = ''
+    if mode:
+        wrote = True
+        CTRX.setMode(mode)
+        try:
+            back = (CTRX._rigctld_command('m') or '').strip().splitlines()
+            back = (back[0].strip() if back else '') or '空'
+        except Exception:                                        # noqa: BLE001 - 只影响日志
+            back = '失败'
+        detail.append(f"{mode}（读回 {back}）")
+    note = " —— IC-M710 不响应查询，hamlib 拿最后一次设置当读数（F11）" if wrote else \
+           " —— 本机 rigctld 能回答查询，以电台为准、不覆盖（F11b）"
+    print(f"🔁 rigctld 状态{'已恢复' if wrote else '已确认'}（{reason}）：{' '.join(detail)}"
+          f"{note}", flush=True)
+    return True
+
 e="No"
 
 # ATU相关功能已移除
@@ -452,6 +580,7 @@ def writte_log(logmsg):
 ############ BaseHandler tornado ##############
 import base_path as _base_path
 import session_metrics as _metrics  # 会话遥测（Cloud Hub 前置能力）              # 路径前缀支持（Cloud Hub 路径反代入口）
+import cloud_hub as _cloud_hub  # 接入云端（Cloud Hub）：申请/认领/状态/登记/隧道（纯逻辑在 cloud_hub.py）
 BASE_PATH = _base_path.normalize(config['SERVER'].get('base_path', ''))
 _base_path._ACTIVE_BASE = BASE_PATH          # 供 base_path.application() 使用
 if BASE_PATH:
@@ -925,6 +1054,21 @@ _TX_LIVENESS_S = float(config['CTRL'].get('tx_liveness_s', 5.0) or 0)
 _TX_MISS_LIMIT = max(1, int(round(_TX_LIVENESS_S / _TX_POLL_S))) if _TX_LIVENESS_S > 0 else 0
 AudioTXHandlerClients = []
 
+
+def _release_ptt_async():
+	"""F6/RC-003: 在 executor 线程里释放 PTT。
+
+	CTRX.setPTT("false") 自带 3×3s 的 rigctld 阻塞 IO —— F3 已把控制通道的
+	setPTT 挪出 IOLoop，音频/连接关闭路径（s:/on_close）是同族的遗漏点。
+	setPTT 线程安全：确认后自行经 MAIN_IOLOOP.add_callback 广播 getPTT 状态
+	（释放方向绝不乐观预设，R3 安全约束）。
+	"""
+	try:
+		CTRX.setPTT("false")
+	except Exception as e:
+		logger.error(f"异步释放 PTT 失败: {e}")
+
+
 class WS_AudioTXHandler(AuthenticatedWebSocketHandler):
 
 	def stoppttontimeout(self):
@@ -1132,7 +1276,9 @@ class WS_AudioTXHandler(AuthenticatedWebSocketHandler):
 			self._tx_init_cancel = True
 			if PYAUDIO_AVAILABLE:
 				if hasattr(self, 'audio_playback') and self.audio_playback:
-					self.audio_playback.close()
+					# F6/RC-003: 不再同步拆流 —— PortAudio stop 可能永不返回，
+					# 会把 IOLoop 连同后面的 PTT 释放一起楔死 2h+（2026-10-04）。
+					self.audio_playback.close_async()
 					self.audio_playback = None
 			else:
 				if hasattr(self, 'inp') and self.inp:
@@ -1146,23 +1292,12 @@ class WS_AudioTXHandler(AuthenticatedWebSocketHandler):
 			if tx_audio_analyzer and tx_audio_analyzer.is_recording:
 				tx_audio_analyzer.stop_recording()
 			# 关键修复：立即关闭PTT
+			# F6/RC-003: setPTT 的 rigctld 阻塞 IO 放 executor（同 F3），且不再手写
+			# "乐观"广播 —— 状态由 setPTT 确认后自行广播（R3：释放方向绝不乐观
+			# 预设为 false，命令失败要能翻回 true 并发 pttError 告警）。
 			if CTRX and CTRX.mrrc_ptt_active:
-				CTRX.setPTT("false")
-				print("🔴 PTT已关闭（收到s:命令）")
-				# 广播PTT状态变化
-				try:
-					clients_to_remove = []
-					for client in ControlTRXHandlerClients:
-						try:
-							if client.ws_connection and not client.close_code:
-								safe_ws_write(client, "getPTT:false")
-						except Exception:
-							clients_to_remove.append(client)
-					for client in clients_to_remove:
-						if client in ControlTRXHandlerClients:
-							ControlTRXHandlerClients.remove(client)
-				except Exception as e:
-					logger.error(f"Error broadcasting PTT status: {e}")
+				MAIN_IOLOOP.run_in_executor(None, _release_ptt_async)
+				print("🔴 PTT释放已异步下发（收到s:命令）")
 		else :
 			tx_timestamp_ns = time.monotonic_ns()
 			# 线格式：tagged 模式下剥掉 1 字节编解码标签
@@ -1227,7 +1362,8 @@ class WS_AudioTXHandler(AuthenticatedWebSocketHandler):
 		self._tx_pending_frames = []
 		if PYAUDIO_AVAILABLE:
 			if hasattr(self, 'audio_playback') and self.audio_playback:
-				self.audio_playback.close()
+				# F6/RC-003: 同 s: 分支 —— 拆流绝不阻塞 IOLoop（连接关闭路径）
+				self.audio_playback.close_async()
 		else:
 			if hasattr(self, 'inp') and self.inp:
 				self.inp.close()
@@ -1237,7 +1373,8 @@ class WS_AudioTXHandler(AuthenticatedWebSocketHandler):
 			# 🎙️ TX 音频分析：停止录音
 			if tx_audio_analyzer and tx_audio_analyzer.is_recording:
 				tx_audio_analyzer.stop_recording()
-			CTRX.setPTT("false")
+			# F6/RC-003: setPTT 阻塞 IO 不得压在 IOLoop（连接关闭路径）
+			MAIN_IOLOOP.run_in_executor(None, _release_ptt_async)
 		print('connection closed for TX socket')		
 
 ############ websocket for control TRX ##############
@@ -1733,6 +1870,30 @@ def sync_freq_to_atr1000(freq):
             except:
                 pass
 
+def _broadcast_freq_to_clients(freq):
+    """把频率广播给控制通道客户端（页面据此更新显示）。
+
+    V4.9.2 的 FrequencySyncThread 本来就是为"第三方软件联动"建的（RUMlogNG/JTDX/flrig
+    直接经 rigctld 改频），但它只把频率喂给了 ATR-1000 代理 —— 网页不跟随
+    （2026-10-04 实测：在 RUMlogNG 里点 DX spot 改频，电台确实 QSY 了，MRRC 页面显示的
+    还是旧频率，直到用户手动刷新）。controls.js 已能处理服务端主动下发的 getFreq:<值>，
+    这里补上广播即可。
+
+    从后台线程调用 ⇒ 必须经 MAIN_IOLOOP.add_callback（V5.8.2 的线程安全规矩）。
+    """
+    def _send():
+        for client in list(globals().get('ControlTRXHandlerClients') or []):
+            try:
+                if client.ws_connection and not client.close_code:
+                    safe_ws_write(client, f"getFreq:{freq}")
+            except Exception:
+                pass
+    try:
+        MAIN_IOLOOP.add_callback(_send)
+    except Exception as e:
+        logger.debug(f"频率广播失败: {e}")
+
+
 # 独立的频率同步线程 - 不依赖WebSocket客户端连接
 class FrequencySyncThread(threading.Thread):
     """
@@ -1762,6 +1923,7 @@ class FrequencySyncThread(threading.Thread):
                 # 只有频率变化时才同步（避免不必要的通信）
                 if current_freq and current_freq > 0 and current_freq != self.last_freq:
                     sync_freq_to_atr1000(current_freq)
+                    _broadcast_freq_to_clients(current_freq)   # 页面跟随外部改频（F9）
                     self.last_freq = current_freq
                     logger.debug(f"🔄 频率同步: {current_freq/1000:.1f}kHz")
                     
@@ -2799,6 +2961,12 @@ class TRXRIG:
 		self.rigctld_port = 4532
 		self._connect_fail_count = 0
 		self._last_connect_attempt = 0.0
+		# F9（2026-10-04）：S 表电平支持探测。本机 IC-M710 的 hamlib 后端起 get_level
+		# 全失败（l STRENGTH → RPRT -1），而 ticksTRXRIG 每 0.5s 问一次 —— 实测每秒
+		# 约 2 条 hamlib 解析告警把 rigctld 日志刷到 99%，还白占一轮进程/串口往返。
+		# 连续失败到阈值即闩住，不再发问（打印一次）。
+		self._strength_fail_count = 0
+		self._strength_unsupported = False
 
 		# ① 先把后台服务准备好：Windows 安装版自带 rigctld.exe（vendor/hamlib/windows/bin/x64），
 		#    过去没人拉起它 → 下面这次探测必然失败 → 整个应用进“模拟模式”，用户看到的就是
@@ -3118,6 +3286,7 @@ class TRXRIG:
 		if self.rig == "rigctld_daemon":
 			if self._rigctld_set_command("F", frequency):
 				self.infos["FREQ"] = frequency
+				save_rig_state(freq=frequency)   # F11：虚拟后端靠它给出"读"的答案
 				logger.info(f"✓ Frequency set to {frequency} Hz via rigctld")
 			else:
 				logger.error(f"✗ Failed to set frequency to {frequency} Hz via rigctld")
@@ -3143,9 +3312,21 @@ class TRXRIG:
 			if freq_str:
 				try:
 					freq = int(float(freq_str))  # Convert to int to avoid display issues
-					self.infos["FREQ"] = freq
-					logger.info(f"Current frequency from rigctld: {freq} Hz")
-					return freq
+					if freq > 0:
+						self.infos["FREQ"] = freq
+						logger.info(f"Current frequency from rigctld: {freq} Hz")
+						return freq
+					# F10/F11（2026-10-04 实测）：IC-M710 **不响应任何查询** —— hamlib 的
+					# icm710 后端拿"最后一次设置"的内存副本当读数（见 rigs/icmarine/icm710.c
+					# 的 "virtual rig response" 注释）。rigctld 一重启副本归零，读频率恒 0。
+					# 这里按上次已知值重写一遍（幂等），副本即恢复；0 绝不覆盖 infos["FREQ"]。
+					now = time.time()
+					if now - getattr(self, '_freq_zero_warn_at', 0.0) > 600:
+						self._freq_zero_warn_at = now
+						if reassert_rig_state('检测到读频率为 0，虚拟副本已丢失'):
+							return self.infos.get("FREQ", 7200000)
+						print("⚠️ rigctld 频率读回 0，且无历史值可恢复（在界面上设一次频率即会记住）",
+						      flush=True)
 				except ValueError:
 					logger.error(f"Invalid frequency response from rigctld: {freq_str}")
 		elif not self.rig:
@@ -3178,6 +3359,7 @@ class TRXRIG:
 				logger.debug(f"rigctld mode response to '{mode_cmd}': {response}")
 				if response == "RPRT 0":
 					self.infos["MODE"] = MODE.upper()
+					save_rig_state(mode=MODE.upper())   # F11：同 setFreq（模式读取同样是虚拟的）
 					logger.info(f"✓ Mode set to {MODE} via rigctld")
 				elif response.startswith("RPRT -"):
 					# 电台明确拒绝：绝不本地记为成功，否则 UI 显示已切换而实际没有。
@@ -3310,7 +3492,13 @@ class TRXRIG:
 			return "0"
 	
 	def _rigctld_get_signal_strength(self):
-		"""通过 rigctld 获取信号强度，返回 dB 值或 None"""
+		"""通过 rigctld 获取信号强度，返回 dB 值或 None。
+
+		F9：不支持就别再问 —— 连续 3 次 RPRT 失败即闩住（见 __init__ 说明），
+		否则 ticksTRXRIG 每 0.5s 问一次，把 rigctld 日志刷满且白占往返。
+		"""
+		if self._strength_unsupported:
+			return None
 		sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 		try:
 			sock.settimeout(3)
@@ -3319,7 +3507,19 @@ class TRXRIG:
 			response = sock.recv(1024).decode().strip()
 			
 			if response.startswith("RPRT"):
+				# F9d：只有 -1（RIG_EINVAL：本机不支持该电平）才算“机型不支持”。其它错误码
+				# （-5/-6/-9/-11…：串口抖动、电台忙、rigctld 正在重启）都是暂时性的 —— 对
+				# FT-817 这类**本来读得到** S 表的机型，连吃三次瞬时错误就把 S 表闩死到
+				# 会话结束是不对的，所以那些不入计数、也不闩（机型无关的安全化）。
+				if response.strip() != "RPRT -1":
+					return None
+				self._strength_fail_count += 1
+				if self._strength_fail_count >= 3 and not self._strength_unsupported:
+					self._strength_unsupported = True
+					print("📉 本机 rigctld 不支持信号强度电平（l STRENGTH → RPRT）："
+					      "已停用 S 表轮询（F9），rigctld 日志噪音随之停止", flush=True)
 				return None
+			self._strength_fail_count = 0
 			
 			try:
 				strength = int(response)
@@ -5411,6 +5611,343 @@ class SessionMetricsHandler(BaseHandler):
 		self.write(json.dumps(_metrics.render(_metrics_active(), {"pid": os.getpid()})))
 
 
+# ---------------------------------------------------------------------------
+# Cloud Hub 接入（云上电台）：门户申请 → 批准 → 自动签证书/登记/起隧道。
+# 纯逻辑在 cloud_hub.py（stdlib、无 tornado 依赖，可单测：dev_tools/test_cloud_hub.py）；
+# 这里只做 HTTP 接线与生命周期。状态存 <配置目录>/mrrc_cloud.json（含申请令牌，0600）。
+# 行为参照系 = mrrc_modern v1.25.0（docs/OPERATION_GUIDE.md §0.9）。
+# ---------------------------------------------------------------------------
+_cloud_tunnel = None          # cloud_hub.TunnelProcess | None
+_cloud_lock = threading.Lock()
+_cloud_connect_lock = threading.Lock()
+_cloud_autoconnect_state = {}
+_cloud_autoconnect_thread = None
+_CLOUD_AUTOCONNECT_INTERVAL = 30.0
+_PROCESS_STARTED_AT = time.time()
+_SERVING_CERT_PATH = ""       # 本进程实际加载的证书（在 __main__ 建 SSLContext 时记录）
+
+
+def _cloud_dir():
+	return os.path.dirname(os.path.abspath(config_file))
+
+
+def _cloud_state_path():
+	return os.path.join(_cloud_dir(), 'mrrc_cloud.json')
+
+
+def _cloud_state():
+	return _cloud_hub.load_state(_cloud_state_path())
+
+
+def _cloud_portal(state):
+	# 运维改指向用 MRRC.conf [CLOUD] portal；否则用申请时记下的；最后是内置默认
+	try:
+		override = (config['CLOUD'].get('portal', '') or '').strip()
+	except Exception:
+		override = ''
+	return override or state.get('portal') or _cloud_hub.PORTAL_DEFAULT
+
+
+def _cloud_fleet_dir():
+	return os.path.join(_runtime_dir(), 'fleet')
+
+
+def _cloud_cert_dir():
+	return os.path.join(_cloud_dir(), 'certs')
+
+
+def _cloud_data_dir():
+	p = os.path.join(_cloud_dir(), 'fleet')
+	os.makedirs(p, exist_ok=True)
+	return p
+
+
+def _same_file(a, b):
+	try:
+		return os.path.samefile(a, b)
+	except OSError:
+		return os.path.normcase(os.path.abspath(a)) == os.path.normcase(os.path.abspath(b))
+
+
+def _cert_reload_required():
+	"""进程正在服务的证书 vs 接入时登记的证书：TLS 上下文只在启动时建立。
+
+	两种情形都算：登记写入了**不同路径**（mrrc_modern 实测：配置已是 fullchain.pem，
+	进程仍在服务启动时的 server.crt，入口 502 且没人提示）；或**同一路径被重写**——
+	那只能靠文件写入时间晚于进程启动时间来判断（epoch 秒，不能与 monotonic 混比）。
+	"""
+	configured = _cloud_state().get('cert') or ''
+	if not configured or not os.path.exists(configured):
+		return False
+	if _SERVING_CERT_PATH and not _same_file(configured, _SERVING_CERT_PATH):
+		return True
+	try:
+		return os.path.getmtime(configured) > _PROCESS_STARTED_AT + 1.0
+	except OSError:
+		return False
+
+
+def _cloud_start_tunnel(state):
+	"""已接入的实例在启动时把隧道拉起来。
+
+	mrrc_modern v1.24.8 的教训：隧道若只由页面状态接口拉起，重启之后入口会一直 502，
+	直到有人点一下设置。
+	"""
+	global _cloud_tunnel
+	label = state.get('label')
+	if not label or _cloud_tunnel is not None:
+		return
+	frpc = _cloud_hub.find_frpc(_cloud_fleet_dir())
+	conf = os.path.join(_cloud_data_dir(), f"frpc-{label}.toml")
+	if frpc is None or not os.path.exists(conf):
+		return
+	with _cloud_lock:
+		if _cloud_tunnel is None:
+			_cloud_tunnel = _cloud_hub.TunnelProcess(frpc, conf)
+			_cloud_tunnel.start()
+			print(f"☁️ Cloud Hub 隧道已拉起（{state.get('entry', label)}）", flush=True)
+
+
+def _cloud_ensure_tunnel():
+	"""确保监管对象存在（connect() 真正 start 它）；首次接入前没有 frpc 配置。"""
+	global _cloud_tunnel
+	if _cloud_tunnel is None:
+		with _cloud_lock:
+			if _cloud_tunnel is None:
+				_cloud_tunnel = _cloud_hub.TunnelProcess(
+					_cloud_hub.find_frpc(_cloud_fleet_dir()) or 'frpc',
+					os.path.join(_cloud_data_dir(), 'pending.toml'))
+	return _cloud_tunnel
+
+
+def _cloud_cert_extra_names():
+	"""实例可达的其它名字（[SERVER] cert_extra_names，逗号分隔）。
+
+	Cloud Hub 证书只带 <标签>.mrrc.vlsc.net；像 radio.vlsc.net 这种**直连本机 IPv6**
+	的老入口会因域名不匹配被浏览器拒绝（2026-10-04 实测：日志每 0.5s 一条 SSL
+	CERTIFICATE_UNKNOWN，页面直接打不开）。把这些名字写进证书 SAN 即可共存，
+	不影响 hub 入口（边缘用 Let's Encrypt 真证书终止，实例证书只服务上游/直连）。
+	"""
+	raw = (config['SERVER'].get('cert_extra_names', '') or '').strip()
+	return [n.strip() for n in raw.split(',') if n.strip()]
+
+
+def _cloud_finish_connect(portal, callsign, token):
+	"""批准之后的完整接入：签证书 → 登记 → 写隧道配置 → 起隧道 → 落状态。
+
+	页面与自动轮询共用；调用方必须已持有 _cloud_connect_lock。会阻塞（网络 + 签名），
+	只能在线程里跑（executor / autoconnect 线程），不得直接在 IOLoop 上调用（RC-001）。
+	"""
+	frpc = _cloud_hub.find_frpc(_cloud_fleet_dir())
+	result = _cloud_hub.connect(
+		portal, callsign, token,
+		state_path=_cloud_state_path(), cert_dir=_cloud_cert_dir(),
+		data_dir=_cloud_data_dir(), local_port=int(config['SERVER']['port']),
+		frpc=frpc, tunnel=_cloud_ensure_tunnel(),
+		extra_names=_cloud_cert_extra_names())
+	result = dict(result)
+	result['cert_reload_required'] = _cert_reload_required()
+	if not frpc:
+		result['tunnel_note'] = ('未找到 frpc 可执行文件：brew install frp 或运行 '
+								 'mrrc_hub/deploy/install_instance_tunnel.sh，然后重启本应用')
+	return result
+
+
+def _note_autoconnect(status, error=""):
+	"""记录无人值守轮询的最后一次结果。
+
+	没有它，「从来没去问」和「问了还没批」在界面上完全一样（mrrc_modern 实测：
+	BG6LH 在「已提交申请」上卡了几个小时，只有 hub 的 nginx 日志能说明没人在问）。
+	"""
+	global _cloud_autoconnect_state
+	_cloud_autoconnect_state = {"status": status, "error": error, "at": time.time()}
+	return dict(_cloud_autoconnect_state)
+
+
+def _cloud_autoconnect_once():
+	"""问一次 hub：批准了就自己完成接入。永不抛异常（守护线程上的异常 = 轮询无声消失）。"""
+	state = _cloud_state()
+	callsign, token = state.get('callsign', ''), state.get('token', '')
+	if not (callsign and token):
+		return _note_autoconnect("idle")
+	if state.get('label'):
+		return _note_autoconnect("connected")
+	portal = _cloud_portal(state)
+	try:
+		reply = _cloud_hub.status(portal, callsign, token)
+	except _cloud_hub.CloudHubError as exc:
+		return _note_autoconnect("unreachable", str(exc))
+	if reply.get("status") != "granted":
+		return _note_autoconnect(str(reply.get("status") or "unknown"))
+	if not _cloud_connect_lock.acquire(blocking=False):
+		return _note_autoconnect("busy")     # 页面这一刻正在登记，让它来
+	try:
+		result = _cloud_finish_connect(portal, callsign, token)
+	except Exception as exc:
+		logger.warning(f"cloud hub: 无人值守接入失败（会一直重试）: {exc}")
+		return _note_autoconnect("connect-failed", str(exc))
+	finally:
+		_cloud_connect_lock.release()
+	logger.info(f"cloud hub: 批准后自动接入完成 - {result.get('entry', '')}")
+	if result.get('cert_reload_required'):
+		# 刚签的证书不是进程正在服务的那张，入口会 502 直到重启；无人值守 = 没有按钮可点，
+		# 所以自己重启（restart_self 用 execv 原地替换进程，冻结包下启动器看护不受影响）。
+		_note_autoconnect("restarting")
+		threading.Timer(1.2, restart_self).start()
+		return dict(_cloud_autoconnect_state)
+	return _note_autoconnect("connected")
+
+
+def _cloud_autoconnect_loop(interval):
+	while True:
+		try:
+			_cloud_autoconnect_once()
+		except Exception:
+			logger.exception("cloud hub: 轮询异常 - 继续")
+		time.sleep(interval)
+
+
+def _cloud_start_autoconnect(interval=_CLOUD_AUTOCONNECT_INTERVAL):
+	"""有申请未接入就起 30s 轮询；幂等。启动时与申请提交后各调一次。
+
+	批准它的人不是守着页面的那个人 —— 轮询必须住在服务端，关掉页面也不能停。
+	"""
+	global _cloud_autoconnect_thread
+	state = _cloud_state()
+	if not (state.get('callsign') and state.get('token')) or state.get('label'):
+		return False
+	if _cloud_autoconnect_thread is not None and _cloud_autoconnect_thread.is_alive():
+		return False
+	_cloud_autoconnect_thread = threading.Thread(target=_cloud_autoconnect_loop, args=(interval,),
+												 name="cloud-autoconnect", daemon=True)
+	_cloud_autoconnect_thread.start()
+	print("☁️ Cloud Hub：等待批准，本机每 30s 自动询问一次", flush=True)
+	return True
+
+
+class CloudApiHandler(BaseHandler):
+	"""「☁️ 接入云端」接口（页面 www/cloud.html）。
+
+	GET  /api/cloud/state     页面自绘所需的全部状态
+	POST /api/cloud/apply     {callsign, contact?, secret?} 申请；带口令 = 认领已批准的申请
+	POST /api/cloud/refresh   立即问一次门户；已批准则当场完成接入
+	POST /api/cloud/restart   重启进程以加载接入时签的证书（TLS 上下文只在启动时建立）
+
+	网络与签名 IO 全部走 executor，不阻塞 IOLoop（见 RC-001）。
+	"""
+
+	def _authz(self):
+		if auth_enabled() and not self.current_user:
+			self.set_status(401)
+			self.finish(json.dumps({"error": "Authentication required"}))
+			return False
+		return True
+
+	def _json(self, obj, status=200):
+		self.set_status(status)
+		self.set_header("Content-Type", "application/json; charset=utf-8")
+		self.set_header("Cache-Control", "no-store")
+		self.write(json.dumps(obj, ensure_ascii=False))
+
+	async def get(self):
+		if not self._authz():
+			return
+		state = _cloud_state()
+		_cloud_start_tunnel(state)
+		self._json({
+			"connected": bool(state.get("label")),
+			"callsign": state.get("callsign", ""),
+			"has_token": bool(state.get("token")),
+			"label": state.get("label", ""),
+			"entry": state.get("entry", ""),
+			"cert": state.get("cert", ""),
+			"portal": _cloud_portal(state),
+			"autoconnect": dict(_cloud_autoconnect_state),
+			"tunnel_running": bool(_cloud_tunnel and _cloud_tunnel.running),
+			"tunnel_error": (_cloud_tunnel.last_error if _cloud_tunnel else ""),
+			"frpc_available": _cloud_hub.find_frpc(_cloud_fleet_dir()) is not None,
+			"cert_reload_required": _cert_reload_required(),
+		})
+
+	async def post(self):
+		if not self._authz():
+			return
+		action = self.request.path.rstrip('/').rsplit('/', 1)[-1]
+		if action == 'apply':
+			await self._apply()
+		elif action == 'refresh':
+			await self._refresh()
+		elif action == 'restart':
+			self._restart()
+		else:
+			self._json({"error": "unknown action"}, status=404)
+
+	async def _apply(self):
+		try:
+			body = json.loads(self.request.body.decode('utf-8') or '{}')
+		except Exception:
+			self._json({"error": "bad json"}, status=400)
+			return
+		callsign = str(body.get("callsign", "")).strip().upper()
+		contact = str(body.get("contact", "")).strip()
+		secret = str(body.get("secret", "")).strip()
+		if not callsign:
+			self._json({"error": "需要呼号"}, status=400)
+			return
+		portal = _cloud_portal(_cloud_state())
+
+		def _do_apply():
+			if secret:
+				# 运维已在门户批准（可能是网页提交的申请）：一次性口令把它认领过来；
+				# 同一口令也是 hub 接受证书的凭据，不会多授予任何东西
+				return _cloud_hub.claim(portal, callsign, secret)
+			return _cloud_hub.apply(portal, callsign, contact, "legacy")
+
+		try:
+			reply = await tornado.ioloop.IOLoop.current().run_in_executor(None, _do_apply)
+		except _cloud_hub.CloudHubError as exc:
+			self._json({"error": str(exc)}, status=502)
+			return
+		_cloud_hub.save_state(_cloud_state_path(), {
+			"callsign": callsign, "token": reply["request_token"], "portal": portal})
+		# 此后不必有人守着页面：轮询住在服务端，明天才批准也会自己完成
+		_cloud_start_autoconnect()
+		if reply.get("status") == "granted":
+			await self._refresh()    # 认领成功 = 已批准：当场接入，不多要一次点击
+			return
+		self._json({"submitted": True, "status": reply.get("status", "applied"),
+					"callsign": callsign})
+
+	async def _refresh(self):
+		state = _cloud_state()
+		callsign, token = state.get('callsign', ''), state.get('token', '')
+		if not (callsign and token):
+			self._json({"error": "还没有申请"}, status=400)
+			return
+		portal = _cloud_portal(state)
+
+		def _do():
+			reply = _cloud_hub.status(portal, callsign, token)
+			if reply.get("status") != "granted":
+				return {"connected": False, "status": reply.get("status", "unknown")}
+			with _cloud_connect_lock:      # 轮询线程可能正在接入：只能有一个登记
+				return _cloud_finish_connect(portal, callsign, token)
+
+		try:
+			result = await tornado.ioloop.IOLoop.current().run_in_executor(None, _do)
+		except _cloud_hub.CloudHubError as exc:
+			self._json({"error": str(exc)}, status=502)
+			return
+		self._json(result)
+
+	def _restart(self):
+		# 与 /CONFIG、/api/devices/apply 同一个重启机制（execv 原地替换）；走 call_later
+		# 而不是 handler 里 sleep，避免压着 IOLoop（看门狗 2s/8s 会当成 stall 倾倒线程栈）
+		self._json({"restarting": True})
+		self.flush()
+		MAIN_IOLOOP.call_later(1.0, restart_self)
+
+
 class MemChannelsHandler(BaseHandler):
 
 	def get(self):
@@ -5473,16 +6010,29 @@ class MainHandler(BaseHandler):
 		return
 
 def arm_ioloop_watchdog(interval=2.0, threshold=8.0):
-	"""IOLoop 假死看门狗（2026-09-14 8891 无响应事故后引入）。
+	"""IOLoop 假死看门狗（2026-09-14 8891 无响应事故后引入；2026-10-04 RC-003 加强）。
 
-	心跳超时本身调度在 IOLoop 上：若它实际触发时间比预定时间晚超过
-	threshold 秒，说明事件循环线程被同步阻塞（如在 IOLoop 线程上执行
-	p.open()/rigctld I/O 之类）。此时把所有线程栈 dump 到 stderr（进
-	MRRC 日志），下次假死可直接看到阻塞点，无需猜测。30s 冷却避免
-	持续卡死时刷屏。
+	两层：
+	1. 心跳（本线程）：若实际触发时间比预定时间晚超过 threshold 秒，说明事件
+	   循环曾被同步阻塞（如在 IOLoop 上执行 p.open()/rigctld I/O/PortAudio stop），
+	   卡顿**结束**时把所有线程栈 dump 到 stderr。30s 冷却避免刷屏。
+	2. 原生定时器（F6/RC-003）：心跳自身跑在 IOLoop 上——事件循环**永久**楔死时
+	   它永远排不上队，第 1 层一次栈都倒不出来（2026-10-04 实况：close() 卡死
+	   2h23m，日志里连栈转储都没有）。每拍重臂 faulthandler.dump_traceback_later
+	   （独立 C 线程，不依赖 IOLoop）；心跳一停摆，它到点就留下全部线程栈。
 	"""
 	import faulthandler
 	state = {'cooldown_until': 0.0}
+	# 原生转储窗口：必须显著大于心跳间隔，否则健康时也会开火
+	native_window = max(30.0, threshold * 2.0, interval * 3.0)
+
+	def _arm_native_dump():
+		try:
+			faulthandler.cancel_dump_traceback_later()
+			faulthandler.dump_traceback_later(native_window, repeat=True,
+			                                  file=sys.stderr)
+		except Exception as e:
+			logger.error(f"native watchdog arm failed: {e}")
 
 	def _beat():
 		now = time.time()
@@ -5497,13 +6047,16 @@ def arm_ioloop_watchdog(interval=2.0, threshold=8.0):
 				faulthandler.dump_traceback(file=sys.stderr)
 			except Exception as e:
 				logger.error(f"faulthandler dump failed: {e}")
+		_arm_native_dump()
 		scheduled[0] = time.time() + interval
 		MAIN_IOLOOP.add_timeout(datetime.timedelta(seconds=interval), _beat)
 
 	scheduled = [time.time() + interval]
+	_arm_native_dump()
 	MAIN_IOLOOP.add_timeout(datetime.timedelta(seconds=interval), _beat)
 	# 用 print 而非 logger.info：basicConfig 级别是 WARNING，info 不进日志
-	print(f"IOLoop watchdog armed (interval={interval}s, threshold={threshold}s)")
+	print(f"IOLoop watchdog armed (interval={interval}s, threshold={threshold}s, "
+	      f"native dump window={native_window:.0f}s)")
 
 if __name__ == "__main__":
 	# 加载频道记忆（服务端持久化）
@@ -5519,6 +6072,14 @@ if __name__ == "__main__":
 		threadloadWavdata.start()
 		
 		CTRX = TRXRIG()
+
+		# F11：IC-M710 不响应查询，hamlib 拿"最后一次设置"当读数 —— 启动时先把上次
+		# 已知的频率/模式写回去，rigctld 的虚拟副本就有了，页面与第三方软件的读取才正常。
+		try:
+			load_rig_state()
+			reassert_rig_state('启动')
+		except Exception as exc:
+			logger.warning(f"恢复电台虚拟状态失败（忽略）: {exc}")
 		
 		# 设置 ATU 自动调谐回调函数
 		if ATU_AUTO_TUNER_AVAILABLE:
@@ -5560,8 +6121,16 @@ if __name__ == "__main__":
 					print(f"⚠️ [metrics] 采集失败: {_e}", flush=True)
 			tornado.ioloop.PeriodicCallback(_log_metrics, int(_metrics_interval * 1000)).start()
 			print(f"📊 会话遥测已启用（每 {_metrics_interval:g}s 一行；GET /api/session_metrics）", flush=True)
+
+		# Cloud Hub：已接入的实例启动即拉起隧道（不能等有人打开页面，否则重启后入口一直 502）；
+		# 已申请未批准的继续 30s 自动轮询，批准到达后无人值守完成接入（签证书→登记→起隧道→自重启生效）。
+		try:
+			_cloud_start_tunnel(_cloud_state())
+			_cloud_start_autoconnect()
+		except Exception as _e:
+			print(f"⚠️ Cloud Hub 启动接线失败（不影响本地服务）: {_e}", flush=True)
 		
-		app = base_path.application([
+		app = _base_path.application([
 					(r'/login', AuthLoginHandler),			(r'/logout', AuthLogoutHandler),
 			(r'/WSaudioRX', WS_AudioRXHandler),
 			(r'/WSaudioTX', WS_AudioTXHandler),
@@ -5580,6 +6149,7 @@ if __name__ == "__main__":
 					(r'/api/devices/apply', DevicesApiHandler),  # 设备配置保存并重启
 					(r'/api/support/.*', SupportApiHandler),  # 诊断包：生成/上传/保存/下载
 					(r'/api/session_metrics', SessionMetricsHandler),  # 会话遥测
+				(r'/api/cloud/.*', CloudApiHandler),  # 接入云端（Cloud Hub）：申请/认领/状态/接入/重启
 					(r'/api/antenna_sweep/.*', AntennaSweepApiHandler),  # 天线 SWR 扫频（天调 bypass 画像）
 					(r'/api/update.*', UpdateApiHandler),  # 一键升级：状态/升级/回退
 					(r'/recordings/([^/]+)', RecordingsDownloadHandler),  # 录音下载
@@ -5593,7 +6163,7 @@ if __name__ == "__main__":
 		import traceback
 		traceback.print_exc()
 		print("=== END EXCEPTION INFO ===")
-		app = base_path.application([
+		app = _base_path.application([
 		(r'/CONFIG', ConfigHandler),
 		(r'/', ConfigHandler),
 		(r'/(.*)', OverlayStaticFileHandler, { 'path' : os.path.join(_resource_dir(), 'www') })
@@ -5602,6 +6172,14 @@ if __name__ == "__main__":
 	# Use explicit SSLContext to avoid PEM parsing quirks
 	cert_path = os.path.join(config['SERVER']['certfile'])
 	key_path = os.path.join(config['SERVER']['keyfile'])
+	# Cloud Hub 接入过的实例要服务登记到 hub 的那张证书（hub 按 <标签>.mrrc.vlsc.net 校验上游），
+	# 否则入口一直 502。状态文件没有或证书文件不在就回退 MRRC.conf 的配置。
+	_cloud_boot = _cloud_state()
+	if _cloud_boot.get('cert') and _cloud_boot.get('key') \
+			and os.path.exists(_cloud_boot['cert']) and os.path.exists(_cloud_boot['key']):
+		cert_path, key_path = _cloud_boot['cert'], _cloud_boot['key']
+		print(f"☁️ Cloud Hub 实例证书生效：{cert_path}", flush=True)
+	_SERVING_CERT_PATH = cert_path
 	ssl_ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
 	ssl_ctx.options |= ssl.OP_NO_COMPRESSION
 	# Allow TLS 1.2 and TLS 1.3 for better compatibility

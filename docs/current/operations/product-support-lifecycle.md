@@ -44,7 +44,7 @@
 **目标**：任何一次发布都可复现、可验证、可回退。
 
 | 环节 | 做法 | 判据/产物 |
-|---|---|---|
+| --- | --- | --- |
 | 版本语义 | `MRRC.iss` 的 `MyAppVersion` → 安装目录 `version.txt`；运行时**唯一权威** | 拒绝降级；安装版本 > 热修通道版本 |
 | 质量闸门 | 单元测试（当前 **104 项**）+ **内联 JS 语法守卫**（`node --check` 逐段扫 `www/**`、`website/**`）+ 产物级**热修验收 3/3** | 不过闸门不允许发布 |
 | 构建 | Windows 包只能在 Windows 上出 → `ham.vlsc.net` 上的 Win11 VM（`build_wdsp_dll.ps1` → `build.ps1`） | 产物 `MRRC-Setup.exe` + `version.txt` |
@@ -53,6 +53,7 @@
 | 事故驱动 | 每次事故都加一条**守卫**（见 §6） | 同类问题不再复发 |
 
 **不变量（踩过的坑）**
+
 1. `previous` 必须在站点上真实存在 **且已入库**——部署是 `rsync --delete`，未入库的服务器文件会被删掉（回退按钮 404，实际发生过）；
 2. 回退目标不能指向"已知有问题的版本"（例：6.1.13 的 `previous` 刻意设为 6.1.11，跳过带坏页面的 6.1.12）；
 3. 服务器 `/tmp` 是 454 MB tmpfs：大文件先传 `~` 再 `sudo mv`；
@@ -65,7 +66,7 @@
 **目标**：用户点一下就能升级，失败不损坏现有安装，随时可回退。
 
 | 环节 | 做法 |
-|---|---|
+| --- | --- |
 | 发现 | 启动器启动时读 `latest.json` → 只提示 + **后台预下载**（不打断收听） |
 | 触发 | 页面 **⬆️ 软件更新 →【立即升级】** 或启动器窗口**输入 U 回车**；服务端先做 PTT 门禁（发射中 423） |
 | 执行 | 已暂存则**离线直接升**；否则下载（`.part<pid>` → SHA256 → 原子改名，带超时/重试/互斥）→ 停服务 →（已提权则直跑，否则一次 UAC）静默安装 → 启动器退出让出文件 → 安装器 `[Run]` 自动重启 |
@@ -107,6 +108,7 @@ crontab */10 ─► support_autopilot.py --once --publish
 ```
 
 **判定纪律（写进 skill，非可选项）**
+
 - 保守：材料不足 → `need_more_info`；**没有 Traceback 就不叫崩溃**；
 - 结论必须落在用户能做的动作上（不许写"等维护者修"）；
 - 环境类（无声卡、无 rigctld、虚拟机、未接电台）**不判成产品缺陷**；
@@ -131,7 +133,7 @@ crontab */10 ─► support_autopilot.py --once --publish
 ## 6. 事故驱动的改进清单（每条都补了守卫）
 
 | 事故 | 加什么守卫 |
-|---|---|
+| --- | --- |
 | IOLoop 楔死 / 蓝牙 DAC 致 TX 静默（RC-001） | 看门狗 + 线程栈转储 + TX 初始化打点（`⏱️ TX audio init`） |
 | 升级链路 10 个静默失效（RC-002） | 10 项修复 + 顺序/互斥/超时的回归测试 + "新版自证 ok" |
 | 打包漏 `upgrade_core` → `/api/update` 报 ModuleNotFoundError | 加入 spec `_APP_MODULES`；"函数内 import 的新模块"必须显式登记 |
@@ -139,6 +141,10 @@ crontab */10 ─► support_autopilot.py --once --publish
 | **改页面拼字符串写坏内联 JS → 整页按钮失效**（6.1.12，随热修下发） | **`tests/test_web_inline_js.py`：所有内联脚本逐段 `node --check`** |
 | 半包上报（只有元数据）让自动分诊反复失败 | 非 zip 载荷标记 `skip`，不重试 |
 | **Windows 安装版不启动 rigctld** → 用户"连不上电台"（两次上报 14ef/ebd2） | `MRRC` 启动时自动拉起（`rigctld_manager`）+ vendor 内置 rigctld.exe 与依赖 DLL + 名字→编号解析 + 失败只提示不阻断；答复页留卡 |
+| **macOS 打包版没有 CA 信任库** → 接入云端/诊断包上传/软件更新全报 `CERTIFICATE_VERIFY_FAILED`，上报包只能人工递送（2026-10-04，动因：那份报告包不是应用上传的，是运维手工给的） | 随包 `vendor/ca/cacert.pem` + `net_tls.py`（默认 store 为空时依次用 包内 → 系统 bundle）+ AST 守卫（任何直接 `urlopen` 必须带 `context=`）+ **构建期闸门 `dev_tools/tls_trust_gate.py`：故意把 CA 环境打空，未修法必须复现为空、修好后必须与 portal/latest.json 真握手**（判据：“构建机上测不出的东西要在用户机器上测”） |
+| **macOS 打包版真频谱从未启动**（相对 `MRRC_FTDI_LIB_DIR` 被锚到 `Contents/MacOS`，而数据树在 `Contents/Resources`） | 启动器相对路径改走 `runtime_path()`（回退 `_internal`）+ 3 个回归测试（含“同级副本优先”与“绝对路径不动”）；现场判据：日志出现 `scope_pipe: first frame received — spectrum active`，而不是反复 `scope_pipe exited (frames=0, connected=False)` |
+| **TX 拆流 `Pa_StopStream` 阻塞在 IOLoop 线程上 → 8891 假死 2h23m，且释放 PTT 排在清理动作之后**（RC-003，2026-10-04 macOS radio1） | `PyAudioPlayback.close()` 有界化（3s 超时即放弃、写线程竞态保护）+ `close_async()` + s:/on_close 异步释放 PTT + 看门狗原生线程转储；守卫：`python3 dev_tools/test_audio_close_liveness.py` |
+| **陈旧 frpc 泄漏**：`_kill_stale_frpc` 只在 Windows 生效 → macOS/Linux 每次重启泄漏一个 frpc、抢 proxy 名、隧道由孤儿持有（RC-003 附带，2026-10-04） | `_stale_frpc_pids` 平台无关选进程 + POSIX SIGTERM/SIGKILL；守卫用例加进 `python3 dev_tools/test_cloud_hub.py` |
 
 ## 7. 闭环不变量（验收这套能力时看这 8 条）
 

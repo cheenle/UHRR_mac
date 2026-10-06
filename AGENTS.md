@@ -26,6 +26,12 @@ subdomain root, so asset and request URLs must be **prefix-safe**:
 
 - `[SERVER] base_path` in `MRRC.conf` selects the prefix; empty (default) means behaviour
   is exactly as before - keep it that way, and keep it tested that way.
+- Current hub reality (2026-10-04): the **only** live entry is the subdomain root
+  `https://<callsign>.mrrc.vlsc.net/` on **443** - the `:8899`/`:9988` ports and the
+  overseas edge path entry were removed in hub V0.21, so **no live path entry consumes
+  `base_path` today**; it is a built-and-guarded reserve. Current facts live in
+  `../mrrc_hub/SDD/12-operational-model.md` §12.8 (§12.8.1 covers this product) and in
+  `docs/current/design/hub-parity-plan.md`.
 - Server side: routes go through `base_path.application(handlers, **kwargs)`; `_base_path.url()`
   for redirects/next URLs; **and `path=_base_path.cookie_path(BASE_PATH)` on every cookie**.
   That last one is not cosmetic - on the path entry every tenant shares one origin.
@@ -34,6 +40,43 @@ subdomain root, so asset and request URLs must be **prefix-safe**:
 - `sw.js` keeps its precache list absolute but derives the prefix from the registration scope.
 - Run `python3 dev_tools/test_path_prefix.py` after touching routes, assets, cookies or `sw.js`.
   It caught two escapes a manual pattern sweep had missed.
+
+## Cloud Hub 接入（应用内，对齐 mrrc_modern v1.25.0）
+
+- 页面 `www/cloud.html`（主界面 ☁️ / 移动端菜单），接口 `/api/cloud/state|apply|refresh|restart`
+  （`CloudApiHandler`），纯逻辑 `cloud_hub.py`（stdlib，无 Tornado 依赖）。
+  守卫：`python3 dev_tools/test_cloud_hub.py`（改 cloud_hub.py、`MRRC` 云接线、Dockerfile
+  或 cloud.html 后必跑）。
+- **状态**在 `<配置目录>/mrrc_cloud.json`（0600，含申请令牌；`cloud_hub.save_state` 合并 +
+  原子写）。**不要**把这些值写进 `MRRC.conf`——configparser 重写会丢注释；门户指向的运维
+  覆盖才用 `[CLOUD] portal`（只读）。
+- **申请即挂牌照**：`product=legacy` → 门户分配 `<呼号>-legacy` 标签（hub `portal/callsign.py`
+  的 `label_for`）；旧门户地址（`:8899`、边缘路径）由 `cloud_hub._post` 改写到现网。
+- **批准后零点击**：`cloud-autoconnect` 守护线程每 30 s 问一次门户，批准后
+  `_cloud_finish_connect`（签证书 → `/enroll` 登记公钥 → 写 `fleet/frpc-<标签>.toml` →
+  起 `TunnelProcess`）→ 证书变了就 `restart_self()` 自重启。已接入实例**启动即拉起隧道**。
+  轮询线程永不抛异常（守护线程上抛异常 = 轮询无声消失）。
+- **证书生效判据按事实**：`_cert_reload_required()` 比"进程实际服务的证书
+  （`_SERVING_CERT_PATH`，建 SSLContext 时记录）vs 状态里登记的那张"——路径不同或同路径
+  重写（mtime > 进程启动，epoch 秒，别混 monotonic）都要重启。
+- **陈旧 frpc 必须清（F7/RC-003）**：`TunnelProcess` 启动前调 `_kill_stale_frpc`，按
+  "命令行点名了本实例自己的 `fleet/frpc-<标签>.toml`" 选进程（Windows wmic，POSIX
+  `ps -eo pid=,command=`），SIGTERM → 宽限 3s → SIGKILL。**原实现只在 Windows 生效**：
+  macOS/Linux 每次重启泄漏一个 frpc，抢同一个 proxy 名（`proxy already exists` 刷屏），
+  隧道由孤儿 frpc 持有。动这块先跑 `python3 dev_tools/test_cloud_hub.py`。
+- **换证书 = 站端 + hub 两侧一起动（F8，已实测跑通）**：公网看到的入口证书是 hub 边缘的
+  Let's Encrypt，但 hub 的 nginx 对上游开 `proxy_ssl_verify`，用 `trust-bundle.pem`
+  （系统 CA + `/etc/mrrc-hub/instance-certs/<label>.pem`）按 `$mrrc_tls_name` 校验实例证书。
+  **只重签站端证书 = 入口立刻 502**（2026-10-04 中间踩到并回滚过一次）。完整三步：
+  ① 站端重签（可带 `[SERVER] cert_extra_names` 的额外 SAN）+ `/enroll` 重新登记；
+  ② hub：`sudo /usr/local/sbin/gen_hub_routes.py && sudo nginx -t && sudo systemctl reload nginx`；
+  ③ 站端重启（TLS 上下文只在启动时建立）。把 ② 插在 ③ 的重启窗口里，对外中断≈一次重启。
+  `sign_for(extra_names=...)` 的行为由 `tests/test_ssl_bootstrap.py` 守着。
+- **IO 纪律**：apply/refresh 的网络与签名走 `run_in_executor`，不在 IOLoop 上阻塞（RC-001）；
+  `_restart` 用 `MAIN_IOLOOP.call_later(1.0, restart_self)` 而不是 handler 里 `time.sleep`
+  （2s/8s 看门狗会把 sleep 当 stall 倾倒线程栈）。
+- 行为与运维事实的权威：`../mrrc_modern/docs/OPERATION_GUIDE.md` §0.9（用户侧流程）与
+  `../mrrc_hub/SDD/12-operational-model.md` §12.8/§12.9（hub 现网）。
 
 ## Session Metrics
 
@@ -73,7 +116,7 @@ their own line. (Also: the TX config section is `[CTRL]`; `CTRX` is the runtime 
 - `dev_tools/test_connection.py` targets `https://localhost:8888/`, which does not match the current default `8877`; adjust before using it.
 - Hardware-facing checks may require PortAudio/PyAudio, Hamlib/rigctld, serial devices, RTL-SDR, TLS certs, or ATR-1000 network access.
 - `mrrc_multi.sh` rotates logs on start: the previous instance's tail survives as `<log>.prev` — the first place to look after a crash/restart.
-- Runtime log markers (F4/F4b, V6.0.2): `IOLoop watchdog armed` at startup; `⏱️ TX audio init: 枚举 Xs, p.open Xs` on every PTT (healthy <0.2s each); `📦 TX init took ... flushing N buffered frames` when F4b buffering engaged; `🚨 IOLoop stall` + full thread dump if the event loop wedges. TX modulation is verified fastest via ATR-1000 power readings (swinging 100W+ = modulated, flat ~7W carrier = silent TX).
+- Runtime log markers (F4/F4b, V6.0.2; F6, RC-003): `IOLoop watchdog armed` at startup (F6 起含 `native dump window=30s`); `⏱️ TX audio init: 枚举 Xs, p.open Xs` on every PTT (healthy <0.2s each); `📦 TX init took ... flushing N buffered frames` when F4b buffering engaged; `🚨 IOLoop stall` + full thread dump when a stall clears; `Timeout (0:00:30)!` + full thread dump if the loop wedges permanently (F6 native timer); `⚠️ TX stream stop/close 超过 3s 未返回` / `⚠️ TX 写线程未在 1s 内退出` when the audio device/HAL is degrading (F6, stream intentionally leaked). TX modulation is verified fastest via ATR-1000 power readings (swinging 100W+ = modulated, flat ~7W carrier = silent TX).
 - Bluetooth audio devices as macOS default output churn A2DP (`bluetoothd` `Jitter Buffer ... error 312`) and stall CoreAudio globally, slowing MRRC `p.open()`; see `docs/current/reliability/RC-001-ioloop-wedge-and-tx-silence.md` §7 for probes.
 
 ## Architecture Notes
@@ -81,17 +124,43 @@ their own line. (Also: the TX config section is `[CTRL]`; `CTRX` is the runtime 
 - 电台型号有两套键、必须同步：UI/配置里的 `[HAMLIB] rig_model`（hamlib 规范名，如 `IC-M710`）与 rigctld 实际读取的 `[INSTANCE_SETTINGS] instance_rigctl_model`（数字，如 30003）。Device Config 保存时由 `rig_models.apply_to_config()` 两处一起写；机型表由 `rig_models.py` 从本机 hamlib 实时枚举（312 个），不要再硬编码型号列表。
 - 「🐞 遇到问题」一键诊断包：生成/脱敏在 `support_bundle.py`（纯标准库、松散模块，可热修），服务端接口在 `MRRC` 的 `SupportApiHandler`（`/api/support/*`，IO 全走 executor），页面 `www/support.html`；接收端 `tools/support_receiver/server.py` 部署在 <www.vlsc.net（`./deploy_support_receiver.sh`），维护者列表页与口令见> `docs/current/operations/support-bundle.md`。
 - Radio control goes through `rigctld`/Hamlib via `hamlib_wrapper.py`; audio I/O goes through PyAudio abstractions in `audio_interface.py`.
+- **rigctld 轮询纪律（F9/F10，2026-10-04）**：① 查不出结果就别一直查 —— 本机 IC-M710
+  的 `l STRENGTH` 恒返 `RPRT -1`，而 `ticksTRXRIG` 每 0.5s 问一次；现在连续 3 次失败就
+  **闩住**（`_strength_unsupported`，只提示一次）。② **rigctld 用 `-vv` 启动，不要 `-vvv`**：
+  TRACE 级会把“连上但没发命令”的探针记成 `nothing to scan#1? last_cmd=[empty]`，实测
+  2~3 条/秒、占日志 99%；`-vv` 保留有用的 `rigctl_set_ptt` 审计行。并且**只有 `RPRT -1`
+  才计入闩锁** —— 瞬时错误码（-5/-6/-9/-11、串口抖动、电台忙）不计数，否则 FT-817
+  这类**本来读得到** S 表的机型会被误闩到会话结束（F9d）。③ 频率读回 0
+  （电台关机/串口掉线）**不覆盖**上次已知值，只每 10 分钟提示一次。
+  守卫：`python3 dev_tools/test_rig_polling.py`。
+- **第三方软件联动（F9c）**：RUMlogNG/JTDX/flrig 可直接轮询同一个 rigctld（读频率、
+  点 DX spot 改频）；`FrequencySyncThread` 检测到外部改频后会 `sync_freq_to_atr1000()`
+  **并向页面广播** `getFreq:<值>`（经 `MAIN_IOLOOP.add_callback`），所以页面会跟着变。
+  已知限制：IC-M710 的 `m`（读模式）只回 passband（hamlib 后端行为），RUMlogNG 读不到
+  模式 —— 记日志时模式得手选。
+- **IC-M710 的 hamlib 后端三个坑（F11/F12，2026-10-04）**：① 该机**不响应 CAT 查询**，
+  `get_freq/get_mode` 返回的是 rigctld 内存里“最后一次设置”的副本 → 重启即归零（应用用
+  `rig_state.json` 落盘 + 启动/读 0 时重写，F11）。**重写前必须先读后写**（F11b）：会
+  回答查询的机型（FT-817/FT-818…）以电台自报值为准，绝不用记忆值覆盖操作员手动的调台；
+  只有读回 0/空（副本丢失）才写。注意副本为空时 rigctld 对 `m` 回的是“空首行 + 2200”，
+  不得把 2200 当成模式名（真机踩过）。② `set_mode()` **从不记** `priv->mode`
+  → 模式只在 ~1s 的 get 缓存里可读（本地补丁 `dev_tools/patches/icm710-mode-cache.patch`，
+  独立构建在 `/usr/local/mrrc-hamlib`，实例配置 `[HAMLIB] rigctld_bin` 指认）；
+  ③ caps 声明 `RAWSTR` 但 `get_level()` 未实现（S 表不可能，应用已闩住不再轮询）。
+  换 hamlib 升级后需按 `dev_tools/patches/README.md` 重新打补丁构建；两条都建议报 upstream。
 - WebSocket endpoints are defined near the bottom of `MRRC`: `/WSaudioRX`, `/WSaudioTX`, `/WSCTRX`, `/WSpanFFT`, `/WSATR1000`, and `/WSATU`.
 - `www/controls.js` owns shared browser control/audio behavior; `www/mobile_modern.js` depends on `controls.js` and should not redeclare its globals.
 - Mobile HTML contains hidden desktop-compatible elements required by `controls.js`; do not remove them as dead markup without checking runtime dependencies.
 - The active RX engine lives in `www/controls.js` with the `rx_worklet_processor.js` watermark buffer; `www/audio_rx.js` (V5.2 `BufferSourceNode` scheduler) is deprecated legacy and incompatible with the tagged wire format — no page should load it.
+- **音量滑块的量程是约定（F13）**：`C_af`（接收音量）是 **0-1000**，线性增益 = `value/1000`；`C_mg`（发射麦克风）是 **0-200**，`value/100` → 0-2.0。旧量程（`C_af` 的 0-100）只允许在**读存储值**时一次性 ×10 迁移（`controls.js::normalizeCAfScale`，标记 `mrrc_caf_scale_v2`），增益函数里只能 `/1000` —— 写成 `/100` 会算出 5.0、把音量顶爆 10 倍（`audio_rx.js` 就漏了这一处）。守卫：`tests/test_web_audio_gain.py`（结构 + 用 node 实跑音量数学）。
 - TX capture runs on `tx_worklet_processor.js` (`tx-capture` AudioWorklet, 960-sample/20 ms frames posted to `OpusEncoderProcessor.pushSamples`); `MediaHandler._setupScriptProcessor` is the iOS/legacy fallback — both paths must stay functional.
 - WDSP integration is in `wdsp_wrapper.py` plus `DSP/wdsp/`; macOS builds produce `libwdsp.dylib`, Linux builds produce `libwdsp.so`.
 - 一键升级（Windows 安装版）：纯逻辑在 `upgrade_core.py`（清单/版本决策/原子下载校验/state.json+upgrade.request），启动器负责 `ShellExecuteW runas` 静默安装；服务端 `/api/update*`（仅本机免口令）；发布用 `dev_tools/make_latest_json.py`；开关 `[UPDATE] enabled/autoDownload`、`MRRC_NO_UPDATE_CHECK=1`。文档：`docs/current/operations/one-click-upgrade.md`。
 - ATR-1000 是**可选**组件：`[ATR1000] enabled = auto|true|false`（auto = 配了 `instance_atr1000_device` 才启用；`MRRC_ATR1000=0/1` 可覆盖）。关闭时 `ATR1000_ENABLED=False` → 不启动代理管理器、不轮询、`/WSATR1000` 只回一条 `atr1000_status{enabled:false}` 让前端隐藏面板；代理连接失败/重连日志走 `_log_throttled()`（默认 5 分钟一条），别再直接 `logger.warning` 刷屏。
 - ATR-1000 integration uses `atr1000_proxy.py` with a Unix socket defaulting to `/tmp/atr1000_proxy.sock`; multi-instance configs override this via `[INSTANCE_SETTINGS]`. The proxy answers from cache only (request/response); TX `stop` zeroes the cached power/SWR so RX never shows ghost readings, and `MRRC`'s `ATR1000ProxyManager` fast-polls (250 ms) off the CTRX PTT state, broadcasting meter JSON to `/WSATR1000` clients via the IOLoop thread only.
 - **IOLoop thread-safety (V5.8.2)**: `tornado.ioloop.IOLoop.instance()` is a thread-dependent alias of `IOLoop.current()` in tornado 6.5. Background threads (ATR-1000 reconnect `Timer`, rigctld executor via `run_in_executor`, `PTTSafetyMonitor`) MUST use the main-thread-pinned global `MAIN_IOLOOP` (defined at module top) for `add_callback`/`add_timeout`, never `IOLoop.instance()` — calling it from a worker thread creates a separate asyncio loop whose queued callbacks never run (ATR meter/PTT broadcasts silently die, frontend shows only the initial snapshot).
-- **TX init is async (F4/F4b, V6.0.2)**: `WS_AudioTXHandler` `m:` → `_start_tx_init_async` runs `TX_init` (incl. blocking `p.open()`) on a `run_in_executor` worker — never call `TX_init` synchronously from `on_message`. Frames arriving during init buffer into `_tx_pending_frames` (250-frame cap) and flush on completion; `s:`/`on_close` set `_tx_init_cancel` and clear the buffer; the discard path force-releases PTT. `audio_interface.py` caches the output-device index (`_output_device_index_cache`, validated by name on each hit). A heartbeat watchdog (`arm_ioloop_watchdog`, 2s/8s) dumps all thread stacks if the IOLoop wedges. Full story: `docs/current/reliability/RC-001-ioloop-wedge-and-tx-silence.md`.
+- **TX init is async (F4/F4b, V6.0.2)**: `WS_AudioTXHandler` `m:` → `_start_tx_init_async` runs `TX_init` (incl. blocking `p.open()`) on a `run_in_executor` worker — never call `TX_init` synchronously from `on_message`. Frames arriving during init buffer into `_tx_pending_frames` (250-frame cap) and flush on completion; `s:`/`on_close` set `_tx_init_cancel` and clear the buffer; the discard path force-releases PTT. `audio_interface.py` caches the output-device index (`_output_device_index_cache`, validated by name on each hit). A heartbeat watchdog (`arm_ioloop_watchdog`, 2s/8s) dumps all thread stacks when a stall *clears*; since F6 it also re-arms a native `faulthandler.dump_traceback_later` timer each beat, which dumps stacks even if the loop wedges **permanently**. Full story: `docs/current/reliability/RC-001-ioloop-wedge-and-tx-silence.md`.
+- **TX 拆流是有界 + 异步的（F6, RC-003）**: `PyAudioPlayback.close()` 内部的 PortAudio `Pa_StopStream` 可能**永不返回**（2026-10-04 把 8891 楔死 2h23m），因此它绝不在 IOLoop 线程上被调用 —— `WS_AudioTXHandler` 的 `s:`/`on_close` 走 `close_async()`；`close()` 自身有界（3s 超时即放弃、泄漏流）并规避“写线程卡在阻塞 write() 时跨线程拆流”。释放 PTT 走 `MAIN_IOLOOP.run_in_executor(None, _release_ptt_async)`，**不得排在音频清理之后**（本案 setPTT 就死在 close() 后面）。守卫：`python3 dev_tools/test_audio_close_liveness.py`。Full story: `docs/current/reliability/RC-003-ioloop-wedge-on-tx-close.md`。
 
 ## Windows Installer / One-Click Upgrade
 
@@ -182,7 +251,7 @@ their own line. (Also: the TX config section is `[CTRL]`; `CTRX` is the runtime 
 ## Existing Guidance
 
 - 天线/天调（EFHW × ATR-1000）：扫频画像、学习库体检/修复、测算页的全程复盘与铁律在 `docs/current/antenna/efhw-atr1000-project-retrospective-2026-09-28.md`，操作技能沉淀在 `.pi/skills/antenna-sweep/SKILL.md`（与 `~/.agents/skills/antenna-sweep/` 同步）。动天线测量、学习库或调谐自动化前先读。关键坑：PTTSafetyMonitor TOT=120s 不豁免 tune（长会话工具须 re-arm）、确认学习需继电器稳定 >8s、改学习库必须走 proxy socket learn。
-- `docs/current/reliability/` indexes the reliability/safety case series (RC-001: IOLoop wedge + BT-DAC-churn silent TX); consult it before touching TX init, the IOLoop, or macOS audio device handling.
+- `docs/current/reliability/` indexes the reliability/safety case series (RC-001: IOLoop wedge + BT-DAC-churn silent TX; RC-003: TX 拆流 `Pa_StopStream` 楔死 IOLoop); consult it before touching TX init/拆流, the IOLoop, or macOS audio device handling.
 - `docs/current/methodology/project-retrospective-2026-09.md` is the full project history retrospective (phases, problem taxonomy, validated methods, future outlook) — read it when planning larger direction changes.
 - `docs/legacy/methodology/aldv2/Aladdin_V2_Methodology.md` is the top-level engineering methodology; `.opencode/skills/aladdin-v2/SKILL.md` turns it into a repo-local OpenCode skill.
 - `docs/legacy/tooling/CLAUDE.md` has broader architecture notes; prefer this file for compact OpenCode-specific gotchas.

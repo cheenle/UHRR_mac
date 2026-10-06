@@ -1,0 +1,34 @@
+diff --git a/rigs/icmarine/icm710.c b/rigs/icmarine/icm710.c
+--- a/rigs/icmarine/icm710.c
++++ b/rigs/icmarine/icm710.c
+@@ -488,6 +488,7 @@
+ int icm710_set_mode(RIG *rig, vfo_t vfo, rmode_t mode, pbwidth_t width)
+ {
+     const char *pmode;
++    int retval;
+ 
+     switch (mode)
+     {
+@@ -518,7 +519,21 @@
+         return -RIG_EINVAL;
+     }
+ 
+-    return icmarine_transaction(rig, CMD_MODE, pmode, NULL);
++    retval = icmarine_transaction(rig, CMD_MODE, pmode, NULL);
++
++    if (retval != RIG_OK)
++    {
++        return retval;
++    }
++
++    /* The M710 does not respond to queries: keep our own copy of the mode exactly
++     * as set_freq() keeps rxfreq. Without it get_mode() can only ever answer
++     * RIG_MODE_NONE once hamlib's get-cache (rig_set_cache_timeout_ms(), 1 s by
++     * default) expires -- a polling client (a logger reading the rig through
++     * rigctld) then sees an empty mode forever. */
++    ((struct icm710_priv_data *)STATE(rig)->priv)->mode = mode;
++
++    return RIG_OK;
+ }
+ 
+ int icm710_get_mode(RIG *rig, vfo_t vfo, rmode_t *mode, pbwidth_t *width)

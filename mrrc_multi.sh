@@ -21,68 +21,68 @@ NC='\033[0m'
 
 # 打印状态消息
 print_status() {
-    echo -e "${BLUE}[${INSTANCE:-default}]${NC} $1"
+	echo -e "${BLUE}[${INSTANCE:-default}]${NC} $1"
 }
 
 print_success() {
-    echo -e "${GREEN}[${INSTANCE:-default}]${NC} $1"
+	echo -e "${GREEN}[${INSTANCE:-default}]${NC} $1"
 }
 
 print_warning() {
-    echo -e "${YELLOW}[${INSTANCE:-default}]${NC} $1"
+	echo -e "${YELLOW}[${INSTANCE:-default}]${NC} $1"
 }
 
 print_error() {
-    echo -e "${RED}[${INSTANCE:-default}]${NC} $1"
+	echo -e "${RED}[${INSTANCE:-default}]${NC} $1"
 }
 
 print_info() {
-    echo -e "${CYAN}[${INSTANCE:-default}]${NC} $1"
+	echo -e "${CYAN}[${INSTANCE:-default}]${NC} $1"
 }
 
 # 检测可用的 Python 解释器（兼容 Python 升级后的环境）
 # 优先使用项目 venv（且其底层框架仍存在），否则查找包含 tornado/numpy 依赖的解释器
 detect_python() {
-    if [ -n "$PYTHON" ] && [ -x "$PYTHON" ]; then
-        return 0
-    fi
+	if [ -n "$PYTHON" ] && [ -x "$PYTHON" ]; then
+		return 0
+	fi
 
-    local venv_python="$SCRIPT_DIR/venv/bin/python"
-    local candidates=(
-        "$venv_python"
-        "/opt/homebrew/bin/python3.11"
-        "/opt/homebrew/bin/python3"
-        "$(command -v python3 2>/dev/null)"
-        "/opt/local/bin/python3"
-    )
-    local cand
-    for cand in "${candidates[@]}"; do
-        [ -z "$cand" ] && continue
-        # 跳过损坏的 venv：直接尝试运行其解释器（底层 Python 框架被删除时 dyld 会失败，
-        # Python 升级后常见）。不能只检查 home 路径下是否存在 python3——
-        # Homebrew 的 opt 目录下只有 python3.11 并无 python3，会误报健康 venv 已失效。
-        if [ "$cand" = "$venv_python" ] && ! "$cand" -c "" >/dev/null 2>&1; then
-            print_warning "venv 已失效（$cand 无法执行），跳过并查找其他解释器"
-            continue
-        fi
-        if [ -x "$cand" ] && ( "$cand" -c "import tornado, numpy" >/dev/null 2>&1 ); then
-            PYTHON="$cand"
-            print_info "Using Python: $PYTHON"
-            return 0
-        fi
-    done
-    print_error "未找到可用的 Python 解释器（需安装 tornado/numpy）"
-    return 1
+	local venv_python="$SCRIPT_DIR/venv/bin/python"
+	local candidates=(
+		"$venv_python"
+		"/opt/homebrew/bin/python3.11"
+		"/opt/homebrew/bin/python3"
+		"$(command -v python3 2>/dev/null)"
+		"/opt/local/bin/python3"
+	)
+	local cand
+	for cand in "${candidates[@]}"; do
+		[ -z "$cand" ] && continue
+		# 跳过损坏的 venv：直接尝试运行其解释器（底层 Python 框架被删除时 dyld 会失败，
+		# Python 升级后常见）。不能只检查 home 路径下是否存在 python3——
+		# Homebrew 的 opt 目录下只有 python3.11 并无 python3，会误报健康 venv 已失效。
+		if [ "$cand" = "$venv_python" ] && ! "$cand" -c "" >/dev/null 2>&1; then
+			print_warning "venv 已失效（$cand 无法执行），跳过并查找其他解释器"
+			continue
+		fi
+		if [ -x "$cand" ] && ("$cand" -c "import tornado, numpy" >/dev/null 2>&1); then
+			PYTHON="$cand"
+			print_info "Using Python: $PYTHON"
+			return 0
+		fi
+	done
+	print_error "未找到可用的 Python 解释器（需安装 tornado/numpy）"
+	return 1
 }
 
 # 检查进程是否运行
 is_running() {
-    pgrep -f "$1" > /dev/null 2>&1
+	pgrep -f "$1" >/dev/null 2>&1
 }
 
 # 获取进程PID
 get_pid() {
-    pgrep -f "$1" 2>/dev/null
+	pgrep -f "$1" 2>/dev/null
 }
 
 # 杀掉进程
@@ -91,66 +91,67 @@ get_pid() {
 # 且 final 检查改用 ps -p 精确判定，不再依赖易被 tail 监控等误命中的模式匹配。
 # 返回 0 = 全部停止；1 = 仍有进程存活。
 kill_process() {
-    local process_pattern="$1"
-    local pids
-    pids=$(get_pid "$process_pattern")
+	local process_pattern="$1"
+	local pids
+	pids=$(get_pid "$process_pattern")
 
-    if [ -n "$pids" ]; then
-        print_status "Stopping $process_pattern (PID: $(echo "$pids" | tr '\n' ' '))..."
-        # 优雅终止所有匹配进程
-        for pid in $pids; do
-            kill "$pid" 2>/dev/null
-        done
-        sleep 2
+	if [ -n "$pids" ]; then
+		print_status "Stopping $process_pattern (PID: $(echo "$pids" | tr '\n' ' '))..."
+		# 优雅终止所有匹配进程
+		for pid in $pids; do
+			kill "$pid" 2>/dev/null
+		done
+		sleep 2
 
-        # 逐个检查，仍在运行则强制杀
-        for pid in $pids; do
-            if ps -p "$pid" > /dev/null 2>&1; then
-                print_warning "Force killing $pid..."
-                kill -9 "$pid" 2>/dev/null
-            fi
-        done
-        sleep 1
+		# 逐个检查，仍在运行则强制杀
+		for pid in $pids; do
+			if ps -p "$pid" >/dev/null 2>&1; then
+				print_warning "Force killing $pid..."
+				kill -9 "$pid" 2>/dev/null
+			fi
+		done
+		sleep 1
 
-        # 最终确认
-        local alive=""
-        for pid in $pids; do
-            if ps -p "$pid" > /dev/null 2>&1; then
-                alive="$alive $pid"
-            fi
-        done
-        if [ -n "$alive" ]; then
-            print_error "Failed to stop (still alive:$alive)"
-            return 1
-        fi
-        print_success "Stopped"
-    else
-        print_status "Not running"
-    fi
-    return 0
+		# 最终确认
+		local alive=""
+		for pid in $pids; do
+			if ps -p "$pid" >/dev/null 2>&1; then
+				alive="$alive $pid"
+			fi
+		done
+		if [ -n "$alive" ]; then
+			print_error "Failed to stop (still alive:$alive)"
+			return 1
+		fi
+		print_success "Stopped"
+	else
+		print_status "Not running"
+	fi
+	return 0
 }
 
 # 加载实例配置
 load_instance_config() {
-    local instance_name="$1"
-    local config_file="$SCRIPT_DIR/MRRC.$instance_name.conf"
+	local instance_name="$1"
+	local config_file="$SCRIPT_DIR/MRRC.$instance_name.conf"
 
-    # H19: 实例名经 shell 插值进入 Python 字符串字面量（如 c.read('$config_file')），
-    # 含单引号/分号等可注入任意代码。严格限制为 [A-Za-z0-9_-] 阻断注入面。
-    if ! [[ "$instance_name" =~ ^[A-Za-z0-9_-]+$ ]]; then
-        print_error "Invalid instance name '$instance_name': only letters, digits, '_' and '-' are allowed"
-        return 1
-    fi
+	# H19: 实例名经 shell 插值进入 Python 字符串字面量（如 c.read('$config_file')），
+	# 含单引号/分号等可注入任意代码。严格限制为 [A-Za-z0-9_-] 阻断注入面。
+	if ! [[ "$instance_name" =~ ^[A-Za-z0-9_-]+$ ]]; then
+		print_error "Invalid instance name '$instance_name': only letters, digits, '_' and '-' are allowed"
+		return 1
+	fi
 
-    if [ ! -f "$config_file" ]; then
-        print_error "Config file not found: $config_file"
-        return 1
-    fi
+	if [ ! -f "$config_file" ]; then
+		print_error "Config file not found: $config_file"
+		return 1
+	fi
 
-    detect_python || return 1
+	detect_python || return 1
 
-    # 使用 Python 解析配置文件获取实例参数
-    local python_script=$(cat << 'PYEOF'
+	# 使用 Python 解析配置文件获取实例参数
+	local python_script=$(
+		cat <<'PYEOF'
 import sys
 import configparser
 
@@ -199,411 +200,425 @@ except Exception as e:
     print(f"Error: {e}", file=sys.stderr)
     sys.exit(1)
 PYEOF
-)
-    
-    # 调用 Python 解析配置
-    local config_values=($("$PYTHON" -c "$python_script" "$config_file" "$instance_name"))
-    
-    # 设置实例变量
-    INSTANCE="$instance_name"
-    
-    # 从配置文件中读取标准配置
-    INSTANCE_PORT=$("$PYTHON" -c "import configparser; c=configparser.ConfigParser(); c.read('$config_file'); print(c.get('SERVER', 'port', fallback='8877'))" 2>/dev/null)
-    INSTANCE_AUDIO_INPUT=$("$PYTHON" -c "import configparser; c=configparser.ConfigParser(); c.read('$config_file'); print(c.get('AUDIO', 'inputdevice', fallback=''))" 2>/dev/null)
-    INSTANCE_AUDIO_OUTPUT=$("$PYTHON" -c "import configparser; c=configparser.ConfigParser(); c.read('$config_file'); print(c.get('AUDIO', 'outputdevice', fallback=''))" 2>/dev/null)
-    INSTANCE_RIGCTL_DEVICE=$("$PYTHON" -c "import configparser; c=configparser.ConfigParser(); c.read('$config_file'); print(c.get('HAMLIB', 'rig_pathname', fallback=''))" 2>/dev/null)
+	)
 
-    # 从 INSTANCE_SETTINGS 节读取额外的实例配置
-    INSTANCE_RIGCTL_MODEL=$("$PYTHON" -c "import configparser; c=configparser.ConfigParser(); c.read('$config_file'); print(c.get('INSTANCE_SETTINGS', 'INSTANCE_RIGCTL_MODEL', fallback='30003'))" 2>/dev/null)
-    INSTANCE_RIGCTL_SPEED=$("$PYTHON" -c "import configparser; c=configparser.ConfigParser(); c.read('$config_file'); print(c.get('INSTANCE_SETTINGS', 'INSTANCE_RIGCTL_SPEED', fallback='4800'))" 2>/dev/null)
-    INSTANCE_RIGCTL_STOP_BITS=$("$PYTHON" -c "import configparser; c=configparser.ConfigParser(); c.read('$config_file'); print(c.get('INSTANCE_SETTINGS', 'INSTANCE_RIGCTL_STOP_BITS', fallback='2'))" 2>/dev/null)
-    INSTANCE_RIGCTL_HOST=$("$PYTHON" -c "import configparser; c=configparser.ConfigParser(); c.read('$config_file'); print(c.get('INSTANCE_SETTINGS', 'INSTANCE_RIGCTL_HOST', fallback='127.0.0.1'))" 2>/dev/null)
-    INSTANCE_RIGCTL_PORT=$("$PYTHON" -c "import configparser; c=configparser.ConfigParser(); c.read('$config_file'); print(c.get('INSTANCE_SETTINGS', 'INSTANCE_RIGCTL_PORT', fallback=''))" 2>/dev/null)
-    INSTANCE_ATR1000_DEVICE=$("$PYTHON" -c "import configparser; c=configparser.ConfigParser(); c.read('$config_file'); print(c.get('INSTANCE_SETTINGS', 'INSTANCE_ATR1000_DEVICE', fallback=''))" 2>/dev/null)
-    INSTANCE_ATR1000_PORT=$("$PYTHON" -c "import configparser; c=configparser.ConfigParser(); c.read('$config_file'); print(c.get('INSTANCE_SETTINGS', 'INSTANCE_ATR1000_PORT', fallback='60001'))" 2>/dev/null)
-    INSTANCE_LOG_DIR=$("$PYTHON" -c "import configparser; c=configparser.ConfigParser(); c.read('$config_file'); print(c.get('INSTANCE_SETTINGS', 'INSTANCE_LOG_DIR', fallback='$SCRIPT_DIR'))" 2>/dev/null)
-    INSTANCE_UNIX_SOCKET=$("$PYTHON" -c "import configparser; c=configparser.ConfigParser(); c.read('$config_file'); print(c.get('INSTANCE_SETTINGS', 'INSTANCE_UNIX_SOCKET', fallback='/tmp/mrrc_${instance_name}.sock'))" 2>/dev/null)
-    
-    # 设置默认值
-    : ${INSTANCE_PORT:=8877}
-    : ${INSTANCE_RIGCTL_MODEL:=30003}
-    : ${INSTANCE_RIGCTL_SPEED:=4800}
-    : ${INSTANCE_RIGCTL_STOP_BITS:=2}
-    : ${INSTANCE_RIGCTL_HOST:=127.0.0.1}
-    : ${INSTANCE_ATR1000_PORT:=60001}
-    : ${INSTANCE_LOG_DIR:=$SCRIPT_DIR}
-    : ${INSTANCE_UNIX_SOCKET:="/tmp/mrrc_${instance_name}.sock"}
+	# 调用 Python 解析配置
+	local config_values=($("$PYTHON" -c "$python_script" "$config_file" "$instance_name"))
 
-    # 日志目录支持相对路径（相对 SCRIPT_DIR 解析），兼容部署目录变更
-    case "$INSTANCE_LOG_DIR" in
-        /*) : ;;
-        *) INSTANCE_LOG_DIR="$SCRIPT_DIR/$INSTANCE_LOG_DIR" ;;
-    esac
-    
-    # 设置日志文件路径
-    RIGCTLD_LOG="${INSTANCE_LOG_DIR}/rigctld_${instance_name}.log"
-    MRRC_LOG="${INSTANCE_LOG_DIR}/mrrc_${instance_name}.log"
-    ATR1000_LOG="${INSTANCE_LOG_DIR}/atr1000_${instance_name}.log"
-    PID_DIR="${INSTANCE_LOG_DIR}"
-    
-    print_info "Loaded config: $config_file"
-    print_info "Port: $INSTANCE_PORT"
-    print_info "Rig: $INSTANCE_RIGCTL_DEVICE"
-    print_info "Audio In: $INSTANCE_AUDIO_INPUT"
-    print_info "Audio Out: $INSTANCE_AUDIO_OUTPUT"
-    
-    return 0
+	# 设置实例变量
+	INSTANCE="$instance_name"
+
+	# 从配置文件中读取标准配置
+	INSTANCE_PORT=$("$PYTHON" -c "import configparser; c=configparser.ConfigParser(); c.read('$config_file'); print(c.get('SERVER', 'port', fallback='8877'))" 2>/dev/null)
+	INSTANCE_AUDIO_INPUT=$("$PYTHON" -c "import configparser; c=configparser.ConfigParser(); c.read('$config_file'); print(c.get('AUDIO', 'inputdevice', fallback=''))" 2>/dev/null)
+	INSTANCE_AUDIO_OUTPUT=$("$PYTHON" -c "import configparser; c=configparser.ConfigParser(); c.read('$config_file'); print(c.get('AUDIO', 'outputdevice', fallback=''))" 2>/dev/null)
+	INSTANCE_RIGCTL_DEVICE=$("$PYTHON" -c "import configparser; c=configparser.ConfigParser(); c.read('$config_file'); print(c.get('HAMLIB', 'rig_pathname', fallback=''))" 2>/dev/null)
+	# F12：可选 —— 指定 rigctld 可执行文件（例如给 IC-M710 打了“模式缓存”补丁的那份）。
+	# 空 = 用 PATH 里的 rigctld（MacPorts/官方 Homebrew 都行）。
+	INSTANCE_RIGCTLD_BIN=$("$PYTHON" -c "import configparser; c=configparser.ConfigParser(); c.read('$config_file'); print(c.get('HAMLIB', 'rigctld_bin', fallback=''))" 2>/dev/null)
+
+	# 从 INSTANCE_SETTINGS 节读取额外的实例配置
+	INSTANCE_RIGCTL_MODEL=$("$PYTHON" -c "import configparser; c=configparser.ConfigParser(); c.read('$config_file'); print(c.get('INSTANCE_SETTINGS', 'INSTANCE_RIGCTL_MODEL', fallback='30003'))" 2>/dev/null)
+	INSTANCE_RIGCTL_SPEED=$("$PYTHON" -c "import configparser; c=configparser.ConfigParser(); c.read('$config_file'); print(c.get('INSTANCE_SETTINGS', 'INSTANCE_RIGCTL_SPEED', fallback='4800'))" 2>/dev/null)
+	INSTANCE_RIGCTL_STOP_BITS=$("$PYTHON" -c "import configparser; c=configparser.ConfigParser(); c.read('$config_file'); print(c.get('INSTANCE_SETTINGS', 'INSTANCE_RIGCTL_STOP_BITS', fallback='2'))" 2>/dev/null)
+	INSTANCE_RIGCTL_HOST=$("$PYTHON" -c "import configparser; c=configparser.ConfigParser(); c.read('$config_file'); print(c.get('INSTANCE_SETTINGS', 'INSTANCE_RIGCTL_HOST', fallback='127.0.0.1'))" 2>/dev/null)
+	INSTANCE_RIGCTL_PORT=$("$PYTHON" -c "import configparser; c=configparser.ConfigParser(); c.read('$config_file'); print(c.get('INSTANCE_SETTINGS', 'INSTANCE_RIGCTL_PORT', fallback=''))" 2>/dev/null)
+	INSTANCE_ATR1000_DEVICE=$("$PYTHON" -c "import configparser; c=configparser.ConfigParser(); c.read('$config_file'); print(c.get('INSTANCE_SETTINGS', 'INSTANCE_ATR1000_DEVICE', fallback=''))" 2>/dev/null)
+	INSTANCE_ATR1000_PORT=$("$PYTHON" -c "import configparser; c=configparser.ConfigParser(); c.read('$config_file'); print(c.get('INSTANCE_SETTINGS', 'INSTANCE_ATR1000_PORT', fallback='60001'))" 2>/dev/null)
+	INSTANCE_LOG_DIR=$("$PYTHON" -c "import configparser; c=configparser.ConfigParser(); c.read('$config_file'); print(c.get('INSTANCE_SETTINGS', 'INSTANCE_LOG_DIR', fallback='$SCRIPT_DIR'))" 2>/dev/null)
+	INSTANCE_UNIX_SOCKET=$("$PYTHON" -c "import configparser; c=configparser.ConfigParser(); c.read('$config_file'); print(c.get('INSTANCE_SETTINGS', 'INSTANCE_UNIX_SOCKET', fallback='/tmp/mrrc_${instance_name}.sock'))" 2>/dev/null)
+
+	# 设置默认值
+	: ${INSTANCE_PORT:=8877}
+	: ${INSTANCE_RIGCTL_MODEL:=30003}
+	: ${INSTANCE_RIGCTL_SPEED:=4800}
+	: ${INSTANCE_RIGCTL_STOP_BITS:=2}
+	: ${INSTANCE_RIGCTL_HOST:=127.0.0.1}
+	: ${INSTANCE_ATR1000_PORT:=60001}
+	: ${INSTANCE_LOG_DIR:=$SCRIPT_DIR}
+	: ${INSTANCE_UNIX_SOCKET:="/tmp/mrrc_${instance_name}.sock"}
+
+	# 日志目录支持相对路径（相对 SCRIPT_DIR 解析），兼容部署目录变更
+	case "$INSTANCE_LOG_DIR" in
+	/*) : ;;
+	*) INSTANCE_LOG_DIR="$SCRIPT_DIR/$INSTANCE_LOG_DIR" ;;
+	esac
+
+	# 设置日志文件路径
+	RIGCTLD_LOG="${INSTANCE_LOG_DIR}/rigctld_${instance_name}.log"
+	MRRC_LOG="${INSTANCE_LOG_DIR}/mrrc_${instance_name}.log"
+	ATR1000_LOG="${INSTANCE_LOG_DIR}/atr1000_${instance_name}.log"
+	PID_DIR="${INSTANCE_LOG_DIR}"
+
+	print_info "Loaded config: $config_file"
+	print_info "Port: $INSTANCE_PORT"
+	print_info "Rig: $INSTANCE_RIGCTL_DEVICE"
+	print_info "Audio In: $INSTANCE_AUDIO_INPUT"
+	print_info "Audio Out: $INSTANCE_AUDIO_OUTPUT"
+
+	return 0
 }
 
 # 启动 rigctld
 start_rigctld() {
-    # 检查是否需要启动 rigctld（如果未配置设备则跳过）
-    if [ -z "$INSTANCE_RIGCTL_DEVICE" ]; then
-        print_info "No rigctl device configured, skipping rigctld..."
-        return 0
-    fi
-    
-    # 使用端口号作为 rigctld 标识（更可靠）
-    : ${INSTANCE_RIGCTL_PORT:=4532}
-    local rigctld_pattern="rigctld.*-t.*${INSTANCE_RIGCTL_PORT}"
-    
-    if is_running "$rigctld_pattern"; then
-        print_warning "rigctld already running on port $INSTANCE_RIGCTL_PORT"
-        return 1
-    fi
-    
-    # 如果没有指定 rigctl 端口，使用默认值
-    : ${INSTANCE_RIGCTL_PORT:=4532}
-    
-    print_status "Starting rigctld..."
-    print_status "  Device: $INSTANCE_RIGCTL_DEVICE"
-    print_status "  Model: $INSTANCE_RIGCTL_MODEL"
-    print_status "  Speed: $INSTANCE_RIGCTL_SPEED"
-    print_status "  Port: $INSTANCE_RIGCTL_PORT"
-    
-    # 日志轮转：先把上一份（可能是死亡现场）留作 .prev，再写新文件
-    [ -f "$RIGCTLD_LOG" ] && mv "$RIGCTLD_LOG" "$RIGCTLD_LOG.prev"
-    > "$RIGCTLD_LOG"
-    
-    # 启动 rigctld，使用实例名称作为标识
-    rigctld -m "$INSTANCE_RIGCTL_MODEL" \
-            -r "$INSTANCE_RIGCTL_DEVICE" \
-            -s "$INSTANCE_RIGCTL_SPEED" \
-            -C stop_bits="$INSTANCE_RIGCTL_STOP_BITS" \
-            -T "$INSTANCE_RIGCTL_HOST" \
-            -t "$INSTANCE_RIGCTL_PORT" \
-            -vvv > "$RIGCTLD_LOG" 2>&1 &
-    
-    local pid=$!
-    sleep 3
-    
-    if is_running "$rigctld_pattern"; then
-        print_success "rigctld started (PID: $pid)"
-        echo "$pid" > "$PID_DIR/rigctld_${INSTANCE}.pid"
-        return 0
-    else
-        print_error "Failed to start rigctld"
-        tail -20 "$RIGCTLD_LOG"
-        return 1
-    fi
+	# 检查是否需要启动 rigctld（如果未配置设备则跳过）
+	if [ -z "$INSTANCE_RIGCTL_DEVICE" ]; then
+		print_info "No rigctl device configured, skipping rigctld..."
+		return 0
+	fi
+
+	# 使用端口号作为 rigctld 标识（更可靠）
+	: ${INSTANCE_RIGCTL_PORT:=4532}
+	local rigctld_pattern="rigctld.*-t.*${INSTANCE_RIGCTL_PORT}"
+
+	if is_running "$rigctld_pattern"; then
+		print_warning "rigctld already running on port $INSTANCE_RIGCTL_PORT"
+		return 1
+	fi
+
+	# 如果没有指定 rigctl 端口，使用默认值
+	: ${INSTANCE_RIGCTL_PORT:=4532}
+
+	print_status "Starting rigctld..."
+	print_status "  Device: $INSTANCE_RIGCTL_DEVICE"
+	print_status "  Model: $INSTANCE_RIGCTL_MODEL"
+	print_status "  Speed: $INSTANCE_RIGCTL_SPEED"
+	print_status "  Port: $INSTANCE_RIGCTL_PORT"
+
+	# 日志轮转：先把上一份（可能是死亡现场）留作 .prev，再写新文件
+	[ -f "$RIGCTLD_LOG" ] && mv "$RIGCTLD_LOG" "$RIGCTLD_LOG.prev"
+	>"$RIGCTLD_LOG"
+
+	# 启动 rigctld，使用实例名称作为标识
+	#
+	# F9（2026-10-04）：这里用 -vv 而不是 -vvv。hamlib 的 TRACE 级会把每条“连上但没
+	# 发命令”的探针（第三方日志软件的连接探测 / 旧客户端）记成
+	#   rigctl_parse: nothing to scan#1? retcode=-1, last_cmd=[empty]
+	# 实测：-vvv 下约 2~3 条/秒（占 rigctld 日志 99%，一天 20MB 级），而 -vv 下
+	# 完全不再出现；**真正有用的审计行（rigctl_set_ptt: ptt=0/1）在 -vv 下照旧保留**。
+	#
+	# F12：可用 MRRC_RIGCTLD_BIN 指定另一个 rigctld（例如给 IC-M710 打了 mode 缓存
+	# 补丁的那份；见 docs/current/reliability/RC-003 与 CHANGELOG 的 hamlib 小节）。
+	local rigctld_bin="${INSTANCE_RIGCTLD_BIN:-${MRRC_RIGCTLD_BIN:-rigctld}}"
+	"$rigctld_bin" -m "$INSTANCE_RIGCTL_MODEL" \
+		-r "$INSTANCE_RIGCTL_DEVICE" \
+		-s "$INSTANCE_RIGCTL_SPEED" \
+		-C stop_bits="$INSTANCE_RIGCTL_STOP_BITS" \
+		-T "$INSTANCE_RIGCTL_HOST" \
+		-t "$INSTANCE_RIGCTL_PORT" \
+		-vv >"$RIGCTLD_LOG" 2>&1 &
+
+	local pid=$!
+	sleep 3
+
+	if is_running "$rigctld_pattern"; then
+		print_success "rigctld started (PID: $pid)"
+		echo "$pid" >"$PID_DIR/rigctld_${INSTANCE}.pid"
+		return 0
+	else
+		print_error "Failed to start rigctld"
+		tail -20 "$RIGCTLD_LOG"
+		return 1
+	fi
 }
 
 # 停止 rigctld
 stop_rigctld() {
-    : ${INSTANCE_RIGCTL_PORT:=4532}
-    local rigctld_pattern="rigctld.*-t.*${INSTANCE_RIGCTL_PORT}"
-    kill_process "$rigctld_pattern"
-    local rc=$?
-    rm -f "$PID_DIR/rigctld_${INSTANCE}.pid"
-    return $rc
+	: ${INSTANCE_RIGCTL_PORT:=4532}
+	local rigctld_pattern="rigctld.*-t.*${INSTANCE_RIGCTL_PORT}"
+	kill_process "$rigctld_pattern"
+	local rc=$?
+	rm -f "$PID_DIR/rigctld_${INSTANCE}.pid"
+	return $rc
 }
 
 # 启动 MRRC
 start_mrrc() {
-    if is_running "MRRC\.$INSTANCE\.conf"; then
-        print_warning "MRRC already running"
-        return 0
-    fi
-    
-    print_status "Starting MRRC server..."
-    
-    # 日志轮转：先把上一份（可能是死亡现场）留作 .prev，再写新文件
-    [ -f "$MRRC_LOG" ] && mv "$MRRC_LOG" "$MRRC_LOG.prev"
-    > "$MRRC_LOG"
-    
-    # 启动 MRRC，传递配置文件路径
-    # -u: stdout 无缓冲。print() 与 logging 写同一个日志文件，缓冲不一致会把
-    # print 行粘到 logger 行中间（日志出现 "...datato=false2026-...- ERROR" 之类），
-    # 破坏 grep 解析。
-    cd "$SCRIPT_DIR" && "$PYTHON" -u "$SCRIPT_DIR/MRRC" "$SCRIPT_DIR/MRRC.$INSTANCE.conf" > "$MRRC_LOG" 2>&1 &
-    
-    local pid=$!
-    sleep 3
-    
-    if is_running "MRRC\.$INSTANCE\.conf"; then
-        print_success "MRRC started (PID: $pid)"
-        echo "$pid" > "$PID_DIR/mrrc_${INSTANCE}.pid"
-        print_success "Access at: https://localhost:$INSTANCE_PORT"
-        return 0
-    else
-        print_error "Failed to start MRRC"
-        tail -20 "$MRRC_LOG"
-        return 1
-    fi
+	if is_running "MRRC\.$INSTANCE\.conf"; then
+		print_warning "MRRC already running"
+		return 0
+	fi
+
+	print_status "Starting MRRC server..."
+
+	# 日志轮转：先把上一份（可能是死亡现场）留作 .prev，再写新文件
+	[ -f "$MRRC_LOG" ] && mv "$MRRC_LOG" "$MRRC_LOG.prev"
+	>"$MRRC_LOG"
+
+	# 启动 MRRC，传递配置文件路径
+	# -u: stdout 无缓冲。print() 与 logging 写同一个日志文件，缓冲不一致会把
+	# print 行粘到 logger 行中间（日志出现 "...datato=false2026-...- ERROR" 之类），
+	# 破坏 grep 解析。
+	cd "$SCRIPT_DIR" && "$PYTHON" -u "$SCRIPT_DIR/MRRC" "$SCRIPT_DIR/MRRC.$INSTANCE.conf" >"$MRRC_LOG" 2>&1 &
+
+	local pid=$!
+	sleep 3
+
+	if is_running "MRRC\.$INSTANCE\.conf"; then
+		print_success "MRRC started (PID: $pid)"
+		echo "$pid" >"$PID_DIR/mrrc_${INSTANCE}.pid"
+		print_success "Access at: https://localhost:$INSTANCE_PORT"
+		return 0
+	else
+		print_error "Failed to start MRRC"
+		tail -20 "$MRRC_LOG"
+		return 1
+	fi
 }
 
 # 停止 MRRC
 stop_mrrc() {
-    kill_process "MRRC\.$INSTANCE\.conf"
-    local rc=$?
-    rm -f "$PID_DIR/mrrc_${INSTANCE}.pid"
-    return $rc
+	kill_process "MRRC\.$INSTANCE\.conf"
+	local rc=$?
+	rm -f "$PID_DIR/mrrc_${INSTANCE}.pid"
+	return $rc
 }
 
 # 启动 ATR-1000 代理
 start_atr1000() {
-    # [ATR1000] enabled = auto|true|false（auto = 配了设备才启用），环境变量 MRRC_ATR1000 可覆盖
-    local atr_setting="${MRRC_ATR1000:-$(cat "$config_file" 2>/dev/null | awk -F= '/^\[ATR1000\]/{f=1;next} /^\[/{f=0} f&&/^[[:space:]]*enabled[[:space:]]*=/{gsub(/[[:space:]]/,"",$2);print $2; exit}')}"
-    atr_setting=$(echo "${atr_setting:-auto}" | tr 'A-Z' 'a-z')
-    case "$atr_setting" in
-        0|false|no|off|disabled)
-            print_status "  ATR-1000: 配置已关闭（[ATR1000] enabled=false），不启动代理"
-            return 0 ;;
-        1|true|yes|on|always) ;;
-        *) ;;   # auto：按下面的设备判断
-    esac
-    if [ -z "$INSTANCE_ATR1000_DEVICE" ]; then
-        print_info "ATR-1000 not configured, skipping..."
-        return 0
-    fi
-    
-    if is_running "atr1000_proxy.*$INSTANCE"; then
-        print_warning "ATR-1000 proxy already running"
-        return 1
-    fi
-    
-    print_status "Starting ATR-1000 proxy..."
+	# [ATR1000] enabled = auto|true|false（auto = 配了设备才启用），环境变量 MRRC_ATR1000 可覆盖
+	local atr_setting="${MRRC_ATR1000:-$(cat "$config_file" 2>/dev/null | awk -F= '/^\[ATR1000\]/{f=1;next} /^\[/{f=0} f&&/^[[:space:]]*enabled[[:space:]]*=/{gsub(/[[:space:]]/,"",$2);print $2; exit}')}"
+	atr_setting=$(echo "${atr_setting:-auto}" | tr 'A-Z' 'a-z')
+	case "$atr_setting" in
+	0 | false | no | off | disabled)
+		print_status "  ATR-1000: 配置已关闭（[ATR1000] enabled=false），不启动代理"
+		return 0
+		;;
+	1 | true | yes | on | always) ;;
+	*) ;; # auto：按下面的设备判断
+	esac
+	if [ -z "$INSTANCE_ATR1000_DEVICE" ]; then
+		print_info "ATR-1000 not configured, skipping..."
+		return 0
+	fi
 
-    # 日志轮转：先把上一份（可能是死亡现场）留作 .prev，再写新文件
-    [ -f "$ATR1000_LOG" ] && mv "$ATR1000_LOG" "$ATR1000_LOG.prev"
-    > "$ATR1000_LOG"
-    
-    # V5.8.6: nohup 防 SIGHUP — 之前用 "&" 直挂终端,关掉终端标签页会把代理
-    # 无摘要猝死(14:34 事故签名),手机端功率显示随之失联且无人拉活。
-    nohup "$PYTHON" "$SCRIPT_DIR/atr1000_proxy.py" \
-        --device "$INSTANCE_ATR1000_DEVICE" \
-        --port "$INSTANCE_ATR1000_PORT" \
-        --unix-socket "$INSTANCE_UNIX_SOCKET" \
-        > "$ATR1000_LOG" 2>&1 &
-    
-    local pid=$!
-    sleep 2
-    
-    # V5.8.6: 限定本实例 socket，避免另一部署的代理造成误报 started
-    if is_running "atr1000_proxy.*--unix-socket $INSTANCE_UNIX_SOCKET"; then
-        print_success "ATR-1000 proxy started (PID: $pid)"
-        echo "$pid" > "$PID_DIR/atr1000_${INSTANCE}.pid"
-        return 0
-    else
-        print_error "Failed to start ATR-1000 proxy"
-        return 1
-    fi
+	if is_running "atr1000_proxy.*$INSTANCE"; then
+		print_warning "ATR-1000 proxy already running"
+		return 1
+	fi
+
+	print_status "Starting ATR-1000 proxy..."
+
+	# 日志轮转：先把上一份（可能是死亡现场）留作 .prev，再写新文件
+	[ -f "$ATR1000_LOG" ] && mv "$ATR1000_LOG" "$ATR1000_LOG.prev"
+	>"$ATR1000_LOG"
+
+	# V5.8.6: nohup 防 SIGHUP — 之前用 "&" 直挂终端,关掉终端标签页会把代理
+	# 无摘要猝死(14:34 事故签名),手机端功率显示随之失联且无人拉活。
+	nohup "$PYTHON" "$SCRIPT_DIR/atr1000_proxy.py" \
+		--device "$INSTANCE_ATR1000_DEVICE" \
+		--port "$INSTANCE_ATR1000_PORT" \
+		--unix-socket "$INSTANCE_UNIX_SOCKET" \
+		>"$ATR1000_LOG" 2>&1 &
+
+	local pid=$!
+	sleep 2
+
+	# V5.8.6: 限定本实例 socket，避免另一部署的代理造成误报 started
+	if is_running "atr1000_proxy.*--unix-socket $INSTANCE_UNIX_SOCKET"; then
+		print_success "ATR-1000 proxy started (PID: $pid)"
+		echo "$pid" >"$PID_DIR/atr1000_${INSTANCE}.pid"
+		return 0
+	else
+		print_error "Failed to start ATR-1000 proxy"
+		return 1
+	fi
 }
 
 # 停止 ATR-1000 代理
 stop_atr1000() {
-    # V5.8.6: 限定实例模式。原 "atr1000_proxy" 无路径/实例限制，
-    # 从另一份部署目录（如 UHRR/MRRC）执行 stop/restart 会误杀
-    # HAM/mrrc 正在服务的代理（今日 12:34/12:49 的 socket 中断即此症状）。
-    kill_process "atr1000_proxy.*--unix-socket $INSTANCE_UNIX_SOCKET"
-    local rc=$?
-    rm -f "$PID_DIR/atr1000_${INSTANCE}.pid"
-    rm -f "$INSTANCE_UNIX_SOCKET"
-    return $rc
+	# V5.8.6: 限定实例模式。原 "atr1000_proxy" 无路径/实例限制，
+	# 从另一份部署目录（如 UHRR/MRRC）执行 stop/restart 会误杀
+	# HAM/mrrc 正在服务的代理（今日 12:34/12:49 的 socket 中断即此症状）。
+	kill_process "atr1000_proxy.*--unix-socket $INSTANCE_UNIX_SOCKET"
+	local rc=$?
+	rm -f "$PID_DIR/atr1000_${INSTANCE}.pid"
+	rm -f "$INSTANCE_UNIX_SOCKET"
+	return $rc
 }
 
 # 显示实例状态
 show_status() {
-    echo ""
-    echo -e "${MAGENTA}========== Instance: $INSTANCE ==========${NC}"
-    echo ""
-    
-    : ${INSTANCE_RIGCTL_PORT:=4532}
-    local rigctld_pattern="rigctld.*-t.*${INSTANCE_RIGCTL_PORT}"
-    if is_running "$rigctld_pattern"; then
-        local pid=$(get_pid "$rigctld_pattern")
-        print_success "rigctld: running (PID: $pid)"
-    else
-        print_error "rigctld: not running"
-    fi
-    
-    if is_running "MRRC\.$INSTANCE\.conf"; then
-        local pid=$(get_pid "MRRC\.$INSTANCE\.conf")
-        print_success "MRRC: running (PID: $pid)"
-        print_success "  URL: https://localhost:$INSTANCE_PORT"
-    else
-        print_error "MRRC: not running"
-    fi
-    
-    if is_running "atr1000_proxy"; then
-        local pid=$(get_pid "atr1000_proxy")
-        print_success "ATR-1000: running (PID: $pid)"
-    else
-        print_warning "ATR-1000: not running"
-    fi
-    
-    echo ""
-    echo "Log files:"
-    echo "  rigctld: $RIGCTLD_LOG"
-    echo "  MRRC:    $MRRC_LOG"
-    echo "  ATR-1000: $ATR1000_LOG"
-    echo ""
+	echo ""
+	echo -e "${MAGENTA}========== Instance: $INSTANCE ==========${NC}"
+	echo ""
+
+	: ${INSTANCE_RIGCTL_PORT:=4532}
+	local rigctld_pattern="rigctld.*-t.*${INSTANCE_RIGCTL_PORT}"
+	if is_running "$rigctld_pattern"; then
+		local pid=$(get_pid "$rigctld_pattern")
+		print_success "rigctld: running (PID: $pid)"
+	else
+		print_error "rigctld: not running"
+	fi
+
+	if is_running "MRRC\.$INSTANCE\.conf"; then
+		local pid=$(get_pid "MRRC\.$INSTANCE\.conf")
+		print_success "MRRC: running (PID: $pid)"
+		print_success "  URL: https://localhost:$INSTANCE_PORT"
+	else
+		print_error "MRRC: not running"
+	fi
+
+	if is_running "atr1000_proxy"; then
+		local pid=$(get_pid "atr1000_proxy")
+		print_success "ATR-1000: running (PID: $pid)"
+	else
+		print_warning "ATR-1000: not running"
+	fi
+
+	echo ""
+	echo "Log files:"
+	echo "  rigctld: $RIGCTLD_LOG"
+	echo "  MRRC:    $MRRC_LOG"
+	echo "  ATR-1000: $ATR1000_LOG"
+	echo ""
 }
 
 # 显示所有实例状态
 show_all_status() {
-    echo ""
-    echo -e "${MAGENTA}======================================${NC}"
-    echo -e "${MAGENTA}     MRRC Multi-Instance Status       ${NC}"
-    echo -e "${MAGENTA}======================================${NC}"
-    echo ""
-    
-    # 查找所有实例配置文件
-    local instances=$(ls -1 "$SCRIPT_DIR"/MRRC.*.conf 2>/dev/null | sed 's/.*MRRC\.\(.*\)\.conf/\1/' | grep -v "bak\|orig\|9000")
-    
-    if [ -z "$instances" ]; then
-        print_warning "No instance config files found (MRRC.*.conf)"
-        echo ""
-        echo "Create config file: MRRC.<instance_name>.conf"
-        return
-    fi
-    
-    for inst in $instances; do
-        if load_instance_config "$inst" 2>/dev/null; then
-            show_status
-        fi
-    done
+	echo ""
+	echo -e "${MAGENTA}======================================${NC}"
+	echo -e "${MAGENTA}     MRRC Multi-Instance Status       ${NC}"
+	echo -e "${MAGENTA}======================================${NC}"
+	echo ""
+
+	# 查找所有实例配置文件
+	local instances=$(ls -1 "$SCRIPT_DIR"/MRRC.*.conf 2>/dev/null | sed 's/.*MRRC\.\(.*\)\.conf/\1/' | grep -v "bak\|orig\|9000")
+
+	if [ -z "$instances" ]; then
+		print_warning "No instance config files found (MRRC.*.conf)"
+		echo ""
+		echo "Create config file: MRRC.<instance_name>.conf"
+		return
+	fi
+
+	for inst in $instances; do
+		if load_instance_config "$inst" 2>/dev/null; then
+			show_status
+		fi
+	done
 }
 
 # 启动所有服务
 start_instance() {
-    local instance_name="$1"
-    
-    if [ -z "$instance_name" ]; then
-        print_error "Instance name required"
-        echo "Usage: $0 start <instance_name>"
-        exit 1
-    fi
-    
-    if ! load_instance_config "$instance_name"; then
-        exit 1
-    fi
-    
-    print_status "Starting instance: $instance_name"
-    
-    start_rigctld
-    sleep 2
-    # V5.8.3: 代理先于 MRRC 启动，避免 MRRC 启动时 Unix Socket 尚不存在
-    # 导致的 ATR-1000 代理连接失败告警（原顺序 MRRC 在前会连刷 4-5 条 WARNING）
-    start_atr1000
-    sleep 1
-    start_mrrc
-    
-    if is_running "MRRC\.$INSTANCE\.conf"; then
-        print_success "Instance '$instance_name' started successfully!"
-        show_status
-    else
-        print_error "Failed to start instance '$instance_name'"
-    fi
+	local instance_name="$1"
+
+	if [ -z "$instance_name" ]; then
+		print_error "Instance name required"
+		echo "Usage: $0 start <instance_name>"
+		exit 1
+	fi
+
+	if ! load_instance_config "$instance_name"; then
+		exit 1
+	fi
+
+	print_status "Starting instance: $instance_name"
+
+	start_rigctld
+	sleep 2
+	# V5.8.3: 代理先于 MRRC 启动，避免 MRRC 启动时 Unix Socket 尚不存在
+	# 导致的 ATR-1000 代理连接失败告警（原顺序 MRRC 在前会连刷 4-5 条 WARNING）
+	start_atr1000
+	sleep 1
+	start_mrrc
+
+	if is_running "MRRC\.$INSTANCE\.conf"; then
+		print_success "Instance '$instance_name' started successfully!"
+		show_status
+	else
+		print_error "Failed to start instance '$instance_name'"
+	fi
 }
 
 # 停止实例
 stop_instance() {
-    local instance_name="$1"
-    
-    if [ -z "$instance_name" ]; then
-        print_error "Instance name required"
-        echo "Usage: $0 stop <instance_name>"
-        exit 1
-    fi
-    
-    if ! load_instance_config "$instance_name"; then
-        exit 1
-    fi
-    
-    print_status "Stopping instance: $instance_name"
-    # V5.8.1: 聚合三个组件 stop 结果，任一残留则返回非零，
-    # 让 restart.sh 的 `if ! stop` 能真正中止（原实现末尾 print_success 恒返 0）
-    local rc=0
-    stop_atr1000 || rc=1
-    stop_mrrc || rc=1
-    stop_rigctld || rc=1
+	local instance_name="$1"
 
-    if [ $rc -eq 0 ]; then
-        print_success "Instance '$instance_name' stopped"
-    else
-        print_error "Instance '$instance_name' stop had failures"
-    fi
-    return $rc
+	if [ -z "$instance_name" ]; then
+		print_error "Instance name required"
+		echo "Usage: $0 stop <instance_name>"
+		exit 1
+	fi
+
+	if ! load_instance_config "$instance_name"; then
+		exit 1
+	fi
+
+	print_status "Stopping instance: $instance_name"
+	# V5.8.1: 聚合三个组件 stop 结果，任一残留则返回非零，
+	# 让 restart.sh 的 `if ! stop` 能真正中止（原实现末尾 print_success 恒返 0）
+	local rc=0
+	stop_atr1000 || rc=1
+	stop_mrrc || rc=1
+	stop_rigctld || rc=1
+
+	if [ $rc -eq 0 ]; then
+		print_success "Instance '$instance_name' stopped"
+	else
+		print_error "Instance '$instance_name' stop had failures"
+	fi
+	return $rc
 }
 
 # 重启实例
 restart_instance() {
-    local instance_name="$1"
-    
-    if [ -z "$instance_name" ]; then
-        print_error "Instance name required"
-        echo "Usage: $0 restart <instance_name>"
-        exit 1
-    fi
-    
-    print_status "Restarting instance: $instance_name"
-    stop_instance "$instance_name"
-    sleep 2
-    start_instance "$instance_name"
+	local instance_name="$1"
+
+	if [ -z "$instance_name" ]; then
+		print_error "Instance name required"
+		echo "Usage: $0 restart <instance_name>"
+		exit 1
+	fi
+
+	print_status "Restarting instance: $instance_name"
+	stop_instance "$instance_name"
+	sleep 2
+	start_instance "$instance_name"
 }
 
 # 创建新实例配置文件
 create_instance() {
-    local instance_name="$1"
+	local instance_name="$1"
 
-    if [ -z "$instance_name" ]; then
-        print_error "Instance name required"
-        echo "Usage: $0 create <instance_name>"
-        exit 1
-    fi
+	if [ -z "$instance_name" ]; then
+		print_error "Instance name required"
+		echo "Usage: $0 create <instance_name>"
+		exit 1
+	fi
 
-    # H19: 实例名会插值进 Python 字符串字面量，严格限制字符集以阻断代码注入
-    if ! [[ "$instance_name" =~ ^[A-Za-z0-9_-]+$ ]]; then
-        print_error "Invalid instance name '$instance_name': only letters, digits, '_' and '-' are allowed"
-        exit 1
-    fi
+	# H19: 实例名会插值进 Python 字符串字面量，严格限制字符集以阻断代码注入
+	if ! [[ "$instance_name" =~ ^[A-Za-z0-9_-]+$ ]]; then
+		print_error "Invalid instance name '$instance_name': only letters, digits, '_' and '-' are allowed"
+		exit 1
+	fi
 
-    local config_file="$SCRIPT_DIR/MRRC.$instance_name.conf"
-    
-    if [ -f "$config_file" ]; then
-        print_error "Config file already exists: $config_file"
-        exit 1
-    fi
-    
-    # 计算端口号 - 从实例名称提取数字或使用递增数字
-    local instance_num=$(echo "$instance_name" | sed 's/[^0-9]//g')
-    if [ -z "$instance_num" ]; then
-        # 如果没有数字，使用时间戳末位
-        instance_num=$(date +%s | tail -c 2)
-    fi
-    # 取最后1位作为实例编号，最多支持9个实例
-    local instance_digit="${instance_num: -1}"
-    local mrrc_port="889$instance_digit"  # 例如 radio1 -> 8891, radio2 -> 8892
-    local rigctl_port="453$instance_digit"   # 例如 radio1 -> 4531, radio2 -> 4532
-    
-    # 复制默认配置并修改端口
-    cp "$SCRIPT_DIR/MRRC.conf" "$config_file"
+	local config_file="$SCRIPT_DIR/MRRC.$instance_name.conf"
 
-    detect_python || return 1
+	if [ -f "$config_file" ]; then
+		print_error "Config file already exists: $config_file"
+		exit 1
+	fi
 
-    # 使用 Python 修改端口
-    "$PYTHON" -c "
+	# 计算端口号 - 从实例名称提取数字或使用递增数字
+	local instance_num=$(echo "$instance_name" | sed 's/[^0-9]//g')
+	if [ -z "$instance_num" ]; then
+		# 如果没有数字，使用时间戳末位
+		instance_num=$(date +%s | tail -c 2)
+	fi
+	# 取最后1位作为实例编号，最多支持9个实例
+	local instance_digit="${instance_num: -1}"
+	local mrrc_port="889$instance_digit"   # 例如 radio1 -> 8891, radio2 -> 8892
+	local rigctl_port="453$instance_digit" # 例如 radio1 -> 4531, radio2 -> 4532
+
+	# 复制默认配置并修改端口
+	cp "$SCRIPT_DIR/MRRC.conf" "$config_file"
+
+	detect_python || return 1
+
+	# 使用 Python 修改端口
+	"$PYTHON" -c "
 import configparser
 config = configparser.ConfigParser()
 config.read('$config_file')
@@ -633,158 +648,160 @@ config['INSTANCE_SETTINGS'] = {
 with open('$config_file', 'w') as f:
     config.write(f)
 "
-    
-    print_success "Created config: $config_file"
-    print_info "  MRRC Port: $mrrc_port"
-    print_info "  Rigctl Port: $rigctl_port"
-    print_info ""
-    print_info "Please edit the config file to set correct devices:"
-    print_info "  - Audio input/output device names"
-    print_info "  - Radio serial device path"
-    print_info "  - ATR-1000 device IP (if using)"
+
+	print_success "Created config: $config_file"
+	print_info "  MRRC Port: $mrrc_port"
+	print_info "  Rigctl Port: $rigctl_port"
+	print_info ""
+	print_info "Please edit the config file to set correct devices:"
+	print_info "  - Audio input/output device names"
+	print_info "  - Radio serial device path"
+	print_info "  - ATR-1000 device IP (if using)"
 }
 
 # 删除实例配置
 delete_instance() {
-    local instance_name="$1"
-    
-    if [ -z "$instance_name" ]; then
-        print_error "Instance name required"
-        echo "Usage: $0 delete <instance_name>"
-        exit 1
-    fi
-    
-    local config_file="$SCRIPT_DIR/MRRC.$instance_name.conf"
-    
-    if [ ! -f "$config_file" ]; then
-        print_error "Config file not found: $config_file"
-        exit 1
-    fi
-    
-    # 先停止实例
-    if load_instance_config "$instance_name" 2>/dev/null; then
-        if is_running "MRRC\.$INSTANCE\.conf"; then
-            print_warning "Instance is running, stopping first..."
-            stop_instance "$instance_name"
-        fi
-    fi
-    
-    # 删除配置文件
-    rm -f "$config_file"
-    rm -f "$SCRIPT_DIR/rigctld_${instance_name}.log"
-    rm -f "$SCRIPT_DIR/rigctld_${instance_name}.log.prev"
-    rm -f "$SCRIPT_DIR/mrrc_${instance_name}.log"
-    rm -f "$SCRIPT_DIR/mrrc_${instance_name}.log.prev"
-    rm -f "$SCRIPT_DIR/atr1000_${instance_name}.log"
-    rm -f "$SCRIPT_DIR/atr1000_${instance_name}.log.prev"
-    
-    print_success "Deleted instance: $instance_name"
+	local instance_name="$1"
+
+	if [ -z "$instance_name" ]; then
+		print_error "Instance name required"
+		echo "Usage: $0 delete <instance_name>"
+		exit 1
+	fi
+
+	local config_file="$SCRIPT_DIR/MRRC.$instance_name.conf"
+
+	if [ ! -f "$config_file" ]; then
+		print_error "Config file not found: $config_file"
+		exit 1
+	fi
+
+	# 先停止实例
+	if load_instance_config "$instance_name" 2>/dev/null; then
+		if is_running "MRRC\.$INSTANCE\.conf"; then
+			print_warning "Instance is running, stopping first..."
+			stop_instance "$instance_name"
+		fi
+	fi
+
+	# 删除配置文件
+	rm -f "$config_file"
+	rm -f "$SCRIPT_DIR/rigctld_${instance_name}.log"
+	rm -f "$SCRIPT_DIR/rigctld_${instance_name}.log.prev"
+	rm -f "$SCRIPT_DIR/mrrc_${instance_name}.log"
+	rm -f "$SCRIPT_DIR/mrrc_${instance_name}.log.prev"
+	rm -f "$SCRIPT_DIR/atr1000_${instance_name}.log"
+	rm -f "$SCRIPT_DIR/atr1000_${instance_name}.log.prev"
+
+	print_success "Deleted instance: $instance_name"
 }
 
 # 显示实例列表
 list_instances() {
-    echo ""
-    echo -e "${MAGENTA}======= Available Instances =======${NC}"
-    echo ""
-    
-    local instances=$(ls -1 "$SCRIPT_DIR"/MRRC.*.conf 2>/dev/null | sed 's/.*MRRC\.\(.*\)\.conf/\1/' | grep -v "bak\|orig\|9000\|default")
-    
-    if [ -z "$instances" ]; then
-        print_warning "No instances found"
-        echo ""
-        echo "Create a new instance:"
-        echo "  $0 create <instance_name>"
-        return
-    fi
-    
-    for inst in $instances; do
-        if load_instance_config "$inst" 2>/dev/null; then
-            if is_running "MRRC\.$INSTANCE\.conf"; then
-                echo -e "  ${GREEN}●${NC} $inst (running) - Port $INSTANCE_PORT"
-            else
-                echo -e "  ${YELLOW}○${NC} $inst (stopped) - Port $INSTANCE_PORT"
-            fi
-        fi
-    done
-    
-    echo ""
+	echo ""
+	echo -e "${MAGENTA}======= Available Instances =======${NC}"
+	echo ""
+
+	local instances=$(ls -1 "$SCRIPT_DIR"/MRRC.*.conf 2>/dev/null | sed 's/.*MRRC\.\(.*\)\.conf/\1/' | grep -v "bak\|orig\|9000\|default")
+
+	if [ -z "$instances" ]; then
+		print_warning "No instances found"
+		echo ""
+		echo "Create a new instance:"
+		echo "  $0 create <instance_name>"
+		return
+	fi
+
+	for inst in $instances; do
+		if load_instance_config "$inst" 2>/dev/null; then
+			if is_running "MRRC\.$INSTANCE\.conf"; then
+				echo -e "  ${GREEN}●${NC} $inst (running) - Port $INSTANCE_PORT"
+			else
+				echo -e "  ${YELLOW}○${NC} $inst (stopped) - Port $INSTANCE_PORT"
+			fi
+		fi
+	done
+
+	echo ""
 }
 
 # 显示帮助
 show_help() {
-    echo "MRRC Multi-Instance Control Script"
-    echo ""
-    echo "Usage: $0 <command> [instance_name]"
-    echo ""
-    echo "Commands:"
-    echo "  start <name>      Start a specific instance"
-    echo "  stop <name>       Stop a specific instance"
-    echo "  restart <name>    Restart a specific instance"
-    echo "  status [name]     Show status of instance(s)"
-    echo "  logs <name> [n]   Show logs (last n lines, default 20)"
-    echo "  create <name>     Create new instance config"
-    echo "  delete <name>     Delete an instance (stops first)"
-    echo "  list              List all instances"
-    echo ""
-    echo "Examples:"
-    echo "  $0 create radio1          # Create instance 'radio1'"
-    echo "  $0 start radio1           # Start instance 'radio1'"
-    echo "  $0 status radio1          # Show status of 'radio1'"
-    echo "  $0 logs radio1 50         # Show last 50 lines of logs"
-    echo "  $0 list                   # List all instances"
-    echo "  $0 stop radio1            # Stop instance 'radio1'"
-    echo ""
+	echo "MRRC Multi-Instance Control Script"
+	echo ""
+	echo "Usage: $0 <command> [instance_name]"
+	echo ""
+	echo "Commands:"
+	echo "  start <name>      Start a specific instance"
+	echo "  stop <name>       Stop a specific instance"
+	echo "  restart <name>    Restart a specific instance"
+	echo "  status [name]     Show status of instance(s)"
+	echo "  logs <name> [n]   Show logs (last n lines, default 20)"
+	echo "  create <name>     Create new instance config"
+	echo "  delete <name>     Delete an instance (stops first)"
+	echo "  list              List all instances"
+	echo ""
+	echo "Examples:"
+	echo "  $0 create radio1          # Create instance 'radio1'"
+	echo "  $0 start radio1           # Start instance 'radio1'"
+	echo "  $0 status radio1          # Show status of 'radio1'"
+	echo "  $0 logs radio1 50         # Show last 50 lines of logs"
+	echo "  $0 list                   # List all instances"
+	echo "  $0 stop radio1            # Stop instance 'radio1'"
+	echo ""
 }
 
 # 主逻辑
 case "$1" in
-    start)
-        start_instance "$2"
-        ;;
-    stop)
-        stop_instance "$2"
-        ;;
-    restart)
-        restart_instance "$2"
-        ;;
-    status)
-        if [ -n "$2" ]; then
-            load_instance_config "$2"
-            show_status
-        else
-            show_all_status
-        fi
-        ;;
-    logs)
-        if [ -n "$2" ]; then
-            load_instance_config "$2"
-            local lines=${3:-20}
-            echo "=== rigctld logs ==="
-            tail -n "$lines" "$RIGCTLD_LOG"
-            echo ""
-            echo "=== MRRC logs ==="
-            tail -n "$lines" "$MRRC_LOG"
-            echo ""
-            echo "=== ATR-1000 logs ==="
-            tail -n "$lines" "$ATR1000_LOG"
-        else
-            print_error "Instance name required"
-            echo "Usage: $0 logs <instance_name> [lines]"
-        fi
-        ;;
-    create)
-        create_instance "$2"
-        ;;
-    delete)
-        delete_instance "$2"
-        ;;
-    list)
-        list_instances
-        ;;
-    help|--help|-h)
-        show_help
-        ;;
-    *)
-        show_help
-        ;;
+start)
+	start_instance "$2"
+	;;
+stop)
+	stop_instance "$2"
+	;;
+restart)
+	restart_instance "$2"
+	;;
+status)
+	if [ -n "$2" ]; then
+		load_instance_config "$2"
+		show_status
+	else
+		show_all_status
+	fi
+	;;
+logs)
+	if [ -n "$2" ]; then
+		load_instance_config "$2"
+		# 这里在脚本主体（case 分支）里，不在函数内 —— `local` 只在函数里合法，
+		# 原写法会让 shellcheck 报 SC2168，且在 bash 下直接报 "not in a function"。
+		lines=${3:-20}
+		echo "=== rigctld logs ==="
+		tail -n "$lines" "$RIGCTLD_LOG"
+		echo ""
+		echo "=== MRRC logs ==="
+		tail -n "$lines" "$MRRC_LOG"
+		echo ""
+		echo "=== ATR-1000 logs ==="
+		tail -n "$lines" "$ATR1000_LOG"
+	else
+		print_error "Instance name required"
+		echo "Usage: $0 logs <instance_name> [lines]"
+	fi
+	;;
+create)
+	create_instance "$2"
+	;;
+delete)
+	delete_instance "$2"
+	;;
+list)
+	list_instances
+	;;
+help | --help | -h)
+	show_help
+	;;
+*)
+	show_help
+	;;
 esac

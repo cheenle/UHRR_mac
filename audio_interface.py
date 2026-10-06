@@ -1240,6 +1240,7 @@ class PyAudioPlayback:
         self._tx_queue = queue.Queue(maxsize=50)
         self._writer_stop = threading.Event()
         self._writer_thread = None
+        self._closed = False  # F6/RC-003: close() 幂等
 
         if is_encoded:
             self.decoder = OpusDecoder(op_rate, 1)
@@ -1430,8 +1431,17 @@ class PyAudioPlayback:
             except Exception as e:
                 print(f"TX stream write error: {e}")
 
-    def close(self):
-        """Close the audio stream"""
+    def close(self, timeout=3.0):
+        """Close the audio stream（有界返回，F6/RC-003）
+
+        PortAudio 的 stop_stream()/close() 是 C 调用，设备/HAL 异常时可能**永不
+        返回**：2026-10-04 它在 IOLoop 线程上把整个服务楔死 2h23m（8891 端口假死）。
+        现在拆流跑在一次性线程上、超时即放弃（泄漏流），并规避"写线程还卡在
+        阻塞 write() 时从别的线程 stop 同一 stream"的已知竞态。
+        """
+        if getattr(self, '_closed', False):
+            return
+        self._closed = True
         # Stop the writer thread first so it doesn't touch a closed stream
         self._writer_stop.set()
         try:
@@ -1440,13 +1450,58 @@ class PyAudioPlayback:
             pass
         if self._writer_thread is not None:
             self._writer_thread.join(timeout=1.0)
-        try:
-            if self.stream.is_active():
-                self.stream.stop_stream()
-            self.stream.close()
-        except Exception as e:
-            print(f"TX stream close error: {e}")
-        self.p.terminate()
+            if self._writer_thread.is_alive():
+                # 写线程仍停在阻塞 write()：两个线程同时操作一个 PortAudio
+                # stream 是已知竞态。交给看护线程等它退出后再收尾。
+                print("⚠️ TX 写线程未在 1s 内退出（阻塞 write），改由后台看护收尾")
+                threading.Thread(target=self._reap_writer_and_close, daemon=True,
+                                 name="PyAudioPlayback-reaper").start()
+                return
+        self._teardown_bounded(timeout)
+
+    def close_async(self):
+        """非阻塞 close：IOLoop 调用点（WS_AudioTXHandler 的 s:/on_close）专用。
+
+        调用方立即返回，拆流在后台线程完成——释放 PTT 等安全动作不再排在
+        音频拆流的后面（RC-003 的教训：s: 分支的 setPTT 就死在 close() 后面）。
+        """
+        threading.Thread(target=self.close, daemon=True,
+                         name="PyAudioPlayback-close").start()
+
+    def _reap_writer_and_close(self, timeout=3.0):
+        """看护：等写线程真正退出后再做有界拆流（避免跨线程操作同一 stream）。"""
+        if self._writer_thread is not None:
+            self._writer_thread.join()
+        self._teardown_bounded(timeout)
+
+    def _teardown_bounded(self, timeout=3.0):
+        """stop/close/terminate 全放一次性线程，超时即放弃：宁可泄漏一个流，
+        也不让调用者（IOLoop / 看护线程）被 PortAudio 的阻塞调用拖死。"""
+        stream = getattr(self, 'stream', None)
+        pa = getattr(self, 'p', None)
+        done = threading.Event()
+
+        def _teardown():
+            try:
+                if stream is not None:
+                    if stream.is_active():
+                        stream.stop_stream()
+                    stream.close()
+            except Exception as e:
+                print(f"TX stream close error: {e}")
+            try:
+                if pa is not None:
+                    pa.terminate()
+            except Exception as e:
+                print(f"PyAudio terminate error: {e}")
+            finally:
+                done.set()
+
+        threading.Thread(target=_teardown, daemon=True,
+                         name="PyAudioPlayback-teardown").start()
+        if not done.wait(timeout):
+            print(f"⚠️ TX stream stop/close 超过 {timeout:.0f}s 未返回，放弃等待"
+                  f"（流已泄漏，调用者不被阻塞）— RC-003 保护")
 
 
 # ========== 录音控制函数 ==========

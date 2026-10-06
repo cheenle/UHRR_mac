@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MRRC · 接入云端</title>
+<link rel="stylesheet" type="text/css" href="mobile_modern.css?v=6.0.9">
+<style>
+  body{background:#12121a;color:#e0e0e0;font-family:tahoma,sans-serif;margin:0;padding:16px;line-height:1.6}
+  h2{margin:0 0 4px}
+  .muted{color:#8a8a96;font-size:12.5px}
+  input[type=text]{width:100%;box-sizing:border-box;background:#0f0f16;color:#fff;
+    border:1px solid #444;border-radius:4px;padding:9px;font-size:13.5px;margin-top:4px}
+  button{padding:11px 16px;border:0;border-radius:4px;background:#4a9eff;color:#fff;
+    font-weight:bold;font-size:14px;margin:6px 8px 0 0;cursor:pointer}
+  button.plain{background:#2c2c38;border:1px solid #444}
+  .ok{color:#5ad07a}.warn{color:#e8c25a}.bad{color:#e86464}
+  .card{background:#181824;border:1px solid #2c2c38;border-radius:6px;padding:14px;margin-bottom:14px}
+  .mono{font-family:ui-monospace,monospace;font-size:12.5px;word-break:break-all}
+  a{color:#4a9eff}
+  #msg{min-height:1.4em;margin:8px 0}
+</style>
+</head>
+<body>
+  <h2>☁️ 接入云端（Cloud Hub）</h2>
+  <p class="muted">给这台机器一个公网入口 <span class="mono">https://&lt;呼号&gt;-legacy.mrrc.vlsc.net/</span>：
+  <b>不需要</b>公网 IP，也<b>不用</b>在路由器上开端口。本应用<b>出站</b>连到中转（hub），入口的 TLS 在中转处终结。
+  服务器：<span id="portal" class="mono">—</span></p>
+
+  <div id="msg" class="muted"></div>
+  <div id="auto" class="muted" style="margin-bottom:10px"></div>
+
+  <div class="card" id="form">
+    <label class="muted">呼号（便携/前缀写法如 BG1SB/P 会被拒绝——登记的是身份，标签要当 DNS 名用）</label>
+    <input type="text" id="callsign" placeholder="BG1SB">
+    <label class="muted">联系方式（可选，便于运维核对）</label>
+    <input type="text" id="contact" placeholder="邮箱 / 微信 / 电话">
+    <label class="muted">登记口令（可选——运维已批准并给过口令就直接填，不必再等）</label>
+    <input type="text" id="secret" placeholder="一次性登记口令">
+    <div>
+      <button id="btnApply" onclick="submitApply()">申请入口 / 接入</button>
+    </div>
+  </div>
+
+  <div class="card" id="pending" style="display:none">
+    <div>已为 <b id="callsign-shown"></b> 提交申请，等运维批准。</div>
+    <p class="muted">批准一到本机会<b>自动</b>签证书、登记并建立隧道——不必守着这个页面。
+    运维若直接给了你登记口令，贴在下面可立即接入：</p>
+    <input type="text" id="secret-pending" placeholder="一次性登记口令">
+    <div>
+      <button id="btnClaim" onclick="submitClaim()">用登记口令直接接入</button>
+      <button id="btnRefresh" class="plain" onclick="refresh()">刷新状态</button>
+    </div>
+  </div>
+
+  <div class="card" id="done" style="display:none">
+    <div>✅ 已接入。入口：<a id="entry" href="#" target="_blank" class="mono"></a></div>
+    <p class="muted">
+      证书：<span id="cert" class="mono">—</span><br>
+      隧道：<span id="tunnel">—</span>
+    </p>
+    <button id="btnRestart" style="display:none" onclick="restartNow()">重启应用以启用新证书</button>
+    <p class="muted" id="restart-why" style="display:none">TLS 上下文只在进程启动时建立：接入时签的新证书要重启后才被服务，
+    否则 hub 校验上游不通过、入口一直 502。</p>
+  </div>
+
+  <p class="muted">别把入口名当安全边界：呼号是公开标识、入口可枚举，防线在「核验通过才给访问」；
+  入口后面仍是本机的登录口令。出问题：打开 <a href="support.html" target="_blank">🐞 诊断包</a> 页面上传。</p>
+
+<script>
+(function(){
+  var AUTO_LABELS = {
+    idle: '还没申请',
+    applied: '已提交，等待运维批准',
+    verified: '已核验，等待分配入口',
+    granted: '已批准，正在接入…',
+    busy: '正在接入…',
+    connected: '已接入',
+    restarting: '已接入，正在重启以启用新证书',
+    unreachable: '联系不上 hub（会一直重试）',
+    'connect-failed': '接入失败（会一直重试）'
+  };
+  var lastState = null;
+
+  function el(id){ return document.getElementById(id); }
+
+  // 相对路径：页面在 <前缀>/cloud.html 时接口自然落在同一前缀下（Cloud Hub 路径入口约定）
+  function api(path, body){
+    var opts = { method: body ? 'POST' : 'GET', headers: { 'Content-Type': 'application/json' } };
+    if (body) opts.body = JSON.stringify(body);
+    return fetch(path, opts).then(function(r){
+      return r.json().catch(function(){
+        // 非 JSON 几乎只有一种来源：未登录被 302 到登录页。把地址和状态码带回界面，
+        // 而不是一句没有地址的 SyntaxError（mrrc_modern 2026-10-03 的教训）
+        return { error: '接口 ' + path + ' 返回了非 JSON（HTTP ' + r.status + '）' +
+                 (r.redirected ? '，并被重定向到 ' + r.url : '（登录已过期？刷新页面重新登录）') };
+      }).then(function(j){ return { ok: r.ok, j: j }; });
+    });
+  }
+
+  function show(msg, kind){
+    var box = el('msg');
+    box.textContent = msg || '';
+    box.className = kind === 'error' ? 'bad' : kind === 'ok' ? 'ok' : 'muted';
+  }
+
+  // 服务端自己在轮询（cloud-autoconnect 线程）：这行显示的是本机最后一次询问的结果，
+  // 不是这个页面的。它存在的理由：「从来没去问」和「问了还没批」必须在界面上可区分。
+  function renderAuto(auto){
+    auto = auto || {};
+    var line = '自动接入：本机每 30 秒自己问 hub，不必守着这个页面';
+    if (auto.at){
+      var secs = Math.max(0, Math.round(Date.now()/1000 - auto.at));
+      var when = secs < 90 ? secs + ' 秒前' : Math.round(secs/60) + ' 分钟前';
+      line += '（上次询问 ' + when + '：' + (AUTO_LABELS[auto.status] || auto.status || 'idle') + '）';
+    }
+    if (auto.error) line += ' — ' + auto.error;
+    el('auto').textContent = line;
+  }
+
+  function render(state){
+    lastState = state;
+    var applied = !!(state.callsign && state.has_token);
+    el('form').style.display = applied ? 'none' : 'block';
+    el('pending').style.display = (applied && !state.connected) ? 'block' : 'none';
+    el('done').style.display = state.connected ? 'block' : 'none';
+    if (applied) el('callsign-shown').textContent = state.callsign;
+    renderAuto(state.autoconnect);
+    el('portal').textContent = state.portal || '—';
+    if (state.connected){
+      var link = el('entry');
+      link.href = state.entry; link.textContent = state.entry;
+      el('cert').textContent = state.cert || '—';
+      var t = el('tunnel');
+      t.textContent = state.tunnel_running ? '已连接' : (state.tunnel_error || '未运行（稍候会自动重试）');
+      t.className = state.tunnel_running ? 'ok' : 'warn';
+      if (state.cert_reload_required){
+        el('btnRestart').style.display = 'inline-block';
+        el('restart-why').style.display = 'block';
+      }
+    }
+  }
+
+  function afterConnect(j){
+    if (j.cert_reload_required){
+      show('已接入 ✓ 还需重启应用以启用新证书（否则入口会 502）', 'ok');
+      el('btnRestart').style.display = 'inline-block';
+      el('restart-why').style.display = 'block';
+    } else {
+      show('已接入 ✓', 'ok');
+    }
+    if (j.tunnel_note) show(j.tunnel_note, 'error');
+    setTimeout(function(){ refresh(); }, 1500);
+  }
+
+  window.refresh = function(){
+    return api('api/cloud/state').then(function(r){
+      if (!r.ok){ show((r.j && r.j.error) || '读取状态失败', 'error'); return; }
+      render(r.j);
+      if (r.j.callsign && r.j.has_token && !r.j.connected){
+        return api('api/cloud/refresh', {}).then(function(rr){
+          if (rr.j && rr.j.connected){ afterConnect(rr.j); }
+          else if (rr.j && rr.j.error){ show(rr.j.error, 'error'); }
+          else { show('等待运维批准（状态：' + ((rr.j && rr.j.status) || 'applied') + '）'); }
+        });
+      }
+    });
+  };
+
+  window.submitApply = function(){
+    var callsign = (el('callsign').value || '').trim();
+    var contact = (el('contact').value || '').trim();
+    var secret = (el('secret').value || '').trim();
+    if (!callsign){ show('请填呼号', 'error'); return; }
+    show(secret ? '接入中…' : '提交中…');
+    api('api/cloud/apply', { callsign: callsign, contact: contact, secret: secret }).then(function(r){
+      if (!r.ok){ show((r.j && r.j.error) || '提交失败', 'error'); return; }
+      if (r.j && r.j.connected){ afterConnect(r.j); return; }
+      show('已提交 ✓ 等运维批准后这里会自动继续', 'ok');
+      refresh();
+    });
+  };
+
+  window.submitClaim = function(){
+    // 与申请表单里的口令是同一条认领路径；已申请过的人在这个面板粘贴口令（v1.24.8 的用户反馈）
+    var secret = (el('secret-pending').value || '').trim();
+    if (!secret){ show('请填入运维给的登记口令', 'error'); return; }
+    if (!lastState || !lastState.callsign){ show('还没提交过申请', 'error'); return; }
+    show('接入中…');
+    api('api/cloud/apply', { callsign: lastState.callsign, contact: '', secret: secret }).then(function(r){
+      if (!r.ok){ show((r.j && r.j.error) || '接入失败', 'error'); return; }
+      if (r.j && r.j.connected){ afterConnect(r.j); return; }
+      show('口令已受理，状态：' + ((r.j && r.j.status) || '处理中'), 'ok');
+      refresh();
+    });
+  };
+
+  window.restartNow = function(){
+    show('正在重启…页面会在几秒后自动回来');
+    api('api/cloud/restart', {}).then(function(){
+      setTimeout(function(){ location.reload(); }, 6000);
+    });
+  };
+
+  refresh();
+})();
+</script>
+</body>
+</html>

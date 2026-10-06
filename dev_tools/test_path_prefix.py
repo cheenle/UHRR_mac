@@ -52,7 +52,7 @@ for path in sorted((ROOT / 'www').glob('*.js')):
         notes.append(f'{path.name}: 出现 WS 路径字面量但未见前缀化助手，请复核')
 
 src = (ROOT / 'MRRC').read_text(encoding='utf-8')
-if src.count('app = base_path.application(') != 2:
+if src.count('app = _base_path.application(') != 2:
     failures.append('MRRC: 两处 Application 未走 base_path.application')
 if src.count('_base_path.cookie_path(BASE_PATH)') < 5:
     failures.append('MRRC: Cookie 的 path 未全部限定（同 origin 多产品会互踩）')

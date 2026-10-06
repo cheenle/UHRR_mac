@@ -1,0 +1,14 @@
+diff --git a/rigs/icmarine/icm710.c b/rigs/icmarine/icm710.c
+--- a/rigs/icmarine/icm710.c
++++ b/rigs/icmarine/icm710.c
+@@ -661,7 +661,9 @@
+ 
+         if (retval == RIG_OK)
+         {
+-            priv->afgain = val.i;
++            /* Was priv->afgain -- an AGC change clobbered the AF-gain copy, and
++             * get_level(AGC) could only ever answer 0 (nothing stored priv->agc). */
++            priv->agc = val.i;
+         }
+ 
+         break;

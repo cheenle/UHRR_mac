@@ -116,3 +116,61 @@ def ensure_self_signed(cert_dir: Path):
     except Exception as e:
         logger.warning("Self-signed certificate generation failed: %s", e)
         return None
+
+
+def sign_for(name: str, cert_dir: Path, filename: str = "fullchain.pem", extra_names=None):
+    """Generate a self-signed pair whose CN is ``name`` and whose SANs are ``name`` + extras.
+
+    The Cloud Hub verifies the instance by exactly this name (its /enroll endpoint refuses a
+    certificate for any other), so the certificate the app serves when it is published through
+    the hub must carry it. ``extra_names`` adds the *other* names the instance is reachable by
+    — e.g. the legacy ``radio.vlsc.net`` dynamic-DNS entry, which resolves straight to this host
+    and would otherwise be rejected by the browser as a name mismatch the moment the Cloud Hub
+    certificate takes over (2026-10-04 measured: one SSL CERTIFICATE_UNKNOWN every 0.5s). Hub
+    entries are unaffected: the hub edge terminates TLS with its own Let's Encrypt certificate.
+    Same primitives as the localhost pair, different subject.
+    (Ported from mrrc_modern ssl_bootstrap.sign_for, v1.25.0.)
+    """
+    cert_dir = Path(cert_dir)
+    cert_dir.mkdir(parents=True, exist_ok=True)
+    cert_path = cert_dir / filename
+    key_path = cert_dir / (name.split(".")[0] + ".key")
+    try:
+        from cryptography import x509
+        from cryptography.hazmat.primitives import hashes, serialization
+        from cryptography.hazmat.primitives.asymmetric import ec
+        from cryptography.x509.oid import NameOID
+    except ImportError:
+        logger.warning("cryptography not installed — cannot sign a certificate for %s", name)
+        return None
+    key = ec.generate_private_key(ec.SECP256R1())
+    subject = x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, name)])
+    extra = [str(x).strip() for x in (extra_names or [])]
+    san = [x509.DNSName(n) for n in dict.fromkeys([name] + [x for x in extra if x]) if n]
+    now = datetime.datetime.now(datetime.timezone.utc)
+    cert = (
+        x509.CertificateBuilder()
+        .subject_name(subject)
+        .issuer_name(subject)
+        .public_key(key.public_key())
+        .serial_number(x509.random_serial_number())
+        .not_valid_before(now - datetime.timedelta(minutes=5))
+        .not_valid_after(now + datetime.timedelta(days=VALID_DAYS))
+        .add_extension(x509.SubjectAlternativeName(san), critical=False)
+        .add_extension(x509.BasicConstraints(ca=False, path_length=None), critical=True)
+        .sign(key, hashes.SHA256())
+    )
+    cert_path.write_bytes(cert.public_bytes(serialization.Encoding.PEM))
+    key_path.write_bytes(
+        key.private_bytes(
+            serialization.Encoding.PEM,
+            serialization.PrivateFormat.PKCS8,
+            serialization.NoEncryption(),
+        )
+    )
+    try:
+        key_path.chmod(0o600)
+    except OSError:
+        pass  # Windows ACLs don't map POSIX modes — fine
+    logger.info("signed a self-signed certificate for %s", name)
+    return cert_path, key_path
