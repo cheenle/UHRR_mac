@@ -1,25 +1,23 @@
 {
-  "latest": "6.1.18",
+  "latest": "6.2.0",
   "installer": {
-    "version": "6.1.18",
-    "url": "https://www.vlsc.net/mrrc/downloads/MRRC-Setup-6.1.18.exe",
-    "sha256": "c10399867aead38f98db0fbe03bc5400109f40f275c0c6980f2bf8c1e6776e32",
-    "size": 51984242
+    "url": "https://www.vlsc.net/mrrc/downloads/MRRC-Setup-6.2.0.exe",
+    "sha256": "3b25a7d300c8529c58cd0c1ac8f2a93f39d8d794bbc54ddbeededa31db07a0fd",
+    "size": 66278857
   },
   "minSupported": "6.0.3",
   "mandatory": false,
-  "releasedAt": "2026-09-17T23:30:00",
-  "notes": "NR3(RNNoise 神经降噪)进包 + libwdsp 重建（EMNR 新旋钮）+ NR2 等级表 -9 + 门控修复（关降噪=真旁路）",
+  "releasedAt": "2026-10-06T12:49:02",
+  "notes": "内网穿透（Cloud Hub）：主界面点 ☁️ 申请公网入口，批准后自动签证书 → 向 hub 登记公钥 → 拉起 frp 隧道 → 自重启，得到 https://<呼号>-legacy.mrrc.vlsc.net/（443，浏览器零警告，无需路由器端口映射）；安装包已内置 frpc 0.71.0，开箱即用。另含：TX 拆流不再楔死 IOLoop（RC-003）、rigctld 轮询纪律与第三方软件（RUMlogNG/JTDX/flrig）改频跟随（F9/F10）、证书 SAN 支持老直连入口（F8）、macOS/Linux 陈旧 frpc 泄漏修复（F7）、会话遥测与 PTT 活性闸门阈值可配、Device Config 抽屉不再每 2.5s 自重建。",
   "hotfix": {
-    "url": "https://www.vlsc.net/mrrc/downloads/hotfix-6.0.9.zip",
-    "sha256": "e326fd38784119119eabcc3c6262a0a7ae758381ce6ba3e9b169fdab69c805f2",
+    "url": "https://www.vlsc.net/mrrc/downloads/hotfix-6.1.18.zip",
+    "sha256": "874b02e213145c86b13d77127e8209cda6398417291ae70a1a053e40d66c95b8",
     "requires": "6.0.3",
-    "notes": "新增「🐞 遇到问题」一键诊断包上传（含新模块 support_bundle.py）；空闲关机改为幂等"
+    "notes": "RN3(RNNoise)可用（vendor/rnnoise.dll）+ libwdsp 重建（EMNR alpha/npMax 旋钮）+ NR2 等级表 -6/-9/-12/-16 + 门控修复（关降噪=真旁路）"
   },
   "previous": {
-    "version": "6.1.16",
-    "url": "https://www.vlsc.net/mrrc/downloads/MRRC-Setup-6.1.16.exe",
-    "sha256": "32e14996001e634e612e54b89b43836b907be3f339117907ce5ee03071cbb9d0",
-    "size": 48480307
+    "version": "6.1.18",
+    "url": "https://www.vlsc.net/mrrc/downloads/MRRC-Setup-6.1.18.exe",
+    "sha256": "c10399867aead38f98db0fbe03bc5400109f40f275c0c6980f2bf8c1e6776e32"
   }
 }
