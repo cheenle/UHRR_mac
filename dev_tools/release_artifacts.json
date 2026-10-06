@@ -260,6 +260,20 @@
       "pattern": "新版安装包（当前 V([0-9]+\\.[0-9]+\\.[0-9]+)）",
       "count": 1,
       "why": "修复工具页里'装新版就不用跑修复工具'的当前版本声明。"
+    },
+    {
+      "id": "winfix-btn-en",
+      "path": "website/docs/windows-fix.html",
+      "pattern": "MRRC-Setup\\.exe \\(V([0-9]+\\.[0-9]+\\.[0-9]+),",
+      "count": 1,
+      "why": "修复工具页的下载按钮。**同一行还有产物字节数（~66 MB），版本检查器治不了它** —— 每次发版必须照 dist/windows/MRRC-Setup.exe 的真实大小手工改，别沿用上一版的数字（6.1.18 那行就写着 ~45 MB，而实际是 51,984,242 B ≈ 52 MB，一直是错的）。"
+    },
+    {
+      "id": "winfix-btn-zh",
+      "path": "website/zh/docs/windows-fix.html",
+      "pattern": "MRRC-Setup\\.exe（V([0-9]+\\.[0-9]+\\.[0-9]+)，",
+      "count": 1,
+      "why": "同上（中文站）。锚定全角括号与全角逗号，避免命中页内其它版本字样。"
     }
   ]
 }
