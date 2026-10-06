@@ -165,7 +165,13 @@ if [ "$NO_DEPLOY" = 0 ]; then
 	log "提交并推送"
 	run "git add -A packaging/windows/MRRC.iss www/ README.md CHANGELOG.md website/ dist/RELEASE-${VERSION}.md 2>/dev/null || true"
 	run "git add -A website/downloads/MRRC-Setup.exe website/downloads/MRRC-Setup-*.exe website/downloads/latest.json"
-	run "git commit -q -m 'release: Windows V${VERSION} 安装包\n\n产物 $(stat -f%z "$LOCAL_EXE" 2>/dev/null || echo ?) bytes\nSHA256 $(shasum -a 256 "$LOCAL_EXE" 2>/dev/null | awk '{print $1}')\nCo-Authored-By: Pi <noreply@pi.dev>' || true"
+	# 多个 -m 而不是一个带 \n 的字符串：bash 的双引号**不**解释 \n，
+	# 原来那样写会把字面量反斜杠+n 塞进提交标题，git log 里是一行乱码。
+	# git 会用空行连接多个 -m，正好是"标题 + 正文 + 署名"的形状。
+	run "git commit -q \
+		-m 'release: Windows V${VERSION} 安装包' \
+		-m '产物 $(stat -f%z "$LOCAL_EXE" 2>/dev/null || echo ?) bytes；SHA256 $(shasum -a 256 "$LOCAL_EXE" 2>/dev/null | awk '{print $1}')' \
+		-m 'Co-Authored-By: Pi <noreply@pi.dev>' || true"
 	# 发版提交可能落在特性分支（本仓的 hub 工作在 feat/hub）：`git push origin main` 推的是
 	# **本地 main 分支**，不是当前分支 —— 不先把 main 快进过去，push 就只会说
 	# "Everything up-to-date"，提交根本没上去（windows-installer 技能里点名的坑）。
