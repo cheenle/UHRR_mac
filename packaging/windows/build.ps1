@@ -66,6 +66,16 @@ foreach ($check in $vendorChecks) {
     }
 }
 
+# Purge the PyInstaller workpath. The module graph is cached there and a file is only
+# re-analyzed when its (size, mtime) changed - so a source tree shipped as a zip, which keeps
+# the build Mac's mtimes, can look older than the cache and a CHANGED file gets its OLD
+# bytecode frozen into the package. Measured on mrrc_modern v1.25.3: server.py had changed,
+# its mtime predated the cache, only COLLECT-00.toc was rewritten, and the frozen server entry
+# was the pre-fix revision while version.txt, the 1612-test gate and iscc ALL looked green.
+# Only the symbol walk caught it. Same hazard here: the VM's build\pyinstaller dates from the
+# 6.1.18 build (2026-09-18) and this release adds a new module (cloud_hub) plus heavy MRRC edits.
+Remove-Item "build\pyinstaller" -Recurse -Force -ErrorAction SilentlyContinue
+
 Invoke-Checked pyinstaller packaging\pyinstaller\mrrc_server.spec --noconfirm --distpath "$PyInstallerRoot" --workpath "build\pyinstaller"
 Invoke-Checked pyinstaller packaging\pyinstaller\mrrc_launcher.spec --noconfirm --distpath "$PyInstallerRoot" --workpath "build\pyinstaller"
 Invoke-Checked pyinstaller packaging\pyinstaller\atr1000_proxy.spec --noconfirm --distpath "$PyInstallerRoot" --workpath "build\pyinstaller"
