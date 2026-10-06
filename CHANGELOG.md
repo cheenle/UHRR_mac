@@ -1,20 +1,211 @@
 # Changelog
 
-## [Unreleased]
+All notable changes to this project will be documented in this file.
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [V6.2.0] - 2026-10-06 — 内网穿透（Cloud Hub 应用内开通）+ TX 可靠性 + rigctld 轮询纪律
+
+**本版头号能力：不用改路由器、不用做端口映射，就能从公网访问自己的电台。**
+在主界面点 ☁️（或移动端菜单「☁️ 接入云端」）填呼号申请入口；运维在门户批准后，实例会自己
+签证书 → 向 hub 登记公钥 → 写 frpc 配置并拉起隧道 → 自重启加载新证书，最终得到
+`https://<呼号>-legacy.mrrc.vlsc.net/`（443，Let's Encrypt 真证书，浏览器零警告）。
+批准后**零点击**：服务端每 30 s 自查一次门户；已接入的实例**启动即拉起隧道**。
+
+> ⚠️ 本版**只能随安装包到达用户**，热修通道覆盖不到：改动落在 `MRRC` 主脚本（+644 行）、
+> `ssl_bootstrap.py`、`audio_interface.py`，全部冻在 PYZ 里。
+
+### 📦 打包：安装包内置 frpc.exe（本版新增的构建硬门禁）
+
+- 冻结包里 `_cloud_fleet_dir()` = `_runtime_dir()/fleet` = **安装目录**`\fleet`，而
+  `_runtime_dir()` 在 frozen 下是 `dirname(sys.executable)` —— 靠"发现"（PATH / `~/bin` /
+  `~/.local/share/mrrc-fleet`，全是 POSIX 习惯）在 Windows 上一个都不会命中。缺了 frpc，
+  用户申请/批准全走通，**最后一步起不了隧道**，`/api/cloud/state` 只报一个
+  `frpc_available:false`。所以 `build.ps1` 现在把它当**硬门禁**（缺则 `throw`，不再像
+  vendor DLL 那样只告警）。
+- 权威是入库的 `packaging/payload.lock`（平台/文件名 + 版本 + sha256 + 出处）；二进制本身
+  **不**入库，构建前由 `dev_tools/fetch_payload.sh` 取到 `packaging/payload/` 并逐个校验。
+  已在本地且哈希符合 lock 就**不联网**（GitHub 在境内经常不可达，2026-10-06 本机实测
+  github.com 连接超时），只有缺件时才去取。
+- **取件器会"成功"地什么都不放**：`mrrc_hub/deploy/fetch_installer_payload.sh` 拉不到 frp
+  官方 checksums 时按设计整批跳过 frpc，消息只进 stderr，然后照样打印"取件完成"并退出 0
+  （2026-10-06 本机实测命中）。判据是**文件在不在、哈希对不对**，不是退出码或 ✓ 的条数。
+  `fetch_payload.sh` 已按此实现，并做过变异验证（缺件 / 哈希不符两条路径都实测变红）。
+- 不需要 mrrc_modern 那套 openssl.exe + 9 个 DLL：本产品的实例证书由 `ssl_bootstrap.py` 用
+  Python `cryptography` 签，不调 openssl CLI；也不随包带 `install_instance_tunnel.ps1`
+  （那是 modern 的流程，它写的是 `MRRC-Modern\mrrc_modern.env`）。
+- frpc 版本 pin 到 hub 的 frps（**0.71.0**）—— 客户端比服务端新可能握手失败，换版本时两侧一起动。
+- `cloud_hub` / `session_metrics` / `base_path` 已加进 `mrrc_server.spec` 的 `_APP_MODULES`：
+  它们被 `MRRC` import 所以本来就会进 PYZ，但**"功能在包里"与"能热修"是两件事**。
+
+### 🔧 发版工程：两个会在发布环节静默出错的缺陷（本版修）
+
+- **归档必须早于覆盖**：`release_windows.sh` 原先先 `cp 新包 → website/downloads/MRRC-Setup.exe`，
+  **然后**才把它归档成 `MRRC-Setup-<上一版>.exe` —— 归档到的是刚取回的新包。而
+  `make_latest_json.py` 是事后算哈希的，所以 `previous.sha256` 跟那个错文件还对得上：
+  校验全绿，用户点【回退到上一版】却静默装上新版。修法：归档移到覆盖之前 +
+  **已入库的历史归档一律不覆盖**。发版后抽查 `previous.sha256` ≠ `installer.sha256`。
+- **提交落在特性分支上推不出去**：脚本末尾是 `git push origin main`，推的是**本地 main**
+  而不是当前分支；hub 工作在 `feat/hub` 上时 push 只会说 "Everything up-to-date"。
+  修法：push 前把 main 快进到当前分支，并把当前分支也推上去。
+- `iscc` 改为**先出到临时目录再复制**：构建 VM 上实时防毒会锁住刚写出的 exe，
+  iscc 报 "The output file appears to be in use (32)"，而上一版产物还躺在 `dist\windows`
+  里 —— 看起来就像构建成功了。现在构建前先删掉旧产物，"文件存在"只可能来自本次构建。
+
+
+### 📻 rigctld 轮询纪律 + 第三方软件联动（F9/F10，2026-10-04）
+
+- **修复 F9a（S 表“不支持就别再问”）**：`_rigctld_get_signal_strength()` 对不支持的机器
+  （本机 IC-M710：`l STRENGTH` → `RPRT -1`）会一直问 —— `ticksTRXRIG` 每 0.5s 一次。
+  现在连续 3 次失败即闩住并只提示一次（`📉 本机 rigctld 不支持信号强度电平…`）。
+- **修复 F9d（只对“机型不支持”计数，避免误伤别的电台）**：闩锁原先把**任何** `RPRT`
+  都算失败 —— FT-817/FT-818 这类**本来读得到** S 表的机型，只要连吃三次瞬时错误
+  （串口抖动 / 电台忙 / rigctld 正重启：`RPRT -5/-6/-9/-11`），S 表就被闩死到本次会话
+  结束。现在只有 `RPRT -1`（`RIG_EINVAL` = 本机不支持该电平，IC-M710 就是这种）才入计数。
+- **修复 F9b（rigctld 不用 `-vvv` 启动）**：`mrrc_multi.sh` 的 rigctld 从 `-vvv` 降为 `-vv`。
+  实测 `-vvv`（TRACE 级）会把每条“连上但没发命令”的探针记成
+  `rigctl_parse: nothing to scan#1? retcode=-1, last_cmd=[empty]` —— 量级 2~3 条/秒、
+  占 rigctld 日志 99%；`-vv` 下完全消失，而真正有用的审计行
+  （`rigctl_set_ptt: ptt=0/1`）在 `-vv` 下照旧保留（用 dummy rig 对照实测）。
+- **新增 F9c（第三方改频 → 页面跟随）**：`FrequencySyncThread`（V4.9.2 就是为
+  RUMlogNG/JTDX/flrig 这类直连 rigctld 的软件建的）原先只把频率喂给 ATR-1000 代理，
+  网页不跟随（实测：RUMlogNG 点 DX spot 改频 → 电台 QSY、页面显示旧频率）。现在同步
+  线程把新频率广播给控制通道客户端（`getFreq:<值>`，`controls.js` 已支持），
+  并且走 `MAIN_IOLOOP.add_callback`（后台线程不得直写 WebSocket）。
+- **修复 F10（频率读回 0 不再污染状态）**：hamlib 读不到频率时回 0（电台关机 /
+  USB 串口掉线），原实现会把 0 存进 `infos["FREQ"]` 并回给页面（页面直接显示 0 Hz、
+  ATR 频率上下文跟随丢失）。现在 0 不覆盖上次已知值，并以 10 分钟限流的方式提示一次。
+- **测试**：新增 `dev_tools/test_rig_polling.py`（S 表闩锁在连接之前 / 提示只打一次 /
+  广播走 IOLoop 且页面侧认得 / `getFreq` 的 >0 保护与限流 / `mrrc_multi.sh` 不得退回
+  `-vvv`、支持 `rigctld_bin`）；顺手修掉 `mrrc_multi.sh` 里 `local` 用在函数外的 shellcheck
+  报错（SC2168）。
+- **F11（虚拟后端状态落盘）**：IC-M710 的 hamlib 后端**不响应任何查询**，`get_freq`/
+  `get_mode` 回的是它内存里“最后一次设置”的副本（源码注释原话 “virtual rig response”）。
+  rigctld 一重启副本归零 → 读频率恒 0。现在应用把每次成功设置的频率/模式落盘
+  （`rig_state.json`），启动时（以及发现读回 0 时，限流 10 分钟）按上次已知值重写一遍
+  （幂等），并把**回读值**打进日志。实测：`f → 7050000`、启动日志
+  `🔁 rigctld 虚拟状态已恢复（启动）：7050.0 kHz（读回 7050000） LSB（读回 LSB）`。
+- **F11b（恢复前先读后写，不覆盖能回答的电台）**：F11 的恢复原本**无条件写** —— 对
+  FT-817/FT-818 这类**会回答查询**的机型，应用一启动就拿记忆值强写，覆盖操作员在应用
+  关着时手动调过的频率/模式。现在先问电台：读回非 0/非空就以**电台自报值**为准（并顺手
+  自愈 `rig_state.json`），只有读回 0/空（IC-M710 这种“虚拟副本”后端在 rigctld 重启后
+  正是如此）才写记忆值。真机对照实测：注入过期记忆 `7060000/USB`、电台在 `7050000/LSB`
+  → 重启后电台**纹丝未动**，文件自愈为 `7050000/LSB`，日志
+  `🔁 rigctld 状态已确认（启动）：7050.0 kHz（电台自报，未覆盖） LSB（电台自报，未覆盖）`。
+  附带修掉一个当场被抓到的解析 bug：副本为空时 rigctld 对 `m` 回的是“**空首行 + 2200
+  （通带）**”，原先 `.strip()` 后取首行会把 `2200` 当成模式名写进 `rig_state.json`。
+- **F12（hamlib 后端 bug → 本地补丁）**：同一后端 `get_mode()` 回 `priv->mode`，但
+  **`set_mode()` 从不写这个字段**（只有 `set_freq()` 写了 `rxfreq`）→ 模式只在 hamlib 的
+  get 缓存（实测 ∼1s）内可读，之后恒为空；且 caps 里声明了 `RAWSTR` 却未在 `get_level()`
+  实现（S 表只能闩住不问）。补丁 `dev_tools/patches/icm710-mode-cache.patch` 让 `set_mode`
+  与 `set_freq` 对称地记下模式；已用 `--prefix=/usr/local/mrrc-hamlib` 独立构建/安装
+  （不动 MacPorts），实例配置用 `[HAMLIB] rigctld_bin` 指认（启动脚本新增
+  `MRRC_RIGCTLD_BIN`/`INSTANCE_RIGCTLD_BIN` 覆盖）。实测补丁版下 `m` 16 秒后仍稳定返回
+  `LSB` → **RUMlogNG 现在频率与模式都能跟着记**。构建/验证步骤见
+  `dev_tools/patches/README.md`（两处建议上报 upstream）。
+- **F13（客户端音量量程，2026-10-04）**：`C_af`（接收音量滑块）的量程早已从 0-100 改为
+  0-1000（线性增益 = `/1000`），但 `www/audio_rx.js` 的 `AudioRX_SetGAIN()` 仍按 `value/100`
+  换算 —— 对 0-1000 的滑块会算出 **5.0 的增益，把音量顶爆 10 倍**。该文件已被标记
+  DEPRECATED 且没有任何页面加载它（`modern.html` 的 H17 已移除，原因是它与 tagged wire
+  format 不兼容），所以这一条是**未爆发的死代码**；已按新量程改正，并加 `[0,1]` 夹紧与
+  旧量程一次性迁移（有 `controls.js` 的 `normalizeCAfScale` 时用同一把尺）。新增守卫
+  `tests/test_web_audio_gain.py`：结构（量程声明 / 换算写法 / 废弃文件不得被页面加载 /
+  `C_mg` 不串档）+ 行为（用 node 把两个 `AudioRX_SetGAIN` 与 `normalizeCAfScale` 抽出来
+  **真跑**，验证 0-1000→0-1、越界夹紧、旧量程只迁移一次）。
+
+### ☁️ 证书：老直连入口写进 SAN（F8，已完成并实测跑通）
+
+- **新增** `ssl_bootstrap.sign_for(..., extra_names=...)` 与 `[SERVER] cert_extra_names`：
+  证书 SAN 除 hub 入口名外，可再带上实例可达的其它名字（例如直连本机 IPv6 的老书签
+  `radio.vlsc.net:8891`）——否则浏览器按域名不匹配拒绝（2026-10-04 实测：日志每 0.5 秒
+  一条 `SSL CERTIFICATE_UNKNOWN`，页面直接打不开）。不传 `extra_names` 时行为与从前
+  完全一致（其它实例不受影响）。
+- **测试** `tests/test_ssl_bootstrap.py`（SAN 内容 / CN 仍是 hub 入口名 / 去重与空白 /
+  私钥 0600）+ `dev_tools/test_cloud_hub.py` 增加 `extra_names` 透传断言。
+- **换证书 = 站端 + hub 两侧一起动（实测）**：公网入口证书是 hub 边缘的 Let's Encrypt，
+  但 hub 的 nginx 对上游开 `proxy_ssl_verify`，用 `trust-bundle.pem`（系统 CA +
+  `/etc/mrrc-hub/instance-certs/<label>.pem`）按 `$mrrc_tls_name` 校验实例证书。
+  **只重签站端证书 = 入口立刻 502**（中间踩到并回滚过一次）。完整流程：
+  ① 站端重签（可带 SAN）+ `/enroll` 重新登记；
+  ② hub：`sudo /usr/local/sbin/gen_hub_routes.py && sudo nginx -t && sudo systemctl reload nginx`；
+  ③ 站端重启（TLS 上下文只在启动时建立）。把 ② 插在 ③ 的重启窗口里，对外中断≈一次重启。
+  本次（`bg6lh-legacy`）已按此流程完成：入口 302 恢复，证书 SAN 含两个名字，信任包已换成新证书。
+
+### ☁️ 修复：陈旧 frpc 泄漏（macOS/Linux 上每次重启泄漏一个隧道进程）
+
+- **修复 F7**：`cloud_hub._kill_stale_frpc()` 补齐 POSIX 实现 —— 原实现只写了
+  wmic/taskkill，并在非 Windows 上一行 `return`，于是 macOS/Linux 下每次重启都泄漏一个
+  frpc：2026-10-04 实测累积 5 个（99050/21607/23064/23256/25305），它们抢同一个
+  proxy 名、日志每 10s 一条 `proxy already exists`，而隧道实际由**早已失去父进程的
+  孤儿**持有（该函数 docstring 早就描述了这个后果）。现在拆出平台无关的
+  `_stale_frpc_pids()`（POSIX `ps -eo pid=,command=`，Windows wmic；带测试注入缝），
+  只选"命令行点名了**本实例自己**配置文件"的进程，SIGTERM → 宽限 3s → SIGKILL；
+  清理动作改成 `print`（本产品 logger 级别 WARNING，info 不进日志）。
+  实测：重启后 frpc 5 → 1，隧道日志转为 `start proxy success`，`already exists` 停止。
+- **测试**：`dev_tools/test_cloud_hub.py` 新增用例（只选中本实例的 / 不误杀另一实例或
+  非 frpc 进程 / 无匹配返回空 / 静态守住"不再在 POSIX 一行 return"）。
+
+### 🛡️ 可靠性：TX 拆流不再楔死 IOLoop（RC-003 / F6）
+
+- **修复 F6**：`PyAudioPlayback.close()` 有界化 —— PortAudio 的
+  `stop_stream()/close()/terminate()` 是可能**永不返回**的 C 调用，2026-10-04 它在
+  IOLoop 线程上把 radio1 的 8891 端口楔死 2h23m（进程活着、音频照跑，
+  HTTP/WebSocket/PTT/天调中继全失能）。现在拆流在一次性线程执行、3s 超时即放弃
+  （**泄漏一个流而不是死一个服务**）；写线程卡在阻塞 `write()` 时不再跨线程碰同一
+  stream；新增 `close_async()` 供 IOLoop 调用点使用；`close()` 幂等。
+- **修复 F6b**：s:/on_close 不再阻塞 —— 两处音频拆流改 `close_async()`；
+  两处 `CTRX.setPTT("false")` 挪进执行器（setPTT 自带 3×3s rigctld 阻塞 IO，
+  F3 当时只修了控制通道）；s: 分支手写的“乐观”`getPTT:false` 广播删除，改由
+  setPTT 确认后自行广播（R3 安全约束：释放方向绝不乐观预设）。
+- **修复 F6c**：看门狗补原生转储 —— 心跳自身跑在 IOLoop 上，事件循环**永久**楔死时
+  它永远排不上队；现在每拍重臂 `faulthandler.dump_traceback_later`（独立 C 线程，
+  30s 窗口），心跳停摆即自动倾倒全部线程栈。启动日志新增 `native dump window=30s`。
+- **测试**：`dev_tools/test_audio_close_liveness.py` —— 假 stream 永久阻塞
+  `stop_stream`，钉住 close 有界/`close_async` 立即返回/写线程竞态保护/幂等/
+  IOLoop 调用点无裸调（修复前 8 项不合格）。
+- **文档**：新增 `docs/current/reliability/RC-003-ioloop-wedge-on-tx-close.md`
+  （含 py-spy/netstat 判定手段与下次楔死的预期现场）；同案附带发现并修复了 stale
+  frpc 泄漏（见上一条 F7）。
+
+### ☁️ 接入云端（Cloud Hub）应用内开通 —— 对齐 mrrc_modern v1.25.0
+
+- **新增** `cloud_hub.py`（纯 stdlib、无 Tornado 依赖，可单测）：门户 `apply/claim/status`
+  表单协议、旧门户地址改写（V0.21 前的 `:8899`/边缘路径）、`frpc` 配置生成、`frpc` 发现
+  （`fleet/`、PATH、`~/.local/share/mrrc-fleet`）、`TunnelProcess` 常驻看护、`connect()`
+  批准后的完整接入（签证书 → 登记公钥 → 写隧道配置 → 起隧道 → 落状态）。
+- **新增** `ssl_bootstrap.sign_for(name, cert_dir)`：为实例入口名签自签证书
+  （hub 按 `<标签>.mrrc.vlsc.net` 校验上游，`/enroll` 拒绝任何其他名字）。
+- **新增** `GET/POST /api/cloud/state|apply|refresh|restart`（`CloudApiHandler`）：
+  网络与签名 IO 全部走 executor，不阻塞 IOLoop（RC-001）；重启复用 `restart_self()`
+  （execv 原地替换），但经 `MAIN_IOLOOP.call_later` 触发，不在 handler 里 sleep 压 IOLoop。
+- **新增** `www/cloud.html`（自包含页面，主界面 ☁️ 按钮与移动端菜单入口）：
+  申请 / 待批面板（含登记口令直接）/ 已接入面板（入口、证书、隧道状态、重启按钮）；
+  显示服务端自动轮询的最后一次结果——"根本没问"与"问了没批"在界面上可区分。
+- **自动行为**：有申请未批准 → 服务端每 30 s 自查（`cloud-autoconnect` 线程），批准后
+  **无人值守完成接入并在证书需要时自重启**；已接入实例**启动即拉起隧道**
+  （不等有人打开页面，mrrc_modern v1.24.8 的教训）。
+- **证书生效**：接入登记的证书写入 `mrrc_cloud.json`（0600，含申请令牌），启动时优先于
+  `MRRC.conf [SERVER] certfile/keyfile`；`cert_reload_required` 按"进程正在服务的那张 vs
+  登记的那张"的事实判断（路径不同或同路径被重写都算）。
+- **差异说明**：状态存 JSON 而非 env 文件（本仓配置是 configparser 的 `MRRC.conf`，
+  不能让代码重写丢注释）；申请 `product=legacy` → 门户按标签规则分配 `<呼号>-legacy`。
+- **测试** `dev_tools/test_cloud_hub.py`：报文形状、旧地址改写、错误包装、状态文件
+  （合并/原子写/0600/坏 JSON）、`connect()` 全流程（含未批准不签证书、非数字端口是一句话）、
+  MRRC 接线与 Dockerfile / 前端入口守卫。
 
 ### ☁️ Cloud Hub 路径入口支持（base_path）
 
 - **新增** `base_path.py` 与 `[SERVER] base_path` 配置：实例可挂在 `/<产品>/<呼号>/` 路径下运行，
   与子域根路径入口并存。默认空值 = 行为与之前完全一致。
+  **注意（2026-10-04）**：hub V0.21 已删除唯一的海外边缘路径入口，当前公网入口只有
+  `https://<呼号>.mrrc.vlsc.net/`（443）—— 本能力处于储备状态，生产中保持默认空值。
 - **修复** 路径入口下的三类前缀逃逸：HTML 站点根绝对引用（8 处）、`fetch('/api/...')`（3 处）、
   WebSocket 地址（10 处，含 2 处 `location.href.split` 写法，由守卫测试发现）。
 - **安全** Cookie 的 `path` 限定到前缀：路径入口下同 origin 的多个产品不再互相覆盖会话（fleet 评审 P0-3）。
 - **打包** `Dockerfile` 增加 `base_path.py`（缺它会在容器内 ImportError）。
 - **测试** 新增 `dev_tools/test_path_prefix.py` 守卫（模块行为 + 资产扫描 + 服务端接线 + 打包）。
-- 详见 `docs/current/design/hub-parity-plan.md`；未完成：TX 活性闸门、会话遥测。
-All notable changes to this project will be documented in this file.
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+- 详见 `docs/current/design/hub-parity-plan.md`；配套的会话遥测与 PTT 活性闸门见下面两条
+  （两项均已完成，此前"未完成"的记述作废）。
 
 ### 🩹 Device Config 抽屉不再每 2.5 s 自重建（"搜索/选择一闪而过"）
 
@@ -23,7 +214,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `innerHTML` 重建：搜索词被清空、展开的机型下拉被打掉、Loading 闪烁。
   现补取只发生一次（`retryProbe` 参数），且 `renderDeviceSettings()` 重建前
   保留搜索词与已选机型（选项仍存在才恢复）。
-
 
 ### 📊 会话遥测（Cloud Hub 前置能力）
 
@@ -44,6 +234,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   导致启动时 ValueError。注释请独占一行（本次即为踩坑后修正）。
 - **测试** `dev_tools/test_ptt_liveness.py`：除守住"默认仍是 5s / 未残留硬编码 / 走既有释放路径"外，
   还校验**配置段名真实存在**与**取值可被解析**（这两条今天各抓到一个会导致启动崩溃的错误）。
+
+### ⚠️ 已知风险（本版**未修**，已记录在案）：全部装机共用同一个 `cookie_secret`
+
+发版前体检发现的既有缺陷（**不是本版引入**，V6.1.18 及更早全部版本都成立），
+完整取证与修复方案见 `docs/current/reliability/RC-004-shared-cookie-secret.md`。
+
+- `windows/MRRC.conf.template` 里的 `cookie_secret` 与仓库另外 6 份配置**完全同值**，
+  而该模板会随安装包分发（`build.ps1:91` 复制 `windows/` → iss 打包 `dist\windows\MRRC\*`），
+  安装包在站点上任何人可下载 ⇒ 这把会话签名密钥等同于公开。
+- 首启 `launcher.py:_copy_seed()` 用 `write_bytes(read_bytes())` **逐字节**复制模板，不做随机化；
+  `MRRC:6157` 直接把它交给 Tornado，无兜底；而 `get_current_user` 只有一句
+  `get_secure_cookie("user")` ⇒ **知道密钥即可自签会话 cookie，不经口令登录**，
+  而本应用的已登录会话能按下发射键。
+- **为什么在本版记录**：本版之前多数装机只在局域网可达；内网穿透让实例挂到
+  `https://<呼号>-legacy.mrrc.vlsc.net/`（443 公网可达）之后，"一把公开密钥 + 一个公网入口"
+  同时成立。缺陷没变，**可利用性变了**。
+- 维护者决定（2026-10-06）：**先发 V6.2.0，风险记录在案**。
+  注意"发完再热修"这条路**不成立** —— `MRRC` 与 `windows/launcher.py` 都在 PYZ 里，
+  热修通道覆盖不到，修复只能随下一个安装包到达用户。
+- 未修期间的缓解：**不启用 Cloud Hub 入口**（不申请/不让 hub 开放），或手工把本机
+  `MRRC.conf` 的 `cookie_secret` 换成随机值并重启（会让已登录会话失效一次）。
+- 自查本机是否仍暴露：`grep -n cookie_secret %LOCALAPPDATA%\MRRC\MRRC.conf`
+  （Windows 装机）—— 命中 RC-004 里记的那个值即为仍暴露。
+
 ## [V6.1.18] - 2026-09-17
 
 ### 🧠 NR3(RNNoise) 进包 + WDSP C 层旋钮 + 门控修复

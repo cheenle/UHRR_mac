@@ -49,7 +49,7 @@
     <div class="hero-content">
         <div class="hero-badge">
             <i class="fas fa-satellite-dish"></i>
-            <span>V6.1.18 · 生产就绪</span>
+            <span>V6.2.0 · 生产就绪</span>
         </div>
         <h1 class="hero-title">
             业余无线电<br>
@@ -57,7 +57,7 @@
         </h1>
         <p class="hero-subtitle">
             MRRC 是 VLSC 远程无线电生态中的通用 HF 路线。手机、平板、电脑随时操控您的短波电台。
-            V6.1.18：新增一键升级 —— 发现新版本后自动下载 + SHA256 校验，点一下（页面按钮或启动器窗口按 U）即静默安装并自动重启，支持一键回退上一版，已在真机端到端验证；另有热修补丁通道，前端/服务端/DLL 修复不必重新打包或重装，用户侧几十 KB 即完成；
+            V6.2.0：新增内网穿透（Cloud Hub 远程接入）—— 在应用内直接申请入口，运维批准后实例会自己签证书 → 向 hub 登记公钥 → 拉起 frp 隧道 → 自重启加载新证书，于是得到一个公网地址 https://&lt;呼号&gt;-legacy.mrrc.vlsc.net/，**不用改路由器、不用做端口映射**。同时：TX 拆流不再楔死 IOLoop（RC-003）、rigctld 对读不到信号强度的机型不再每 0.5 s 重问、第三方软件（RUMlogNG / JTDX / flrig）改频后页面跟随、Device Config 抽屉不再每 2.5 s 自重建
             ATR-1000 功率/SWR 实时监测、天调自动学习修复（按实测功率判发射，面板直发同样学习）、
             IC-M710 AGC/RF 增益控制、三层 PTT 安全防护体系。
         </p>
@@ -76,7 +76,7 @@
             <div class="stat-item"><span class="stat-value">&lt;100ms</span><span class="stat-label">TX/RX 切换</span></div>
             <div class="stat-item"><span class="stat-value">99%+</span><span class="stat-label">PTT 可靠性</span></div>
             <div class="stat-item"><span class="stat-value">15-20dB</span><span class="stat-label">WDSP 降噪</span></div>
-            <div class="stat-item"><span class="stat-value">V6.1.18</span><span class="stat-label">Windows 就绪</span></div>
+            <div class="stat-item"><span class="stat-value">V6.2.0</span><span class="stat-label">Windows 就绪</span></div>
         </div>
     </div>
 </section>
@@ -85,7 +85,7 @@
     <div class="container">
         <div class="section-header">
             <span class="section-label">本版新能力</span>
-            <h2 class="section-title">V6.1.18 · 一键升级 &amp; 一键诊断 &amp; 公开答复</h2>
+            <h2 class="section-title">V6.2.0 · 内网穿透（Cloud Hub）&amp; TX 可靠性 &amp; rigctld 轮询纪律</h2>
         </div>
         <div class="features-grid">
             <div class="feature-card animate">
@@ -318,7 +318,7 @@
                 <p>
                     Mobile Remote Radio Control<br>
                     业余无线电，随时随地<br>
-                    V6.1.18 · GPLv3 协议
+                    V6.2.0 · GPLv3 协议
                 </p>
             </div>
             <div class="footer-section">

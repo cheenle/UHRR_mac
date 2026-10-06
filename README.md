@@ -1,8 +1,8 @@
-# Mobile Remote Radio Control (MRRC) V6.1.18
+# Mobile Remote Radio Control (MRRC) V6.2.0
 
 [![English](https://img.shields.io/badge/lang-English-blue.svg)](README_en.md)
 [![中文](https://img.shields.io/badge/lang-中文-red.svg)](README_CN.md)
-[![Version](https://img.shields.io/badge/version-V6.1.18-green.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-V6.2.0-green.svg)](CHANGELOG.md)
 
 ---
 
@@ -30,7 +30,9 @@ A modern web-based remote control system optimized for mobile devices, enabling 
 热修通道：`www/**`、`_APP_MODULES`（含 `upgrade_core.py`/`support_bundle.py`）与 `vendor` 的修复**无需重装**，
 用户重启即生效。
 
-> 🎉 **V6.1.18 更新**: **一键升级**（有新版本时点一下/按 U 即可，自动下载校验 + 静默安装 + 自动重启，支持回退上一版）。
+> 🎉 **V6.2.0 更新**: **内网穿透（Cloud Hub 远程接入）** —— 在主界面点 ☁️ 申请入口，运维批准后实例会自己签证书 → 向 hub 登记公钥 → 写 frpc 配置并拉起隧道 → 自重启加载新证书，
+> 于是得到一个公网地址 `https://<呼号>-legacy.mrrc.vlsc.net/`（443，浏览器零警告），**不用改路由器、不用做端口映射**。
+> 安装包已内置 `frpc.exe`（pin 到 hub 的 frps 0.71.0），开箱即用。守卫：`python3 dev_tools/test_cloud_hub.py`。
 
 > 🎉 **V6.0.10 更新**: 新增「🐞 遇到问题」一键诊断包上传（脱敏 + 自动体检摘要，维护者可直接看到问题与日志）、
 > 启动器 tee 服务端日志、空闲关机幂等、诊断包接收端部署在随站点。
@@ -342,7 +344,7 @@ Based on [F4HTB/Universal_HamRadio_Remote_HTML5](https://github.com/F4HTB/Univer
 
 ---
 
-**Latest Release: V6.1.18** (2026-09-17) | [View Changelog](CHANGELOG.md)
+**Latest Release: V6.2.0** (2026-10-06) | [View Changelog](CHANGELOG.md)
 
 ## 🖥️ Multi-Instance Support ⭐ New
 
