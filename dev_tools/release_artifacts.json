@@ -113,6 +113,153 @@
       "path": "website/zh/index.html",
       "pattern": "section-title\">V([0-9]+\\.[0-9]+\\.[0-9]+)",
       "count": 1
+    },
+    {
+      "id": "mobile-zh-css",
+      "path": "www/mobile_modern_zh.html",
+      "pattern": "mobile_modern\\.css\\?v=([0-9.]+)",
+      "count": 1,
+      "why": "中文手机页的静态资源缓存戳。原表只登记了英文版（mobile-css），这一条从来没人管，实测停在 5.8.3 —— 落后 11 个版本，中文手机端因此一直拿旧 CSS。"
+    },
+    {
+      "id": "index-hero-en",
+      "path": "website/index.html",
+      "pattern": ">V([0-9]+\\.[0-9]+\\.[0-9]+) · Production Ready<",
+      "count": 1,
+      "why": "英文主页 hero 徽章。锚定 '· Production Ready' 以免命中页内其它版本字样。"
+    },
+    {
+      "id": "index-hero-zh",
+      "path": "website/zh/index.html",
+      "pattern": ">V([0-9]+\\.[0-9]+\\.[0-9]+) · 生产就绪<",
+      "count": 1,
+      "why": "中文主页 hero 徽章。"
+    },
+    {
+      "id": "index-footer-en",
+      "path": "website/index.html",
+      "pattern": "^\\s*V([0-9]+\\.[0-9]+\\.[0-9]+) · GPLv3 License",
+      "count": 1,
+      "why": "英文主页页脚的当前版本声明。"
+    },
+    {
+      "id": "index-footer-zh",
+      "path": "website/zh/index.html",
+      "pattern": "^\\s*V([0-9]+\\.[0-9]+\\.[0-9]+) · GPLv3 协议",
+      "count": 1,
+      "why": "中文主页页脚的当前版本声明。"
+    },
+    {
+      "id": "sdd-note-zh",
+      "path": "website/docs/design/MRRC_SDD.html",
+      "pattern": "，当前版本 V([0-9]+\\.[0-9]+\\.[0-9]+)）",
+      "count": 1,
+      "why": "SDD 页眉的'当前版本'注记。锚定中文逗号与全角右括号：同文件另有两处**历史**版本字样（'AI 分诊…（V6.1.18 起）'、'核心功能已在V6.1.18实现'）绝不能被规则或替换碰到。"
+    },
+    {
+      "id": "docs-current-api",
+      "path": "website/docs/design/API.html",
+      "pattern": "当前版本 <strong>V([0-9]+\\.[0-9]+\\.[0-9]+)</strong>",
+      "count": 1,
+      "why": "文档页眉统一的'当前版本'注记（正文里 V5.x 是历史版本，故必须锚定这个 strong 结构）。"
+    },
+    {
+      "id": "docs-current-spec",
+      "path": "website/docs/design/SPEC.html",
+      "pattern": "当前版本 <strong>V([0-9]+\\.[0-9]+\\.[0-9]+)</strong>",
+      "count": 1,
+      "why": "同上。"
+    },
+    {
+      "id": "docs-current-design",
+      "path": "website/docs/design.html",
+      "pattern": "当前版本 <strong>V([0-9]+\\.[0-9]+\\.[0-9]+)</strong>",
+      "count": 1,
+      "why": "同上。"
+    },
+    {
+      "id": "docs-current-features",
+      "path": "website/docs/features.html",
+      "pattern": "当前版本 <strong>V([0-9]+\\.[0-9]+\\.[0-9]+)</strong>",
+      "count": 1,
+      "why": "同上。注意本文件另有一处历史事实（'validated end-to-end … in V6.1.18'）不在规则内。"
+    },
+    {
+      "id": "docs-current-agentic",
+      "path": "website/agentic.html",
+      "pattern": "当前版本 <strong>V([0-9]+\\.[0-9]+\\.[0-9]+)</strong>",
+      "count": 1,
+      "why": "同上。"
+    },
+    {
+      "id": "zh-docs-current-design",
+      "path": "website/zh/docs/design.html",
+      "pattern": "当前版本 <strong>V([0-9]+\\.[0-9]+\\.[0-9]+)</strong>",
+      "count": 1,
+      "why": "同上（中文站）。"
+    },
+    {
+      "id": "zh-docs-current-features",
+      "path": "website/zh/docs/features.html",
+      "pattern": "当前版本 <strong>V([0-9]+\\.[0-9]+\\.[0-9]+)</strong>",
+      "count": 1,
+      "why": "同上（中文站）。本文件另有一处历史事实（'V6.1.18 真机端到端验证通过'）不在规则内。"
+    },
+    {
+      "id": "zh-docs-current-docs",
+      "path": "website/zh/docs/docs.html",
+      "pattern": "当前版本 <strong>V([0-9]+\\.[0-9]+\\.[0-9]+)</strong>",
+      "count": 1,
+      "why": "同上（中文站）。"
+    },
+    {
+      "id": "zh-docs-current-agentic",
+      "path": "website/zh/agentic.html",
+      "pattern": "当前版本 <strong>V([0-9]+\\.[0-9]+\\.[0-9]+)</strong>",
+      "count": 1,
+      "why": "同上（中文站）。"
+    },
+    {
+      "id": "arch-title-en",
+      "path": "website/docs/design/architecture.html",
+      "pattern": "<title>MRRC V([0-9]+\\.[0-9]+\\.[0-9]+) Architecture",
+      "count": 1,
+      "why": "架构图页的 <title>；浏览器标签与搜索结果里可见。"
+    },
+    {
+      "id": "arch-diagram-en",
+      "path": "website/docs/design/architecture.html",
+      "pattern": "diagram-title\">MRRC V([0-9]+\\.[0-9]+\\.[0-9]+) Architecture",
+      "count": 1,
+      "why": "同页图内标题，与 <title> 必须一致。"
+    },
+    {
+      "id": "docs-svg-arch",
+      "path": "website/docs/docs.html",
+      "pattern": "MRRC System Architecture V([0-9]+\\.[0-9]+\\.[0-9]+)",
+      "count": 1,
+      "why": "内嵌 SVG 里的架构图标题 —— 藏在 <text> 节点里，肉眼扫版本号时最容易漏。"
+    },
+    {
+      "id": "install-win-en",
+      "path": "website/docs/installation.html",
+      "pattern": "Windows Installer \\(V([0-9]+\\.[0-9]+\\.[0-9]+), Easiest Path\\)",
+      "count": 1,
+      "why": "安装指南里'当前安装包版本'的小标题。同页另有两处**历史**门槛（'rigctld now starts automatically (V6.1.18)'、'Already installed (V6.1.18 or newer)?'）是能力引入版本，不在规则内、也不该被替换。"
+    },
+    {
+      "id": "install-win-zh",
+      "path": "website/zh/docs/installation.html",
+      "pattern": "Windows 安装包（V([0-9]+\\.[0-9]+\\.[0-9]+)，最简单路径）",
+      "count": 1,
+      "why": "同上（中文站）。同页两处历史门槛（'V6.1.18 起'、'V6.1.18 及以后'）不在规则内。"
+    },
+    {
+      "id": "winfix-current-zh",
+      "path": "website/zh/docs/windows-fix.html",
+      "pattern": "新版安装包（当前 V([0-9]+\\.[0-9]+\\.[0-9]+)）",
+      "count": 1,
+      "why": "修复工具页里'装新版就不用跑修复工具'的当前版本声明。"
     }
   ]
 }

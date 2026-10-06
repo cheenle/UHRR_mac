@@ -233,7 +233,7 @@ if has_pending_challenge; then
     echo ""
 
     if [ "$rc" != "0" ]; then
-        echo -e "${RED}验证/签发失败（退出码 $rc）。${NC}"
+        echo -e "${RED}验证/签发失败（退出码 ${rc}）。${NC}"
         echo "常见原因: TXT 记录未生效、DNS 未传播、或在别处已消费该挑战。"
         echo "可查看完整日志或重试:"
         echo "  tail -50 /tmp/acme_*.log 2>/dev/null"
@@ -280,7 +280,7 @@ else
     fi
 
     if [ "$rc" != "0" ]; then
-        echo -e "${RED}acme.sh 执行失败（退出码 $rc）。完整日志: $ACME_OUT${NC}"
+        echo -e "${RED}acme.sh 执行失败（退出码 ${rc}）。完整日志: $ACME_OUT${NC}"
         exit 1
     fi
 fi

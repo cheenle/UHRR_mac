@@ -21,46 +21,68 @@ SRC_ZIP="dist/mrrc_build_src.zip"
 LOCAL_EXE="dist/windows/MRRC-Setup.exe"
 SITE_EXE="website/downloads/MRRC-Setup.exe"
 
-SKIP_BUILD=0; NO_DEPLOY=0; DRY_RUN=0
+SKIP_BUILD=0
+NO_DEPLOY=0
+DRY_RUN=0
 for arg in "$@"; do
-    case "$arg" in
-        --skip-build) SKIP_BUILD=1 ;;
-        --no-deploy)  NO_DEPLOY=1 ;;
-        --dry-run)    DRY_RUN=1 ;;
-        *) echo "未知参数: $arg"; exit 2 ;;
-    esac
+	case "$arg" in
+	--skip-build) SKIP_BUILD=1 ;;
+	--no-deploy) NO_DEPLOY=1 ;;
+	--dry-run) DRY_RUN=1 ;;
+	*)
+		echo "未知参数: $arg"
+		exit 2
+		;;
+	esac
 done
 
-log()  { printf '\033[1;36m==>\033[0m %s\n' "$*"; }
-ok()   { printf '\033[1;32m✅ %s\033[0m\n' "$*"; }
+log() { printf '\033[1;36m==>\033[0m %s\n' "$*"; }
+ok() { printf '\033[1;32m✅ %s\033[0m\n' "$*"; }
 warn() { printf '\033[1;33m⚠️  %s\033[0m\n' "$*"; }
-run()  { if [ "$DRY_RUN" = 1 ]; then echo "   [dry-run] $*"; else eval "$@"; fi; }
+run() { if [ "$DRY_RUN" = 1 ]; then echo "   [dry-run] $*"; else eval "$@"; fi; }
 
 VERSION="$(grep -oE 'MyAppVersion "[^"]+"' packaging/windows/MRRC.iss | head -1 | sed 's/.*"\(.*\)"/\1/')"
-[ -n "$VERSION" ] || { echo "无法从 MRRC.iss 读取版本号"; exit 1; }
+[ -n "$VERSION" ] || {
+	echo "无法从 MRRC.iss 读取版本号"
+	exit 1
+}
 log "发行版本: V$VERSION"
 
 # ---------- 0. 前置检查 ----------
 source_ps1='. "$(dirname "$0")/vm.sh" 2>/dev/null || true'
 vm() { ssh -o ConnectTimeout=10 "$HOST" "ssh -o BatchMode=yes -o StrictHostKeyChecking=no ${VM_USER}@${VM_IP} $1"; }
 vm_ps() {
-    local b64
-    b64=$(python3 -c "import base64,sys; print(base64.b64encode(sys.argv[1].encode('utf-16-le')).decode())" \
-        "\$ProgressPreference='SilentlyContinue'; [Console]::OutputEncoding=[Text.Encoding]::UTF8; $1")
-    ssh -o ConnectTimeout=10 "$HOST" "ssh -o BatchMode=yes -o StrictHostKeyChecking=no ${VM_USER}@${VM_IP} powershell -NoProfile -EncodedCommand $b64"
+	local b64
+	b64=$(python3 -c "import base64,sys; print(base64.b64encode(sys.argv[1].encode('utf-16-le')).decode())" \
+		"\$ProgressPreference='SilentlyContinue'; [Console]::OutputEncoding=[Text.Encoding]::UTF8; $1")
+	ssh -o ConnectTimeout=10 "$HOST" "ssh -o BatchMode=yes -o StrictHostKeyChecking=no ${VM_USER}@${VM_IP} powershell -NoProfile -EncodedCommand $b64"
 }
 
 log "检查 $HOST / Win11 VM 可达性"
 if [ "$DRY_RUN" = 0 ]; then
-    vm 'hostname' >/dev/null 2>&1 || { echo "❌ 无法连接 $HOST（网络/DDNS？）"; exit 1; }
-    vm_ps 'hostname' >/dev/null 2>&1 || { echo "❌ 无法连接 Win11 VM ${VM_IP}"; exit 1; }
-    ok "构建机可达"
+	vm 'hostname' >/dev/null 2>&1 || {
+		echo "❌ 无法连接 ${HOST}（网络/DDNS？）"
+		exit 1
+	}
+	vm_ps 'hostname' >/dev/null 2>&1 || {
+		echo "❌ 无法连接 Win11 VM ${VM_IP}"
+		exit 1
+	}
+	ok "构建机可达"
 fi
+
+# ---------- 0.5 安装包内置件门禁（frpc）----------
+# 必须在打源码包之前跑：源码包只收 git 跟踪文件（git ls-files），而 packaging/payload/
+# 是构建输入、**不入库**（入库的是 packaging/payload.lock 的版本与哈希），所以要显式带上。
+# 缺了它构建照样“成功”，但装出来的包接不进 Cloud Hub（_cloud_fleet_dir() 在安装目录下，
+# 那里不会有任何 frpc）—— 这正是本次发版的功能。
+log "内置件门禁（frpc，按 packaging/payload.lock 校验）"
+run "./dev_tools/fetch_payload.sh"
 
 # ---------- 1. 源码包（git 跟踪文件 + DSP/wdsp 源码 + 构建所需运行时文件） ----------
 if [ "$SKIP_BUILD" = 0 ]; then
-    log "打包源码（含 DSP/wdsp 全部 .c/.h 与补丁）"
-    run "venv/bin/python3 - <<'PY'
+	log "打包源码（含 DSP/wdsp 全部 .c/.h 与补丁）"
+	run "venv/bin/python3 - <<'PY'
 import json, os, subprocess, zipfile
 excl = json.load(open('dev_tools/release_src_excludes.json'))['exclude_prefixes']
 tracked=[f for f in subprocess.run(['git','ls-files'],capture_output=True,text=True).stdout.split('\\n') if f and os.path.isfile(f)]
@@ -68,7 +90,15 @@ tracked=[f for f in tracked if not any(f.startswith(p) for p in excl)]
 dsp=sorted(os.path.join('DSP/wdsp',f) for f in os.listdir('DSP/wdsp')
            if f.endswith(('.c','.h','.md','.sh')) or f.startswith(('Makefile','makefile')))
 extra=[f for f in ('win_pack.md','memory_channels.json','MRRC_users.db','windows/MRRC.conf.template') if os.path.isfile(f)]
-files=sorted(set(tracked+[f for f in dsp if os.path.isfile(f)]+extra))
+# 内置件（frpc）不入库，按 lock 显式加进源码包；缺一个就停 —— 别把一个接不进云端的包发出去。
+lock=[l.split() for l in open('packaging/payload.lock',encoding='utf-8').read().splitlines()
+      if l.strip() and not l.lstrip().startswith('#')]
+lock=[e for e in lock if len(e)>=3]
+payload=['packaging/payload/'+e[0] for e in lock]
+missing=[p for p in payload if not os.path.isfile(p)]
+if missing:
+    raise SystemExit('安装包内置件缺失（跑 dev_tools/fetch_payload.sh）：'+', '.join(missing))
+files=sorted(set(tracked+[f for f in dsp if os.path.isfile(f)]+extra+payload))
 out='$SRC_ZIP'
 if os.path.exists(out): os.remove(out)
 with zipfile.ZipFile(out,'w',zipfile.ZIP_DEFLATED,compresslevel=9) as z:
@@ -76,15 +106,15 @@ with zipfile.ZipFile(out,'w',zipfile.ZIP_DEFLATED,compresslevel=9) as z:
 print(f'源码包 {len(files)} 文件 / {os.path.getsize(out)/1e6:.1f} MB（已排除 {excl}）')
 PY"
 
-    log "上传源码到 $HOST → VM"
-    run "scp -q $SRC_ZIP $HOST:/tmp/mrrc_build_src.zip"
-    run "ssh $HOST 'scp -q -o BatchMode=yes /tmp/mrrc_build_src.zip ${VM_USER}@${VM_IP}:C:/tmp/mrrc_build_src.zip'"
+	log "上传源码到 $HOST → VM"
+	run "scp -q $SRC_ZIP $HOST:/tmp/mrrc_build_src.zip"
+	run "ssh $HOST 'scp -q -o BatchMode=yes /tmp/mrrc_build_src.zip ${VM_USER}@${VM_IP}:C:/tmp/mrrc_build_src.zip'"
 
-    log "VM 上构建（解压 → PyInstaller → Inno Setup）"
-    run "vm_ps \"Set-Location '${VM_REPO}'; Expand-Archive -Path C:\\tmp\\mrrc_build_src.zip -DestinationPath '${VM_REPO}' -Force; \$env:PATH='${VM_REPO}\\venv\\Scripts;'+\$env:PATH; powershell -NoProfile -ExecutionPolicy Bypass -File packaging\\windows\\build.ps1 > C:\\tmp\\build_release.log 2>&1; \\\"build exit=\$LASTEXITCODE\\\"; Get-Content C:\\tmp\\build_release.log -Tail 3\""
+	log "VM 上构建（解压 → PyInstaller → Inno Setup）"
+	run "vm_ps \"Set-Location '${VM_REPO}'; Expand-Archive -Path C:\\tmp\\mrrc_build_src.zip -DestinationPath '${VM_REPO}' -Force; \$env:PATH='${VM_REPO}\\venv\\Scripts;'+\$env:PATH; powershell -NoProfile -ExecutionPolicy Bypass -File packaging\\windows\\build.ps1 > C:\\tmp\\build_release.log 2>&1; \\\"build exit=\$LASTEXITCODE\\\"; Get-Content C:\\tmp\\build_release.log -Tail 3\""
 
-    log "VM 上跑热修通道验收（在打包产物上）"
-    run "vm_ps \"Set-Location '${VM_REPO}'; & '${VM_REPO}\\venv\\Scripts\\python.exe' packaging\\hotfix\\verify_hotfix.py --app '${VM_REPO}\\dist\\windows\\MRRC' --repo '${VM_REPO}' 2>&1 | Select-Object -Last 12\""
+	log "VM 上跑热修通道验收（在打包产物上）"
+	run "vm_ps \"Set-Location '${VM_REPO}'; & '${VM_REPO}\\venv\\Scripts\\python.exe' packaging\\hotfix\\verify_hotfix.py --app '${VM_REPO}\\dist\\windows\\MRRC' --repo '${VM_REPO}' 2>&1 | Select-Object -Last 12\""
 fi
 
 # ---------- 2. 取回产物 ----------
@@ -92,56 +122,87 @@ log "取回 MRRC-Setup.exe"
 run "ssh $HOST 'scp -q -o BatchMode=yes ${VM_USER}@${VM_IP}:C:/mrrc/dist/windows/MRRC-Setup.exe /tmp/MRRC-Setup-release.exe'"
 run "scp -q $HOST:/tmp/MRRC-Setup-release.exe $LOCAL_EXE"
 if [ "$DRY_RUN" = 0 ]; then
-    SHA="$(shasum -a 256 "$LOCAL_EXE" | awk '{print $1}')"
-    SIZE="$(stat -f%z "$LOCAL_EXE")"
-    ok "产物 $SIZE bytes  SHA256 $SHA"
-    cp "$LOCAL_EXE" "$SITE_EXE"
-    ok "已放入 $SITE_EXE"
+	SHA="$(shasum -a 256 "$LOCAL_EXE" | awk '{print $1}')"
+	SIZE="$(stat -f%z "$LOCAL_EXE")"
+	ok "产物 $SIZE bytes  SHA256 $SHA"
+
+	# 上一版留档，供 latest.json 的 previous 段（【回退到上一版】按钮）。
+	# 必须在用新包覆盖 $SITE_EXE **之前**做：原来这一步排在覆盖之后，归档到的是
+	# 刚取回的新包 —— 于是站上会出现一个名字写着上一版、字节却是新版的 exe，
+	# 而 make_latest_json.py 是事后算哈希的，所以 sha 还对得上：用户点【回退】
+	# 会静默装上新版，没有任何报错。
+	PREV="$(python3 -c "import json;print(json.load(open('website/downloads/latest.json')).get('latest',''))" 2>/dev/null || true)"
+	if [ -n "$PREV" ] && [ "$PREV" != "$VERSION" ]; then
+		ARCH="website/downloads/MRRC-Setup-${PREV}.exe"
+		if [ -f "$ARCH" ]; then
+			# 已入库的历史归档不得覆盖 —— 它是回退入口的唯一凭据。
+			ok "上一版归档已存在（$(basename "$ARCH")，$(stat -f%z "$ARCH") bytes），不覆盖"
+		elif [ -f "$SITE_EXE" ]; then
+			cp "$SITE_EXE" "$ARCH"
+			ok "已把当前线上包归档为 MRRC-Setup-${PREV}.exe（回退用）"
+		else
+			warn "找不到可归档的上一版包（$ARCH 与 $SITE_EXE 都不在）—— latest.json 将没有回退入口"
+		fi
+	fi
+
+	cp "$LOCAL_EXE" "$SITE_EXE"
+	ok "已放入 $SITE_EXE"
 fi
 
 # ---------- 3. 提交 + 部署 + 线上验证 ----------
 if [ "$NO_DEPLOY" = 0 ]; then
-    log "产物归档（带版本名）并生成升级清单 latest.json"
-    if [ "$DRY_RUN" = 0 ]; then
-        PREV="$(python3 -c "import json;print(json.load(open('website/downloads/latest.json')).get('latest',''))" 2>/dev/null || true)"
-        # 上一版安装包留档，供 latest.json 的 previous 段（回退入口）
-        if [ -n "$PREV" ] && [ -f "website/downloads/MRRC-Setup-${VERSION}.exe" ] = "0" ]; then :; fi
-        if [ -n "$PREV" ] && [ "$PREV" != "$VERSION" ] && [ -f website/downloads/MRRC-Setup.exe ]; then
-            cp -f website/downloads/MRRC-Setup.exe "website/downloads/MRRC-Setup-${PREV}.exe"
-            ok "已把当前线上包归档为 MRRC-Setup-${PREV}.exe（回退用）"
-        fi
-        venv/bin/python3 dev_tools/make_latest_json.py --version "$VERSION" \
-            --installer "$LOCAL_EXE" --previous "${PREV:-}" --notes "${RELEASE_NOTES:-Windows 安装包 $VERSION}" \
-            | tail -20
-        ok "latest.json 已生成（installer 指向带版本名产物）"
-    fi
+	log "产物归档（带版本名）并生成升级清单 latest.json"
+	if [ "$DRY_RUN" = 0 ]; then
+		# PREV 已在取回产物那一步算过（归档必须早于覆盖 ${SITE_EXE}，见那里的注释）。
+		venv/bin/python3 dev_tools/make_latest_json.py --version "$VERSION" \
+			--installer "$LOCAL_EXE" --previous "${PREV:-}" --notes "${RELEASE_NOTES:-Windows 安装包 $VERSION}" |
+			tail -20
+		ok "latest.json 已生成（installer 指向带版本名产物）"
+	fi
 
-    log "提交并推送"
-    run "git add -A packaging/windows/MRRC.iss www/ README.md CHANGELOG.md website/ dist/RELEASE-${VERSION}.md 2>/dev/null || true"
-    run "git add -A website/downloads/MRRC-Setup.exe website/downloads/MRRC-Setup-*.exe website/downloads/latest.json"
-    run "git commit -q -m 'release: Windows V${VERSION} 安装包\n\n产物 $(stat -f%z "$LOCAL_EXE" 2>/dev/null || echo ?) bytes\nSHA256 $(shasum -a 256 "$LOCAL_EXE" 2>/dev/null | awk '{print $1}')\nCo-Authored-By: Pi <noreply@pi.dev>' || true"
-    run "git push -q origin main"
+	log "提交并推送"
+	run "git add -A packaging/windows/MRRC.iss www/ README.md CHANGELOG.md website/ dist/RELEASE-${VERSION}.md 2>/dev/null || true"
+	run "git add -A website/downloads/MRRC-Setup.exe website/downloads/MRRC-Setup-*.exe website/downloads/latest.json"
+	run "git commit -q -m 'release: Windows V${VERSION} 安装包\n\n产物 $(stat -f%z "$LOCAL_EXE" 2>/dev/null || echo ?) bytes\nSHA256 $(shasum -a 256 "$LOCAL_EXE" 2>/dev/null | awk '{print $1}')\nCo-Authored-By: Pi <noreply@pi.dev>' || true"
+	# 发版提交可能落在特性分支（本仓的 hub 工作在 feat/hub）：`git push origin main` 推的是
+	# **本地 main 分支**，不是当前分支 —— 不先把 main 快进过去，push 就只会说
+	# "Everything up-to-date"，提交根本没上去（windows-installer 技能里点名的坑）。
+	CUR_BRANCH="$(git rev-parse --abbrev-ref HEAD)"
+	if [ "$CUR_BRANCH" != "main" ] && git merge-base --is-ancestor main "$CUR_BRANCH" 2>/dev/null; then
+		# 必须走 run：--dry-run 下 `git branch -f` 会**真的**把 main 移过去
+		# （2026-10-06 实测命中：一次 dry-run 把本地 main 从 456ce20 挪到了当轮提交）。
+		# if 里的判据（merge-base --is-ancestor）是只读的，留在原地没关系。
+		run "git branch -f main \"$CUR_BRANCH\""
+		run "ok \"main 已快进到 ${CUR_BRANCH}（发版提交在特性分支上，否则推不上去）\""
+	fi
+	run "git push -q origin main"
+	if [ "$CUR_BRANCH" != "main" ]; then
+		run "git push -q origin \"$CUR_BRANCH\""
+	fi
+	run "git rev-parse HEAD"
 
-    log "部署网站"
-    run "./deploy_website.sh 2>&1 | tail -5"
+	log "部署网站"
+	run "./deploy_website.sh 2>&1 | tail -5"
 
-    log "线上验证（下载并比对 SHA256）"
-    if [ "$DRY_RUN" = 0 ]; then
-        curl -s -o /tmp/dl_verify.exe https://www.vlsc.net/mrrc/downloads/MRRC-Setup.exe
-        LIVE_SHA="$(shasum -a 256 /tmp/dl_verify.exe | awk '{print $1}')"
-        if [ "$LIVE_SHA" = "$SHA" ]; then ok "线上文件与本地逐字节一致（$LIVE_SHA）"; else
-            echo "❌ 线上 SHA256 不一致：$LIVE_SHA"; exit 1; fi
-        curl -s https://www.vlsc.net/mrrc/ | grep -oE "V${VERSION}[^<]*" | head -3 || true
-        curl -s https://www.vlsc.net/mrrc/downloads/latest.json | python3 -c "
+	log "线上验证（下载并比对 SHA256）"
+	if [ "$DRY_RUN" = 0 ]; then
+		curl -s -o /tmp/dl_verify.exe https://www.vlsc.net/mrrc/downloads/MRRC-Setup.exe
+		LIVE_SHA="$(shasum -a 256 /tmp/dl_verify.exe | awk '{print $1}')"
+		if [ "$LIVE_SHA" = "$SHA" ]; then ok "线上文件与本地逐字节一致（${LIVE_SHA}）"; else
+			echo "❌ 线上 SHA256 不一致：$LIVE_SHA"
+			exit 1
+		fi
+		curl -s https://www.vlsc.net/mrrc/ | grep -oE "V${VERSION}[^<]*" | head -3 || true
+		curl -s https://www.vlsc.net/mrrc/downloads/latest.json | python3 -c "
 import json, sys
 m = json.load(sys.stdin)
 print('线上 latest.json →', m.get('latest'), '| installer', m.get('installer', {}).get('url', '')[-28:],
       '| previous', (m.get('previous') or {}).get('version'))" || true
-    fi
+	fi
 fi
 
 ok "完成：V$VERSION"
 echo
 echo "热修补丁（以后修 bug 用这个，不重装）："
-echo "  python3 packaging/hotfix/make_hotfix.py --version ${VERSION%.*}.$(( ${VERSION##*.} + 1 )) www/controls.js wdsp_wrapper.py"
+echo "  python3 packaging/hotfix/make_hotfix.py --version ${VERSION%.*}.$((${VERSION##*.} + 1)) www/controls.js wdsp_wrapper.py"
 echo "  cp dist/hotfix/* website/downloads/ && ./deploy_website.sh"

@@ -44,7 +44,7 @@ hamlib（含 `rigctld.exe`）用 `packaging/windows/collect_hamlib.ps1` 收集�
 
 ## 证明产物真的含本次代码（**不要**只看退出码）
 
-`release_windows.sh:84` 只把 `build exit=$LASTEXITCODE` 打进日志。**退出码不是证据**——
+`release_windows.sh:114` 只把 `build exit=$LASTEXITCODE` 打进日志。**退出码不是证据**——
 `Invoke-Checked` 中止的是*子* PowerShell，外层脚本会继续往下走。只认产物：
 
 ```powershell
@@ -79,14 +79,48 @@ print("你要验的符号" in seen)
 
 ## 热修覆盖面 = 打包时被踢出 PYZ 的那批模块
 
-`packaging/pyinstaller/mrrc_server.spec:137` 刻意把 `_APP_MODULES`（:28-47）排除出 PYZ，
+`packaging/pyinstaller/mrrc_server.spec:142` 刻意把 `_APP_MODULES`（:28-52）排除出 PYZ，
 好让 `patch_overlay.py` 能在运行时用 `%LOCALAPPDATA%\MRRC\patch` 里的 `.py` 覆盖它们。
 **新增一个需要可热修的模块，必须同时加进 `_APP_MODULES`**——`upgrade_core` 漏过一次，
-VM 实测报 `ModuleNotFoundError`。
+VM 实测报 `ModuleNotFoundError`。（`cloud_hub` / `session_metrics` / `base_path` 是 V6.2.0
+补上的：它们被 `MRRC` import 所以本来就会进 PYZ——“功能在包里”与“能热修”是两件事。）
+
+## Cloud Hub 内置件：frpc（V6.2.0 起是**硬门禁**）
+
+内网穿透要能跑，包里必须有 `frpc.exe`。冻结包里 `_cloud_fleet_dir()` = `_runtime_dir()/fleet`
+= **安装目录**`\fleet`，而 `_runtime_dir()` 在 frozen 下是 `dirname(sys.executable)` ——
+所以它只能由安装器放，靠“发现”（PATH / `~/bin` / `~/.local/share/mrrc-fleet`）在 Windows
+上一个都不会命中。症状很坑：申请/批准全走通了，最后一步起不了隧道，
+`/api/cloud/state` 只报一个 `frpc_available:false`。
+
+```
+packaging/payload.lock        入库：平台/文件名 \t 版本 \t sha256（+ 出处说明）
+packaging/payload/            不入库：构建输入（.gitignore）
+dev_tools/fetch_payload.sh    取件 + 按 lock 校验；--check 只校不联网
+build.ps1                     复制到 dist\windows\MRRC\fleet\frpc.exe（缺则 throw）
+release_windows.sh:74         打源码包前先过门禁（源码包只收 git ls-files，载荷必须显式带上）
+```
+
+三个实测过的坑：
+
+1. **取件器会“成功”地什么都不放。** `mrrc_hub/deploy/fetch_installer_payload.sh` 拉不到
+   frp 官方 `frp_sha256_checksums.txt` 时按设计整批跳过 frpc，消息只进 stderr，
+   然后照样打印“取件完成”并退出 0（2026-10-06 本机实测：github.com 连接超时）。
+   **判据是文件在不在、哈希对不对，不是退出码或 ✓ 的条数。**
+2. **离线也得能构建。** GitHub 在境内经常不可达，所以 `fetch_payload.sh` 对
+   “已在本地且哈希符合 lock” 直接放行、不联网；只有缺件时才去取。
+3. **本产品不需要 modern 那套 openssl。** `ssl_bootstrap.py` 用 Python `cryptography`
+   签实例证书（已在 requirements.txt 与 spec 的 hiddenimports），不调 openssl CLI；
+   也不随包带 `install_instance_tunnel.ps1`（那是 modern 的流程，它写的是
+   `MRRC-Modern\mrrc_modern.env`）。载荷多一个文件 = 包大 5 MB 且给用户一个错脚本。
+
+> 参照系的坑：`mrrc_modern/packaging/windows/build.ps1` 把整个 fleet 载荷块写在了
+> `if (Test-Path $OpusSource) {` **里面**（右括号在 fleet 段末尾）—— opus 目录不在就
+> 连门禁带拷贝一起静默跳过。本仓的载荷块刻意放在**顶层**。
 
 ## 在产物上跑热修通道验收
 
-`release_windows.sh:87` 会在打包产物上跑 `packaging/hotfix/verify_hotfix.py`。
+`release_windows.sh:117` 会在打包产物上跑 `packaging/hotfix/verify_hotfix.py`。
 它从 `%LOCALAPPDATA%\MRRC\` 找配置、按启动器的方式解包到 `patch\`、再启动 `MRRC-Server.exe` 验证。
 手动跑（VM 上仓库根是 `C:\mrrc`，即 `release_windows.sh` 的 `VM_REPO`——**不是**
 `%USERPROFILE%\mrrc`）：

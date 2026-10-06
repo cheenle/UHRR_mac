@@ -98,6 +98,35 @@ if (Test-Path $VendorRoot) {
     Copy-Item $VendorRoot (Join-Path $AppRoot "vendor") -Recurse -Force
 }
 
+# Cloud Hub（内网穿透）的内置件：frpc 隧道客户端。权威是 packaging/payload.lock（入库），
+# 二进制本身不入库，构建前由 dev_tools/fetch_payload.sh 取到 packaging/payload/ 并校验哈希。
+#
+# 为什么是硬要求而不是像上面 vendor 那样只告警：冻结包里 _cloud_fleet_dir() =
+# _runtime_dir()/fleet = **安装目录**\fleet，那里不会有任何 frpc；Windows 用户的 PATH 上一般
+# 也没有（~/bin 与 ~/.local/share/mrrc-fleet 是 POSIX 习惯）。缺了它，用户申请/批准全走通了，
+# 最后一步起不了隧道（/api/cloud/state 报 frpc_available:false）—— 而这正是本次发版的功能。
+# 实例侧网络也未必能访问 GitHub（2026-10-06 实测超时），所以不能让用户自己下载。
+# 只给临时试验用：MRRC_ALLOW_MISSING_PAYLOAD=1 显式放行。
+#
+# 不需要 modern 那套 openssl.exe + 9 个 DLL：本产品的实例证书由 ssl_bootstrap.py 用 Python
+# cryptography 签，不调 openssl CLI；也不随包带 install_instance_tunnel.ps1（那是 modern 的流程）。
+$PayloadSource = Join-Path $RepoRoot "packaging\payload\windows-amd64"
+$FleetDest = Join-Path $AppRoot "fleet"
+$AllowMissingPayload = ($env:MRRC_ALLOW_MISSING_PAYLOAD -eq "1")
+if (Test-Path (Join-Path $PayloadSource "frpc.exe")) {
+    # 先建目录再拷，拷完硬校：目录建不出来 / 文件没到位，都不能让它“看起来成了”。
+    if (-not (Test-Path $FleetDest)) { New-Item -ItemType Directory -Path $FleetDest -Force | Out-Null }
+    Copy-Item (Join-Path $PayloadSource "frpc.exe") (Join-Path $FleetDest "frpc.exe") -Force
+    if (-not (Test-Path (Join-Path $FleetDest "frpc.exe"))) { throw "frpc.exe was not copied into $FleetDest" }
+    $frpcSize = (Get-Item (Join-Path $FleetDest "frpc.exe")).Length
+    $frpcHash = (Get-FileHash (Join-Path $FleetDest "frpc.exe") -Algorithm SHA256).Hash.ToLower()
+    Write-Host "Fleet payload: frpc.exe ($frpcSize bytes, sha256 $frpcHash)"
+} elseif ($AllowMissingPayload) {
+    Write-Warning "frpc.exe missing ($PayloadSource) - building anyway because MRRC_ALLOW_MISSING_PAYLOAD=1; the installer will NOT be able to set up a Cloud Hub tunnel"
+} else {
+    throw "fleet payload missing: $PayloadSource\frpc.exe - run dev_tools/fetch_payload.sh first (or set MRRC_ALLOW_MISSING_PAYLOAD=1 to build a test package without it)"
+}
+
 # NR3: RNNoise (Xiph 新代, BSD-3) —— MinGW 构建 rnnoise.dll 放进应用模块目录
 # （audio_interface.py 同目录查找；构建失败只告警，NR3 在该包内自动降级关闭）
 $RnSrc = Join-Path $RepoRoot "DSP\rnnoise"
@@ -122,7 +151,21 @@ if (Test-Path (Join-Path $RnSrc "src\denoise.c")) {
 }
 
 if (Get-Command iscc -ErrorAction SilentlyContinue) {
-    Invoke-Checked iscc packaging\windows\MRRC.iss
+    # Build into a scratch directory and copy the result into place. Measured on the build VM
+    # (mrrc_modern, 2026-10-02): iscc aborts with "The output file appears to be in use (32)"
+    # because real-time antivirus keeps the freshly written exe open, and it cannot recover from
+    # that - while a plain copy of the finished file succeeds every time. Worse, the stale
+    # MRRC-Setup.exe from the previous build is still sitting in dist\windows, so a failed iscc
+    # leaves a *plausible-looking old artifact* behind.
+    $scratch = Join-Path $env:TEMP ("mrrc-iscc-" + [guid]::NewGuid().ToString("N").Substring(0, 8))
+    New-Item -ItemType Directory -Path $scratch -Force | Out-Null
+    # Remove the previous artifact first: if iscc fails, a stale MRRC-Setup.exe left in
+    # dist\windows still looks like a successful build (this burned three rounds on
+    # mrrc_modern v1.24.6). After this line, "the file exists" can only mean "this build made it".
+    Remove-Item (Join-Path $DistRoot "MRRC-Setup.exe") -Force -ErrorAction SilentlyContinue
+    Invoke-Checked iscc "/O$scratch" packaging\windows\MRRC.iss
+    Copy-Item (Join-Path $scratch "MRRC-Setup.exe") (Join-Path $DistRoot "MRRC-Setup.exe") -Force
+    Remove-Item $scratch -Recurse -Force -ErrorAction SilentlyContinue
 } else {
     Write-Warning "Inno Setup Compiler 'iscc' was not found. Install Inno Setup and rerun this script to create the setup EXE."
 }

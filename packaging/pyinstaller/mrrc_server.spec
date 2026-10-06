@@ -43,6 +43,11 @@ _APP_MODULES = [
     "recording_session",
     "mrrc_perf_monitor",
     "ssl_bootstrap",
+    "cloud_hub",               # Cloud Hub（内网穿透）纯逻辑：门户表单协议 / frpc 配置生成 /
+                               #   frpc 发现 / 陈旧隔道回收 / TunnelProcess。stdlib、无 Tornado 依赖，
+                               #   正是该可热修的那一类（守卫：dev_tools/test_cloud_hub.py）
+    "session_metrics",         # 会话遥测（Cloud Hub 容量决策的数据来源）
+    "base_path",               # 路径入口前缀（守卫：dev_tools/test_path_prefix.py）
     "tci_client",
 ]
 _APP_DATA = [(str(ROOT / _APP_ENTRY), "app")]

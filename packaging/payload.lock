@@ -1,0 +1,28 @@
+# 安装包要内置的外部二进制。制表符分隔：<平台/文件名>\t<版本>\t<sha256>
+#
+# 这份文件入库；它锁定的二进制本身**不**入库（.gitignore 的 packaging/payload/），
+# 由 dev_tools/fetch_payload.sh 在构建前取到 packaging/payload/ 下并逐个校验。
+#
+# 为什么必须内置（与 docs/current/design/hub-parity-plan.md 原先"靠发现"的写法相反）：
+#   冻结包里 _cloud_fleet_dir() = _runtime_dir()/fleet = **安装目录**\fleet，那里不会有任何
+#   frpc；Windows 用户的 PATH 上一般也没有，~/bin 与 ~/.local/share/mrrc-fleet 是 POSIX 习惯。
+#   结果是申请/批准都走通了，最后一步起不了隧道（/api/cloud/state 报 frpc_available:false）。
+#   而实例侧网络未必能访问 GitHub（2026-10-06 本机实测 github.com 连接超时），所以
+#   "让用户自己下载 frpc"这条路不可靠 —— 内置件缺了就装不出一个能接入的包。
+#
+# 只需要 frpc，不需要 modern 那套 openssl.exe + 9 个 DLL：
+#   本产品的实例证书由 ssl_bootstrap.py 用 Python cryptography 签（已在 requirements.txt
+#   与 mrrc_server.spec 的 hiddenimports 里），不调 openssl CLI。
+#   也不随包带 install_instance_tunnel.ps1 —— 那是 mrrc_modern 的流程（写 MRRC-Modern 的
+#   env 文件）；本产品的隧道由 cloud_hub.py 自己写 fleet/frpc-<标签>.toml 并拉起。
+#
+# 版本纪律：frpc 必须 pin 到 hub 的 frps 版本（MRRC_FRP_VERSION，当前 0.71.0）。
+#   客户端比服务端新可能握手失败 —— 换版本时站端与 hub 一起动。
+#
+# 出处（本条哈希的来源，2026-10-06 记录）：
+#   由 mrrc_hub/deploy/fetch_installer_payload.sh 于 2026-10-03 从 frp 官方 release 取得，
+#   当时已按官方 frp_sha256_checksums.txt 校验通过；同一份二进制随 mrrc_modern v1.25.x
+#   安装包发布并在真实租户机上运行（hub 注册表 bg1sb / ba4eg / bg8aaa），对 frps 0.71.0
+#   握手正常。本机复算 sha256 与取件时一致。
+#   二进制自查：Go go1.25.12 构建，模块路径 github.com/fatedier/frp/{client,assets,pkg/msg}。
+windows-amd64/frpc.exe	0.71.0	c9c59f9bb99561405b81d68f688384aec49369df10489044315292b0eaac957a

@@ -101,7 +101,7 @@ rc=$?
 
 if [ "$rc" != "0" ]; then
     echo ""
-    echo -e "${RED}生产签发失败（退出码 $rc）。当前证书未被破坏，可继续用手动模式:${NC}"
+    echo -e "${RED}生产签发失败（退出码 ${rc}）。当前证书未被破坏，可继续用手动模式:${NC}"
     echo "  $SCRIPT_DIR/setup_ssl_manual.sh"
     exit 1
 fi

@@ -106,4 +106,16 @@ perf_data_*.json
 librnnoise*.dylib
 libwdsp*.dylib
 *.bak_*
+*.bak-*
 rigctld.managed.json
+
+# ---- Cloud Hub（内网穿透）的运行时状态：本机身份与隧道，不入库 ----
+# mrrc_cloud.json 里有申请令牌（bearer）与本机证书路径 —— 提交即泄漏，且每台机器各不相同。
+# fleet/ 是本机 frpc 的配置与日志（frpc-<标签>.toml / *.log），不是构建载荷。
+mrrc_cloud.json
+/fleet/
+rig_state.json
+
+# 安装包内置的 frpc：构建输入，不入库（入库的是 packaging/payload.lock 的版本与哈希）。
+# 取件：mrrc_hub/deploy/fetch_installer_payload.sh —— 见 dev_tools/fetch_payload.sh
+packaging/payload/
