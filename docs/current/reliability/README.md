@@ -11,6 +11,7 @@
 | [RC-003](RC-003-ioloop-wedge-on-tx-close.md) | 2026-10-04 | TX 拆流（`Pa_StopStream`）阻塞在 IOLoop 上致 8891 假死 2h23m（F2/F4 后的同族第三处遗漏） | 可用性（高）+ 释放路径次序风险 | 已修复（F5，V6.2.0） |
 | [RC-004](RC-004-shared-cookie-secret.md) | 2026-10-06 | 全部装机共用同一个 `cookie_secret`（随安装包模板公开分发）⇒ 会话 cookie 可被伪造，绕过口令登录 | **认证绕过 + 发射安全** | ⚠️ 未修复（已知风险，2026-10-06 决定先发 V6.2.0）|
 | [RC-005](RC-005-plaintext-credentials-in-installer.md) | 2026-10-06 | 明文口令文件 `MRRC_users.db` 被 spec 的 datas 打进公开可下载的安装包（而 live 实例用的正是这一份） | **凭据泄露 → 认证绕过 → 发射安全** | ✅ 打包链路已修（V6.2.0）；⚠️ 口令仍待轮换 |
+| [RC-006](RC-006-unregistered-loose-module.md) | 2026-10-06 | 松散模块 `antenna_sweep` 未登记进 spec ⇒ 安装包一启动就 `ModuleNotFoundError`（前三层验证全绿，只有洁净室真跑抓到） | **安装包完全不可用** | ✅ 已修 + 已加守卫（V6.2.0）|
 
 支持链路里每次事故都要在《[产品支持生命周期](../operations/product-support-lifecycle.md)》§6
 留下一条守卫（守卫清单见该文档）。

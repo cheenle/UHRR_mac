@@ -43,8 +43,15 @@ _APP_MODULES = [
     "recording_session",
     "mrrc_perf_monitor",
     "ssl_bootstrap",
+    "antenna_sweep",           # 天线 SWR 扫频引擎。MRRC:2675 上方的注释就写着它是
+                               #   “松散模块（回调注入）”，但一直没进本列表 ——
+                               #   而 frozen_entry.py 是用 runpy.run_path() 跑 _internal/app/MRRC 的，
+                               #   PyInstaller 看不到 MRRC 的任何 import，所以未登记的模块
+                               #   既不在 PYZ 里、也不会被当数据文件发出 ⇒ 安装包一启动就
+                               #   ModuleNotFoundError（V6.2.0 洁净室实测抓到，见 RC-006）。
+                               #   守卫：tests/test_frozen_module_coverage.py
     "cloud_hub",               # Cloud Hub（内网穿透）纯逻辑：门户表单协议 / frpc 配置生成 /
-                               #   frpc 发现 / 陈旧隔道回收 / TunnelProcess。stdlib、无 Tornado 依赖，
+                               #   frpc 发现 / 陈旧隧道回收 / TunnelProcess。stdlib、无 Tornado 依赖，
                                #   正是该可热修的那一类（守卫：dev_tools/test_cloud_hub.py）
     "session_metrics",         # 会话遥测（Cloud Hub 容量决策的数据来源）
     "base_path",               # 路径入口前缀（守卫：dev_tools/test_path_prefix.py）
