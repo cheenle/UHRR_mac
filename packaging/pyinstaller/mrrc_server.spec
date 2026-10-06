@@ -91,7 +91,15 @@ a = Analysis(
     datas=[
         (str(ROOT / "www"), "www"),
         (str(ROOT / "memory_channels.json"), "."),
-        (str(ROOT / "MRRC_users.db"), "."),
+        # MRRC_users.db 是**明文口令文件**（"username password" 每行一条），不是数据库。
+        # 曾经打进包里（_internal/MRRC_users.db），而安装包在站点上公开可下载 ⇒ 等于把
+        # 构建机上那份真实口令发给所有人。且它在运行时**根本够不到**：
+        #   * Windows 新装：launcher 把 db_users_file 写成用户数据目录的绝对路径，
+        #     并由 ensure_users() 自己生成随机口令；
+        #   * 相对路径配置：config_io.read_text 只是 open(path)，按 CWD 解析，
+        #     不做 _resource_dir() 解析，所以永远落不到 _internal/；
+        #   * Docker：docker-compose.yml 显式挂载仓库根那份。
+        # 故此处不再打包（2026-10-06，见 docs/current/reliability/RC-005）。
         (str(ROOT / "windows" / "MRRC.conf.template"), "windows"),
         (str(ROOT / "windows" / "launcher.py"), "windows"),
         *_APP_DATA,

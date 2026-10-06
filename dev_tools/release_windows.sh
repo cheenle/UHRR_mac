@@ -89,7 +89,9 @@ tracked=[f for f in subprocess.run(['git','ls-files'],capture_output=True,text=T
 tracked=[f for f in tracked if not any(f.startswith(p) for p in excl)]
 dsp=sorted(os.path.join('DSP/wdsp',f) for f in os.listdir('DSP/wdsp')
            if f.endswith(('.c','.h','.md','.sh')) or f.startswith(('Makefile','makefile')))
-extra=[f for f in ('win_pack.md','memory_channels.json','MRRC_users.db','windows/MRRC.conf.template') if os.path.isfile(f)]
+extra=[f for f in ('win_pack.md','memory_channels.json','windows/MRRC.conf.template') if os.path.isfile(f)]
+# MRRC_users.db 是明文口令文件（"username password" 每行一条）。它既不该进安装包
+# （spec 已移除，见 RC-005），也没必要送上构建机 —— 构建机留着它就是一份可被顺手带走的凭据。
 # 内置件（frpc）不入库，按 lock 显式加进源码包；缺一个就停 —— 别把一个接不进云端的包发出去。
 lock=[l.split() for l in open('packaging/payload.lock',encoding='utf-8').read().splitlines()
       if l.strip() and not l.lstrip().startswith('#')]

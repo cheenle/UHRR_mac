@@ -44,7 +44,7 @@ hamlib（含 `rigctld.exe`）用 `packaging/windows/collect_hamlib.ps1` 收集�
 
 ## 证明产物真的含本次代码（**不要**只看退出码）
 
-`release_windows.sh:114` 只把 `build exit=$LASTEXITCODE` 打进日志。**退出码不是证据**——
+`release_windows.sh:116` 只把 `build exit=$LASTEXITCODE` 打进日志。**退出码不是证据**——
 `Invoke-Checked` 中止的是*子* PowerShell，外层脚本会继续往下走。只认产物：
 
 ```powershell
@@ -120,7 +120,7 @@ release_windows.sh:74         打源码包前先过门禁（源码包只收 git 
 
 ## 在产物上跑热修通道验收
 
-`release_windows.sh:117` 会在打包产物上跑 `packaging/hotfix/verify_hotfix.py`。
+`release_windows.sh:119` 会在打包产物上跑 `packaging/hotfix/verify_hotfix.py`。
 它从 `%LOCALAPPDATA%\MRRC\` 找配置、按启动器的方式解包到 `patch\`、再启动 `MRRC-Server.exe` 验证。
 手动跑（VM 上仓库根是 `C:\mrrc`，即 `release_windows.sh` 的 `VM_REPO`——**不是**
 `%USERPROFILE%\mrrc`）：
