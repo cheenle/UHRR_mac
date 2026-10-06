@@ -15,7 +15,8 @@ from pathlib import Path
 sys.path.insert(0, os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "dev_tools"))
 
-import release_check as rc  # noqa: E402
+# dev_tools 是运行时插进 sys.path 的，静态分析看不到这一步（套件 210 全绿即证明可导入）。
+import release_check as rc  # noqa: E402  # type: ignore[import-not-found]
 
 
 class RuleEngineTests(unittest.TestCase):
@@ -255,13 +256,17 @@ class VersionTxtDerivationTests(unittest.TestCase):
         written = re.search(
             r'Set-Content\s+-Path\s+\(Join-Path\s+\$AppRoot\s+"version\.txt"\)\s+'
             r'-Value\s+(\S+)', text)
-        self.assertIsNotNone(
-            written, "build.ps1 必须用 Set-Content … \"version.txt\" 写版本标记")
+        # 用 `if … is None: self.fail(…)` 而不是 assertIsNotNone：语义完全等价
+        # （assertIsNotNone 内部就是调 fail），但这个写法能让静态分析收窄类型，
+        # 不再把下面的 .group() 报成 "not a known attribute of None"。
+        if written is None:
+            self.fail("build.ps1 必须用 Set-Content … \"version.txt\" 写版本标记")
         var = written.group(1)
         self.assertRegex(var, r"^\$[A-Za-z_]\w*$",
                          f"version.txt 的值必须是变量，不能硬编码版本字面量：{var!r}")
         assign = re.search(re.escape(var) + r"\s*=\s*(.+)", text)
-        self.assertIsNotNone(assign, f"build.ps1 里找不到 {var} 的赋值")
+        if assign is None:
+            self.fail(f"build.ps1 里找不到 {var} 的赋值")
         source = assign.group(1)
         self.assertIn("MRRC.iss", source, f"{var} 必须从 MRRC.iss 取版本")
         self.assertIn("MyAppVersion", source, f"{var} 必须读 MyAppVersion")
@@ -270,7 +275,8 @@ class VersionTxtDerivationTests(unittest.TestCase):
         """运行时权威是 version.txt；启动器必须在 _installed_version() 里读它。"""
         text = self._text("windows/launcher.py")
         fn = re.search(r"def _installed_version\(\).*?(?=\ndef |\Z)", text, re.S)
-        self.assertIsNotNone(fn, "启动器必须有 _installed_version()")
+        if fn is None:
+            self.fail("启动器必须有 _installed_version()")
         self.assertIn("version.txt", fn.group(0),
                       "_installed_version() 必须读 version.txt（那是运行时权威）")
 
@@ -288,10 +294,28 @@ class ReleaseSourceZipTests(unittest.TestCase):
         return json.loads(self.EXCLUDES.read_text(encoding="utf-8"))
 
     def _tracked(self):
+        """git ls-files 的结果；构建机上没有 git 时**跳过**而不是报错。
+
+        这两个用例断言的是**仓库状态**（排除清单是否真盖住了私钥、有没有拼错的失效前缀），
+        没有 git 仓库就无从判定 —— 与产物正确性无关，不该把打包门禁卡死。
+
+        2026-10-06 实测：Win11 构建 VM 上没有 git，`check=True` 让两条用例以
+        FileNotFoundError 变成 errors，build.ps1 的测试门禁随即中止整轮构建。
+        真正该跑这两个用例的地方是 Mac（源码包就是在那儿打的），那里它们是真的会红的。
+        构建机侧的等价保证改为直接数源码包内容（见 RC-005 的验收：
+        MRRC_users.db 0 条 / certs/ 0 条 / frpc.exe 1 条）。
+        """
         import subprocess
-        return subprocess.run(["git", "ls-files"], cwd=rc.ROOT,
-                              capture_output=True, text=True,
-                              check=True).stdout.split()
+        try:
+            proc = subprocess.run(["git", "ls-files"], cwd=rc.ROOT,
+                                  capture_output=True, text=True)
+        except OSError as exc:                 # FileNotFoundError 是 OSError 的子类
+            raise unittest.SkipTest(f"git 不可用（构建机上没装）：{exc}") from exc
+        if proc.returncode != 0:
+            raise unittest.SkipTest(
+                f"不是 git 仓库或 git 失败（rc={proc.returncode}）："
+                f"{proc.stderr.strip()[:120]}")
+        return proc.stdout.split()
 
     def test_exclude_file_exists_and_is_wellformed(self):
         data = self._excludes()
