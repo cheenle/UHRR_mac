@@ -12,6 +12,7 @@
 | [RC-004](RC-004-shared-cookie-secret.md) | 2026-10-06 | 全部装机共用同一个 `cookie_secret`（随安装包模板公开分发）⇒ 会话 cookie 可被伪造，绕过口令登录 | **认证绕过 + 发射安全** | ⚠️ 未修复（已知风险，2026-10-06 决定先发 V6.2.0）|
 | [RC-005](RC-005-plaintext-credentials-in-installer.md) | 2026-10-06 | 明文口令文件 `MRRC_users.db` 被 spec 的 datas 打进公开可下载的安装包（而 live 实例用的正是这一份） | **凭据泄露 → 认证绕过 → 发射安全** | ✅ 打包链路已修（V6.2.0）；⚠️ 口令仍待轮换 |
 | [RC-006](RC-006-unregistered-loose-module.md) | 2026-10-06 | 松散模块 `antenna_sweep` 未登记进 spec ⇒ 安装包一启动就 `ModuleNotFoundError`（前三层验证全绿，只有洁净室真跑抓到） | **安装包完全不可用** | ✅ 已修 + 已加守卫（V6.2.0）|
+| [RC-007](RC-007-writable-state-in-install-dir.md) | 2026-10-06 | 冻结包把频道记忆写进**安装目录**（`_runtime_dir()`），Program Files 下静默保存失败 | 功能可用性（不崩溃，有 try/except 兜底） | ⚠️ 本版未修（需连迁移一起做，属产品决策）|
 
 支持链路里每次事故都要在《[产品支持生命周期](../operations/product-support-lifecycle.md)》§6
 留下一条守卫（守卫清单见该文档）。
