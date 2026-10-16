@@ -139,6 +139,7 @@ crontab */10 ─► support_autopilot.py --once --publish
 | **改页面拼字符串写坏内联 JS → 整页按钮失效**（6.1.12，随热修下发） | **`tests/test_web_inline_js.py`：所有内联脚本逐段 `node --check`** |
 | 半包上报（只有元数据）让自动分诊反复失败 | 非 zip 载荷标记 `skip`，不重试 |
 | **Windows 安装版不启动 rigctld** → 用户"连不上电台"（两次上报 14ef/ebd2） | `MRRC` 启动时自动拉起（`rigctld_manager`）+ vendor 内置 rigctld.exe 与依赖 DLL + 名字→编号解析 + 失败只提示不阻断；答复页留卡 |
+| **自动分诊停摆六天**：cron 里裸 `--implement` 取真值（`const="ALL"`）短路了 `--once`，轮询零次（run.log 1728 行没有一行「没有新包」）；修好后第一轮又因 cron PATH 缺 `/usr/bin` 发不出去（`FileNotFoundError: 'git'`），且 `publish()` 先写 state 再发货，失败也登记「已发布」→ 永不重试 | cron 命令必须仍调用 `run_once`（测试钉住分支顺序）；cron 行 PATH 含 `/usr/bin:/bin:/usr/sbin:/sbin`；发货失败撤回 state 记录（`mrrc_modern/tests/test_support_autopilot.py` 四条守卫） |
 
 ## 7. 闭环不变量（验收这套能力时看这 8 条）
 
