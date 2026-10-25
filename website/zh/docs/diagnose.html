@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>出问题先拿诊断包 - MRRC</title>
+<meta name="description" content="MRRC 诊断包：三步、包里有什么（日志尾部、脱敏配置、环境快照、自动体检结论）、绝不包含什么，以及上传之后会发生什么。">
+<link rel="stylesheet" href="../../css/style.css">
+<link rel="stylesheet" href="../../css/octen.css?v=5">
+<link rel="stylesheet" href="../../css/sunsdrmobile.css?v=1">
+<link rel="stylesheet" href="../../css/docs.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body data-site="mrrc">
+    <nav class="navbar">
+        <div class="container navbar-content">
+            <a href="../../index.html" class="logo">
+                <span class="logo-icon">&#x1f4fb;</span>
+                <span>MRRC</span>
+            </a>
+            <ul class="nav-links">
+                <li><a href="../../index.html">Home</a></li>
+                <li><a href="features.html">Features</a></li>
+                <li><a href="../../index.html#demo">Demo</a></li>
+                <li><a href="installation.html">Installation</a></li>
+                <li><a href="upgrade.html">Upgrade</a></li>
+                <li><a href="diagnose.html">Troubleshooting</a></li>
+                <li><a href="cloud.html">Cloud Hub</a></li>
+                <li><a href="docs.html">Docs</a></li>
+                <li><a href="../../efhw/index.html">EFHW</a></li>
+                <li><a href="https://github.com/cheenle/UHRR_mac" target="_blank" rel="noopener">
+                    <i class="fab fa-github"></i> GitHub
+                </a></li>
+            </ul>
+            <div class="nav-actions">
+                <a href="../../docs/diagnose.html" class="lang-btn">English</a>
+                <button class="mobile-menu-toggle"><i class="fas fa-bars"></i></button>
+            </div>
+        </div>
+    </nav>
+
+    <section class="hero">
+        <div class="container">
+            <h1 class="hero-title">出问题先拿诊断包</h1>
+            <p class="hero-subtitle">"日志里写了什么"这句话，三次点击就能回答，不用翻文件夹。</p>
+        </div>
+    </section>
+
+    <section class="section">
+        <div class="container">
+
+            <div class="doc-section" id="when">
+                <h2><span class="feature-icon">🐞</span> 什么时候用</h2>
+                <p>屏幕上解释不了的事：声音一顿一顿、面板不再刷新、电台连不上、点了升级毫无反应、某个页面的按钮集体失灵。</p>
+                <p class="muted">没有证据的上报只能靠猜。诊断包存在的意义，是把第一个回答变成结论，而不是又一句反问。</p>
+            </div>
+
+            <div class="doc-section" id="steps">
+                <h2><span class="feature-icon">🧭</span> 三步</h2>
+                <table class="hardware-table">
+                    <tr><th>#</th><th>你做什么</th><th>为什么重要</th></tr>
+                    <tr><td>1</td><td>打开 <strong>🐞 遇到问题</strong>，写清现象——什么表现、从什么时候开始、电台型号和频率</td><td>"换到 Windows 这台机器后，接收每隔约 1 秒卡一下"能查；"不能用"不能查</td></tr>
+                    <tr><td>2</td><td>点【生成诊断包】</td><td>收集日志、脱敏配置、环境快照，并跑一遍自动体检</td></tr>
+                    <tr><td>3</td><td>点【上传给维护者】，或【只保存到本地】</td><td>你点了才会上传</td></tr>
+                </table>
+                <p class="muted">这一页要求你先登录本机 MRRC 界面；没有会话时它返回 401/403。</p>
+            </div>
+
+            <div class="doc-section" id="inside">
+                <h2><span class="feature-icon">📦</span> 包里有什么</h2>
+                <ul>
+                    <li><strong>日志尾部</strong>——各角色的日志末尾，不是整部历史</li>
+                    <li><strong>脱敏后的配置</strong>——按白名单取值，敏感项替换，被略去的键会计数</li>
+                    <li><strong>环境快照</strong>——平台、版本、设备</li>
+                    <li><strong>自动体检结论</strong>——日志新鲜度、音频健康、热修与 WDSP 状态、启动次数与时间跨度（区分重启和崩溃）、音频设备判定</li>
+                </ul>
+                <h3>绝不包含什么</h3>
+                <p>用户数据库、证书私钥、会话密钥、任何口令与令牌。不论脱敏与否，都不打进去。</p>
+            </div>
+
+            <div class="doc-section" id="offline">
+                <h2><span class="feature-icon">📴</span> 上传不出去怎么办</h2>
+                <p>防火墙、到接收端没有路由、或者这台机器根本不上外网：点【只保存到本地】，再用你现成的渠道把文件递过来。</p>
+                <p class="muted">诊断包就是一个普通文件，能上传只是替你省一步。</p>
+            </div>
+
+            <div class="doc-section" id="after">
+                <h2><span class="feature-icon">🔎</span> 之后会发生什么</h2>
+                <ol>
+                    <li>新上报会被抓取、摘要，并按本项目的分诊纪律过一遍：结论保守、没有证据不下结论、"环境问题"不算缺陷。</li>
+                    <li>每一条结论都会变成一张卡：<strong>编号 / 症状 / 诊断（附证据）/ 结论 / 你要做的</strong>。</li>
+                    <li>卡片发到<a href="../../answers/">公开答复页</a>，可以按编号或关键词搜到。</li>
+                </ol>
+                <p class="muted">证据不足时结论就是 <code>need_more_info</code>，绝不给猜测——这也正是体检摘要必须进包的原因。</p>
+            </div>
+
+            <div class="doc-section" id="more">
+                <h2><span class="feature-icon">📚</span> 细节在哪</h2>
+                <ul>
+                    <li><a href="https://github.com/cheenle/UHRR_mac/blob/main/docs/current/operations/support-bundle.md">诊断包与自动分诊</a></li>
+                    <li><a href="lifecycle.html">产品支持生命周期</a>——发版 → 升级 → 诊断 → 分诊 → 答复</li>
+                    <li><a href="../../answers/">公开答复页</a>——先看这里，你的症状可能已经有卡</li>
+                </ul>
+            </div>
+
+        </div>
+    </section>
+
+    <footer class="footer"><div class="container">
+        <p class="muted" style="text-align:center">MRRC · GPLv3 · 诊断</p>
+    </div></footer>
+    <script src="../../js/global-nav.js?v=9" defer data-gn="1"></script>
+    <script src="../../js/main.js"></script>
+</body>
+</html>

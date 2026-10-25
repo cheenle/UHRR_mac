@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>升级与热修 - MRRC</title>
+<meta name="description" content="MRRC 一键升级：三个入口、点下去之后每一步做什么、唯一成功判据、lastResult 的八种取值，以及不用重装的热修通道。">
+<link rel="stylesheet" href="../../css/style.css">
+<link rel="stylesheet" href="../../css/octen.css?v=5">
+<link rel="stylesheet" href="../../css/sunsdrmobile.css?v=1">
+<link rel="stylesheet" href="../../css/docs.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body data-site="mrrc">
+    <nav class="navbar">
+        <div class="container navbar-content">
+            <a href="../../index.html" class="logo">
+                <span class="logo-icon">&#x1f4fb;</span>
+                <span>MRRC</span>
+            </a>
+            <ul class="nav-links">
+                <li><a href="../../index.html">Home</a></li>
+                <li><a href="features.html">Features</a></li>
+                <li><a href="../../index.html#demo">Demo</a></li>
+                <li><a href="installation.html">Installation</a></li>
+                <li><a href="upgrade.html">Upgrade</a></li>
+                <li><a href="diagnose.html">Troubleshooting</a></li>
+                <li><a href="cloud.html">Cloud Hub</a></li>
+                <li><a href="docs.html">Docs</a></li>
+                <li><a href="../../efhw/index.html">EFHW</a></li>
+                <li><a href="https://github.com/cheenle/UHRR_mac" target="_blank" rel="noopener">
+                    <i class="fab fa-github"></i> GitHub
+                </a></li>
+            </ul>
+            <div class="nav-actions">
+                <a href="../../docs/upgrade.html" class="lang-btn">English</a>
+                <button class="mobile-menu-toggle"><i class="fas fa-bars"></i></button>
+            </div>
+        </div>
+    </nav>
+
+    <section class="hero">
+        <div class="container">
+            <h1 class="hero-title">升级与热修</h1>
+            <p class="hero-subtitle">点一下、过一次 UAC 就到最新版；升不动的时候，该看哪一个文件。</p>
+        </div>
+    </section>
+
+    <section class="section">
+        <div class="container">
+
+            <div class="doc-section" id="applies">
+                <h2><span class="feature-icon">📌</span> 这一页适用于你吗</h2>
+                <table class="hardware-table">
+                    <tr><th>你装的版本</th><th>该怎么做</th></tr>
+                    <tr><td><strong>V6.1.0 及更新</strong></td><td>直接用下面的一键升级，不需要任何准备。</td></tr>
+                    <tr><td><strong>V6.0.10 及更早</strong></td><td>那些版本根本没有升级逻辑。手工装一次 6.1.x 的包，之后一键升级才开始可用。</td></tr>
+                </table>
+                <p class="muted">装的是哪个版本，只看安装目录里的 <code>version.txt</code>。它是唯一权威——产物里没有任何编译进去的版本常量。</p>
+            </div>
+
+            <div class="doc-section" id="entry">
+                <h2><span class="feature-icon">⬆️</span> 三个入口</h2>
+                <ul>
+                    <li><strong>桌面网页</strong>——工具栏 <strong>⬆️</strong> →【立即升级】</li>
+                    <li><strong>移动端菜单</strong>——<strong>⬆️ 软件更新</strong></li>
+                    <li><strong>启动器窗口</strong>——输入 <code>U</code> 回车</li>
+                </ul>
+                <p>三条路写的是同一个请求。全程只会弹<strong>一次 UAC</strong>，其余自动。</p>
+            </div>
+
+            <div class="doc-section" id="flow">
+                <h2><span class="feature-icon">🔁</span> 点下去之后发生什么</h2>
+                <table class="hardware-table">
+                    <tr><th>#</th><th>动作</th><th>说明</th></tr>
+                    <tr><td>1</td><td>读 <code>latest.json</code></td><td>清单读不到时，退回热修清单的旧行为</td></tr>
+                    <tr><td>2</td><td>决策</td><td>拒绝降级；低于 <code>minSupported</code> 的版本会被要求装完整包</td></tr>
+                    <tr><td>3</td><td>后台下载</td><td>绝不打断收听。SHA-256 校验通过后原子改名</td></tr>
+                    <tr><td>4</td><td>PTT 门禁</td><td>正在发射就拒绝，返回 <strong>423</strong>；松开 PTT 再点</td></tr>
+                    <tr><td>5</td><td>停服务、装、起</td><td>停掉服务子进程 → 一次 UAC → 静默安装 → 安装器拉起新版</td></tr>
+                    <tr><td>6</td><td>新版自己确认</td><td>老启动器升级时已经退出，成功由<em>新版</em>在启动时记录</td></tr>
+                </table>
+            </div>
+
+            <div class="doc-section" id="judge">
+                <h2><span class="feature-icon">✅</span> 唯一成功判据</h2>
+                <p><code>%LOCALAPPDATA%\MRRC\updates\state.json</code> 里的 <code>lastResult.status == "ok"</code>。</p>
+                <table class="hardware-table">
+                    <tr><th>status</th><th>含义</th><th>你该做什么</th></tr>
+                    <tr><td><code>ok</code></td><td>已安装，并由新版确认</td><td>不用管</td></tr>
+                    <tr><td><code>installing</code></td><td>静默安装已启动，老启动器正在退出</td><td>等</td></tr>
+                    <tr><td><code>uac_denied</code></td><td>你拒绝了 UAC</td><td>再点一次，并允许</td></tr>
+                    <tr><td><code>ptt_active</code></td><td>正在发射，被拒</td><td>松开 PTT 再点</td></tr>
+                    <tr><td><code>sha_mismatch</code></td><td>安装包校验失败，已丢弃</td><td>再点一次；什么都没装进去</td></tr>
+                    <tr><td><code>download_failed</code></td><td>网络 / 超时 / 权限，已自动重试</td><td>等一会儿，或再点一次</td></tr>
+                    <tr><td><code>missing_staged</code></td><td>包还没下完就点了</td><td>等一下；请求不会丢</td></tr>
+                    <tr><td><code>install_failed</code></td><td>安装器失败，或 <code>version.txt</code> 没更新</td><td>先看 <code>updates\install-&lt;版本&gt;.log</code></td></tr>
+                </table>
+            </div>
+
+            <div class="doc-section" id="hotfix">
+                <h2><span class="feature-icon">🩹</span> 热修：不用重装</h2>
+                <p>前端文件和可热修的模块单独下发。每次启动时启动器拉 <code>patch.json</code>，把文件覆盖到 <code>%LOCALAPPDATA%\MRRC\patch\</code>，而且发生在升级检查<strong>之前</strong>——所以热修连升级路径本身都能修。</p>
+                <p class="muted">重启 MRRC 即生效。范围是明确的（<code>www/**</code>、散装应用模块、<code>vendor</code>），其余一律随版本发布。</p>
+            </div>
+
+            <div class="doc-section" id="switches">
+                <h2><span class="feature-icon">🎛️</span> 开关</h2>
+                <table class="hardware-table">
+                    <tr><td><code>[UPDATE] enabled = False</code></td><td>完全不检查，热修也不再拉</td></tr>
+                    <tr><td><code>[UPDATE] autoDownload = False</code></td><td>只提示有新版，不后台预下载</td></tr>
+                    <tr><td><code>MRRC_NO_UPDATE_CHECK=1</code></td><td>环境变量，覆盖一切</td></tr>
+                    <tr><td><code>MRRC_UPDATE_MANIFEST=&lt;url&gt;</code></td><td>指向镜像或测试清单，不动生产</td></tr>
+                </table>
+            </div>
+
+            <div class="doc-section" id="never">
+                <h2><span class="feature-icon">🛡️</span> 它绝不会做的事</h2>
+                <ul>
+                    <li>绝不降级。</li>
+                    <li>绝不在发射过程中安装。</li>
+                    <li>下载失败只删自己的临时文件——现有安装一个字节都不动。</li>
+                </ul>
+                <p class="muted">还是卡着？<a href="diagnose.html">把诊断包拿出来</a>，里面已经含版本、升级状态和日志尾部。</p>
+            </div>
+
+            <div class="doc-section" id="more">
+                <h2><span class="feature-icon">📚</span> 细节在哪</h2>
+                <ul>
+                    <li><a href="https://github.com/cheenle/UHRR_mac/blob/main/docs/current/operations/one-click-upgrade.md">一键升级机制与十个真机坑</a></li>
+                    <li><a href="https://github.com/cheenle/UHRR_mac/blob/main/docs/current/operations/hotfix-and-patching.md">热修覆盖范围规则</a></li>
+                    <li><a href="lifecycle.html">产品支持生命周期</a>——本页所属的五段链路</li>
+                </ul>
+            </div>
+
+        </div>
+    </section>
+
+    <footer class="footer"><div class="container">
+        <p class="muted" style="text-align:center">MRRC · GPLv3 · 升级与热修</p>
+    </div></footer>
+    <script src="../../js/global-nav.js?v=9" defer data-gn="1"></script>
+    <script src="../../js/main.js"></script>
+</body>
+</html>

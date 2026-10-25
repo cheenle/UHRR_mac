@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Get the Diagnostics Bundle Out - MRRC</title>
+<meta name="description" content="MRRC diagnostics bundle: three steps, what goes in (log tails, redacted config, environment snapshot, automatic health summary), what never goes in, and what happens after you upload.">
+<link rel="stylesheet" href="../css/style.css">
+<link rel="stylesheet" href="../css/octen.css?v=5">
+<link rel="stylesheet" href="../css/sunsdrmobile.css?v=1">
+<link rel="stylesheet" href="../css/docs.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body data-site="mrrc">
+    <nav class="navbar">
+        <div class="container navbar-content">
+            <a href="../index.html" class="logo">
+                <span class="logo-icon">&#x1f4fb;</span>
+                <span>MRRC</span>
+            </a>
+            <ul class="nav-links">
+                <li><a href="../index.html">Home</a></li>
+                <li><a href="features.html">Features</a></li>
+                <li><a href="../index.html#demo">Demo</a></li>
+                <li><a href="installation.html">Installation</a></li>
+                <li><a href="upgrade.html">Upgrade</a></li>
+                <li><a href="diagnose.html">Troubleshooting</a></li>
+                <li><a href="cloud.html">Cloud Hub</a></li>
+                <li><a href="docs.html">Docs</a></li>
+                <li><a href="../efhw/index.html">EFHW</a></li>
+                <li><a href="https://github.com/cheenle/UHRR_mac" target="_blank" rel="noopener">
+                    <i class="fab fa-github"></i> GitHub
+                </a></li>
+            </ul>
+            <div class="nav-actions">
+                <a href="../zh/docs/diagnose.html" class="lang-btn">中文</a>
+                <button class="mobile-menu-toggle"><i class="fas fa-bars"></i></button>
+            </div>
+        </div>
+    </nav>
+
+    <section class="hero">
+        <div class="container">
+            <h1 class="hero-title">Get the Diagnostics Bundle Out</h1>
+            <p class="hero-subtitle">"What do the logs say?" — this is how you answer that question in three steps, without hunting through folders.</p>
+        </div>
+    </section>
+
+    <section class="section">
+        <div class="container">
+
+            <div class="doc-section" id="when">
+                <h2><span class="feature-icon">🐞</span> When to use it</h2>
+                <p>Anything you cannot explain from the screen: audio that stutters, a panel that stops updating, a radio that will not connect, an upgrade that did nothing, a page whose buttons went dead.</p>
+                <p class="muted">A report without evidence turns into a guessing game. The bundle exists so that the first answer is a verdict, not a question.</p>
+            </div>
+
+            <div class="doc-section" id="steps">
+                <h2><span class="feature-icon">🧭</span> Three steps</h2>
+                <table class="hardware-table">
+                    <tr><th>#</th><th>What you do</th><th>Why it matters</th></tr>
+                    <tr><td>1</td><td>Open <strong>🐞 Something went wrong</strong> and describe the symptom — what happens, when it started, radio model and frequency</td><td>"Audio stutters about once a second since I moved to the Windows box" is answerable; "it does not work" is not</td></tr>
+                    <tr><td>2</td><td>Press <strong>Build bundle</strong></td><td>Collects logs, a redacted config, an environment snapshot and runs the health checks</td></tr>
+                    <tr><td>3</td><td>Press <strong>Upload to maintainer</strong> — or <strong>Save locally</strong></td><td>Upload only happens when you click it</td></tr>
+                </table>
+                <p class="muted">The page requires you to be logged into the local MRRC UI; without a session it answers 401/403.</p>
+            </div>
+
+            <div class="doc-section" id="inside">
+                <h2><span class="feature-icon">📦</span> What is inside</h2>
+                <ul>
+                    <li><strong>Log tails</strong> — the last part of each role's log, not the whole history</li>
+                    <li><strong>Redacted configuration</strong> — a whitelist; secrets are replaced, omitted keys are counted</li>
+                    <li><strong>Environment snapshot</strong> — platform, versions, devices</li>
+                    <li><strong>Automatic health summary</strong> — log freshness, audio health, hotfix and WDSP state, startup count and time span (restarts versus crashes), audio-device verdict</li>
+                </ul>
+                <h3>What is never inside</h3>
+                <p>The user database, certificate private keys, session secrets, passwords and tokens. None of them are packaged, redacted or not.</p>
+            </div>
+
+            <div class="doc-section" id="offline">
+                <h2><span class="feature-icon">📴</span> If the upload does not go through</h2>
+                <p>Firewall, no route to the receiver, or a machine that never reaches the internet: choose <strong>Save locally</strong>, then hand the file over by whatever channel you already use.</p>
+                <p class="muted">The bundle is a plain file; uploading early just saves you a step.</p>
+            </div>
+
+            <div class="doc-section" id="after">
+                <h2><span class="feature-icon">🔎</span> What happens after</h2>
+                <ol>
+                    <li>New reports are fetched and digested, and each one is triaged against this project's rules — conservative verdicts, no verdict without evidence, "environment problem" is not a defect.</li>
+                    <li>Every conclusion becomes a card: <strong>id / symptom / diagnosis with evidence / conclusion / what to do</strong>.</li>
+                    <li>Cards are published to the <a href="../answers/">public answers page</a>, searchable by report id or keyword.</li>
+                </ol>
+                <p class="muted">Thin evidence produces <code>need_more_info</code>, never a guess — which is exactly why the health summary is part of the bundle.</p>
+            </div>
+
+            <div class="doc-section" id="more">
+                <h2><span class="feature-icon">📚</span> Where the details live</h2>
+                <ul>
+                    <li><a href="https://github.com/cheenle/UHRR_mac/blob/main/docs/current/operations/support-bundle.md">Support bundle and auto triage</a></li>
+                    <li><a href="lifecycle.html">Product support lifecycle</a> — release → upgrade → diagnose → triage → answer</li>
+                    <li><a href="../answers/">Public answers page</a> — check here first; your symptom may already have a card</li>
+                </ul>
+            </div>
+
+        </div>
+    </section>
+
+    <footer class="footer"><div class="container">
+        <p class="muted" style="text-align:center">MRRC · GPLv3 · Diagnostics</p>
+    </div></footer>
+    <script src="../js/global-nav.js?v=9" defer data-gn="1"></script>
+    <script src="../js/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>把电台接到公网（Cloud Hub）- MRRC</title>
+<meta name="description" content="MRRC 接入 Cloud Hub：不用公网 IP、不用开端口。三步、批准后会发生什么、怎么判断生效，以及已知的三条边界。">
+<link rel="stylesheet" href="../../css/style.css">
+<link rel="stylesheet" href="../../css/octen.css?v=5">
+<link rel="stylesheet" href="../../css/sunsdrmobile.css?v=1">
+<link rel="stylesheet" href="../../css/docs.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body data-site="mrrc">
+    <nav class="navbar">
+        <div class="container navbar-content">
+            <a href="../../index.html" class="logo">
+                <span class="logo-icon">&#x1f4fb;</span>
+                <span>MRRC</span>
+            </a>
+            <ul class="nav-links">
+                <li><a href="../../index.html">Home</a></li>
+                <li><a href="features.html">Features</a></li>
+                <li><a href="../../index.html#demo">Demo</a></li>
+                <li><a href="installation.html">Installation</a></li>
+                <li><a href="upgrade.html">Upgrade</a></li>
+                <li><a href="diagnose.html">Troubleshooting</a></li>
+                <li><a href="cloud.html">Cloud Hub</a></li>
+                <li><a href="docs.html">Docs</a></li>
+                <li><a href="../../efhw/index.html">EFHW</a></li>
+                <li><a href="https://github.com/cheenle/UHRR_mac" target="_blank" rel="noopener">
+                    <i class="fab fa-github"></i> GitHub
+                </a></li>
+            </ul>
+            <div class="nav-actions">
+                <a href="../../docs/cloud.html" class="lang-btn">English</a>
+                <button class="mobile-menu-toggle"><i class="fas fa-bars"></i></button>
+            </div>
+        </div>
+    </nav>
+
+    <section class="hero">
+        <div class="container">
+            <h1 class="hero-title">把电台接到公网</h1>
+            <p class="hero-subtitle">给这台机器一个真证书的 HTTPS 入口——不要公网 IP，不在路由器上开端口，也不用 DDNS 脚本。</p>
+        </div>
+    </section>
+
+    <section class="section">
+        <div class="container">
+
+            <div class="doc-section" id="what">
+                <h2><span class="feature-icon">☁️</span> 你能拿到什么</h2>
+                <p>一个随处可达、证书是真的地址：</p>
+                <pre style="background:#0f0f16;border:1px solid #333;border-radius:6px;padding:12px;overflow:auto">https://&lt;呼号&gt;-legacy.mrrc.vlsc.net/</pre>
+                <p>本产品的标签一律带 <code>-legacy</code> 后缀，所以同一个呼号上的 Modern 实例和它不会撞名。隧道从你这台机器主动拨出去：路由器上什么都没开，也不需要公网 IP。</p>
+            </div>
+
+            <div class="doc-section" id="steps">
+                <h2><span class="feature-icon">🧭</span> 三步</h2>
+                <table class="hardware-table">
+                    <tr><th>#</th><th>你做什么</th><th>说明</th></tr>
+                    <tr><td>1</td><td>打开 <strong>☁️ 接入云端</strong>——主界面的按钮，或移动端菜单里的「☁️ 接入云端」</td><td>在本机打开 <code>cloud.html</code></td></tr>
+                    <tr><td>2</td><td>填呼号，联系方式可选</td><td>运维会对照呼号库核验</td></tr>
+                    <tr><td>3</td><td>点【申请入口 / 接入】</td><td>状态从"已提交申请"走到"已接入"</td></tr>
+                </table>
+                <p>已经批过、并且拿到登记口令的，把口令填进同一个表单就能直接接入，不必再等一轮。</p>
+            </div>
+
+            <div class="doc-section" id="after">
+                <h2><span class="feature-icon">🔁</span> 批准之后会发生什么</h2>
+                <p>不用你再点任何东西：</p>
+                <ol>
+                    <li>这台机器<strong>每 30 秒</strong>问一次门户"批了吗"；</li>
+                    <li>批了就自己签一张 <code>&lt;标签&gt;.mrrc.vlsc.net</code> 的证书，<strong>只把公钥</strong>登记到 hub；</li>
+                    <li>写好隧道配置并起 <code>frpc</code>；</li>
+                    <li>自己重启一次，让真正在服务的就是这张新证书。</li>
+                </ol>
+                <p class="muted">应用会在对话框里报"上次何时问的、结果如何"，所以"批了却没动静"是看得见的，而不是靠猜。</p>
+            </div>
+
+            <div class="doc-section" id="judge">
+                <h2><span class="feature-icon">✅</span> 怎么判断生效了</h2>
+                <table class="hardware-table">
+                    <tr><th>探针</th><th>期望</th></tr>
+                    <tr><td><code>curl -s -o /dev/null -w '%{http_code}\n' https://&lt;标签&gt;.mrrc.vlsc.net/login</code></td><td><code>200</code></td></tr>
+                    <tr><td>对一个人人没登记过的名字做同样的事</td><td><code>404</code></td></tr>
+                    <tr><td><code>curl -I https://&lt;标签&gt;.mrrc.vlsc.net/login</code></td><td><code>405</code>——正常，登录页只接受 GET</td></tr>
+                </table>
+                <p class="muted">证书不对不是"点掉警告继续"：hub 对每一跳都校验上游证书，所以证书名不对的实例在边缘就返回 502，而不是悄悄服务。</p>
+            </div>
+
+            <div class="doc-section" id="callsign">
+                <h2><span class="feature-icon">🪪</span> 呼号规则</h2>
+                <p>呼号会变成一个 DNS 标签，所以 <code>BG1SB/P</code> 这类便携写法会被拒绝——登记的是身份，不是某次操作。批准前运维会对照呼号库核验。</p>
+            </div>
+
+            <div class="doc-section" id="limits">
+                <h2><span class="feature-icon">⚠️</span> 已知的三条边界</h2>
+                <ul>
+                    <li><strong>换了证书要重启应用。</strong>TLS 上下文只在进程启动时建立；之后到的证书，不重启就不会被服务。</li>
+                    <li><strong>隧道客户端版本是钉死的</strong>——与 hub 的 <code>frps</code> 对齐（写作时为 <code>0.71.0</code>）。客户端比服务端新可能握手失败。</li>
+                    <li><strong>登录限流在隧道下会退化</strong>：所有访客看起来都来自回环地址，于是限流共用一个桶（5 次失败 / 5 分钟）。这条已记录并接受；修法是信任 <code>X-Forwarded-For</code>，本产品尚未实现。</li>
+                </ul>
+            </div>
+
+            <div class="doc-section" id="more">
+                <h2><span class="feature-icon">📚</span> 细节在哪</h2>
+                <ul>
+                    <li><a href="https://www.vlsc.net/mrrc_hub/">Cloud Hub 文档站</a>——设计、运维、排障</li>
+                    <li><a href="https://portal.mrrc.vlsc.net/">呼号登记门户</a></li>
+                    <li><a href="https://github.com/cheenle/UHRR_mac/blob/main/docs/current/design/hub-parity-plan.md">本产品接入 hub 的改造记录</a></li>
+                </ul>
+            </div>
+
+        </div>
+    </section>
+
+    <footer class="footer"><div class="container">
+        <p class="muted" style="text-align:center">MRRC · GPLv3 · Cloud Hub</p>
+    </div></footer>
+    <script src="../../js/global-nav.js?v=9" defer data-gn="1"></script>
+    <script src="../../js/main.js"></script>
+</body>
+</html>

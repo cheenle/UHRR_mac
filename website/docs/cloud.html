@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Put Your Radio on the Internet (Cloud Hub) - MRRC</title>
+<meta name="description" content="MRRC Cloud Hub: a public HTTPS entry for this machine with no public IP and no port forwarding. Three steps, what happens after approval, how to tell it works, and the known limits.">
+<link rel="stylesheet" href="../css/style.css">
+<link rel="stylesheet" href="../css/octen.css?v=5">
+<link rel="stylesheet" href="../css/sunsdrmobile.css?v=1">
+<link rel="stylesheet" href="../css/docs.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body data-site="mrrc">
+    <nav class="navbar">
+        <div class="container navbar-content">
+            <a href="../index.html" class="logo">
+                <span class="logo-icon">&#x1f4fb;</span>
+                <span>MRRC</span>
+            </a>
+            <ul class="nav-links">
+                <li><a href="../index.html">Home</a></li>
+                <li><a href="features.html">Features</a></li>
+                <li><a href="../index.html#demo">Demo</a></li>
+                <li><a href="installation.html">Installation</a></li>
+                <li><a href="upgrade.html">Upgrade</a></li>
+                <li><a href="diagnose.html">Troubleshooting</a></li>
+                <li><a href="cloud.html">Cloud Hub</a></li>
+                <li><a href="docs.html">Docs</a></li>
+                <li><a href="../efhw/index.html">EFHW</a></li>
+                <li><a href="https://github.com/cheenle/UHRR_mac" target="_blank" rel="noopener">
+                    <i class="fab fa-github"></i> GitHub
+                </a></li>
+            </ul>
+            <div class="nav-actions">
+                <a href="../zh/docs/cloud.html" class="lang-btn">中文</a>
+                <button class="mobile-menu-toggle"><i class="fas fa-bars"></i></button>
+            </div>
+        </div>
+    </nav>
+
+    <section class="hero">
+        <div class="container">
+            <h1 class="hero-title">Put Your Radio on the Internet</h1>
+            <p class="hero-subtitle">A real HTTPS entry for this machine — no public IP, no port forwarding, no dynamic-DNS scripts.</p>
+        </div>
+    </section>
+
+    <section class="section">
+        <div class="container">
+
+            <div class="doc-section" id="what">
+                <h2><span class="feature-icon">☁️</span> What you get</h2>
+                <p>One address, reachable from anywhere, with a genuine certificate:</p>
+                <pre style="background:#0f0f16;border:1px solid #333;border-radius:6px;padding:12px;overflow:auto">https://&lt;callsign&gt;-legacy.mrrc.vlsc.net/</pre>
+                <p>For this product the label always carries the <code>-legacy</code> suffix, so it never collides with the Modern instance on the same callsign. The tunnel dials out from your machine; nothing on your router is opened, and no public IP is required.</p>
+            </div>
+
+            <div class="doc-section" id="steps">
+                <h2><span class="feature-icon">🧭</span> Three steps</h2>
+                <table class="hardware-table">
+                    <tr><th>#</th><th>What you do</th><th>Notes</th></tr>
+                    <tr><td>1</td><td>Open <strong>☁️ Cloud Hub</strong> — the button on the main UI, or <em>☁️ Connect to cloud</em> in the mobile menu</td><td>Opens <code>cloud.html</code> on this machine</td></tr>
+                    <tr><td>2</td><td>Enter your callsign, and optionally a contact address</td><td>The maintenance team verifies it against the club registry</td></tr>
+                    <tr><td>3</td><td>Press <strong>Apply</strong></td><td>Status moves from "request submitted" to "approved"</td></tr>
+                </table>
+                <p>Already approved and given a registration secret? Paste it in the same form and connect immediately — no waiting.</p>
+            </div>
+
+            <div class="doc-section" id="after">
+                <h2><span class="feature-icon">🔁</span> What happens after approval</h2>
+                <p>Nothing for you to click:</p>
+                <ol>
+                    <li>This machine asks the portal once every <strong>30 seconds</strong> whether it was approved;</li>
+                    <li>It signs its own certificate for <code>&lt;label&gt;.mrrc.vlsc.net</code> and registers <strong>only the public key</strong> with the hub;</li>
+                    <li>It writes the tunnel configuration and starts <code>frpc</code>;</li>
+                    <li>It restarts itself so the new certificate is the one actually being served.</li>
+                </ol>
+                <p class="muted">The application reports what it last asked and what came back, so "approved but nothing happened" is visible in the dialog rather than guessed at.</p>
+            </div>
+
+            <div class="doc-section" id="judge">
+                <h2><span class="feature-icon">✅</span> How to tell it works</h2>
+                <table class="hardware-table">
+                    <tr><th>Probe</th><th>Expected</th></tr>
+                    <tr><td><code>curl -s -o /dev/null -w '%{http_code}\n' https://&lt;label&gt;.mrrc.vlsc.net/login</code></td><td><code>200</code></td></tr>
+                    <tr><td>Same against a name nobody registered</td><td><code>404</code></td></tr>
+                    <tr><td><code>curl -I https://&lt;label&gt;.mrrc.vlsc.net/login</code></td><td><code>405</code> — normal: the login page only accepts GET</td></tr>
+                </table>
+                <p class="muted">A wrong certificate is not a warning you click through: the hub verifies the upstream certificate on every request, so an instance presenting the wrong name answers 502 on the edge instead of quietly serving.</p>
+            </div>
+
+            <div class="doc-section" id="callsign">
+                <h2><span class="feature-icon">🪪</span> Callsign rules</h2>
+                <p>The callsign becomes a DNS label, so portable and suffix forms such as <code>BG1SB/P</code> are rejected — register the identity, not the operation. The maintenance team verifies against the club registry before approving.</p>
+            </div>
+
+            <div class="doc-section" id="limits">
+                <h2><span class="feature-icon">⚠️</span> Known limits</h2>
+                <ul>
+                    <li><strong>A new certificate needs an application restart.</strong> The TLS context is built at startup; a certificate that arrives afterwards is not served until the process restarts.</li>
+                    <li><strong>The tunnel client is pinned</strong> to the hub's <code>frps</code> version (<code>0.71.0</code> at the time of writing). A newer client may fail the handshake.</li>
+                    <li><strong>Login rate limiting degrades behind the tunnel</strong>: every visitor arrives from loopback, so the limiter shares one bucket (5 failed attempts per 5 minutes). Documented and accepted; the fix is trusting <code>X-Forwarded-For</code>, which this product does not do yet.</li>
+                </ul>
+            </div>
+
+            <div class="doc-section" id="more">
+                <h2><span class="feature-icon">📚</span> Where the details live</h2>
+                <ul>
+                    <li><a href="https://www.vlsc.net/mrrc_hub/">Cloud Hub documentation site</a> — design, operations, troubleshooting</li>
+                    <li><a href="https://portal.mrrc.vlsc.net/">Callsign registration portal</a></li>
+                    <li><a href="https://github.com/cheenle/UHRR_mac/blob/main/docs/current/design/hub-parity-plan.md">This product's hub parity record</a></li>
+                </ul>
+            </div>
+
+        </div>
+    </section>
+
+    <footer class="footer"><div class="container">
+        <p class="muted" style="text-align:center">MRRC · GPLv3 · Cloud Hub</p>
+    </div></footer>
+    <script src="../js/global-nav.js?v=9" defer data-gn="1"></script>
+    <script src="../js/main.js"></script>
+</body>
+</html>

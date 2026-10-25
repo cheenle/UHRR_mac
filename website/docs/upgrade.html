@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Upgrade &amp; Hotfix - MRRC</title>
+<meta name="description" content="MRRC one-click upgrade: entry points, what happens step by step, the only success criterion, the eight lastResult states, and the hotfix channel that needs no reinstall.">
+<link rel="stylesheet" href="../css/style.css">
+<link rel="stylesheet" href="../css/octen.css?v=5">
+<link rel="stylesheet" href="../css/sunsdrmobile.css?v=1">
+<link rel="stylesheet" href="../css/docs.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body data-site="mrrc">
+    <nav class="navbar">
+        <div class="container navbar-content">
+            <a href="../index.html" class="logo">
+                <span class="logo-icon">&#x1f4fb;</span>
+                <span>MRRC</span>
+            </a>
+            <ul class="nav-links">
+                <li><a href="../index.html">Home</a></li>
+                <li><a href="features.html">Features</a></li>
+                <li><a href="../index.html#demo">Demo</a></li>
+                <li><a href="installation.html">Installation</a></li>
+                <li><a href="upgrade.html">Upgrade</a></li>
+                <li><a href="diagnose.html">Troubleshooting</a></li>
+                <li><a href="cloud.html">Cloud Hub</a></li>
+                <li><a href="docs.html">Docs</a></li>
+                <li><a href="../efhw/index.html">EFHW</a></li>
+                <li><a href="https://github.com/cheenle/UHRR_mac" target="_blank" rel="noopener">
+                    <i class="fab fa-github"></i> GitHub
+                </a></li>
+            </ul>
+            <div class="nav-actions">
+                <a href="../zh/docs/upgrade.html" class="lang-btn">中文</a>
+                <button class="mobile-menu-toggle"><i class="fas fa-bars"></i></button>
+            </div>
+        </div>
+    </nav>
+
+    <section class="hero">
+        <div class="container">
+            <h1 class="hero-title">Upgrade &amp; Hotfix</h1>
+            <p class="hero-subtitle">One click and one UAC to the newest version — and the single file to read when it does not move.</p>
+        </div>
+    </section>
+
+    <section class="section">
+        <div class="container">
+
+            <div class="doc-section" id="applies">
+                <h2><span class="feature-icon">📌</span> Does this apply to you?</h2>
+                <table class="hardware-table">
+                    <tr><th>Your installed version</th><th>What to do</th></tr>
+                    <tr><td><strong>V6.1.0 or newer</strong></td><td>Use the one-click path below. Nothing to prepare.</td></tr>
+                    <tr><td><strong>V6.0.10 or older</strong></td><td>Those builds have no upgrade logic at all. Install a 6.1.x package <strong>once</strong> by hand; from then on one-click works.</td></tr>
+                </table>
+                <p class="muted">The installed version is read from <code>version.txt</code> inside the install directory. That file is the only authority — no version constant is compiled into the product.</p>
+            </div>
+
+            <div class="doc-section" id="entry">
+                <h2><span class="feature-icon">⬆️</span> Three ways in</h2>
+                <ul>
+                    <li><strong>Desktop web UI</strong> — toolbar <strong>⬆️</strong> → <em>Install Now</em></li>
+                    <li><strong>Mobile menu</strong> — <strong>⬆️ Software Update</strong></li>
+                    <li><strong>Launcher window</strong> — type <code>U</code> and press Enter</li>
+                </ul>
+                <p>All three write the same request. Expect <strong>exactly one UAC prompt</strong>; everything else is automatic.</p>
+            </div>
+
+            <div class="doc-section" id="flow">
+                <h2><span class="feature-icon">🔁</span> What happens when you click</h2>
+                <table class="hardware-table">
+                    <tr><th>#</th><th>Step</th><th>Notes</th></tr>
+                    <tr><td>1</td><td>Read <code>latest.json</code></td><td>The manifest. Unreadable → the launcher falls back to the hotfix manifest.</td></tr>
+                    <tr><td>2</td><td>Decide</td><td>Downgrades are refused; versions below <code>minSupported</code> are asked to install a full package.</td></tr>
+                    <tr><td>3</td><td>Download in the background</td><td>Never interrupts listening. SHA-256 verified, then atomically renamed.</td></tr>
+                    <tr><td>4</td><td>PTT gate</td><td>Transmitting → the request is refused with <strong>423</strong>. Release PTT and click again.</td></tr>
+                    <tr><td>5</td><td>Stop, install, restart</td><td>Service stopped → one UAC → silent install → the installer starts the new version.</td></tr>
+                    <tr><td>6</td><td>The new version confirms itself</td><td>The old launcher has already exited, so success is recorded by the <em>new</em> build at startup.</td></tr>
+                </table>
+            </div>
+
+            <div class="doc-section" id="judge">
+                <h2><span class="feature-icon">✅</span> The only success criterion</h2>
+                <p><code>%LOCALAPPDATA%\MRRC\updates\state.json</code> → <code>lastResult.status == "ok"</code>.</p>
+                <table class="hardware-table">
+                    <tr><th>status</th><th>Meaning</th><th>What you do</th></tr>
+                    <tr><td><code>ok</code></td><td>Installed and confirmed by the new build</td><td>Nothing</td></tr>
+                    <tr><td><code>installing</code></td><td>Silent installer started; the old launcher is leaving</td><td>Wait</td></tr>
+                    <tr><td><code>uac_denied</code></td><td>You declined the UAC prompt</td><td>Click Upgrade again and accept</td></tr>
+                    <tr><td><code>ptt_active</code></td><td>Refused because you were transmitting</td><td>Release PTT, click again</td></tr>
+                    <tr><td><code>sha_mismatch</code></td><td>Package failed verification and was discarded</td><td>Click again; nothing was installed</td></tr>
+                    <tr><td><code>download_failed</code></td><td>Network/timeout/permission; retried automatically</td><td>Wait, or click again</td></tr>
+                    <tr><td><code>missing_staged</code></td><td>Clicked before the download finished</td><td>Wait; the request is not lost</td></tr>
+                    <tr><td><code>install_failed</code></td><td>Installer failed, or <code>version.txt</code> did not change</td><td>Read <code>updates\install-&lt;ver&gt;.log</code> first</td></tr>
+                </table>
+            </div>
+
+            <div class="doc-section" id="hotfix">
+                <h2><span class="feature-icon">🩹</span> Hotfix: no reinstall</h2>
+                <p>Front-end files and patchable modules ship separately. On every start the launcher fetches <code>patch.json</code> and lays the files over <code>%LOCALAPPDATA%\MRRC\patch\</code> — <strong>before</strong> the upgrade check, so a hotfix can even fix the upgrade path itself.</p>
+                <p class="muted">Restart MRRC to apply. Scope is explicit (<code>www/**</code>, loose app modules, <code>vendor</code>); anything else needs a release.</p>
+            </div>
+
+            <div class="doc-section" id="switches">
+                <h2><span class="feature-icon">🎛️</span> Switches</h2>
+                <table class="hardware-table">
+                    <tr><td><code>[UPDATE] enabled = False</code></td><td>No checks at all, hotfix included</td></tr>
+                    <tr><td><code>[UPDATE] autoDownload = False</code></td><td>Tell me there is a new version, do not pre-download</td></tr>
+                    <tr><td><code>MRRC_NO_UPDATE_CHECK=1</code></td><td>Environment variable; overrides everything</td></tr>
+                    <tr><td><code>MRRC_UPDATE_MANIFEST=&lt;url&gt;</code></td><td>Point at a mirror or a test manifest without touching production</td></tr>
+                </table>
+            </div>
+
+            <div class="doc-section" id="never">
+                <h2><span class="feature-icon">🛡️</span> What it will never do</h2>
+                <ul>
+                    <li>Never downgrade.</li>
+                    <li>Never install while you are transmitting.</li>
+                    <li>A failed download only deletes its own temporary file — your current installation is untouched.</li>
+                </ul>
+                <p class="muted">Still stuck? <a href="diagnose.html">Get the diagnostics bundle out</a> — it already contains the version, the update state and the log tails.</p>
+            </div>
+
+            <div class="doc-section" id="more">
+                <h2><span class="feature-icon">📚</span> Where the details live</h2>
+                <ul>
+                    <li><a href="https://github.com/cheenle/UHRR_mac/blob/main/docs/current/operations/one-click-upgrade.md">One-click upgrade and the ten Windows traps</a></li>
+                    <li><a href="https://github.com/cheenle/UHRR_mac/blob/main/docs/current/operations/hotfix-and-patching.md">Hotfix coverage rules</a></li>
+                    <li><a href="lifecycle.html">Product support lifecycle</a> — the five-stage loop this page belongs to</li>
+                </ul>
+            </div>
+
+        </div>
+    </section>
+
+    <footer class="footer"><div class="container">
+        <p class="muted" style="text-align:center">MRRC · GPLv3 · Upgrade &amp; hotfix</p>
+    </div></footer>
+    <script src="../js/global-nav.js?v=9" defer data-gn="1"></script>
+    <script src="../js/main.js"></script>
+</body>
+</html>
