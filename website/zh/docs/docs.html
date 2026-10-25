@@ -60,23 +60,19 @@
         <div class="container">
             <!-- Architecture -->
             <div class="doc-section" id="support">
-                <h2><span class="feature-icon">🛟</span> 产品支持</h2>
-                <p>MRRC 的支持链路端到端打通：<strong>发版 → 升级 → 诊断 → AI 分诊 → 答复</strong>；
-                完整说明见 <a href="features.html">功能页 → 产品支持生命周期</a>。</p>
+                <h2><span class="feature-icon">🛟</span>产品支持</h2>
+                <p>MRRC 的支持链路端到端打通：<strong>发版 → 升级 → 诊断 → AI 分诊 → 答复</strong>；完整说明见 <a href="features.html">功能页 → 产品支持生命周期</a>。</p>
                 <table class="hardware-table">
-                    <tr><td>一键升级</td><td>页面菜单 <strong>⬆️ 软件更新</strong> 或启动器窗口按 <code>U</code>：
-                        自动下载 + SHA256 校验 → 一次 UAC → 静默安装 → 自动重启；可回退上一版</td></tr>
-                    <tr><td>🐞 遇到问题</td><td>一键生成诊断包（日志尾部 + 脱敏配置 + 环境快照 + 自动体检摘要），
-                        可只存本地或上传；用户库/证书/密钥永不打包</td></tr>
-                    <tr><td>答复页</td><td><a href="../../answers/">/answers/</a> —— 按上报编号或关键词搜索，
-                        含“症状 / 诊断（附证据）/ 结论 / 你要做的”；已知问题也在这里说明</td></tr>
+                    <tr><td>一键升级</td><td>页面菜单 <strong>⬆️ 软件更新</strong>或启动器窗口按 <code>U</code>：自动下载 + SHA256 校验 → 一次 UAC → 静默安装 → 自动重启；可回退上一版</td></tr>
+                    <tr><td>🐞 遇到问题</td><td>一键生成诊断包（日志尾部 + 脱敏配置 + 环境快照 + 自动体检摘要），可只存本地或上传；用户库/证书/密钥永不打包</td></tr>
+                    <tr><td>答复页</td><td><a href="../../answers/">/answers/</a> —— 按上报编号或关键词搜索，含“症状 / 诊断（附证据）/ 结论 / 你要做的”；已知问题也在这里说明</td></tr>
                     <tr><td>完整流程</td><td>五段一条链（做法 / 判据 / 产物 / 细则）：<a href="lifecycle.html">产品支持生命周期</a></td></tr>
                     <tr><td>热修</td><td>前端与可热修模块的修复<strong>无需重装</strong>：重启 MRRC 即应用；其余随新版本发布</td></tr>
                 </table>
             </div>
 
             <div class="doc-section" id="architecture">
-                <h2><span class="feature-icon">🏗️</span> 系统架构</h2>
+                <h2><span class="feature-icon">🏗️</span>系统架构</h2>
                 
                 <h3>整体架构图</h3>
                 <div class="svg-diagram" style="overflow-x:auto;margin:1em 0;">
@@ -142,10 +138,10 @@
                         <text x="70" y="358" font-family="JetBrains Mono, monospace" font-size="9" fill="#8899aa">/WSaudioRX</text>
                         <text x="185" y="358" font-family="Inter, -apple-system, sans-serif" font-size="9" fill="#8899aa">RX 音频流 (Opus/Int16, RNNoise/WDSP)</text>
                         <text x="70" y="374" font-family="JetBrains Mono, monospace" font-size="9" fill="#8899aa">/WSaudioTX</text>
-                        <text x="185" y="374" font-family="Inter, -apple-system, sans-serif" font-size="9" fill="#8899aa">TX 音频上传 (Opus 编码, EQ 链)</text>
+                        <text x="185" y="374" font-family="Inter, -apple-system, sans-serif" font-size="9" fill="#8899aa">TX 音频上传 (Opus 编码， EQ 链)</text>
 
                         <text x="500" y="342" font-family="JetBrains Mono, monospace" font-size="9" fill="#8899aa">/WSATR1000</text>
-                        <text x="620" y="342" font-family="Inter, -apple-system, sans-serif" font-size="9" fill="#8899aa">天调功率/SWR 实时显示, 学习缓冲</text>
+                        <text x="620" y="342" font-family="Inter, -apple-system, sans-serif" font-size="9" fill="#8899aa">天调功率/SWR 实时显示，学习缓冲</text>
 
                         <!-- Left branch: rigctld -->
                         <line x1="280" y1="410" x2="280" y2="438" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#arrCyan)"/>
@@ -237,7 +233,7 @@
 
             <!-- Audio Processing -->
             <div class="doc-section" id="audio">
-                <h2><span class="feature-icon">🔊</span> 音频处理流程</h2>
+                <h2><span class="feature-icon">🔊</span>音频处理流程</h2>
                 
                 <h3>接收音频链路 (RX)</h3>
                 <div class="svg-diagram" style="overflow-x:auto;margin:1em 0;">
@@ -463,7 +459,7 @@
 
             <!-- Protocols -->
             <div class="doc-section" id="protocols">
-                <h2><span class="feature-icon">📝</span> 通信协议</h2>
+                <h2><span class="feature-icon">📝</span>通信协议</h2>
                 
                 <h3>WebSocket 命令 (WSCTRX)</h3>
                 <table class="comparison-table">
@@ -478,11 +474,11 @@
                     <tr><td>调谐音</td><td><code>tune:true</code> / <code>tune:false</code></td><td>启动/停止调谐音 (5% 音量)</td></tr>
                     <tr><td>CQ 播放</td><td><code>cq:true</code> / <code>cq:false</code></td><td>启动/停止 CQ 音频 (cq.wav)</td></tr>
                     <tr><td>WDSP 开关</td><td><code>setWDSPEnabled:true</code></td><td>启用/禁用 WDSP 处理</td></tr>
-                    <tr><td>NR2 级别</td><td><code>setWDSPNR2Level:2</code></td><td>0=关, 1=低, 2=中, 3=高, 4=最高</td></tr>
+                    <tr><td>NR2 级别</td><td><code>setWDSPNR2Level:2</code></td><td>0=关， 1=低， 2=中， 3=高， 4=最高</td></tr>
                     <tr><td>噪声消除</td><td><code>setWDSPNB:true</code></td><td>开关 NB (脉冲干扰)</td></tr>
                     <tr><td>自动陷波</td><td><code>setWDSPANF:true</code></td><td>开关 ANF 自动陷波滤波器</td></tr>
                     <tr><td>添加陷波</td><td><code>addWDSPNotch:1500,200</code></td><td>手动陷波 (中心频率Hz, 宽度Hz)</td></tr>
-                    <tr><td>AGC 模式</td><td><code>setWDSPAGC:3</code></td><td>0=关, 1=长, 2=慢, 3=中, 4=快</td></tr>
+                    <tr><td>AGC 模式</td><td><code>setWDSPAGC:3</code></td><td>0=关， 1=长， 2=慢， 3=中， 4=快</td></tr>
                     <tr><td>带通滤波</td><td><code>setWDSPBandpass:300,2700</code></td><td>低截止 Hz, 高截止 Hz</td></tr>
                     <tr><td>录音</td><td><code>startRecording</code> / <code>stopRecording</code></td><td>立体声 WAV → MP3 录音</td></tr>
                     <tr><td>频道存储</td><td><code>memLoadAll</code> / <code>memSaveAll:{json}</code></td><td>每用户记忆频道 (6 个槽位)</td></tr>
@@ -492,7 +488,7 @@
 
             <!-- References -->
             <div class="doc-section" id="references">
-                <h2><span class="feature-icon">📚</span> 参考文档</h2>
+                <h2><span class="feature-icon">📚</span>参考文档</h2>
                 
                 <h3>项目内文档</h3>
                 <ul>
@@ -560,6 +556,6 @@
     </footer>
 
     <script src="../../js/main.js"></script>
-    <script src="../../js/global-nav.js?v=6" defer data-gn="1"></script>
+    <script src="../../js/global-nav.js?v=9" defer data-gn="1"></script>
 </body>
 </html>

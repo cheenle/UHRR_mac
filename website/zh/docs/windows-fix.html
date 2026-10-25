@@ -78,14 +78,13 @@
 
                 <p><strong>现象</strong>：</p>
                 <ul>
-                    <li>双击 <strong>MRRC</strong> 图标后，黑色窗口一闪而过，浏览器打不开；</li>
+                    <li>双击 <strong>MRRC</strong>图标后，黑色窗口一闪而过，浏览器打不开；</li>
                     <li>或者启动窗口停在 "Server exited during startup — see messages above."；</li>
                     <li>端口 8877 无响应，开始菜单里怎么点都起不来。</li>
                 </ul>
 
                 <p><strong>一句话原因</strong>：旧版安装包（V6.0.0 – V6.0.2）在中文 Windows 上会把配置文件
-                    <code>MRRC.conf</code> 按 GBK（系统编码）写回，而服务器启动时固定按 UTF-8 读配置，
-                    于是中文内容（例如带中文用户名的路径）让启动直接失败。这是<strong>文件编码问题，不是硬件/电台问题</strong>，修好后原有配置、登录账号都不会丢。</p>
+                    <code>MRRC.conf</code>按 GBK（系统编码）写回，而服务器启动时固定按 UTF-8 读配置，于是中文内容（例如带中文用户名的路径）让启动直接失败。这是<strong>文件编码问题，不是硬件/电台问题</strong>，修好后原有配置、登录账号都不会丢。</p>
 
                 <p class="tip">📌 想先确认再动手？运行修复工具时加 <code>-DryRun</code>，只检查、不改文件。</p>
             </div>
@@ -130,19 +129,18 @@ fix_mrrc_encoding.ps1        ← 实际逻辑，别删</code></pre>
 == 结果
   [OK]   1 个文件已修复为 UTF-8
         请重新启动 MRRC（关闭旧窗口后从开始菜单启动）。</code></pre>
-                        <p class="tip">📌 如果 Windows 弹出"已保护你的电脑"：点「更多信息」→「仍要运行」；或右键 bat → 属性 → 勾选"解除锁定"。</p>
+                        <p class="tip">📌 如果 Windows 弹出「已保护你的电脑」：点「更多信息」→「仍要运行」；或右键 bat → 属性 → 勾选「解除锁定」。</p>
                     </div>
                 </div>
 
                 <h3>以后怎么启动</h3>
-                <p>建议日常就用 <code>fix_and_start_mrrc.bat</code> 启动（或把它发送到桌面快捷方式）：
-                    旧版安装包在<strong>网页设置页保存</strong>后会再次把配置写成 GBK，这个 bat 每次都会先修再启，避免反复出问题。</p>
+                <p>建议日常就用 <code>fix_and_start_mrrc.bat</code>启动（或把它发送到桌面快捷方式）：旧版安装包在<strong>网页设置页保存</strong>后会再次把配置写成 GBK，这个 bat 每次都会先修再启，避免反复出问题。</p>
             </div>
 
             <!-- One-liner -->
             <div class="doc-section" id="oneliner">
                 <h2>⚡ 不用下载：一行命令修复</h2>
-                <p>适合远程协助/不方便拷文件的场景。在 <strong>PowerShell</strong> 窗口里粘贴回车：</p>
+                <p>适合远程协助/不方便拷文件的场景。在 <strong>PowerShell</strong>窗口里粘贴回车：</p>
                 <pre class="code-block"><code>$p="$env:LOCALAPPDATA\MRRC\MRRC.conf"; $b=[IO.File]::ReadAllBytes($p); try{[Text.UTF8Encoding]::new($false,$true).GetString($b)|Out-Null; "已是 UTF-8"}catch{Copy-Item $p "$p.bak" -Force; [IO.File]::WriteAllText($p,[Text.Encoding]::GetEncoding(936).GetString($b),[Text.UTF8Encoding]::new($false)); "已修复为 UTF-8（备份 $p.bak）"}</code></pre>
                 <p>看到「已修复为 UTF-8」后，从开始菜单重新启动 MRRC 即可。原文件同样保留在 <code>MRRC.conf.bak</code>。</p>
             </div>
@@ -166,8 +164,7 @@ fix_mrrc_encoding.ps1        ← 实际逻辑，别删</code></pre>
                         <td><code>%LOCALAPPDATA%\MRRC\MRRC.conf.bak</code></td>
                     </tr>
                 </table>
-                <p class="tip">📌 本修复自 <strong>V6.0.3</strong> 起已内置（读配置自动容错并迁移为 UTF-8、保存固定写 UTF-8），
-                    新版安装包（当前 V6.2.0）装上即可，无需再跑修复工具；只有更早的安装包才需要上面的修复工具。</p>
+                <p class="tip">📌 本修复自 <strong>V6.0.3</strong>起已内置（读配置自动容错并迁移为 UTF-8、保存固定写 UTF-8），新版安装包（当前 V6.2.0）装上即可，无需再跑修复工具；只有更早的安装包才需要上面的修复工具。</p>
             </div>
 
             <!-- FAQ -->
@@ -176,37 +173,32 @@ fix_mrrc_encoding.ps1        ← 实际逻辑，别删</code></pre>
 
                 <div class="troubleshoot-item">
                     <h4>为什么会出现这个问题？</h4>
-                    <p>中文 Windows 的默认文本编码是 GBK。安装包里的程序在保存配置时用了系统默认编码（写出 GBK），
-                        而读取配置时按 UTF-8 解析。只要配置里有中文（最常见是带中文用户名的
-                        <code>C:\Users\张三\AppData\Local\MRRC\...</code> 路径），下一次启动就会解码失败。</p>
+                    <p>中文 Windows 的默认文本编码是 GBK。安装包里的程序在保存配置时用了系统默认编码（写出 GBK），而读取配置时按 UTF-8 解析。只要配置里有中文（最常见是带中文用户名的
+                        <code>C:\Users\张三\AppData\Local\MRRC\...</code>路径），下一次启动就会解码失败。</p>
                 </div>
 
                 <div class="troubleshoot-item">
                     <h4>修好后，在网页里保存设置又坏了怎么办？</h4>
                     <p>再跑一次修复工具即可（旧版保存设置时还会写回 GBK）。或者一直用
-                        <code>fix_and_start_mrrc.bat</code> 启动——它每次启动前都会自动检查并修复。
-                        根治请等内置修复的新安装包（V6.0.3）。</p>
+                        <code>fix_and_start_mrrc.bat</code>启动——它每次启动前都会自动检查并修复。根治请等内置修复的新安装包（V6.0.3）。</p>
                 </div>
 
                 <div class="troubleshoot-item">
                     <h4>怎么确认已经修好？</h4>
                     <p>修复工具显示「已是 UTF-8，无需修复」就是正常状态；或再次运行
-                        <code>fix_mrrc_encoding.bat -DryRun</code> 预演，若显示无需转换即已修好。
-                        启动成功的标志是服务器窗口出现 <code>Using config file: ...</code> 且浏览器能打开 <code>https://localhost:8877</code>。</p>
+                        <code>fix_mrrc_encoding.bat -DryRun</code>预演，若显示无需转换即已修好。启动成功的标志是服务器窗口出现 <code>Using config file: ...</code>且浏览器能打开 <code>https://localhost:8877</code>。</p>
                 </div>
 
                 <div class="troubleshoot-item">
                     <h4>会丢配置或密码吗？</h4>
                     <p>不会。工具只做「字节 → 文本 → UTF-8 字节」的转换，内容不变，并且把原文件原样备份为
-                        <code>MRRC.conf.bak</code>；登录账号文件（<code>MRRC_users.db</code>）默认不动。
-                        想回滚就把 <code>.bak</code> 改回 <code>MRRC.conf</code>。</p>
+                        <code>MRRC.conf.bak</code>；登录账号文件（<code>MRRC_users.db</code>）默认不动。想回滚就把 <code>.bak</code>改回 <code>MRRC.conf</code>。</p>
                 </div>
 
                 <div class="troubleshoot-item">
                     <h4>工具用的是什么参数？</h4>
-                    <p><code>fix_mrrc_encoding.bat -DryRun</code> 只检查；<code>-IncludeAux</code> 同时转换
-                        <code>MRRC_users.db</code> / <code>memory_channels.json</code> / <code>atr1000_tuner.json</code>；
-                        <code>-SelfTest</code> 自检验证编码识别逻辑。</p>
+                    <p><code>fix_mrrc_encoding.bat -DryRun</code>只检查；<code>-IncludeAux</code>同时转换
+                        <code>MRRC_users.db</code> / <code>memory_channels.json</code> / <code>atr1000_tuner.json</code>；<code>-SelfTest</code>自检验证编码识别逻辑。</p>
                 </div>
             </div>
         </div>
@@ -256,6 +248,6 @@ fix_mrrc_encoding.ps1        ← 实际逻辑，别删</code></pre>
     </footer>
 
     <script src="../../js/main.js"></script>
-    <script src="../../js/global-nav.js?v=6" defer data-gn="1"></script>
+    <script src="../../js/global-nav.js?v=9" defer data-gn="1"></script>
 </body>
 </html>

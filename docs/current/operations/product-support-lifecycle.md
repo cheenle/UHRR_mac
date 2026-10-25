@@ -145,6 +145,7 @@ crontab */10 ─► support_autopilot.py --once --publish
 | **macOS 打包版真频谱从未启动**（相对 `MRRC_FTDI_LIB_DIR` 被锚到 `Contents/MacOS`，而数据树在 `Contents/Resources`） | 启动器相对路径改走 `runtime_path()`（回退 `_internal`）+ 3 个回归测试（含“同级副本优先”与“绝对路径不动”）；现场判据：日志出现 `scope_pipe: first frame received — spectrum active`，而不是反复 `scope_pipe exited (frames=0, connected=False)` |
 | **TX 拆流 `Pa_StopStream` 阻塞在 IOLoop 线程上 → 8891 假死 2h23m，且释放 PTT 排在清理动作之后**（RC-003，2026-10-04 macOS radio1） | `PyAudioPlayback.close()` 有界化（3s 超时即放弃、写线程竞态保护）+ `close_async()` + s:/on_close 异步释放 PTT + 看门狗原生线程转储；守卫：`python3 dev_tools/test_audio_close_liveness.py` |
 | **陈旧 frpc 泄漏**：`_kill_stale_frpc` 只在 Windows 生效 → macOS/Linux 每次重启泄漏一个 frpc、抢 proxy 名、隧道由孤儿持有（RC-003 附带，2026-10-04） | `_stale_frpc_pids` 平台无关选进程 + POSIX SIGTERM/SIGKILL；守卫用例加进 `python3 dev_tools/test_cloud_hub.py` |
+| **自动分诊停摆六天**：cron 里裸 `--implement` 取真值（`const="ALL"`）短路了 `--once`，轮询零次（run.log 1728 行没有一行「没有新包」）；修好后第一轮又因 cron PATH 缺 `/usr/bin` 发不出去（`FileNotFoundError: 'git'`），且 `publish()` 先写 state 再发货，失败也登记「已发布」→ 永不重试 | cron 命令必须仍调用 `run_once`（测试钉住分支顺序）；cron 行 PATH 含 `/usr/bin:/bin:/usr/sbin:/sbin`；发货失败撤回 state 记录（`mrrc_modern/tests/test_support_autopilot.py` 四条守卫） |
 
 ## 7. 闭环不变量（验收这套能力时看这 8 条）
 

@@ -10,7 +10,7 @@ LOCAL_WEBSITE_DIR="$SCRIPT_DIR"
 REMOTE_HOST="www.vlsc.net"
 REMOTE_USER="cheenle"
 REMOTE_WEBROOT="/var/www/vlsc.net/mrrc"
-BACKUP_DIR="/tmp/mrrc_backup_$(date +%Y%m%d_%H%M%S)"
+BACKUP_DIR="/var/tmp/mrrc_backup_$(date +%Y%m%d_%H%M%S)"
 
 echo "=========================================="
 echo "MRRC Website Deployment"
@@ -60,7 +60,7 @@ echo ""
 
 # Create deployment package
 echo "Creating deployment package..."
-DEPLOY_PACKAGE="/tmp/mrrc_website_$(date +%Y%m%d_%H%M%S).tar.gz"
+DEPLOY_PACKAGE="/var/tmp/mrrc_website_$(date +%Y%m%d_%H%M%S).tar.gz"
 # Build-time tooling must not be in the package at all: the DocumentRoot is
 # world-readable. Until 2026-09-13 this tar excluded nothing, so /mrrc/deploy.sh,
 # /mrrc/stats/analyze.py and /mrrc/README.md all served HTTP 200.
@@ -102,7 +102,7 @@ EOF
 
 # Upload files
 echo "Uploading files..."
-scp "$DEPLOY_PACKAGE" "$REMOTE_USER@$REMOTE_HOST:/tmp/"
+scp "$DEPLOY_PACKAGE" "$REMOTE_USER@$REMOTE_HOST:/var/tmp/"
 
 # Extract on remote server
 ssh "$REMOTE_USER@$REMOTE_HOST" << EOF

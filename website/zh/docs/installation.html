@@ -259,16 +259,11 @@
                     <div class="step-content">
                         <h3>Windows 安装包（V6.2.0，最简单路径）</h3>
                         <p>下载并运行 <code>MRRC-Setup.exe</code>，然后从开始菜单启动 <strong>MRRC</strong>。启动器会自动创建 HTTPS 证书、本机登录账号和快速入门文件。</p>
-                        <p class="tip">🔌 <strong>电台后台（rigctld）现在会自动启动（V6.1.18 起）。</strong>
-                            配好机型与串口后，MRRC 启动时会自己找到并拉起 rigctld
+                        <p class="tip">🔌 <strong>电台后台（rigctld）现在会自动启动（V6.1.18 起）。</strong>配好机型与串口后，MRRC 启动时会自己找到并拉起 rigctld
                             （查找顺序：应用目录 <code>vendor\hamlib\windows\bin\x64</code> → <code>PATH</code> →
-                            <code>C:\Program Files\hamlib*\bin</code>；可用 <code>MRRC_RIGCTLD_BIN</code> 指定）。
-                            后台日志：<code>%LOCALAPPDATA%\MRRC\logs\rigctld-stdout.log</code>。
-                            关闭自动启动：<code>[HAMLIB] autostart = false</code>（或 <code>MRRC_RIGCTLD_AUTOSTART=0</code>）。</p>
-                        <p class="tip">⬆️ <strong>已经装过（V6.1.18 及以后）？</strong>不需要再下载安装包：
-                            打开页面 → 菜单 → <strong>⬆️ 软件更新</strong>（或在启动器窗口输入 <code>U</code> 回车）
-                            → 应用会自己下载、校验、静默安装并自动重启。V6.0.10 及更早的安装包没有升级功能，
-                            装一次本安装包即可启用。</p>
+                            <code>C:\Program Files\hamlib*\bin</code>；可用 <code>MRRC_RIGCTLD_BIN</code>指定）。后台日志：<code>%LOCALAPPDATA%\MRRC\logs\rigctld-stdout.log</code>。关闭自动启动：<code>[HAMLIB] autostart = false</code>（或 <code>MRRC_RIGCTLD_AUTOSTART=0</code>）。</p>
+                        <p class="tip">⬆️ <strong>已经装过（V6.1.18 及以后）？</strong>不需要再下载安装包：打开页面 → 菜单 → <strong>⬆️ 软件更新</strong>（或在启动器窗口输入 <code>U</code>回车）
+                            → 应用会自己下载、校验、静默安装并自动重启。V6.0.10 及更早的安装包没有升级功能，装一次本安装包即可启用。</p>
                         <pre class="code-block"><code>配置文件：%LOCALAPPDATA%\MRRC\MRRC.conf
 登录信息：%LOCALAPPDATA%\MRRC\MRRC Quick Start.txt
 用户文件：%LOCALAPPDATA%\MRRC\MRRC_users.db
@@ -276,8 +271,7 @@
 # IC-M710 rigctld 示例
 rigctld.exe -m 30003 -r COM3 -s 4800 -C stop_bits=2 -T 127.0.0.1 -t 4532</code></pre>
                         <p class="tip">📌 Windows 默认配置使用 <code>rig_model = IC_M710</code>、<code>rig_rate = 4800</code>、<code>stop_bits = 2</code>，音频设备使用稳定片段 <code>USB Audio</code>。V6.0.0 不再需要 RTL-SDR DLL。</p>
-                        <p class="tip">⚠️ 启动时黑窗一闪而过、报 <code>UnicodeDecodeError: 'utf-8' codec can't decode byte ...</code>？
-                            这是中文 Windows 的配置编码问题，<strong>无需重装</strong>：见 <a href="windows-fix.html">Windows 启动修复（一键工具）</a>。</p>
+                        <p class="tip">⚠️ 启动时黑窗一闪而过、报 <code>UnicodeDecodeError: 'utf-8' codec can't decode byte ...</code>？这是中文 Windows 的配置编码问题，<strong>无需重装</strong>：见 <a href="windows-fix.html">Windows 启动修复（一键工具）</a>。</p>
                         <pre class="code-block"><code># Windows 可选 ATR-1000 代理（本机 TCP IPC）
 ATR1000-Proxy.exe --device 192.168.1.63 --port 60001 --transport tcp --tcp-host 127.0.0.1 --tcp-port 60100</code></pre>
                     </div>
@@ -330,7 +324,7 @@ sudo cp libwdsp.dylib /usr/local/lib/
                     <div class="step-number">4</div>
                     <div class="step-content">
                         <h3>配置电台参数</h3>
-                        <p>编辑 <code>MRRC.conf</code> 文件：</p>
+                        <p>编辑 <code>MRRC.conf</code>文件：</p>
                         <pre class="code-block"><code># 电台配置
 [HAMLIB]
 rig_pathname = /dev/cu.usbserial-230  # 根据实际修改
@@ -556,13 +550,12 @@ docker-compose -f docker-compose.multi.yml up -d</code></pre>
                     <h4>❌ Windows 启动报 UnicodeDecodeError</h4>
                     <p><strong>症状</strong>：双击 MRRC 后黑窗一闪而过，或启动器输出
                         <code>UnicodeDecodeError: 'utf-8' codec can't decode byte 0x.. in position ..</code></p>
-                    <p><strong>解决</strong>：中文 Windows 上旧安装包把 <code>MRRC.conf</code> 写成了 GBK，
-                        而服务器按 UTF-8 读。下载一键修复工具（无需重装）→ <a href="windows-fix.html">Windows 启动修复</a>。</p>
+                    <p><strong>解决</strong>：中文 Windows 上旧安装包把 <code>MRRC.conf</code>写成了 GBK，而服务器按 UTF-8 读。下载一键修复工具（无需重装）→ <a href="windows-fix.html">Windows 启动修复</a>。</p>
                 </div>
 
                 <div class="troubleshoot-item">
                     <h4>❌ 无法连接WebSocket</h4>
-                    <p><strong>症状</strong>：页面显示"连接断开"</p>
+                    <p><strong>症状</strong>：页面显示「连接断开」</p>
                     <p><strong>解决</strong>：</p>
                     <ul>
                         <li>检查防火墙是否开放8877端口</li>
@@ -661,6 +654,6 @@ open dev_tools/debug_audio.html</code></pre>
     </footer>
 
     <script src="../../js/main.js"></script>
-    <script src="../../js/global-nav.js?v=6" defer data-gn="1"></script>
+    <script src="../../js/global-nav.js?v=9" defer data-gn="1"></script>
 </body>
 </html>

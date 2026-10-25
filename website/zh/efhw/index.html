@@ -40,47 +40,40 @@
     <section class="hero">
         <div class="container">
             <h1 class="hero-title">EFHW 端馈天线 · 工程资料</h1>
-            <p class="hero-subtitle">半波端馈天线（EFHW）的谐振匹配、天调架构与高压安全设计。
-            本区两篇正文均为中文。</p>
+            <p class="hero-subtitle">半波端馈天线（EFHW）的谐振匹配、天调架构与高压安全设计。本区两篇正文均为中文。</p>
         </div>
     </section>
 
     <section class="section">
         <div class="container">
             <div class="doc-section" id="guides">
-                <h2><span class="feature-icon">📚</span> 两篇正文</h2>
+                <h2><span class="feature-icon">📚</span>两篇正文</h2>
                 <table class="hardware-table">
                     <tr><th>文档</th><th>内容</th></tr>
                     <tr>
                         <td><a href="../../efhw/t200-2-guide.html"><strong>T200-2 EFHW 谐振匹配系统工程指南</strong></a></td>
                         <td>铁粉芯（T200-2）LC 并联谐振方案：设计哲学（谐振 vs 49:1 宽带）、磁芯特性对比、
-                            LC 谐振原理、各波段效率与电容分配、高压分析与空气可变电容选型、绕线与抽头、
-                            共模电流防御、完整电路图、调谐操作与物料清单</td>
+                            LC 谐振原理、各波段效率与电容分配、高压分析与空气可变电容选型、绕线与抽头、共模电流防御、完整电路图、调谐操作与物料清单</td>
                     </tr>
                     <tr>
                         <td><a href="../../efhw/auto-efhw-tuner-architecture-premium-v2.html"><strong>EFHW Fuchs 天调 顶级版架构（v2）</strong></a></td>
                         <td>把系统拆成两条真实链路：RF/DC 物理链路与测量/控制闭环；
-                            ATR1000 作为电台侧参考面、远端 ATU 只是执行器；
-                            室外单元边界（ESP32-S3 + MG996R + Fuchs LC）、工程语义（测量基准面/控制环/调谐算法/安全边界）</td>
+                            ATR1000 作为电台侧参考面、远端 ATU 只是执行器；室外单元边界（ESP32-S3 + MG996R + Fuchs LC）、工程语义（测量基准面/控制环/调谐算法/安全边界）</td>
                     </tr>
                 </table>
             </div>
 
             <div class="doc-section" id="keyfacts">
-                <h2><span class="feature-icon">🔑</span> 关键结论速览</h2>
+                <h2><span class="feature-icon">🔑</span>关键结论速览</h2>
                 <ul>
-                    <li><strong>方案选择</strong>：T200-2 铁粉芯（&mu;i=10）做 LC 并联谐振，效率 90–96%；
-                        传统 49:1 宽带（FT240-43）在 10m 仅约 55%。10m 段实测增益差 <strong>+2.2 dB</strong>
+                    <li><strong>方案选择</strong>：T200-2 铁粉芯（&mu;i=10）做 LC 并联谐振，效率 90–96%；传统 49:1 宽带（FT240-43）在 10m 仅约 55%。10m 段实测增益差 <strong>+2.2 dB</strong>
                         （等效发射功率 55W → 92W）。</li>
                     <li><strong>代价</strong>：高 Q 导致 -3dB 带宽仅 <strong>50–80 kHz</strong> → 6:1 减速旋钮是刚需。</li>
                     <li><strong>电压</strong>：高 Q 谐振把电压放大 3–5 倍；100W 时槽路峰值可达 <strong>约 3000 V</strong>
                         → 空气可变电容耐压 ≥2000 V（400W 需 ≥4000 V）。</li>
-                    <li><strong>测量基准面</strong>：<code>best_swr</code> 是 <strong>ATR1000 / 电台侧</strong> 的 SWR，
-                        不是电容电压、也不是 ATU 输出端 SWR —— 它优化的是"电台透过馈线看到的东西"。</li>
-                    <li><strong>控制闭环</strong>：每次伺服动作都要等一次新的 <code>swr_update</code>；
-                        网络抖动、MRRC 轮询与仪表延迟直接决定扫描时长与曲线质量。</li>
-                    <li><strong>安全边界</strong>：过功率 / 无 RF / 高 SWR / 超时都会中止；但电弧、槽路发热、
-                        伺服位置与电流、进水、高压应力<strong>仍无法直接感知</strong>。</li>
+                    <li><strong>测量基准面</strong>：<code>best_swr</code>是 <strong>ATR1000 / 电台侧</strong>的 SWR，不是电容电压、也不是 ATU 输出端 SWR —— 它优化的是「电台透过馈线看到的东西」。</li>
+                    <li><strong>控制闭环</strong>：每次伺服动作都要等一次新的 <code>swr_update</code>；网络抖动、MRRC 轮询与仪表延迟直接决定扫描时长与曲线质量。</li>
+                    <li><strong>安全边界</strong>：过功率 / 无 RF / 高 SWR / 超时都会中止；但电弧、槽路发热、伺服位置与电流、进水、高压应力<strong>仍无法直接感知</strong>。</li>
                 </ul>
             </div>
         </div>

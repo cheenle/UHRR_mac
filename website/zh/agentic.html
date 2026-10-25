@@ -102,7 +102,7 @@
 </head>
 <body data-site="mrrc">
             <div class="note" style="margin:1.5rem 0;padding:1rem 1.25rem;border-left:3px solid var(--accent);background:var(--accent-glow);font-size:0.9rem;">
-          <strong>说明（2026-09-12）：</strong>SunsdrMobile 已并入 SunMRRC，成为其原生 iOS 客户端；MRRC FT-710 已归档进 MRRC Modern。两者不再作为独立项目跟踪。<em>下文的开发历史不变</em>——日期、提交数与复用数据仍然准确。
+          <strong>说明（2026-09-12）：</strong>SunsdrMobile 已并入 SunMRRC，成为其原生 iOS 客户端；MRRC FT-710 已归档进 MRRC Modern。两者不再作为独立项目跟踪。<em>下文的开发历史不变</em>，日期、提交数与复用数据仍然准确。
         </div>
 <nav class="navbar">
         <div class="container navbar-content">
@@ -132,13 +132,12 @@
     <section class="page-hero">
         <div class="page-hero-content">
             <div class="hero-badge"><i class="fas fa-rocket"></i><span>跨三项目的智能体工程实践</span></div>
-            <h1 class="hero-title">一套方法论<br><span class="gradient">三款产品</span></h1>
+            <h1 class="hero-title">一套方法论<br><span class="gradient">三个项目</span></h1>
             <p class="muted" style="margin:0 0 1rem;font-size:.85rem">当前版本 <strong>V6.2.0</strong>（文中 V5.x / V6.0.x 为历史版本，保留原样）</p>
             <p class="hero-subtitle">
-                这些契约是人在工作台上写下的，不是 Agent 生成的。FDE（前沿部署工程）是智能体工程内部的交付环，不是纸上谈兵——MRRC 历经 15 个周期演进（2026 年 3–6 月）、
+                这些契约是人在工作台上写下的，不是 Agent 生成的。FDE（前沿部署工程）是智能体工程内部的交付环，不是纸上谈兵。MRRC 历经 15 个周期演进（2026 年 3–6 月）、
                 SunSDR2 DX 首次提交到 V1.0 仅 4 天（6/21→6/24）、
-                SunsdrMobile iOS 一次提交即发布完整 App（7/1）。
-                每个项目都在加速下一个。
+                SunsdrMobile iOS 一次提交即发布完整 App（7/1）。每个项目都在加速下一个。
             </p>
             <div class="hero-stats">
                 <div class="stat-item"><span class="stat-value">15</span><span class="stat-label">MRRC 周期（3–6 月）</span></div>
@@ -194,9 +193,9 @@
             <div class="project-detail">
                 <div class="text">
                     <h3>从原始分支到量产系统</h3>
-                    <p>MRRC 起源于 <strong>F4HTB</strong> 的分支——一个 Python WebSDR 收发控制项目。上游仅支持 Linux、硬编码单一电台、无移动端支持。<span class="highlight">第 1 个 FDE 周期</span>问了一个简单问题："用户真正需要什么？"答案是跨平台、移动端、多电台。</p>
+                    <p>MRRC 起源于 <strong>F4HTB</strong>的分支，一个 Python WebSDR 收发控制项目。上游仅支持 Linux、硬编码单一电台、无移动端支持。<span class="highlight">第 1 个 FDE 周期</span>问了一个简单问题：「用户真正需要什么？」答案是跨平台、移动端、多电台。</p>
                     <p>每个周期至少产出一个<strong>可复用抽象</strong>：PyAudio 跨平台音频（V2.0）、AudioWorklet 低延迟流水线（V3.0）、PTT 预加热可靠性框架（V4.0）、ATR-1000 独立代理（V4.5）、WDSP Python 封装（V4.9）、Glassmorphism 设计系统（V5.0）、RagChew 发射音频预设（V5.1）、MemoryChannelManager（V5.5）、LearningBuffer（V5.6）。</p>
-                    <p>到 V5.8.5，<span class="highlight">16 个可复用资产</span>构成完整平台。下一个项目不再从零开始——而是从杠杆资产出发。</p>
+                    <p>到 V5.8.5，<span class="highlight">16 个可复用资产</span>构成完整平台。下一个项目不再从零开始，而是从杠杆资产出发。</p>
                 </div>
                 <div class="info-box">
                     <h4><i class="fas fa-chart-line"></i> MRRC 杠杆指标</h4>
@@ -216,7 +215,7 @@
                     <thead><tr><th>阶段</th><th>周期</th><th>关键事件</th><th>杠杆产出</th></tr></thead>
                     <tbody>
                         <tr><td><strong>基础</strong></td><td>1–3</td><td>WebSocket + 跨平台音频 + 移动端 UI</td><td>音频流水线、移动端框架</td></tr>
-                        <tr><td><strong>沉淀</strong></td><td>间隔期</td><td>14 个月日常使用——真实痛点积累</td><td>真实使用数据</td></tr>
+                        <tr><td><strong>沉淀</strong></td><td>间隔期</td><td>14 个月日常使用，痛点全部来自真实数据</td><td>真实使用数据</td></tr>
                         <tr><td><strong>核心系统</strong></td><td>4–6</td><td>PTT 可靠性、ATR-1000 代理、WDSP NR2</td><td>PTT 框架、ATR 代理、WDSP 封装</td></tr>
                         <tr><td><strong>打磨</strong></td><td>7–12</td><td>Ansible 部署、UI 现代化、音频预设、网络监控、ATR-1000 代理</td><td>设计系统、发射预设、NetMonitor</td></tr>
                         <tr><td><strong>稳定</strong></td><td>13–15</td><td>频道记忆、ATR 稳定性、EFHW 研究</td><td>MemoryChannelMgr、LearningBuffer</td></tr>
@@ -238,10 +237,10 @@
             <div class="project-detail">
                 <div class="text">
                     <h3>不同的硬件，不同的架构</h3>
-                    <p>传统 HF 电台通过串口 CAT 接口（频率、模式、PTT）经由 <strong>Hamlib/rigctld</strong> 控制。SunSDR2 DX <em>完全没有这些</em>。它通过 UDP 50002 端口发送原始 <strong>IQ 采样流</strong>，在 50001 端口接收私有<strong>二进制命令</strong>。没有 rigctld、没有 CAT、没有任何公开文档。</p>
+                    <p>传统 HF 电台通过串口 CAT 接口（频率、模式、PTT）经由 <strong>Hamlib/rigctld</strong>控制。SunSDR2 DX <em>完全没有这些</em>。它通过 UDP 50002 端口发送原始 <strong>IQ 采样流</strong>，在 50001 端口接收私有<strong>二进制命令</strong>。没有 rigctld、没有 CAT、没有任何公开文档。</p>
                     <p><span class="highlight">Echo 阶段（pre-git）：</span>在电台现场部署抓包环境。用 Wireshark 捕获 40+ 次 UDP 会话。逆向解码 IQ 帧格式（24-bit 交错 I/Q）、命令头结构（14 字节头部 + 可变 payload + 4 字节尾部）、30 步启动序列。构建 Python UDP 客户端验证理解。</p>
                     <p><span class="highlight">Delta 阶段（6/21–6/24）：</span>FastAPI 服务器 + 5 路 WebSocket。基于 numpy/scipy 的 IQ 解调（DDC + 分数重采样 + Hilbert SSB）。<strong>首次提交已包含：</strong>PROTOCOL.md（22 节完整协议文档）、TX 调制流水线、Tune 模式、频道记忆 API、录音功能。</p>
-                    <p><span class="highlight">Product 阶段（6/24–7/3）：</span>V1.0 发布后持续迭代——标签式双编解码音频传输（Opus/PCM）、SAB ring buffer（零主线程发射音频路径）、WDSP IQ 级降噪（NR2/ANF/SNB）、300Hz 高通滤波器（回收 15% PA 净空）。SDD 同步编写，V3.0→V3.7，17 项架构决策。从 MRRC 继承 8 个资产：PTT 安全模型、WDSP 集成模式、多实例架构、Glassmorphism 设计令牌。</p>
+                    <p><span class="highlight">Product 阶段（6/24–7/3）：</span>V1.0 发布后持续迭代：标签式双编解码音频传输（Opus/PCM）、SAB ring buffer（零主线程发射音频路径）、WDSP IQ 级降噪（NR2/ANF/SNB）、300Hz 高通滤波器（回收 15% PA 净空）。SDD 同步编写，V3.0→V3.7，17 项架构决策。从 MRRC 继承 8 个资产：PTT 安全模型、WDSP 集成模式、多实例架构、Glassmorphism 设计令牌。</p>
                 </div>
                 <div class="info-box">
                     <h4><i class="fas fa-microchip"></i> 逆向工程指标</h4>
@@ -259,7 +258,7 @@
             <!-- SunMRRC Git 验证的开发时间线 -->
             <div style="margin-top:56px;">
                 <h3 style="text-align:center;font-size:1.3rem;font-weight:700;margin-bottom:8px;">SunMRRC 开发时间线（Git 验证）</h3>
-                <p style="text-align:center;color:var(--text-secondary);font-size:0.9rem;margin-bottom:32px;max-width:680px;margin-left:auto;margin-right:auto;">从首次提交到 SDD V3.7 共 13 天。协议逆向工程（40+ 次 Wireshark 抓包，12 种命令解码）在首次提交<em>之前</em>完成——首次提交已包含 PROTOCOL.md（22 节）和可工作的 TX 调制流水线。</p>
+                <p style="text-align:center;color:var(--text-secondary);font-size:0.9rem;margin-bottom:32px;max-width:680px;margin-left:auto;margin-right:auto;">从首次提交到 SDD V3.7 共 13 天。协议逆向工程（40+ 次 Wireshark 抓包，12 种命令解码）在首次提交<em>之前</em>完成。首次提交已包含 PROTOCOL.md（22 节）和可工作的 TX 调制流水线。</p>
 
                 <div class="table-wrap">
                     <table>
@@ -273,7 +272,7 @@
                             </tr>
                             <tr>
                                 <td><strong>6/21</strong></td>
-                                <td><code>38cb85e</code> 初始提交<br><code>697789b</code> TX 调制 + 频道记忆</td>
+                                <td><code>38cb85e</code>初始提交<br><code>697789b</code> TX 调制 + 频道记忆</td>
                                 <td><strong>Delta：</strong>FastAPI 服务器、5 路 WebSocket、IQ DSP（numpy/scipy）、Hilbert SSB 调制器、频道记忆 API。首次提交即包含完整的协议文档、TX 流水线、Tune 模式和 REST API。复用 8 个 MRRC 资产。</td>
                                 <td>server.py、dsp.py、5 路 WS、REST API、移动端 UI</td>
                             </tr>
@@ -285,13 +284,13 @@
                             </tr>
                             <tr>
                                 <td><strong>6/24</strong></td>
-                                <td><code>433194c</code> 双编解码 + 遥测<br><code>6b1bc2b</code> <strong>V1.0 发布</strong></td>
+                                <td><code>433194c</code>双编解码 + 遥测<br><code>6b1bc2b</code> <strong>V1.0 发布</strong></td>
                                 <td><strong>Product：</strong>标签式双编解码音频（Opus/PCM）、SWR 遥测解码、SunMRRC V1.0 量产发布。同日创建项目网站 + SDD 文档 + 部署脚本。<strong>首次提交到 V1.0：4 天。</strong></td>
                                 <td>双编解码传输、遥测解码、网站、SDD V3.0–3.3</td>
                             </tr>
                             <tr>
                                 <td><strong>6/25</strong></td>
-                                <td><code>225e1e0</code> 满幅度 IQ<br><code>587e580</code> TUNE 限幅</td>
+                                <td><code>225e1e0</code>满幅度 IQ<br><code>587e580</code> TUNE 限幅</td>
                                 <td><strong>Delta：</strong>发射 IQ 峰值修正至 1.0（满 24-bit 幅度，匹配 ExpertSDR3）。遥测字段验证（off30=瓦特、off16=电压、off18=温度）。Tune 载波功率上限保护 PA。</td>
                                 <td>TX 增益分级修正、遥测字段验证</td>
                             </tr>
@@ -309,7 +308,7 @@
                             </tr>
                             <tr>
                                 <td><strong>7/3</strong></td>
-                                <td><code>67ce1a3</code> 频谱精度修复<br><code>0254f81</code> SDD V3.7<br><code>a748bc2</code> UI 重新设计</td>
+                                <td><code>67ce1a3</code>频谱精度修复<br><code>0254f81</code> SDD V3.7<br><code>a748bc2</code> UI 重新设计</td>
                                 <td><strong>Product：</strong>精确采样率查找表（39062/78125/156250/312500）、FFT 像素对齐（xScale=W/n）、多客户端状态同步。UI 重新设计 + WDSP NR2 音乐噪声抑制。SDD V3.7：全部 15 章经实时代码验证。</td>
                                 <td>频谱精度修复、SDD V3.7、UI 重新设计、最终文档</td>
                             </tr>
@@ -320,9 +319,9 @@
                 <div style="max-width:760px;margin:40px auto 0;">
                     <h4 style="font-size:1rem;font-weight:600;margin-bottom:12px;color:var(--text-primary);">SunMRRC 关键洞察</h4>
                     <div class="principle-grid" style="grid-template-columns:repeat(auto-fit,minmax(300px,1fr));">
-                        <div class="principle-item"><div class="principle-num" style="background:var(--amber-glow);color:var(--amber);">1</div><div class="principle-text"><h4>逆向工程就是 Echo</h4><p>40+ 次 Wireshark 抓包在电台现场完成。首次提交时 PROTOCOL.md 已包含 22 节完整协议文档——Echo 阶段在任何服务端代码编写之前就产出了基础资产。</p></div></div>
-                        <div class="principle-item"><div class="principle-num" style="background:var(--amber-glow);color:var(--amber);">2</div><div class="principle-text"><h4>复用 8 个 MRRC 资产</h4><p>PTT 安全（ACK×3 + 看门狗）、WDSP 集成模式、多实例架构、Glassmorphism 设计令牌——全部继承。SunMRRC 没有重新解决这些问题，直接用。</p></div></div>
-                        <div class="principle-item"><div class="principle-num" style="background:var(--accent-glow);color:var(--accent);">3</div><div class="principle-text"><h4>协议即契约——赋能 SunsdrMobile</h4><p>WebSocket cmd:val 协议、标签式双编解码传输、512-bin 频谱格式成为稳定契约。SunsdrMobile 直接使用，服务端零改动。</p></div></div>
+                        <div class="principle-item"><div class="principle-num" style="background:var(--amber-glow);color:var(--amber);">1</div><div class="principle-text"><h4>逆向工程就是 Echo</h4><p>40+ 次 Wireshark 抓包在电台现场完成。首次提交时 PROTOCOL.md 已包含 22 节完整协议文档。Echo 阶段在任何服务端代码编写之前就产出了基础资产。</p></div></div>
+                        <div class="principle-item"><div class="principle-num" style="background:var(--amber-glow);color:var(--amber);">2</div><div class="principle-text"><h4>复用 8 个 MRRC 资产</h4><p>PTT 安全（ACK×3 + 看门狗）、WDSP 集成模式、多实例架构、Glassmorphism 设计令牌，全部继承。SunMRRC 没有重新解决这些问题，直接用。</p></div></div>
+                        <div class="principle-item"><div class="principle-num" style="background:var(--accent-glow);color:var(--accent);">3</div><div class="principle-text"><h4>协议即契约：赋能 SunsdrMobile</h4><p>WebSocket cmd:val 协议、标签式双编解码传输、512-bin 频谱格式成为稳定契约。SunsdrMobile 直接使用，服务端零改动。</p></div></div>
                         <div class="principle-item"><div class="principle-num" style="background:var(--accent-glow);color:var(--accent);">4</div><div class="principle-text"><h4>V1.0 仅用 4 天，SDD 同步编写</h4><p>Git 记录：首次提交（6/21）→ V1.0（6/24）= 4 天。SDD 与代码同步迭代，不是事后补文档。到 7/3，全部 15 章经实时代码验证。</p></div></div>
                     </div>
                 </div>
@@ -341,11 +340,11 @@
 
             <div class="project-detail">
                 <div class="text">
-                    <h3>从 Web 到原生——FDE 的方式</h3>
-                    <p><span class="highlight">Echo 阶段：</span>SunMRRC 网页版可用，但移动端用户需要原生性能：流畅 60fps 瀑布图、触觉 PTT 反馈、Keychain 安全自动登录、系统级音频集成（AVAudioEngine）。网页版能做很多事——但做不好<em>这些</em>事。</p>
-                    <p><span class="highlight">Delta 阶段：</span>SwiftUI App，零第三方依赖。4 路 URLSessionWebSocketTask 直连 SunMRRC 服务器。AVAudioEngine 低延迟播放与麦克风采集。CGImage/UIKit 瀑布图渲染（512×100 像素缓冲区，5 帧累积，10fps 节流）。Keychain 凭证存储。无 CocoaPods，无 SPM——纯 Apple 框架。</p>
+                    <h3>从 Web 到原生：FDE 的方式</h3>
+                    <p><span class="highlight">Echo 阶段：</span>SunMRRC 网页版可用，但移动端用户需要原生性能：流畅 60fps 瀑布图、触觉 PTT 反馈、Keychain 安全自动登录、系统级音频集成（AVAudioEngine）。网页版能做很多事，但做不好<em>这些</em>事。</p>
+                    <p><span class="highlight">Delta 阶段：</span>SwiftUI App，零第三方依赖。4 路 URLSessionWebSocketTask 直连 SunMRRC 服务器。AVAudioEngine 低延迟播放与麦克风采集。CGImage/UIKit 瀑布图渲染（512×100 像素缓冲区，5 帧累积，10fps 节流）。Keychain 凭证存储。无 CocoaPods，无 SPM，纯 Apple 框架。</p>
                     <p><span class="highlight">Product 阶段：</span>10+ 可复用 SwiftUI 组件：SpectrumView（瀑布图 + 频率刻度）、SMeterView（实时 dB 表）、GainSlider（AF/RF/SQL 触控滑条）、FavoritesGrid（3×3 频道记忆）、DSPPanel（NR2/AGC/NB/ANF 开关）、PTTButton（96pt 触控区域 + 自动释放）、LoginView（Keychain + WSS）、SettingsView、AudioCodecPicker、BandPowerPanel。</p>
-                    <p><span class="highlight">继承 SunMRRC 6 大资产——服务端零改动：</span>WebSocket cmd:val 协议、标签式双编解码音频传输、DSP 面板命令映射、PTT 安全模型（ACK 重试 + 看门狗）、512-bin 频谱格式、按频段功率 API。<strong>服务端不需要任何改动。</strong></p>
+                    <p><span class="highlight">继承 SunMRRC 6 大资产，服务端零改动：</span>WebSocket cmd:val 协议、标签式双编解码音频传输、DSP 面板命令映射、PTT 安全模型（ACK 重试 + 看门狗）、512-bin 频谱格式、按频段功率 API。<strong>服务端不需要任何改动。</strong></p>
                 </div>
                 <div class="info-box">
                     <h4><i class="fas fa-mobile-alt"></i> iOS 构建指标</h4>
@@ -363,7 +362,7 @@
             <!-- SunsdrMobile Git 验证的开发时间线 -->
             <div style="margin-top:56px;">
                 <h3 style="text-align:center;font-size:1.3rem;font-weight:700;margin-bottom:8px;">SunsdrMobile 开发时间线（Git 验证）</h3>
-                <p style="text-align:center;color:var(--text-secondary);font-size:0.9rem;margin-bottom:32px;max-width:680px;margin-left:auto;margin-right:auto;">共 4 次提交，跨 2 天。V1.0 即首次提交（7/1）——整个 App 一次性发布。随后是 UI 重构（7/4：17 个文件，新增 FFTProcessor、S-meter 修复、dot sliders）。关键 FDE 指标：SunMRRC 服务端<em>零</em>改动即支持了原生 iOS 客户端。</p>
+                <p style="text-align:center;color:var(--text-secondary);font-size:0.9rem;margin-bottom:32px;max-width:680px;margin-left:auto;margin-right:auto;">共 4 次提交，跨 2 天。V1.0 即首次提交（7/1），整个 App 一次性发布。随后是 UI 重构（7/4：17 个文件，新增 FFTProcessor、S-meter 修复、dot sliders）。关键 FDE 指标：SunMRRC 服务端<em>零</em>改动即支持了原生 iOS 客户端。</p>
 
                 <div class="table-wrap">
                     <table>
@@ -385,13 +384,13 @@
                                 <td><strong>7/4</strong></td>
                                 <td><code>d460131</code> UI 重构</td>
                                 <td><strong>17 个文件改动。</strong>UI 布局重构：统一 chips 风格、dot sliders、S-meter 修复、连接状态指示器。<strong>新增 FFTProcessor</strong>（93 行 Swift 频谱分析模块）。Colors.swift（设计令牌）。DSPPanelView、MainRXView、WaterfallView 大幅简化重构。</td>
-                                <td><strong>第二个 FDE 周期</strong>——Echo：真实 UI 使用反馈。Delta：设计令牌系统 + FFT 模块提取。Product：简化的组件架构，可复用的 Colors/FFTProcessor 模块。</td>
+                                <td><strong>第二个 FDE 周期</strong>：Echo 吸收真实 UI 使用反馈，Delta：设计令牌系统 + FFT 模块提取。Product：简化的组件架构，可复用的 Colors/FFTProcessor 模块。</td>
                             </tr>
                             <tr>
                                 <td><strong>7/4</strong></td>
-                                <td><code>f93955e</code> 网站 + SVG</td>
+                                <td><code>f93955e</code>网站 + SVG</td>
                                 <td>双语宣传网站（中/英），内嵌 SVG 架构图和 UI 手机模型。部署至 /sunsdrmobile/。沿用 MRRC/SunMRRC octen.css 设计系统。</td>
-                                <td>网站作为 Product 产物——部署模式复用自 SunMRRC。</td>
+                                <td>网站作为 Product 产物，部署模式复用自 SunMRRC。</td>
                             </tr>
                         </tbody>
                     </table>
@@ -400,10 +399,10 @@
                 <div style="max-width:760px;margin:40px auto 0;">
                     <h4 style="font-size:1rem;font-weight:600;margin-bottom:12px;color:var(--text-primary);">SunsdrMobile 关键洞察</h4>
                     <div class="principle-grid" style="grid-template-columns:repeat(auto-fit,minmax(300px,1fr));">
-                        <div class="principle-item"><div class="principle-num" style="background:var(--purple-glow);color:var(--purple);">1</div><div class="principle-text"><h4>单次提交 V1.0 是 FDE 的终极证明</h4><p>整个 App 一次提交发布。不是因为 App 简单——而是 SunMRRC 的协议是<em>稳定契约</em>。继承的 6 个资产（WS 协议、编解码标签、DSP 命令、PTT 安全、频谱格式、功率 API）省去了全部服务端协商工作。</p></div></div>
+                        <div class="principle-item"><div class="principle-num" style="background:var(--purple-glow);color:var(--purple);">1</div><div class="principle-text"><h4>单次提交 V1.0 是 FDE 的终极证明</h4><p>整个 App 一次提交发布。不是因为 App 简单，而是 SunMRRC 的协议是<em>稳定契约</em>。继承的 6 个资产（WS 协议、编解码标签、DSP 命令、PTT 安全、频谱格式、功率 API）省去了全部服务端协商工作。</p></div></div>
                         <div class="principle-item"><div class="principle-num" style="background:var(--purple-glow);color:var(--purple);">2</div><div class="principle-text"><h4>零依赖 = 零摩擦</h4><p>无 CocoaPods、无 SPM、无第三方库。纯 Apple 框架：SwiftUI、AVAudioEngine、URLSession、Security/Keychain、CGImage。即时构建，无版本冲突，无供应链风险。</p></div></div>
-                        <div class="principle-item"><div class="principle-num" style="background:var(--accent-glow);color:var(--accent);">3</div><div class="principle-text"><h4>SunMRRC 的每个 Product 资产都在这里变现</h4><p>cmd:val 协议、双编解码、DSP 面板映射、PTT 安全模型、频谱格式、按频段功率 API——全部在 SunMRRC 的 13 天 Git 历史中设计和稳定——被零修改继承。每个前序项目的 Product 阶段都在为这个项目付费。</p></div></div>
-                        <div class="principle-item"><div class="principle-num" style="background:var(--accent-glow);color:var(--accent);">4</div><div class="principle-text"><h4>FDE 杠杆用"服务端改动数"衡量：0</h4><p>关键指标不是代码行数或开发时间——而是 SunMRRC 服务器支持全新原生 iOS 客户端需要<strong>零改动</strong>。协议稳定性比优雅代码更值钱。</p></div></div>
+                        <div class="principle-item"><div class="principle-num" style="background:var(--accent-glow);color:var(--accent);">3</div><div class="principle-text"><h4>SunMRRC 的每个 Product 资产都在这里变现</h4><p>cmd:val 协议、双编解码、DSP 面板映射、PTT 安全模型、频谱格式、按频段功率 API，全部在 SunMRRC 的 13 天 Git 历史中设计和稳定，被零修改继承。每个前序项目的 Product 阶段都在为这个项目付费。</p></div></div>
+                        <div class="principle-item"><div class="principle-num" style="background:var(--accent-glow);color:var(--accent);">4</div><div class="principle-text"><h4>FDE 杠杆用「服务端改动数」衡量：0</h4><p>关键指标不是代码行数或开发时间，而是 SunMRRC 服务器支持全新原生 iOS 客户端需要<strong>零改动</strong>。协议稳定性比优雅代码更值钱。</p></div></div>
                     </div>
                 </div>
             </div>
@@ -416,46 +415,46 @@
             <div class="section-header">
                 <span class="section-label">第 4 部分</span>
                 <h2 class="section-title">Harness 链条</h2>
-                <p class="section-subtitle">SDD 如何在三个层面锁定需求：Business Harness 定义"做什么"、Technical Harness 定义"怎么做"、Product Harness 定义"交付什么"。每个 FDE 周期驱动这一链条。</p>
+                <p class="section-subtitle">SDD 如何在三个层面锁定需求：Business Harness 定义「做什么」、Technical Harness 定义「怎么做」、Product Harness 定义「交付什么」。每个 FDE 周期驱动这一链条。</p>
             </div>
 
             <div class="harness-grid">
                 <div class="harness-card bs">
                     <div class="icon"><i class="fas fa-bullseye" style="color:var(--amber);"></i></div>
                     <h3>Business Harness</h3>
-                    <div class="key">定义 WHAT——要解决的问题及其价值</div>
+                    <div class="key">定义 WHAT：要解决的问题及其价值</div>
                     <ul>
-                        <li><strong>SDD Ch2：</strong>业务方向——用户是谁、市场缺口在哪</li>
-                        <li><strong>SDD Ch4：</strong>系统上下文——外部系统、接口、约束</li>
-                        <li><strong>SDD Ch5：</strong>非功能需求——延迟、可靠性、安全性、平台</li>
-                        <li><strong>SDD Ch6：</strong>用例模型——驱动每个周期的具体用户场景</li>
-                        <li><strong>SDD Ch13：</strong>可行性评估——能否用现有资源实现</li>
+                        <li><strong>SDD Ch2</strong>业务方向：用户是谁、市场缺口在哪</li>
+                        <li><strong>SDD Ch4</strong>系统上下文：外部系统、接口、约束</li>
+                        <li><strong>SDD Ch5</strong>非功能需求：延迟、可靠性、安全性、平台</li>
+                        <li><strong>SDD Ch6</strong>用例模型：驱动每个周期的具体用户场景</li>
+                        <li><strong>SDD Ch13</strong>可行性评估：能否用现有资源实现</li>
                         <li><span style="color:var(--amber);">Echo 阶段驱动此 Harness。</span>每个周期从这里开始。</li>
                     </ul>
                 </div>
                 <div class="harness-card tech">
                     <div class="icon"><i class="fas fa-cogs" style="color:var(--accent);"></i></div>
                     <h3>Technical Harness</h3>
-                    <div class="key">定义 HOW——架构和实现方法</div>
+                    <div class="key">定义 HOW：架构和实现方法</div>
                     <ul>
-                        <li><strong>SDD Ch7：</strong>领域模型——领域实体与关系</li>
-                        <li><strong>SDD Ch8：</strong>架构决策（ADs）——为什么选 X 而非 Y</li>
-                        <li><strong>SDD Ch9：</strong>架构概览——系统拓扑、数据流</li>
-                        <li><strong>SDD Ch10：</strong>服务模型——API 契约、WebSocket 协议</li>
-                        <li><strong>SDD Ch11：</strong>组件模型——模块边界、职责</li>
-                        <li><strong>SDD Ch12：</strong>运维模型——部署、监控、备份</li>
+                        <li><strong>SDD Ch7</strong>领域模型：领域实体与关系</li>
+                        <li><strong>SDD Ch8</strong>架构决策（ADs）：为什么选 X 而非 Y</li>
+                        <li><strong>SDD Ch9</strong>架构概览：系统拓扑、数据流</li>
+                        <li><strong>SDD Ch10</strong>服务模型：API 契约、WebSocket 协议</li>
+                        <li><strong>SDD Ch11</strong>组件模型：模块边界、职责</li>
+                        <li><strong>SDD Ch12</strong>运维模型：部署、监控、备份</li>
                         <li><span style="color:var(--accent);">Delta 阶段驱动此 Harness。</span>原型验证架构决策。</li>
                     </ul>
                 </div>
                 <div class="harness-card prod">
                     <div class="icon"><i class="fas fa-box-open" style="color:var(--purple);"></i></div>
                     <h3>Product Harness</h3>
-                    <div class="key">定义 DELIVERABLE——实际交付内容及其可复用性</div>
+                    <div class="key">定义 DELIVERABLE：实际交付内容及其可复用性</div>
                     <ul>
-                        <li><strong>SDD Ch1：</strong>执行摘要——做了什么、为谁做、价值何在</li>
-                        <li><strong>SDD Ch3：</strong>项目定义——范围、交付物、验收标准</li>
-                        <li><strong>SDD Ch14：</strong>版本历史——什么变了、何时、为什么</li>
-                        <li><strong>抽象目录：</strong>碎石路 → 高速公路——可复用模块清单</li>
+                        <li><strong>SDD Ch1</strong>执行摘要：做了什么、为谁做、价值何在</li>
+                        <li><strong>SDD Ch3</strong>项目定义：范围、交付物、验收标准</li>
+                        <li><strong>SDD Ch14</strong>版本历史：什么变了、何时、为什么</li>
+                        <li><strong>抽象目录：</strong>碎石路 → 高速公路：可复用模块清单</li>
                         <li><strong>杠杆仪表板：</strong>累计可复用资产、周期速度趋势</li>
                         <li><span style="color:var(--purple);">Product 阶段驱动此 Harness。</span>抽象使其可复用。</li>
                     </ul>
@@ -463,10 +462,9 @@
             </div>
 
             <p style="text-align:center;color:var(--text-secondary);margin-top:40px;max-width:720px;margin-left:auto;margin-right:auto;line-height:1.8;">
-                <strong style="color:var(--accent);">核心洞察：</strong>不要让文档驱动开发——让开发驱动文档。
-                每个 FDE 阶段完成后，<em>产出物</em>更新 Harness。
+                <strong style="color:var(--accent);">核心洞察：</strong>不要让文档驱动开发，让开发驱动文档。每个 FDE 阶段完成后，<em>产出物</em>更新 Harness。
                 Business Harness 捕获 Echo 的发现。Technical Harness 捕获 Delta 的验证。
-                Product Harness 捕获 Product 的抽象。<strong style="color:var(--text-primary);">Harness 不是计划——它是"什么有效"的记录。</strong>
+                Product Harness 捕获 Product 的抽象。<strong style="color:var(--text-primary);">Harness 不是计划，是「什么有效」的记录。</strong>
             </p>
 
             <div style="margin-top:56px;">
@@ -475,11 +473,11 @@
                     <table>
                         <thead><tr><th>SDD 章节</th><th>MRRC</th><th>→ SunMRRC</th><th>→ SunsdrMobile</th><th>复用类型</th></tr></thead>
                         <tbody>
-                            <tr><td>Ch4 系统上下文</td><td>HF 电台（Hamlib）</td><td>SDR（UDP IQ 流）</td><td>服务器（WSS）</td><td>模板——同结构，不同系统</td></tr>
-                            <tr><td>Ch5 NFRs</td><td>&lt;100ms TX/RX 切换</td><td>&lt;50ms WS 延迟</td><td>60fps 瀑布图</td><td>演进——逐项目收紧</td></tr>
-                            <tr><td>Ch8 架构决策</td><td>12 ADs（音频、PTT、DSP）</td><td>+5 ADs（IQ 解调、编解码）</td><td>+2 ADs（Keychain、CGImage）</td><td>扩展——前序 ADs 继承沿用</td></tr>
-                            <tr><td>Ch10 服务模型</td><td>REST + 1 WS</td><td>5 WS 端点</td><td>同 5 WS——零改动</td><td>继承——服务端即契约</td></tr>
-                            <tr><td>Ch11 组件模型</td><td>仅 Python 后端</td><td>+ FastAPI 层</td><td>+ SwiftUI 组件</td><td>分层——每项目新增一层</td></tr>
+                            <tr><td>Ch4 系统上下文</td><td>HF 电台（Hamlib）</td><td>SDR（UDP IQ 流）</td><td>服务器（WSS）</td><td>模板：同结构，不同系统</td></tr>
+                            <tr><td>Ch5 NFRs</td><td>&lt;100ms TX/RX 切换</td><td>&lt;50ms WS 延迟</td><td>60fps 瀑布图</td><td>演进：逐项目收紧</td></tr>
+                            <tr><td>Ch8 架构决策</td><td>12 ADs（音频、PTT、DSP）</td><td>+5 ADs（IQ 解调、编解码）</td><td>+2 ADs（Keychain、CGImage）</td><td>扩展：前序 ADs 继承沿用</td></tr>
+                            <tr><td>Ch10 服务模型</td><td>REST + 1 WS</td><td>5 WS 端点</td><td>同 5 WS，零改动</td><td>继承：服务端即契约</td></tr>
+                            <tr><td>Ch11 组件模型</td><td>仅 Python 后端</td><td>+ FastAPI 层</td><td>+ SwiftUI 组件</td><td>分层：每项目新增一层</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -500,7 +498,7 @@
                 <div class="flow-step"><div class="num">1</div><h4>从杠杆资产出发</h4><p>盘点现有可复用资产。哪些抽象、协议和模式已经存在？不要重新造轮子。</p></div>
                 <div class="flow-step"><div class="num">2</div><h4>定义 Harness</h4><p>先定 Business Harness（SDD 第 2、4、5、6、13 章）。具体问题是什么？用户是谁？成功标准是什么？</p></div>
                 <div class="flow-step"><div class="num">3</div><h4>Echo：部署到现场</h4><p>进入真实环境。捕获真实数据。逆向工程没有文档的部分。定义 1 个具体演示目标。</p></div>
-                <div class="flow-step"><div class="num">4</div><h4>Delta：交付演示</h4><p>先对风险最大的假设进行原型验证。代码可以粗糙——能用就行。立即与用户验证。</p></div>
+                <div class="flow-step"><div class="num">4</div><h4>Delta：交付演示</h4><p>先对风险最大的假设进行原型验证。代码可以粗糙，能用就行。立即与用户验证。</p></div>
                 <div class="flow-step"><div class="num">5</div><h4>Product：抽象与文档化</h4><p>泛化为可复用模块。更新 SDD 章节。加入杠杆资产目录。把碎石路铺成高速公路。</p></div>
                 <div class="flow-step"><div class="num">6</div><h4>迭代与加速</h4><p>每个周期越来越短。杠杆效应叠加。到第 5 个周期，你建立在 10+ 个资产之上。速度是自然结果。</p></div>
             </div>
@@ -528,7 +526,7 @@
             <div class="section-header">
                 <span class="section-label">附录 A</span>
                 <h2 class="section-title">什么是 FDE（前沿部署工程）？</h2>
-                <p class="section-subtitle">理论基础——移至附录，让实践本身说话。</p>
+                <p class="section-subtitle">理论基础移到附录，让实践本身说话。</p>
             </div>
             <div class="formula-box">
                 <div class="formula">FDE = Echo + Delta + Product</div>
@@ -537,38 +535,38 @@
             <div class="harness-grid">
                 <div class="harness-card" style="border-top:3px solid var(--amber);">
                     <h3><i class="fas fa-search" style="color:var(--amber);margin-right:8px;"></i> Echo</h3>
-                    <div class="key">"用户真正需要什么？"</div>
+                    <div class="key">「用户真正需要什么？」</div>
                     <ul>
-                        <li>嵌入用户场景——部署到现场</li>
-                        <li>定义有价值的演示——每周期 1 个，具体且可交付</li>
-                        <li>管理客户关系——理解真实痛点</li>
+                        <li>嵌入用户场景，部署到现场</li>
+                        <li>定义有价值的演示：每周期 1 个，具体且可交付</li>
+                        <li>管理客户关系，理解真实痛点</li>
                         <li>约占周期 20% 时间。产出：一个经过验证的演示定义</li>
                     </ul>
                 </div>
                 <div class="harness-card" style="border-top:3px solid var(--accent);">
                     <h3><i class="fas fa-bolt" style="color:var(--accent);margin-right:8px;"></i> Delta</h3>
-                    <div class="key">"最快能用的方案是什么？"</div>
+                    <div class="key">「最快能用的方案是什么？」</div>
                     <ul>
-                        <li>快速原型——代码可以粗糙但必须能跑</li>
-                        <li>按时交付——发布演示，获取反馈</li>
-                        <li>基于真实反馈迭代——而非猜测</li>
+                        <li>快速原型：代码可以粗糙但必须能跑</li>
+                        <li>按时交付：发布演示，获取反馈</li>
+                        <li>基于真实反馈迭代，而非猜测</li>
                         <li>约占周期 55% 时间。产出：验证演示目标的可用原型</li>
                     </ul>
                 </div>
                 <div class="harness-card" style="border-top:3px solid var(--purple);">
                     <h3><i class="fas fa-cubes" style="color:var(--purple);margin-right:8px;"></i> Product</h3>
-                    <div class="key">"如何服务接下来的 10 个客户？"</div>
+                    <div class="key">「如何服务接下来的 10 个客户？」</div>
                     <ul>
                         <li>将现场解决方案抽象为可复用模块</li>
-                        <li>编写架构文档——未来的你需要它</li>
-                        <li>把碎石路变成高速公路——边际成本降至零</li>
+                        <li>编写架构文档：未来的你需要它</li>
+                        <li>把碎石路变成高速公路，边际成本降至零</li>
                         <li>约占周期 25% 时间。产出：可复用资产 + 更新的 SDD</li>
                     </ul>
                 </div>
             </div>
             <p style="text-align:center;color:var(--text-secondary);margin-top:32px;max-width:680px;margin-left:auto;margin-right:auto;">
                 <strong style="color:var(--text-primary);">FDE 不是咨询。</strong>咨询交付一次性方案然后离开。
-                FDE 是<em>产品探索过程</em>——每次参与都在构建永久资产，降低未来每次参与的成本。
+                FDE 是<em>产品探索过程</em>：每次参与都在构建永久资产，降低未来每次参与的成本。
             </p>
         </div>
     </section>
@@ -581,12 +579,12 @@
                 <h2 class="section-title">8 条 FDE 原则（从 3 个项目提炼）</h2>
             </div>
             <div class="principle-grid">
-                <div class="principle-item"><div class="principle-num">1</div><div class="principle-text"><h4>从现场出发，而非从产品出发</h4><p>每个周期由真实用户场景驱动——绝非"我想加这个功能"。MRRC 14 个月的运营间隔期证明，真实使用是最好的 Echo。</p></div></div>
-                <div class="principle-item"><div class="principle-num">2</div><div class="principle-text"><h4>演示驱动的验证</h4><p>每周期定义 1 个具体演示。交付它。演示创造渴望——最强大的交付动力。</p></div></div>
-                <div class="principle-item"><div class="principle-num">3</div><div class="principle-text"><h4>及时抽象——不太早，绝不晚</h4><p>等到 2+ 个类似场景成功后再抽象。但永远不要跳过 Product 阶段。Delta 代码是消费品；Product 产出是资产。</p></div></div>
-                <div class="principle-item"><div class="principle-num">4</div><div class="principle-text"><h4>文档是产出，不是计划</h4><p>每个 FDE 阶段后更新 SDD 章节。Harness 记录"什么有效"——不是推测性蓝图。6 个月后的你自己是主要读者。</p></div></div>
+                <div class="principle-item"><div class="principle-num">1</div><div class="principle-text"><h4>从现场出发，而非从产品出发</h4><p>每个周期由真实用户场景驱动，绝非「我想加这个功能」。MRRC 14 个月的运营间隔期证明，真实使用是最好的 Echo。</p></div></div>
+                <div class="principle-item"><div class="principle-num">2</div><div class="principle-text"><h4>演示驱动的验证</h4><p>每周期定义 1 个具体演示。交付它。演示创造渴望，最强大的交付动力。</p></div></div>
+                <div class="principle-item"><div class="principle-num">3</div><div class="principle-text"><h4>及时抽象：不太早，绝不晚</h4><p>等到 2+ 个类似场景成功后再抽象。但永远不要跳过 Product 阶段。Delta 代码是消费品；Product 产出是资产。</p></div></div>
+                <div class="principle-item"><div class="principle-num">4</div><div class="principle-text"><h4>文档是产出，不是计划</h4><p>每个 FDE 阶段后更新 SDD 章节。Harness 记录「什么有效」，不是推测性蓝图。6 个月后的你自己是主要读者。</p></div></div>
                 <div class="principle-item"><div class="principle-num">5</div><div class="principle-text"><h4>协议稳定性是终极杠杆</h4><p>SunMRRC 的 WebSocket 协议是让 SunsdrMobile 在服务端零改动下交付的契约。稳定接口比优雅代码更有价值。</p></div></div>
-                <div class="principle-item"><div class="principle-num">6</div><div class="principle-text"><h4>运维即 Echo——不要跳过沉淀期</h4><p>MRRC 14 个月的运营期积累了驱动爆炸式创新的真实痛点。日常使用产生比任何规划会议更好的需求。</p></div></div>
+                <div class="principle-item"><div class="principle-num">6</div><div class="principle-text"><h4>运维即 Echo：不要跳过沉淀期</h4><p>MRRC 14 个月的运营期积累了驱动爆炸式创新的真实痛点。日常使用产生比任何规划会议更好的需求。</p></div></div>
                 <div class="principle-item"><div class="principle-num">7</div><div class="principle-text"><h4>5 次迭代后转向</h4><p>如果方案经过 5 次迭代仍未稳定，技术路线可能有问题。ATR-1000 在第 5 次迭代找到了正确架构。不要在错误路线上继续打磨。</p></div></div>
                 <div class="principle-item"><div class="principle-num">8</div><div class="principle-text"><h4>杠杆跨项目持续叠加</h4><p>MRRC 的 16 个资产为 SunMRRC 节省了约 40% 的构建时间。SunMRRC 的协议契约为 SunsdrMobile 节省了约 60%。每个项目都在加速下一个。永远不要从零开始。</p></div></div>
             </div>
@@ -649,7 +647,7 @@
                         <tr><td>1</td><td>基础</td><td>2024-10</td><td>V1.0</td><td>F4HTB 上游评估</td><td>WebSocket + Tornado 集成</td><td>AD-001/002/003</td></tr>
                         <tr><td>2</td><td>架构</td><td>2024-11</td><td>V2.0</td><td>仅限 Linux、高延迟</td><td>PyAudio 跨平台 + AudioWorklet</td><td>audio_interface.py</td></tr>
                         <tr><td>3</td><td>移动端</td><td>2024-12</td><td>V3.0</td><td>桌面 UI 手机不可用</td><td>iOS Safari AudioContext</td><td>mobile_modern.html</td></tr>
-                        <tr><td>—</td><td colspan="6" style="color:var(--amber);text-align:center;"><strong>14 个月运营间隔</strong>——日常使用积累真实痛点（最好的 Echo）</td></tr>
+                        <tr><td>—</td><td colspan="6" style="color:var(--amber);text-align:center;"><strong>14 个月运营间隔</strong>：日常使用积累真实痛点（最好的 Echo）</td></tr>
                         <tr><td>4</td><td>延迟</td><td>2026-03</td><td>V4.0</td><td>PTT 3 秒延迟</td><td>预加热帧 + 计数超时</td><td>PTT 可靠性框架</td></tr>
                         <tr><td>5</td><td>ATR-1000</td><td>2026-03</td><td>V4.3–4.5</td><td>无功率/SWR 显示</td><td>5 次迭代 → 代理架构</td><td>atr1000_proxy.py</td></tr>
                         <tr><td>6</td><td>DSP</td><td>2026-03</td><td>V4.6–4.9</td><td>噪声 + 音频刺耳</td><td>WDSP 库集成</td><td>wdsp_wrapper.py</td></tr>
@@ -674,7 +672,7 @@
             <div class="section-header">
                 <span class="section-label">附录 E</span>
                 <h2 class="section-title">碎石路 → 高速公路 目录</h2>
-                <p class="section-subtitle">每个现场 hack 变成可复用资产——横跨全部三个项目</p>
+                <p class="section-subtitle">每个现场 hack 变成可复用资产，横跨全部三个项目</p>
             </div>
             <div class="table-wrap">
                 <table>
@@ -702,7 +700,7 @@
         <div class="container">
             <h2 style="font-size: 2.25rem; font-weight: 700; margin-bottom: 16px;">把智能体工程带到你的项目</h2>
             <p style="color: var(--text-secondary); font-size: 1.05rem; margin-bottom: 36px; max-width: 600px; margin-left: auto; margin-right: auto;">
-                三个项目，一套方法论，全部开源。智能体工程的契约清单、SDD 模板与完整的复利目录都在这里 —— 从你的项目开始。
+                三个项目，一套方法论，全部开源。智能体工程的契约清单、SDD 模板与完整的复利目录都在这里。从你的项目开始。
             </p>
             <div style="display: flex; gap: 16px; justify-content: center; flex-wrap: wrap;">
                 <a href="https://github.com/cheenle/UHRR_mac" class="btn btn-primary btn-large" target="_blank" rel="noopener"><i class="fab fa-github"></i> MRRC Source</a>
@@ -747,7 +745,7 @@
         </div>
     </footer>
 
-    <script src="../js/global-nav.js?v=6" defer data-gn="1"></script>
-<p style="text-align:center;margin-top:2rem;font-size:.85rem;opacity:.8;">跨项目的版本号、测试数与发布状态以 <a href="/zh/agentic.html#evidence">VLSC 证据账本</a> 为唯一来源，本页不再自述可比数字。</p>
+    <script src="../js/global-nav.js?v=9" defer data-gn="1"></script>
+<p style="text-align:center;margin-top:2rem;font-size:.85rem;opacity:.8;">跨项目的版本号、测试数与发布状态以 <a href="/zh/agentic.html#evidence">VLSC 证据账本</a>为唯一来源，本页不再自述可比数字。</p>
 </body>
 </html>

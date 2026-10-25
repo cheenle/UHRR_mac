@@ -44,20 +44,16 @@
 
   <h1>MRRC 问题答复 · 解决办法</h1>
   <p class="sub">你在「🐞 遇到问题」里上传诊断包后，会得到一个<strong>上报编号</strong>
-    （形如 <span class="id">20260917-062314-35dc</span>）。维护者分析后会把结论写在本页，
-    按编号查找即可——多数问题用户自己就能解决。</p>
+    （形如 <span class="id">20260917-062314-35dc</span>）。维护者分析后会把结论写在本页，按编号查找即可——多数问题用户自己就能解决。</p>
 
   <div class="card">
     <h3 style="margin-top:0">这条答复是怎么来的？</h3>
     <ol style="margin-bottom:6px">
-      <li>你在 App 里点 <strong>🐞 遇到问题</strong> 生成诊断包（日志尾部 + <strong>脱敏</strong>配置 + 环境快照 + 自动体检摘要），
-          用户数据库、证书、密钥永不打包；</li>
+      <li>你在 App 里点 <strong>🐞 遇到问题</strong>生成诊断包（日志尾部 + <strong>脱敏</strong>配置 + 环境快照 + 自动体检摘要），用户数据库、证书、密钥永不打包；</li>
       <li>上传后得到<strong>编号</strong>，维护者侧收到（只有维护者能看）；</li>
-      <li>维护者的自动分诊流程会取出诊断包、生成摘要，交给 AI 按固定的<strong>判定纪律</strong>分析
-          （材料不足就写"需要补充信息"，绝不下没有证据的结论）；</li>
-      <li>结论渲染成上面的一张卡片并发布到本页 —— <strong>你按编号就能看到</strong>，多数问题照着"你要做的"就能解决；</li>
-      <li>如果确认是软件缺陷：先给你临时规避，再修代码；能走热修的就热修
-          （<strong>你重启 MRRC 即生效，无需重装</strong>），否则随新版本发布，卡片会标成"已修复 · 版本号"。</li>
+      <li>维护者的自动分诊流程会取出诊断包、生成摘要，交给 AI 按固定的<strong>判定纪律</strong>分析（材料不足就写「需要补充信息」，绝不下没有证据的结论）；</li>
+      <li>结论渲染成上面的一张卡片并发布到本页 —— <strong>你按编号就能看到</strong>，多数问题照着「你要做的」就能解决；</li>
+      <li>如果确认是软件缺陷：先给你临时规避，再修代码；能走热修的就热修（<strong>你重启 MRRC 即生效，无需重装</strong>），否则随新版本发布，卡片会标成「已修复 · 版本号」。</li>
     </ol>
     <p class="muted" style="margin:0">隐私：诊断包只在<strong>你主动点击上传</strong>时才发送；本页只放可公开的结论，不含任何用户数据。</p>
   </div>
@@ -76,8 +72,7 @@
   <h2>怎么自己先看一眼（30 秒）</h2>
   <ol>
     <li>在「🐞 遇到问题」里点 <strong>生成诊断包</strong>（不上传也能看）；</li>
-    <li>打开包里的 <code>diagnostics/summary.txt</code> —— 这是自动体检结论，
-      含<strong>启动次数 / 日志时间跨度</strong>、音频健康、IOLoop 看门狗、发射初始化耗时、ATR 数据新鲜度；</li>
+    <li>打开包里的 <code>diagnostics/summary.txt</code> —— 这是自动体检结论，含<strong>启动次数 / 日志时间跨度</strong>、音频健康、IOLoop 看门狗、发射初始化耗时、ATR 数据新鲜度；</li>
     <li>对照下面的「常见原因表」；对不上再来查本页答复或上报。</li>
   </ol>
 
@@ -86,10 +81,10 @@
     <tr><td><code>音频采集：无 🎧 行</code></td><td>没在采集（没有设备，或设备被独占）</td>
         <td>确认声卡/USB 声卡已插好且未被其它软件独占；Device Config 里选对设备</td></tr>
     <tr><td><code>❌ 音频初始化失败 … -9996</code></td><td>Windows 找不到可用输入/输出设备</td>
-        <td>看 <code>env.json</code> 的 <code>audio.devices</code>：空数组＝本机没有音频设备（虚拟机常见）</td></tr>
+        <td>看 <code>env.json</code>的 <code>audio.devices</code>：空数组＝本机没有音频设备（虚拟机常见）</td></tr>
     <tr><td><code>rigctld daemon not running</code></td><td>电台后台没起来 → 进入模拟模式</td>
         <td>用启动器/控制脚本启动 rigctld，确认 <code>[INSTANCE_SETTINGS] instance_rigctl_port</code></td></tr>
-    <tr><td><code>启动次数</code> 很多但无 <code>Traceback</code></td><td>重启过多次，但不是崩溃</td>
+    <tr><td><code>启动次数</code>很多但无 <code>Traceback</code></td><td>重启过多次，但不是崩溃</td>
         <td>看时间点是否对得上「升级」或手动重启；升级期间应用会主动退出再自动回来，属正常</td></tr>
     <tr><td><code>🚨 IOLoop stall</code> / 看门狗告警</td><td>事件循环被阻塞（音频设备抖动等）</td>
         <td>见仓库 <code>docs/current/reliability/RC-001</code>；排查蓝牙声卡/独占设备</td></tr>
@@ -355,21 +350,18 @@
        （页面看起来正常，但按钮不工作）。</p>
 
     <h3>原因</h3>
-    <p>6.1.12 在页面上拼接"答复页链接"时多写了一个引号，导致页面里唯一的脚本语法出错，
-       <strong>整个页面的脚本失效</strong>——所以所有按钮都点不动。这是我们的失误，与你的环境无关。</p>
+    <p>6.1.12 在页面上拼接「答复页链接」时多写了一个引号，导致页面里唯一的脚本语法出错，<strong>整个页面的脚本失效</strong>——所以所有按钮都点不动。这是我们的失误，与你的环境无关。</p>
 
     <h3>你要做的</h3>
     <ol>
-      <li><strong>关掉 MRRC（那个黑色启动器窗口）再重新打开</strong> —— 启动时会自动拉取热修 6.1.13，
-          页面即恢复正常（日志里会出现 <code>🧩 补丁覆盖层已启用</code>）；</li>
+      <li><strong>关掉 MRRC（那个黑色启动器窗口）再重新打开</strong> —— 启动时会自动拉取热修 6.1.13，页面即恢复正常（日志里会出现 <code>🧩 补丁覆盖层已启用</code>）；</li>
       <li>或者直接安装 <a href="https://www.vlsc.net/mrrc/downloads/MRRC-Setup.exe">MRRC-Setup.exe</a>
           （6.1.13 或更新）覆盖安装一次；</li>
       <li>恢复正常后，如果问题依旧，再用「🐞 遇到问题」生成并上传诊断包即可。</li>
     </ol>
 
     <h3>我们怎么防止再犯</h3>
-    <p>已加入自动检查：每次改动都会对 <code>www/</code> 与站点所有页面的<strong>内联脚本</strong>
-       逐段做语法校验（<code>node --check</code>），这类"整页按钮失效"的错误不会再进仓库。</p>
+    <p>已加入自动检查：每次改动都会对 <code>www/</code>与站点所有页面的<strong>内联脚本</strong>逐段做语法校验（<code>node --check</code>），这类「整页按钮失效」的错误不会再进仓库。</p>
   </div>
 
   <div class="card" data-keys="20260916-184958-f8aa 目前还可以，你看下日志有咩有异常和潜在风险 其他 20260916-184958-f8aa 无服务端日志 看日志有没有异常 潜在风险 体检正常 rigctld Stable IC-M710 macOS-26.3 源码运行 8891 USB Audio CODEC ATR-1000 需要补充日志">
@@ -407,7 +399,7 @@
       <li># 服务端日志末尾 40 行：（无）</li>
       <li>"rigctld": {"id": 30003, "name": "IC-M710", "status": "Stable", "host": "127.0.0.1", "port": 4531}</li>
       <li>"version": "", "frozen": false, "cwd": "/Users/cheenle/HAM/mrrc"</li>
-      <li>"atr1000": {"enabled": true, "reason": "auto（已配置设备 192.168.1.63）"}</li>
+      <li>"atr1000": {"enabled": true, "reason": 「auto（已配置设备 192.168.1.63）」}</li>
     </ul>
 
   </div>
@@ -428,11 +420,11 @@
           <code>⚠ rigctld daemon not running</code>（没接电台）；</li>
       <li>日志里有 <strong>11 次「收到升级请求：6.1.9（当前 6.1.8）」</strong>和
           <strong>1 次「收到升级请求：6.1.11（当前 6.1.9）」</strong>；</li>
-      <li>包内 <code>env.json</code> 显示 <code>version: 6.1.11</code>、<code>audio.devices: []</code>。</li>
+      <li>包内 <code>env.json</code>显示 <code>version: 6.1.11</code>、<code>audio.devices: []</code>。</li>
     </ul>
 
     <h3>结论</h3>
-    <p><strong>不是异常停止，也没有崩溃</strong>。看到的"停止"来自两件事：</p>
+    <p><strong>不是异常停止，也没有崩溃</strong>。看到的「停止」来自两件事：</p>
     <ol>
       <li><strong>一键升级的正常行为</strong>：点【立即升级】后应用会主动退出 → 静默安装 → <strong>自动重启</strong>
           （约 10–40 秒）。窗口消失是过程的一部分；</li>
@@ -444,11 +436,10 @@
     <h3>你要做的</h3>
     <ol>
       <li>升级时看到窗口消失：<strong>等 10–40 秒</strong>，新版会自己回来；期间不要手动重复点；</li>
-      <li>想知道到底重启了几次、是不是崩溃：看诊断包 <code>diagnostics/summary.txt</code> 的
-          「启动次数 / 日志时间跨度」与有没有 <code>Traceback</code>；</li>
+      <li>想知道到底重启了几次、是不是崩溃：看诊断包 <code>diagnostics/summary.txt</code>的「启动次数 / 日志时间跨度」与有没有 <code>Traceback</code>；</li>
       <li>要定位<strong>真实的</strong>使用问题（音频/发射/仪表），请从<strong>接电台那台机器</strong>上报一次——
           那台机器的诊断包会带音频设备表和音频健康行，才看得出原因；</li>
-      <li>本机已验证升级成功：<code>env.json</code> 的版本已是 <strong>6.1.11</strong>。</li>
+      <li>本机已验证升级成功：<code>env.json</code>的版本已是 <strong>6.1.11</strong>。</li>
     </ol>
   </div>
 
@@ -466,9 +457,8 @@
   </div>
 
   <p class="muted" style="margin-top:26px;font-size:13px">
-    本页只收录"可公开的结论"，不含任何用户数据；诊断包内容仅维护者可见。<br>
-    完整的五段流程见 <a href="../docs/lifecycle.html">产品支持生命周期</a>（发布 → 升级 → 诊断 → AI 分析 → 答复）。
-    找不到你的编号？说明还没分析完，或编号输入有误（格式：<code>YYYYMMDD-HHMMSS-4位</code>）。
+    本页只收录「可公开的结论」，不含任何用户数据；诊断包内容仅维护者可见。<br>
+    完整的五段流程见 <a href="../docs/lifecycle.html">产品支持生命周期</a>（发布 → 升级 → 诊断 → AI 分析 → 答复）。找不到你的编号？说明还没分析完，或编号输入有误（格式：<code>YYYYMMDD-HHMMSS-4位</code>）。
   </p>
 </div>
 
